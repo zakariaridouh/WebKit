@@ -954,7 +954,7 @@ void FrameSelection::adjustSelectionExtentIfNeeded(VisiblePosition& extent, bool
     }
 
     if (RefPtr rootUserSelectAll = Position::rootUserSelectAllForNode(protect(extent.deepEquivalent().anchorNode())))
-        extent = isForward ? positionAfterNode(*rootUserSelectAll).downstream(CanCrossEditingBoundary) : positionBeforeNode(*rootUserSelectAll).upstream(CanCrossEditingBoundary);
+        extent = isForward ? positionAfterNode(*rootUserSelectAll).downstream(EditingBoundaryCrossingRule::CanCross) : positionBeforeNode(*rootUserSelectAll).upstream(EditingBoundaryCrossingRule::CanCross);
 }
 
 VisiblePosition FrameSelection::modifyExtendingRight(TextGranularity granularity, UserTriggered userTriggered)
@@ -969,9 +969,9 @@ VisiblePosition FrameSelection::modifyExtendingRight(TextGranularity granularity
     switch (granularity) {
     case TextGranularity::CharacterGranularity:
         if (directionOfEnclosingBlock() == TextDirection::LTR)
-            pos = pos.next(CannotCrossEditingBoundary);
+            pos = pos.next(EditingBoundaryCrossingRule::CannotCross);
         else
-            pos = pos.previous(CannotCrossEditingBoundary);
+            pos = pos.previous(EditingBoundaryCrossingRule::CannotCross);
         break;
     case TextGranularity::WordGranularity:
         if (directionOfEnclosingBlock() == TextDirection::LTR)
@@ -1007,7 +1007,7 @@ VisiblePosition FrameSelection::modifyExtendingForward(TextGranularity granulari
     VisiblePosition pos(m_selection.extent(), m_selection.affinity());
     switch (granularity) {
     case TextGranularity::CharacterGranularity:
-        pos = pos.next(CannotCrossEditingBoundary);
+        pos = pos.next(EditingBoundaryCrossingRule::CannotCross);
         break;
     case TextGranularity::WordGranularity:
         pos = nextWordPositionForPlatform(pos);
@@ -1114,7 +1114,7 @@ VisiblePosition FrameSelection::modifyMovingForward(TextGranularity granularity,
         if (isRange())
             pos = VisiblePosition(m_selection.end(), m_selection.affinity());
         else
-            pos = VisiblePosition(m_selection.extent(), m_selection.affinity()).next(CannotCrossEditingBoundary, reachedBoundary);
+            pos = VisiblePosition(m_selection.extent(), m_selection.affinity()).next(EditingBoundaryCrossingRule::CannotCross, reachedBoundary);
         break;
     case TextGranularity::WordGranularity:
         pos = nextWordPositionForPlatform(currentPosition);
@@ -1182,9 +1182,9 @@ VisiblePosition FrameSelection::modifyExtendingLeft(TextGranularity granularity,
     switch (granularity) {
     case TextGranularity::CharacterGranularity:
         if (directionOfEnclosingBlock() == TextDirection::LTR)
-            pos = pos.previous(CannotCrossEditingBoundary);
+            pos = pos.previous(EditingBoundaryCrossingRule::CannotCross);
         else
-            pos = pos.next(CannotCrossEditingBoundary);
+            pos = pos.next(EditingBoundaryCrossingRule::CannotCross);
         break;
     case TextGranularity::WordGranularity:
         if (directionOfEnclosingBlock() == TextDirection::LTR)
@@ -1224,7 +1224,7 @@ VisiblePosition FrameSelection::modifyExtendingBackward(TextGranularity granular
     // over everything.
     switch (granularity) {
     case TextGranularity::CharacterGranularity:
-        pos = pos.previous(CannotCrossEditingBoundary);
+        pos = pos.previous(EditingBoundaryCrossingRule::CannotCross);
         break;
     case TextGranularity::WordGranularity:
         pos = previousWordPosition(pos);
@@ -1330,7 +1330,7 @@ VisiblePosition FrameSelection::modifyMovingBackward(TextGranularity granularity
         if (isRange())
             pos = VisiblePosition(m_selection.start(), m_selection.affinity());
         else
-            pos = VisiblePosition(m_selection.extent(), m_selection.affinity()).previous(CannotCrossEditingBoundary, reachedBoundary);
+            pos = VisiblePosition(m_selection.extent(), m_selection.affinity()).previous(EditingBoundaryCrossingRule::CannotCross, reachedBoundary);
         break;
     case TextGranularity::WordGranularity:
         pos = previousWordPosition(currentPosition);
