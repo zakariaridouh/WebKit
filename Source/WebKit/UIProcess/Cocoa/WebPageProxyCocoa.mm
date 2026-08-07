@@ -93,6 +93,7 @@
 #import <WebCore/PlaybackSessionInterfaceAVKitLegacy.h>
 #import <WebCore/PlaybackSessionInterfaceMac.h>
 #import <WebCore/PlaybackSessionInterfaceTVOS.h>
+#import <WebCore/RemoteUserInputEventData.h>
 #import <WebCore/RunLoopObserver.h>
 #import <WebCore/SearchPopupMenuCocoa.h>
 #import <WebCore/SleepDisabler.h>
@@ -566,8 +567,22 @@ void WebPageProxy::performDictionaryLookupAtLocation(const WebCore::FloatPoint& 
 {
     if (!hasRunningProcess())
         return;
-    
-    protect(legacyMainFrameProcess())->send(Messages::WebPage::PerformDictionaryLookupAtLocation(point), webPageIDInMainFrameProcess());
+
+    RefPtr mainFrame = m_mainFrame;
+    if (!mainFrame)
+        return;
+
+    performDictionaryLookupAtLocationInFrame(mainFrame->frameID(), point);
+}
+
+void WebPageProxy::performDictionaryLookupAtLocationInFrame(WebCore::FrameIdentifier frameID, const WebCore::FloatPoint& point)
+{
+    sendWithAsyncReplyToProcessContainingFrame(frameID, Messages::WebPage::PerformDictionaryLookupAtLocation(frameID, point), [weakThis = WeakPtr { *this }](std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !remoteUserInputEventData)
+            return;
+        protectedThis->performDictionaryLookupAtLocationInFrame(remoteUserInputEventData->targetFrameID, WebCore::FloatPoint(remoteUserInputEventData->transformedPoint));
+    });
 }
 
 void WebPageProxy::insertDictatedTextAsync(const String& text, const EditingRange& replacementRange, const Vector<TextAlternativeWithRange>& dictationAlternativesWithRange, InsertTextOptions&& options)
