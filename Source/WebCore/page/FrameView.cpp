@@ -602,4 +602,20 @@ FloatRect FrameView::rootViewToContentsAcrossIsolatedFrames(FloatRect rect) cons
     return viewToContents(convertFromRootViewAcrossIsolatedFrames(rect));
 }
 
+FloatRect FrameView::convertToContainingWindowAcrossIsolatedFrames(FloatRect rect) const
+{
+    // The root-view-to-window step needs a platform widget, which only the root of this process's
+    // widget tree has.
+    RefPtr<const Widget> widgetTreeRoot = this;
+    while (RefPtr parent = widgetTreeRoot->parent())
+        widgetTreeRoot = WTF::move(parent);
+
+    return widgetTreeRoot->convertToContainingWindow(convertToRootViewAcrossIsolatedFrames(rect));
+}
+
+FloatRect FrameView::contentsToWindowAcrossIsolatedFrames(FloatRect rect) const
+{
+    return convertToContainingWindowAcrossIsolatedFrames(contentsToView(rect));
+}
+
 }

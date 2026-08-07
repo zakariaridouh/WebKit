@@ -380,7 +380,7 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, cons
 
     DictionaryPopupInfo dictionaryPopupInfo;
 
-    IntRect rangeRect = protect(frame.view())->contentsToWindow(quads[0].enclosingBoundingBox());
+    auto rangeRect = protect(frame.view())->contentsToWindowAcrossIsolatedFrames(quads[0].enclosingBoundingBox());
 
     const CheckedPtr style = range.startContainer().renderStyle();
     float scaledAscent = style ? style->metricsOfPrimaryFont().intAscent() * pageScaleFactor() : 0;
@@ -430,6 +430,30 @@ DictionaryPopupInfo WebPage::dictionaryPopupInfoForRange(LocalFrame& frame, cons
 #endif
 
 #endif
+
+    // TextIndicator's rects are in the local root's root view coordinates, and stay that way at the
+    // source because page overlays in this process draw with them. Convert here, on the way out to the
+    // UI process, from the local root's view: they have already been walked up the widget tree to it,
+    // so starting from this frame's view would count an intervening same-origin frame twice.
+    if (!frame.localMainFrame()) {
+        if (RefPtr rootView = frame.rootFrame().view()) {
+            // textRectsInBoundingRectCoordinates are offsets from the bounding rect, so lift each one
+            // back into root view coordinates to convert it, then re-relativize it.
+            auto boundingRect = textIndicator->textBoundingRectInRootViewCoordinates();
+            auto convertedBoundingRect = rootView->convertToRootViewAcrossIsolatedFrames(boundingRect);
+            auto textRects = textIndicator->textRectsInBoundingRectCoordinates().map([&](auto rect) {
+                rect.moveBy(boundingRect.location());
+                rect = rootView->convertToRootViewAcrossIsolatedFrames(rect);
+                rect.moveBy(-convertedBoundingRect.location());
+                return rect;
+            });
+
+            textIndicator->setTextBoundingRectInRootViewCoordinates(convertedBoundingRect);
+            textIndicator->setTextRectsInBoundingRectCoordinates(WTF::move(textRects));
+            textIndicator->setSelectionRectInRootViewCoordinates(rootView->convertToRootViewAcrossIsolatedFrames(textIndicator->selectionRectInRootViewCoordinates()));
+            textIndicator->setContentImageWithoutSelectionRectInRootViewCoordinates(rootView->convertToRootViewAcrossIsolatedFrames(textIndicator->contentImageWithoutSelectionRectInRootViewCoordinates()));
+        }
+    }
 
     editor->setIsGettingDictionaryPopupInfo(false);
     return dictionaryPopupInfo;

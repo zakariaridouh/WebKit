@@ -124,13 +124,15 @@ public:
     // (Widget::m_parent is not populated for a RemoteFrameView when Site Isolation is enabled) and
     // apply any CSS transforms on the intervening frame-owner elements. "RootView" here is the
     // coordinate space of the top-level (main) frame's view; for a same-process frame tree these are
-    // equivalent to the plain convertFromRootView / rootViewToContents.
+    // equivalent to their plain Widget / ScrollView counterparts.
     WEBCORE_EXPORT FloatPoint convertFromRootViewAcrossIsolatedFrames(FloatPoint) const;
     WEBCORE_EXPORT FloatRect convertFromRootViewAcrossIsolatedFrames(FloatRect) const;
     WEBCORE_EXPORT FloatPoint convertToRootViewAcrossIsolatedFrames(FloatPoint) const;
     WEBCORE_EXPORT FloatRect convertToRootViewAcrossIsolatedFrames(FloatRect) const;
     WEBCORE_EXPORT FloatQuad convertToRootViewAcrossIsolatedFrames(const FloatQuad&) const;
     WEBCORE_EXPORT FloatRect rootViewToContentsAcrossIsolatedFrames(FloatRect) const;
+    WEBCORE_EXPORT FloatRect convertToContainingWindowAcrossIsolatedFrames(FloatRect) const;
+    WEBCORE_EXPORT FloatRect contentsToWindowAcrossIsolatedFrames(FloatRect) const;
 
     WEBCORE_EXPORT virtual LayoutRect layoutViewportRect() const = 0;
 

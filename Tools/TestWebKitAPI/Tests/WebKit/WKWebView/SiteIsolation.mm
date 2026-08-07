@@ -86,6 +86,8 @@
 
 #if PLATFORM(MAC)
 #import "Helpers/mac/AppKitSPI.h"
+#import "Helpers/mac/WKWebViewForTestingImmediateActions.h"
+#import <WebKit/_WKHitTestResult.h>
 
 @interface NSApplication ()
 - (void)_setKeyWindow:(NSWindow *)newKeyWindow;
@@ -10364,6 +10366,156 @@ TEST(SiteIsolation, SelectElementPopupAfterFocusChangesDuringTracking)
     EXPECT_TRUE(Util::waitFor([&] {
         return [[webView objectByEvaluatingJavaScript:@"document.getElementById('sel').value"] isEqualToString:@"c"];
     }));
+}
+
+static std::pair<RetainPtr<WKWebViewForTestingImmediateActions>, RetainPtr<TestNavigationDelegate>> siteIsolatedImmediateActionViewAndDelegate(const HTTPServer& server, CGRect viewRect)
+{
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    enableSiteIsolation(configuration.get());
+
+    RetainPtr navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate allowAnyTLSCertificate];
+
+    RetainPtr webView = adoptNS([[WKWebViewForTestingImmediateActions alloc] initWithFrame:viewRect configuration:configuration.get()]);
+    [webView setNavigationDelegate:navigationDelegate.get()];
+    return { WTF::move(webView), WTF::move(navigationDelegate) };
+}
+
+static CGRect lookUpTextBoundingRect(WKWebViewForTestingImmediateActions *webView, NSPoint location)
+{
+    auto result = [webView simulateImmediateAction:location];
+    if (!result.first)
+        return CGRectZero;
+    return [result.first _dictionaryPopupTextBoundingRectForTesting];
+}
+
+TEST(SiteIsolation, LookUpTextIndicatorRectInCrossOriginIframeUsesMainFrameCoordinates)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<body style='margin: 0'><iframe style='margin: 100px; width: 400px; height: 300px; border: none;' src='https://webkit.org/iframe'></iframe></body>"_s } },
+        { "/iframe"_s, { "<!DOCTYPE html><body style='margin: 0; font-size: 32px'>test</body>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedImmediateActionViewAndDelegate(server, CGRectMake(0, 0, 800, 600));
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView waitForNextPresentationUpdate];
+
+    // The word sits at (100, 100) in the main frame.
+    auto rect = lookUpTextBoundingRect(webView.get(), NSMakePoint(110, 115));
+    EXPECT_FALSE(CGRectIsEmpty(rect));
+    EXPECT_GT(CGRectGetMinX(rect), 90);
+    EXPECT_GT(CGRectGetMinY(rect), 90);
+}
+
+TEST(SiteIsolation, LookUpTextIndicatorRectInNestedCrossOriginIframesUsesMainFrameCoordinates)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<body style='margin: 0'><iframe style='margin: 100px; width: 400px; height: 300px; border: none;' src='https://domain2.com/middle'></iframe></body>"_s } },
+        { "/middle"_s, { "<!DOCTYPE html><body style='margin: 0'><iframe style='margin: 50px; width: 200px; height: 150px; border: none;' src='https://domain3.com/inner'></iframe></body>"_s } },
+        { "/inner"_s, { "<!DOCTYPE html><body style='margin: 0; font-size: 32px'>test</body>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedImmediateActionViewAndDelegate(server, CGRectMake(0, 0, 800, 600));
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView waitForNextPresentationUpdate];
+
+    // Both cross-process hops must be applied: (100, 100) for domain2 plus (50, 50) for domain3.
+    auto rect = lookUpTextBoundingRect(webView.get(), NSMakePoint(160, 165));
+    EXPECT_FALSE(CGRectIsEmpty(rect));
+    EXPECT_GT(CGRectGetMinX(rect), 140);
+    EXPECT_GT(CGRectGetMinY(rect), 140);
+}
+
+TEST(SiteIsolation, LookUpTextIndicatorRectInSameOriginIframeInsideCrossOriginIframe)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<body style='margin: 0'><iframe style='margin: 100px; width: 400px; height: 300px; border: none;' src='https://webkit.org/middle'></iframe></body>"_s } },
+        { "/middle"_s, { "<!DOCTYPE html><body style='margin: 0'><iframe style='margin: 50px; width: 200px; height: 150px; border: none;' src='https://webkit.org/inner'></iframe></body>"_s } },
+        { "/inner"_s, { "<!DOCTYPE html><body style='margin: 0; font-size: 32px'>test</body>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedImmediateActionViewAndDelegate(server, CGRectMake(0, 0, 800, 600));
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView waitForNextPresentationUpdate];
+
+    // Both webkit.org frames share a process, so the rect arrives relative to the outer one and only
+    // (100, 100) is added, landing at (150, 150). Starting from the inner frame's own view would count
+    // its 50px offset twice and land near (200, 200).
+    auto rect = lookUpTextBoundingRect(webView.get(), NSMakePoint(160, 165));
+    EXPECT_FALSE(CGRectIsEmpty(rect));
+    EXPECT_GT(CGRectGetMinX(rect), 140);
+    EXPECT_LT(CGRectGetMinX(rect), 180);
+    EXPECT_GT(CGRectGetMinY(rect), 140);
+    EXPECT_LT(CGRectGetMinY(rect), 180);
+}
+
+TEST(SiteIsolation, LookUpTextIndicatorRectInMainFrameIsNotOffset)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<body style='margin: 0; font-size: 32px'>test</body>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedImmediateActionViewAndDelegate(server, CGRectMake(0, 0, 800, 600));
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView waitForNextPresentationUpdate];
+
+    auto rect = lookUpTextBoundingRect(webView.get(), NSMakePoint(10, 15));
+    EXPECT_FALSE(CGRectIsEmpty(rect));
+    EXPECT_LT(CGRectGetMinX(rect), 50);
+    EXPECT_LT(CGRectGetMinY(rect), 50);
+}
+
+TEST(SiteIsolation, LookUpTextIndicatorRectInCrossOriginIframeBelowSpacer)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<body style='margin: 0'><iframe style='margin: 100px; width: 400px; height: 300px; border: none;' src='https://webkit.org/iframe'></iframe></body>"_s } },
+        { "/iframe"_s, { "<!DOCTYPE html><body style='margin: 0; font-size: 32px'><div style='height: 150px'></div>test</body>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedImmediateActionViewAndDelegate(server, CGRectMake(0, 0, 800, 600));
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView waitForNextPresentationUpdate];
+
+    // The word is 150px down inside the iframe, so it sits at (100, 250) in the main frame.
+    auto rect = lookUpTextBoundingRect(webView.get(), NSMakePoint(110, 265));
+    EXPECT_FALSE(CGRectIsEmpty(rect));
+    EXPECT_GT(CGRectGetMinX(rect), 90);
+    EXPECT_LT(CGRectGetMinX(rect), 160);
+    EXPECT_GT(CGRectGetMinY(rect), 240);
+    EXPECT_LT(CGRectGetMinY(rect), 300);
+}
+
+TEST(SiteIsolation, LookUpTextIndicatorRectInScrolledCrossOriginIframe)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<body style='margin: 0'><iframe style='margin: 100px; width: 400px; height: 300px; border: none;' src='https://webkit.org/iframe#target'></iframe></body>"_s } },
+        { "/iframe"_s, { "<!DOCTYPE html><body style='margin: 0; font-size: 32px'><div style='height: 1000px'></div><div id='target'>test</div><div style='height: 1000px'></div></body>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedImmediateActionViewAndDelegate(server, CGRectMake(0, 0, 800, 600));
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView waitForNextPresentationUpdate];
+
+    // The fragment scrolls the iframe by 1000px, putting the word back at (100, 100) in the main
+    // frame. Ignoring the scroll offset lands the rect near y = 1100.
+    auto rect = lookUpTextBoundingRect(webView.get(), NSMakePoint(110, 115));
+    EXPECT_FALSE(CGRectIsEmpty(rect));
+    EXPECT_GT(CGRectGetMinX(rect), 90);
+    EXPECT_LT(CGRectGetMinX(rect), 160);
+    EXPECT_GT(CGRectGetMinY(rect), 90);
+    EXPECT_LT(CGRectGetMinY(rect), 160);
 }
 
 #endif
