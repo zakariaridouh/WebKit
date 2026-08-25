@@ -23,79 +23,104 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Compare two coverage runs and report what the change did to coverage.
+"""Compare coverage runs, and measure the coverage of a patch.
 
-generate-coverage-report answers "what is covered". This answers "what did my change do
-to that", and "is the code I just wrote tested" -- which is the question review actually
-asks, and the one llvm-cov cannot answer at all because it has no notion of a baseline.
+generate-coverage-report answers "what is covered". This answers "is the code I just wrote
+tested" -- which is the question review actually asks, and the one llvm-cov cannot answer
+at all because it has nothing to compare against.
 
-Generate an lcov trace before and after the change, then compare them:
+Two modes, and the first one is the one to reach for.
 
-    Tools/Scripts/generate-coverage-report --coverage-dir=/tmp/cov --output-dir=/tmp/before
-    ... apply the change, rebuild, rerun the tests ...
+PATCH COVERAGE needs one trace and one diff, so it needs only the test run you were going
+to do anyway:
+
     Tools/Scripts/generate-coverage-report --coverage-dir=/tmp/cov --output-dir=/tmp/after
+    Tools/Scripts/compare-coverage-reports --current=/tmp/after/coverage.lcov.gz \\
+        --git-diff=main --fail-under-patch=70
 
-    Tools/Scripts/compare-coverage-reports --baseline=/tmp/before/coverage.lcov \\
-        --current=/tmp/after/coverage.lcov --git-diff=main --output-dir=/tmp/delta
+It reports the coverage of the lines the diff added or modified, and names the added lines
+nothing executed. Line-number drift cannot affect it: the diff and the trace describe the
+same text, so there is no second set of line numbers to shift against.
 
-The interesting number is almost never the project total, which barely moves; it is what
-happened to the files the change touched, which is what --changed-files and --git-diff
-restrict the report to.
+DELTA COVERAGE needs a baseline, so it needs a second full test run, and it answers a
+weaker question: did the total move?
 
-Two kinds of finding are reported, separately and never added together, because they
-call for different fixes:
+    Tools/Scripts/compare-coverage-reports --baseline=/tmp/before/coverage.lcov.gz \\
+        --current=/tmp/after/coverage.lcov.gz --git-diff=main --output-dir=/tmp/delta
+
+The two combine, and with --git-diff both are reported from one diff. But note what the
+delta alone cannot see: twenty never-executed lines appended to the real Document.cpp
+record -- 8,051 instrumented lines at 92.88%, an entirely untested new function -- move it
+to 92.65%, so --fail-under-delta=0.5 passes. Patch coverage calls the same addition 0% of
+20.
+
+Two kinds of finding are reported by the delta, separately and never added together,
+because they call for different fixes:
 
   * a regressed line was in both traces, executed in the baseline and not now. An
     existing test stopped reaching existing code.
   * an uncovered new line is only in the current trace and was never executed. New code
     that nothing tests.
 
-Both are attributed by line NUMBER, because that is all lcov records. That is exact for
-a file whose source did not change between the two runs, and approximate for one that
-did: inserting a line shifts every line below it, and the shifted numbers then look like
-a mix of regressions and new lines even though the coverage did not change. So for a
-file the change touched, treat the line-level attribution as a pointer to where to look,
-and take the coverage of the lines present in the current run -- reported as "After",
-and independent of any line matching -- as the number that means something. Functions
-are matched by mangled name instead and do survive an edit.
+Both are attributed by line NUMBER, because that is all lcov records. That is exact for a
+file whose source did not change between the two runs, and approximate for one that did:
+inserting a line shifts every line below it, and the shifted numbers then look like a mix
+of regressions and new lines even though the coverage did not change. So for a file the
+change touched, take the delta's line-level attribution as a pointer to where to look, and
+the patch-coverage number as the one that means something. Functions are matched by
+mangled name instead and do survive an edit.
 """
 
 import logging
 import optparse
 import os
-import subprocess
 import sys
 
 from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.webkit_finder import WebKitFinder
-from webkitpy.coverage_delta import (absolute_paths, compare_lcov_files, format_summary,
+from webkitpy.coverage_delta import (absolute_paths, compare, format_summary, load_traces,
                                      write_delta_report)
+from webkitpy.coverage_patch import (PatchCoverage, format_patch_summary, git_diff_added_lines)
 from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
 
 _log = logging.getLogger('compare-coverage-reports')
 
 # --fail-under-delta is a float compared against a float, and a delta computed from equal
 # integer ratios is not always exactly 0.0, so leave room for the last bit rather than
-# failing a build over one.
+# failing a build over one. --fail-under-patch is compared the same way.
 _TOLERANCE = 1e-9
 
 # optparse prints this after the option list. It repeats the docstring's caveat because
-# nobody reads the docstring, and a reviewer who trusts a per-line number for a file whose
-# source moved will chase a regression that never happened.
+# nobody reads the docstring, and a reviewer who trusts a per-line delta number for a file
+# whose source moved will chase a regression that never happened.
 _EPILOG = """
-Two findings are counted separately and never added together: a REGRESSED line was in
-both traces, executed in the baseline and not now, so an existing test stopped reaching
-existing code; an UNCOVERED NEW line is only in the current trace and was never executed,
-so it is new code that nothing tests. They call for different fixes.
+PATCH COVERAGE, with --current and --git-diff and no baseline, is the useful half and the
+cheap one. It intersects the diff's added and modified lines with the trace's per-line
+records and reports how many of them a test executed, plus the line numbers of the ones
+none did. Added lines with no coverage record -- comments, blank lines, braces,
+declarations -- are excluded from the denominator rather than counted uncovered, since no
+test could execute them. Untracked files are included, and every line of one is an added
+line. Nothing here depends on matching two sets of line numbers, so a line shift cannot
+distort it. It does assume the trace was produced from the source the diff describes: an
+lcov trace records no revision, so one from an older tree reads the right line numbers of
+the wrong text.
 
-Both are attributed by line NUMBER, because that is all lcov records. That is exact for a
-file whose source did not change between the two runs and only approximate for one that
-did, since inserting a line shifts every line below it and the shifted numbers then look
-like a mixture of regressions and new lines. For a file the change touched, take the
-line-level attribution as a pointer to where to look and the "After" column -- the
-coverage of the lines present in the current run, which no line matching goes into -- as
-the number that means something. Functions are matched by mangled name instead, so those
-do survive an edit.
+DELTA COVERAGE, with --baseline as well, counts two findings separately and never adds
+them together: a REGRESSED line was in both traces, executed in the baseline and not now,
+so an existing test stopped reaching existing code; an UNCOVERED NEW line is only in the
+current trace and was never executed, so it is new code that nothing tests. They call for
+different fixes.
+
+Both of those are attributed by line NUMBER, because that is all lcov records. That is
+exact for a file whose source did not change between the two runs and only approximate for
+one that did, since inserting a line shifts every line below it and the shifted numbers
+then look like a mixture of regressions and new lines. Prefer the patch-coverage number for
+a file the change touched. Functions are matched by mangled name instead, so those do
+survive an edit.
+
+--changed-files restricts the report to a list of files and carries no line numbers, so it
+is FILE-LEVEL only: it can say how well tested the files you touched are, and it cannot say
+anything about the lines you added. --git-diff is line-level as well as file-level.
 """
 
 
@@ -106,52 +131,53 @@ class _PreformattedEpilog(optparse.IndentedHelpFormatter):
         return epilog or ''
 
 
-def changed_files_from_git(source_root, ref):
-    """git diff --name-only <ref>, as absolute paths.
-
-    The ref is passed through verbatim, so a reviewer can use `main` for "everything since
-    main including my working tree" and CI can use `main...HEAD` for "only my commits".
-    """
-    completed = subprocess.run(['git', 'diff', '--name-only', ref],
-                               cwd=source_root, capture_output=True, text=True)
-    if completed.returncode:
-        raise RuntimeError('git diff --name-only {} failed: {}'.format(
-            ref, completed.stderr.strip()))
-    return absolute_paths(completed.stdout.splitlines(), source_root)
-
-
 def changed_files_from_file(source_root, path):
     with open(path) as handle:
         return absolute_paths(handle, source_root)
 
 
 def parse_args(args):
-    parser = optparse.OptionParser(usage='%prog --baseline=FILE --current=FILE [options]',
+    parser = optparse.OptionParser(usage='%prog --current=FILE [--baseline=FILE] [options]',
                                    epilog=_EPILOG, formatter=_PreformattedEpilog())
-    parser.add_option('--baseline', help='lcov trace from before the change, gzipped or not')
+    parser.add_option('--current', help='lcov trace from after the change, gzipped or not')
+    parser.add_option('--baseline', help='lcov trace from before the change, gzipped or not. '
+                                         'Optional: without it, --git-diff still gives patch '
+                                         'coverage of the lines the change added, off the one '
+                                         'trace and so off one test run')
     parser.add_option('--baseline-source-root', metavar='DIR',
                       help='The checkout the baseline trace was produced in, if it was not '
                            'this one. Its paths are rebased onto --source-root before '
                            'anything is compared. A baseline needs no binaries, so this is '
                            'what makes a kept, downloaded or bot-produced one usable')
-    parser.add_option('--current', help='lcov trace from after the change, gzipped or not')
-    parser.add_option('--output-dir', help='Directory to write the HTML delta report into. '
-                                           'Nothing is opened in a browser; the path is printed')
+    parser.add_option('--output-dir', help='Directory to write the report into. Nothing is '
+                                           'opened in a browser; the path is printed')
     parser.add_option('--changed-files', metavar='FILE',
                       help='File listing the changed paths, one per line, absolute or relative '
-                           'to the checkout. Restricts the report, and therefore '
-                           '--fail-under-delta, to those files')
+                           'to the checkout. FILE-LEVEL only -- it carries no line numbers, so '
+                           'it restricts which files are reported and gated but cannot measure '
+                           'the lines you added. Use --git-diff for that')
     parser.add_option('--git-diff', metavar='REF',
-                      help='Derive the changed paths from git diff --name-only REF. This is what '
-                           'makes the tool usable in review. Combines with --changed-files')
+                      help='Derive the change from git diff -U0 REF, hunks and all. This is '
+                           'what makes the tool usable in review: it gives both the file list '
+                           'and the added line numbers patch coverage needs. `main` means '
+                           'everything since main including the working tree and untracked '
+                           'files, `main...HEAD` only the commits. Combines with '
+                           '--changed-files')
     parser.add_option('--source-root', help='Top of the checkout, used to canonicalize copied '
                                             'header paths in both traces and to resolve relative '
                                             'changed-file paths. Defaults to this checkout')
+    parser.add_option('--fail-under-patch', type='float', metavar='PERCENT',
+                      help='Exit {} if fewer than PERCENT of the added lines that have '
+                           'coverage data were executed. Needs --git-diff, since only a diff '
+                           'carries line numbers. A change that added no instrumented lines '
+                           'at all passes'.format(COVERAGE_GATE_EXIT_CODE))
     parser.add_option('--fail-under-delta', type='float', metavar='PERCENT',
                       help='Exit {} if line coverage fell by more than PERCENT percentage '
-                           'points, so this can gate CI. 0 fails on any drop at all. The gate is '
-                           'on the percentage, over whichever files the report covers; '
-                           'line-level regressions are reported but do not fail it by themselves. '
+                           'points, so this can gate CI. 0 fails on any drop at all. Needs '
+                           '--baseline. The gate is on the percentage, over whichever files '
+                           'the report covers; line-level regressions are reported but do not '
+                           'fail it by themselves. It cannot see a wholly untested addition to '
+                           'a large well-covered file, which --fail-under-patch can. '
                            'For a threshold on absolute coverage rather than on the change, see '
                            "generate-coverage-report's --fail-under-lines".format(
                                COVERAGE_GATE_EXIT_CODE))
@@ -163,50 +189,41 @@ def parse_args(args):
     options, remaining = parser.parse_args(args)
     if remaining:
         parser.error('Unexpected arguments: {}'.format(' '.join(remaining)))
-    for name in ('baseline', 'current'):
+    if not options.current:
+        parser.error('--current is required')
+    for name in ('current', 'baseline', 'changed_files'):
         value = getattr(options, name)
-        if not value:
-            parser.error('--{} is required'.format(name))
-        if not os.path.isfile(value):
-            parser.error('--{} {} does not exist'.format(name, value))
-    if options.changed_files and not os.path.isfile(options.changed_files):
-        parser.error('--changed-files {} does not exist'.format(options.changed_files))
-    if options.fail_under_delta is not None and options.fail_under_delta < 0:
-        parser.error('--fail-under-delta is a size, so it cannot be negative')
+        if value and not os.path.isfile(value):
+            parser.error('--{} {} does not exist'.format(name.replace('_', '-'), value))
+    if not options.baseline and not (options.git_diff or options.changed_files):
+        # Without a baseline there is no comparison, so the change has to be named some other
+        # way or there is nothing here that generate-coverage-report does not already do.
+        parser.error('Without --baseline there is nothing to compare against, so name the '
+                     'change: --git-diff=REF for patch coverage of the lines it added, or '
+                     '--changed-files=FILE for a file-level view')
+    if options.baseline_source_root and not options.baseline:
+        parser.error('--baseline-source-root only makes sense with --baseline')
+    if options.fail_under_delta is not None:
+        if not options.baseline:
+            # It used to warn and exit 0 in every case it could not evaluate itself. Refusing
+            # up front is the same fix applied one step earlier.
+            parser.error('--fail-under-delta compares against a baseline, so it needs '
+                         '--baseline. For a gate that needs only this run, use '
+                         '--fail-under-patch')
+        if options.fail_under_delta < 0:
+            parser.error('--fail-under-delta is a size, so it cannot be negative')
+    if options.fail_under_patch is not None:
+        if not options.git_diff:
+            parser.error('--fail-under-patch measures the lines the change added, so it needs '
+                         '--git-diff. --changed-files carries no line numbers')
+        if not 0 <= options.fail_under_patch <= 100:
+            parser.error('--fail-under-patch is a percentage, so it has to be between 0 and 100')
     return options
 
 
-def main(args):
-    options = parse_args(args)
-    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
-                        format='%(levelname)s: %(message)s')
-
-    source_root = options.source_root or WebKitFinder(FileSystem()).webkit_base()
-
-    changed_files = None
-    if options.changed_files or options.git_diff:
-        changed_files = set()
-        try:
-            if options.changed_files:
-                changed_files |= changed_files_from_file(source_root, options.changed_files)
-            if options.git_diff:
-                changed_files |= changed_files_from_git(source_root, options.git_diff)
-        except (EnvironmentError, RuntimeError) as error:
-            # A mistyped ref is the most likely way to get here, and a traceback would say
-            # much less about it than the message git already produced.
-            _log.error('%s', error)
-            return 1
-        if not changed_files:
-            _log.error('No changed files to compare.')
-            return 1
-        _log.info('Restricting the comparison to %d changed path(s)', len(changed_files))
-
-    try:
-        delta = compare_lcov_files(options.baseline, options.current, source_root, changed_files,
-                                   baseline_source_root=options.baseline_source_root)
-    except RuntimeError as error:
-        _log.error('%s', error)
-        return 1
+def report_delta(options, source_root, baseline_files, current_files, changed_files):
+    """Print and write the delta report. 1 if it could not be made, 2 if its gate fired."""
+    delta = compare(baseline_files, current_files, changed_files)
     if delta.ignored_path_count:
         _log.info('Ignored %d changed path(s) that are not C, C++ or Objective-C sources',
                   delta.ignored_path_count)
@@ -248,8 +265,8 @@ def main(args):
         # gate: with a baseline rooted in another checkout, every file reads as new, the
         # baseline contributes nothing, and this is the branch that was taken -- so the tool
         # said "cannot be applied" once, at WARNING, and exited 0. A gate that cannot evaluate
-        # itself has to fail, which is the same rule coverage_thresholds applies to a metric
-        # with nothing to measure.
+        # itself has to fail, the same rule coverage_thresholds applies to a metric with
+        # nothing to measure.
         _log.error('There is no baseline line coverage percentage for %s, so '
                    '--fail-under-delta cannot be evaluated and is failing rather than '
                    'silently passing. Do the two traces describe the same files?', scope)
@@ -261,6 +278,115 @@ def main(args):
     _log.info('Line coverage over %s changed by %+.2fpp, within the %.2fpp allowed by '
               '--fail-under-delta.', scope, change, options.fail_under_delta)
     return 0
+
+
+def report_patch(options, source_root, added_lines, current_files, line_numbers=True):
+    """Print and write the patch report. 1 if it could not be made, 2 if its gate fired."""
+    patch = PatchCoverage(added_lines, current_files, line_numbers=line_numbers)
+    if patch.ignored_path_count:
+        _log.info('Ignored %d changed path(s) that are not C, C++ or Objective-C sources',
+                  patch.ignored_path_count)
+    if not patch.files:
+        _log.error('None of the changed source files have coverage data in %s, so there is '
+                   'nothing to measure. Was the build instrumented, does --source-root match '
+                   'the paths in the trace, and did the run exercise these binaries?',
+                   options.current)
+        return 1
+
+    summary = format_patch_summary(patch, source_root=source_root, max_files=options.max_files)
+    print(summary, end='')
+    if options.output_dir:
+        name = 'patch-summary.txt' if line_numbers else 'changed-files-summary.txt'
+        path = os.path.join(options.output_dir, name)
+        with open(path, 'w') as handle:
+            handle.write(summary)
+        _log.info('Wrote %s', path)
+
+    if options.fail_under_patch is None:
+        return 0
+    if not patch.instrumented_line_count:
+        # Not a gate that could not be evaluated: the change genuinely added no line any test
+        # could execute -- comments, declarations, a header rename -- and there is nothing for
+        # a test to reach. Failing that would make the flag unusable on a real branch.
+        _log.info('The change added no lines with coverage data, so there is nothing for '
+                  '--fail-under-patch to require.')
+        return 0
+    percent = patch.percent()
+    if percent < options.fail_under_patch - _TOLERANCE:
+        _log.error('Patch coverage is %.2f%% (%d of %d added lines with coverage data), below '
+                   'the %.2f%% required by --fail-under-patch.', percent,
+                   patch.covered_line_count, patch.instrumented_line_count,
+                   options.fail_under_patch)
+        return COVERAGE_GATE_EXIT_CODE
+    _log.info('Patch coverage is %.2f%% (%d of %d added lines with coverage data), at or above '
+              'the %.2f%% required by --fail-under-patch.', percent, patch.covered_line_count,
+              patch.instrumented_line_count, options.fail_under_patch)
+    return 0
+
+
+def main(args):
+    options = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(levelname)s: %(message)s')
+
+    source_root = options.source_root or WebKitFinder(FileSystem()).webkit_base()
+
+    added_lines = None
+    changed_files = None
+    if options.changed_files or options.git_diff:
+        changed_files = set()
+        try:
+            if options.changed_files:
+                changed_files |= changed_files_from_file(source_root, options.changed_files)
+            if options.git_diff:
+                # One git invocation for both the file list and the line numbers, so the two
+                # cannot disagree about what the change is. This is also where untracked files
+                # enter: git diff --name-only never mentioned them, so a brand-new file used
+                # to be missing from the scope entirely.
+                added_lines = git_diff_added_lines(source_root, options.git_diff)
+                changed_files |= set(added_lines)
+        except (EnvironmentError, RuntimeError) as error:
+            # A mistyped ref is the most likely way to get here, and a traceback would say
+            # much less about it than the message git already produced.
+            _log.error('%s', error)
+            return 1
+        if not changed_files:
+            _log.error('No changed files to compare.')
+            return 1
+        _log.info('Restricting the comparison to %d changed path(s)', len(changed_files))
+
+    try:
+        baseline_files, current_files = load_traces(
+            options.current, options.baseline, source_root=source_root,
+            baseline_source_root=options.baseline_source_root)
+    except RuntimeError as error:
+        _log.error('%s', error)
+        return 1
+
+    if options.output_dir:
+        os.makedirs(options.output_dir, exist_ok=True)
+
+    status = 0
+    if baseline_files is not None:
+        code = report_delta(options, source_root, baseline_files, current_files, changed_files)
+        if code == 1:
+            return 1
+        status = max(status, code)
+    if added_lines is not None:
+        code = report_patch(options, source_root, added_lines, current_files)
+        if code == 1:
+            return 1
+        status = max(status, code)
+    elif baseline_files is None:
+        # --current and --changed-files with no diff and no baseline. A list of paths carries
+        # no line numbers, so the only thing left to report is the file-level view, which is
+        # what --baseline=X --current=X used to be a way of asking for.
+        code = report_patch(options, source_root, {path: [] for path in changed_files},
+                            current_files, line_numbers=False)
+        if code == 1:
+            return 1
+        status = max(status, code)
+    return status
 
 
 if __name__ == '__main__':

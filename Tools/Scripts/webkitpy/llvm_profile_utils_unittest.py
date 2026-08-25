@@ -23,6 +23,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGE.
 
+import fcntl
 import json
 import os
 import shutil
@@ -34,9 +35,12 @@ from unittest import mock
 
 from webkitpy import llvm_profile_utils
 from webkitpy.llvm_profile_utils import (
-    COVERAGE_PROFILE_DIRECTORY, LLVMCov, collect_coverage_profiles,
-    collected_profiles_with_no_object, objects_with_no_profile_data, profile_name_prefix,
-    read_instrumentation, survey_instrumentation, unreadable_profiles_from_stderr)
+    COVERAGE_PROFILE_DIRECTORY, CoverageProfileDirectoryInUse, LLVMCov,
+    acquire_coverage_profile_directory_lock, collect_coverage_profiles,
+    collected_profiles_with_no_object, coverage_profile_lock_path, objects_with_no_profile_data,
+    prepare_coverage_profile_directory, profile_name_prefix, read_instrumentation,
+    release_coverage_profile_directory_lock, survey_instrumentation,
+    unreadable_profiles_from_stderr)
 
 
 def _mach_o(profile_filename=None, instrumented=True, sections=(), fat=False,
@@ -488,6 +492,18 @@ class LLVMCovArgumentsTest(unittest.TestCase):
             '-path-equivalence=/build,/src',
         ])
 
+    def test_sources_are_passed_positionally_and_never_as_sources_equals(self):
+        # Verified against the current Apple LLVM: --sources=PATH is accepted, silently ignored and
+        # produces the whole report -- 1,022,546 lines for WebCore against 35,978 for the same
+        # scope passed this way -- with nothing on stderr. Getting this wrong is a scoped report
+        # that is quietly the unscoped one.
+        self.assertEqual(LLVMCov._sources_arguments(['/checkout/Source/WebCore/dom']),
+                         ['--sources', '/checkout/Source/WebCore/dom'])
+        self.assertEqual(LLVMCov._sources_arguments(['/a', '/b']), ['--sources', '/a', '/b'])
+
+    def test_no_sources_adds_no_arguments(self):
+        self.assertEqual(LLVMCov._sources_arguments([]), [])
+
 
 class AtomicOutputTest(unittest.TestCase):
     """A failed export must not leave a well-formed truncated trace at the final filename.
@@ -587,6 +603,111 @@ class CollectCoverageProfilesTest(unittest.TestCase):
                                         os.path.join(self._directory, 'does-not-exist'))
         self._patch.start()
         self.assertEqual(collect_coverage_profiles(self._destination), [])
+
+
+class PrepareCoverageProfileDirectoryTest(unittest.TestCase):
+    """The directory is machine-global, so clearing it is the one place a run can destroy another.
+
+    The clearing itself is load-bearing and must stay: %Nm merges into an existing profile rather
+    than replacing it, so a leftover from an earlier run or a rebuild would be folded into this
+    run's counters. What it cannot do on its own is tell an abandoned profile from one a
+    concurrent run is still writing to.
+    """
+
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.directory, ignore_errors=True)
+        self.profile_directory = os.path.join(self.directory, 'WebKitCoverage')
+        self._patch = mock.patch.object(llvm_profile_utils, 'COVERAGE_PROFILE_DIRECTORY',
+                                        self.profile_directory)
+        self._patch.start()
+        release_coverage_profile_directory_lock()
+        self.addCleanup(self._patch.stop)
+        self.addCleanup(release_coverage_profile_directory_lock)
+
+    def write_profile(self, name, contents='profile'):
+        os.makedirs(self.profile_directory, exist_ok=True)
+        with open(os.path.join(self.profile_directory, name), 'w') as handle:
+            handle.write(contents)
+
+    def test_a_missing_directory_is_created(self):
+        prepare_coverage_profile_directory()
+        self.assertTrue(os.path.isdir(self.profile_directory))
+
+    def test_stale_profiles_are_removed_and_counted(self):
+        # Counted because this is data being discarded: an interrupted run whose profiles were
+        # never collected looks exactly like a rebuild's leftovers from in here.
+        self.write_profile('WebCore_1_0.profraw', 'x' * 100)
+        self.write_profile('WebKit_2_0.profraw', 'y' * 50)
+        stale = prepare_coverage_profile_directory()
+        self.assertEqual((stale.count, stale.total_bytes), (2, 150))
+        self.assertEqual([name for name in os.listdir(self.profile_directory)
+                          if name.endswith('.profraw')], [])
+
+    def test_nothing_stale_is_counted_as_nothing(self):
+        self.assertEqual(prepare_coverage_profile_directory(), (0, 0))
+
+    def test_only_profiles_are_removed(self):
+        self.write_profile('WebCore_1_0.profraw')
+        self.write_profile('notes.txt')
+        prepare_coverage_profile_directory()
+        self.assertEqual(sorted(os.listdir(self.profile_directory)),
+                         sorted([llvm_profile_utils.COVERAGE_PROFILE_LOCK_FILENAME, 'notes.txt']))
+
+    def test_the_lock_is_held_afterwards_and_names_this_process(self):
+        prepare_coverage_profile_directory()
+        with open(coverage_profile_lock_path()) as handle:
+            self.assertIn('pid {}'.format(os.getpid()), handle.read())
+
+    def test_preparing_twice_in_one_process_is_not_a_deadlock(self):
+        # The harness calls this once, but a tool that calls it again must not lock itself out.
+        prepare_coverage_profile_directory()
+        prepare_coverage_profile_directory()
+
+    def test_a_run_already_holding_the_lock_is_refused_and_named(self):
+        # An flock is per open file description, so a second descriptor stands in for another
+        # process here -- and a real other process is what this is for: it would otherwise delete
+        # this run's live mmapped profiles and then collect whatever survived into its own
+        # --coverage-dir.
+        os.makedirs(self.profile_directory, exist_ok=True)
+        other = open(coverage_profile_lock_path(), 'a+')
+        self.addCleanup(other.close)
+        other.write('pid 4242 (run-webkit-tests) since now\n')
+        other.flush()
+        fcntl.flock(other.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+        with self.assertRaises(CoverageProfileDirectoryInUse) as raised:
+            prepare_coverage_profile_directory()
+        self.assertIn('pid 4242', str(raised.exception))
+        self.assertIn('run-webkit-tests', str(raised.exception))
+
+    def test_a_refused_run_does_not_delete_the_other_runs_profiles(self):
+        os.makedirs(self.profile_directory, exist_ok=True)
+        other = open(coverage_profile_lock_path(), 'a+')
+        self.addCleanup(other.close)
+        fcntl.flock(other.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self.write_profile('WebCore_1_0.profraw')
+
+        with self.assertRaises(CoverageProfileDirectoryInUse):
+            prepare_coverage_profile_directory()
+        self.assertIn('WebCore_1_0.profraw', os.listdir(self.profile_directory))
+
+    def test_the_lock_is_released_when_the_holder_goes_away(self):
+        # Which is why there is no stale-lock problem to solve: a SIGKILLed run closes its
+        # descriptor, so the next run takes the lock without having to decide whether a recorded
+        # pid is still alive.
+        os.makedirs(self.profile_directory, exist_ok=True)
+        other = open(coverage_profile_lock_path(), 'a+')
+        fcntl.flock(other.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        other.close()
+        prepare_coverage_profile_directory()
+
+    def test_a_lock_file_that_cannot_be_opened_warns_rather_than_refusing(self):
+        # The directory is mode 1777 so any user's sandboxed process can write a profile there,
+        # which means the lock file can belong to somebody else.
+        os.makedirs(self.profile_directory, exist_ok=True)
+        with mock.patch('builtins.open', side_effect=PermissionError('denied')):
+            self.assertIsNone(acquire_coverage_profile_directory_lock())
 
 
 class LcovCanonicalizationTest(unittest.TestCase):

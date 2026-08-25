@@ -50,7 +50,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from webkitpy.common.host import Host
 from webkitpy.coverage_build_inventory import find_absent_files
-from webkitpy.coverage_directory_index import write_report
+from webkitpy.coverage_directory_index import write_directory_index, write_report
 from webkitpy.coverage_lcov import (
     PathCanonicalizer, parse_lcov, parse_lcov_source_files, project_totals,
     third_party_copied_header_ignore_regexes)
@@ -184,6 +184,35 @@ def product_name(relative):
     return os.path.basename(relative)
 
 
+def resolve_source_scopes(scopes, source_root):
+    """(absolute paths for --sources, the ones that do not exist).
+
+    llvm-cov matches --sources against the absolute paths recorded in the coverage mapping, and
+    resolves a relative argument against its own working directory -- so a relative path works
+    only when the tool happens to have been run from the checkout root, and silently scopes to
+    nothing otherwise. Resolve it here instead: absolute as given, else relative to the current
+    directory when something is there, else relative to the checkout root, which is where the
+    recorded paths are rooted.
+    """
+    resolved, missing = [], []
+    for scope in scopes:
+        if os.path.isabs(scope):
+            path = os.path.normpath(scope)
+        elif os.path.exists(scope):
+            path = os.path.abspath(scope)
+        else:
+            path = os.path.normpath(os.path.join(source_root, scope))
+        if not os.path.exists(path):
+            missing.append(path)
+        resolved.append(path)
+    return resolved, missing
+
+
+def is_under_any(path, prefixes):
+    return any(path == prefix or path.startswith(prefix.rstrip('/') + os.sep)
+               for prefix in prefixes)
+
+
 def selected_products(products, available):
     """The entries of available that products names, or all of them when products is None.
 
@@ -266,6 +295,17 @@ def parse_args(args):
                            'together with --object is how a tool that already knows its own '
                            "product's path asks for that one and nothing else".format(
                                ', '.join(product_name(entry) for entry in INSTRUMENTED_PRODUCTS)))
+    parser.add_option('--sources', '--only', action='append', dest='sources', default=[],
+                      metavar='PATH',
+                      help='Report only on source under PATH, which may be a directory or a '
+                           'single file, relative to the checkout root or absolute. Repeatable. '
+                           'This is the difference between an all-day artifact and an answer to '
+                           '"is the code I just wrote tested": measured against the same profile '
+                           'and binaries, --sources Source/WebCore/dom takes the lcov export from '
+                           '751 MB and 18,237 files to 3.7 MB and 497. It scopes the numbers as '
+                           'well as the output, so the totals are then the scope\'s totals and '
+                           'not the project\'s -- which the provenance record says. Pair it with '
+                           '--no-build-inventory for the fastest loop')
     parser.add_option('--path-equivalence', action='append', default=[], metavar='FROM,TO',
                       help='Passed through to llvm-cov, for reporting on a different machine than the '
                            'one that built. Note this only affects where llvm-cov looks for source text; '
@@ -283,6 +323,11 @@ def parse_args(args):
                            'larger report')
     parser.add_option('--no-html', action='store_false', dest='html', default=True,
                       help='Skip the HTML report: the directory index and the per-file line views')
+    parser.add_option('--no-source-views', action='store_false', dest='source_views', default=True,
+                      help='Write the directory index but not the per-file line views. They are '
+                           'the largest part of the report -- 288 MB for 16,149 files -- and the '
+                           'slowest part of an unscoped run, and the index alone answers "which '
+                           'directory is the gap in". --no-html would drop the index too')
     parser.add_option('--llvm-cov-html', action='store_true', default=False,
                       help="Also produce llvm-cov's own per-file HTML pages, in html/. They are "
                            'off by default because they are 909 MB of the 1.7 GB a full-suite '
@@ -364,7 +409,7 @@ def parse_args(args):
     return options
 
 
-def summarize_absent_files(port, lcov_path, ignore_regexes, output_directory):
+def summarize_absent_files(port, lcov_path, ignore_regexes, output_directory, sources=()):
     """Work out and report the files the coverage data cannot describe at all.
 
     Returns an AbsenceReport, or None if the build directory does not carry enough of a
@@ -380,6 +425,8 @@ def summarize_absent_files(port, lcov_path, ignore_regexes, output_directory):
                      'Percentages below are over an unknown fraction of the tree.',
                      port._build_path())
         return None
+    if sources:
+        absence = restrict_absence_to_scope(absence, port.webkit_base(), sources)
 
     _log.info('%s', absence.denominator_sentence())
     for _, label, files, lines in absence.reasons():
@@ -393,6 +440,41 @@ def summarize_absent_files(port, lcov_path, ignore_regexes, output_directory):
                 absent.path, absent.reason, absent.detail, absent.physical_lines))
     _log.info('Wrote %s', listing)
     return absence
+
+
+def restrict_absence_to_scope(absence, checkout_root, sources):
+    """An AbsenceReport over only the files under one of the --sources scopes.
+
+    find_absent_files() enumerates the whole checkout, which is right for a whole-tree report and
+    catastrophically wrong for a scoped one: every first-party file outside the scope is absent
+    from a scoped trace by construction, so an unrestricted report would present ~8,000 perfectly
+    healthy files as never compiled, and the caveat sentence that travels with the headline
+    percentage would be a lie about the whole tree rather than a fact about the scope.
+
+    Restricted here rather than in coverage_build_inventory, which is owned elsewhere. The cheaper
+    shape would be find_absent_files(checkout_root, build_directory, reported_paths,
+    third_party_regexes=(), scope_prefixes=()) -- with scope_prefixes filtering the universe
+    before anything is classified -- which would also save the classification and physical-line
+    count of the ~2,400 absent files outside the scope. This version pays for that work and throws
+    the result away: measured 17.1 s of the pipeline either way. Pair --sources with
+    --no-build-inventory for a fast loop.
+
+    The denominator is recomputed from the same universe find_absent_files() partitions, so that
+    reported + absent is exactly the number of first-party implementation files in the scope, and
+    not the number of trace records that happen to fall inside it.
+    """
+    from webkitpy.coverage_build_inventory import AbsenceReport, enumerate_source_files
+
+    restricted = AbsenceReport()
+    restricted.compiled_file_count = absence.compiled_file_count
+    for absent in absence.files:
+        if is_under_any(os.path.join(checkout_root, absent.path), sources):
+            restricted.add(absent)
+    in_scope = sum(1 for relative in enumerate_source_files(checkout_root)
+                   if is_under_any(os.path.join(checkout_root, relative), sources))
+    restricted.total_file_count = in_scope
+    restricted.reported_file_count = max(0, in_scope - restricted.absent_file_count)
+    return restricted
 
 
 def warn_about_objects_with_no_profile_data(objects, raw_profiles):
@@ -517,6 +599,20 @@ def main(args):
     host = Host()
     port = host.port_factory.get(options.platform, options)
 
+    # Resolved and checked before any work: a --sources path that matches nothing makes llvm-cov
+    # produce an empty report rather than complain, so a typo would otherwise cost a full run and
+    # then say "contained no coverage records".
+    sources, missing_sources = resolve_source_scopes(options.sources, port.webkit_base())
+    if missing_sources:
+        for path in missing_sources:
+            _log.error('--sources %s does not exist', path)
+        _log.error('llvm-cov matches --sources against paths recorded in the coverage mapping, '
+                   'and reports nothing rather than failing when none of them match.')
+        return 1
+    if sources:
+        _log.info('Reporting only on %s, so every total below is that scope and not the project.',
+                  ', '.join(sources))
+
     try:
         objects = instrumented_binary_paths(port, options.extra_objects,
                                             options.include_test_support, options.products)
@@ -597,6 +693,7 @@ def main(args):
         raw_profile_count=len(raw_profiles),
         unreadable_raw_profile_count=len(unreadable_profiles),
         ignore_filename_regexes=ignore_regexes,
+        sources_scope=sources,
         include_third_party=options.include_third_party,
         include_test_support=options.include_test_support,
         generator=os.path.basename(__file__))
@@ -609,23 +706,25 @@ def main(args):
     # with a different profile.
     def make_summary():
         return LLVMCov.report(objects, profile_path, ignore_regexes, options.path_equivalence,
-                              check_binary_ids=True)
+                              check_binary_ids=True, sources=sources)
 
     def make_lcov():
         return LLVMCov.export_lcov(objects, profile_path, lcov_path, ignore_regexes,
                                    options.path_equivalence, compress=options.compress_lcov,
-                                   header_line=trace_comment(provenance))
+                                   header_line=trace_comment(provenance), sources=sources)
 
     def make_html():
         return LLVMCov.show_html(objects, profile_path, html_dir, ignore_regexes,
                                  options.path_equivalence,
-                                 show_instantiations=options.show_instantiations)
+                                 show_instantiations=options.show_instantiations,
+                                 sources=sources)
 
     def make_suite_lcov(suite_profile, output_path):
         return lambda: LLVMCov.export_lcov(objects, suite_profile, output_path, ignore_regexes,
                                            options.path_equivalence,
                                            compress=options.compress_lcov,
-                                           header_line=trace_comment(provenance))
+                                           header_line=trace_comment(provenance),
+                                           sources=sources)
 
     work = {'summary': make_summary}
     # The directory index and the line views are both built from the lcov trace, so it is
@@ -713,7 +812,8 @@ def main(args):
     # count -- wtf/ASCIICType.cpp is a lookup table -- so a 0% row would invent a denominator.
     absence = None
     if options.build_inventory:
-        absence = summarize_absent_files(port, lcov_path, ignore_regexes, options.output_dir)
+        absence = summarize_absent_files(port, lcov_path, ignore_regexes, options.output_dir,
+                                         sources=sources)
 
     thresholds = thresholds_from_options(options)
     totals = None
@@ -736,7 +836,7 @@ def main(args):
         suite_line_totals = summarize_suites(port.webkit_base(), suite_lcov_paths,
                                              combined_by_path)
 
-    if options.html:
+    if options.html and options.source_views:
         # A per-directory index plus one line-by-line view per file, both rendered from the
         # trace this run already has to parse. llvm-cov's own index lists every source file in
         # one 8MB page, and its per-file pages are 909MB of the report.
@@ -750,6 +850,20 @@ def main(args):
                   os.path.join(options.output_dir, 'index.html'))
         if options.llvm_cov_html:
             _log.info('Wrote %s', os.path.join(html_dir, 'index.html'))
+    elif options.html:
+        # The index without the line views. Every file is then listed without a link, which is
+        # what the index already does for a file whose source it cannot read -- so the tooltip
+        # says "the source could not be read", which is not the reason here. The alternative is
+        # linking to pages that do not exist, and 477 dead links in a shipped report is a bug this
+        # branch has already had once. write_directory_index() taking an unlinkable_reason=str to
+        # put in that tooltip is the change that would fix it.
+        pages = write_directory_index(
+            lcov_path, options.output_dir, source_root=port.webkit_base(), absence=absence,
+            build_directory=port._build_path(), coverage_by_path=combined_by_path,
+            unlinkable=set(combined_by_path), suite_line_totals=suite_line_totals,
+            index_link='html/index.html' if options.llvm_cov_html else None)
+        _log.info('Wrote %d directory pages and no line views (--no-source-views); start at %s',
+                  pages, os.path.join(options.output_dir, 'index.html'))
 
     if not options.lcov:
         os.unlink(lcov_path)
