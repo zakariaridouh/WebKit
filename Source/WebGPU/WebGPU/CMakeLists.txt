@@ -96,8 +96,38 @@ if (SWIFT_REQUIRED)
     webkit_target_compile_definitions(WebGPU PRIVATE ENABLE_WEBGPU_SWIFT=1)
 endif ()
 
-# Generate an empty cmakeconfig.h for the WebGPU target
-file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cmakeconfig.h CONTENT "")
+# Generate a cmakeconfig.h for the WebGPU target, carrying the coverage feature defines.
+#
+# This file is deliberately not ${CMAKE_BINARY_DIR}/cmakeconfig.h, and its directory is
+# placed ahead of the build root on WebGPU's include path, so WebGPU's translation units see
+# none of the ENABLE_/USE_/HAVE_ values the rest of the build sees -- 39 of them differ, and
+# five differ in value. That divergence is pre-existing and is left alone here.
+#
+# ENABLE_LLVM_COVERAGE cannot be left out of it, though. Instance.mm is the one translation
+# unit that defines WebGPU.framework's __llvm_profile_filename, under
+# #if ENABLE(LLVM_COVERAGE); with an empty cmakeconfig.h that conditional is 0, the framework
+# links against the profile runtime's own default.profraw instead, and its counters are
+# written to whatever the GPU process's working directory happens to be -- where the sandbox
+# denies the write. Measured on a coverage build of WebGPU.framework before this change:
+# 2,514 __profc_ symbols, nine __llvm_* sections, and no
+# /private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw string anywhere in the image. That is the
+# same silent failure that reported 45,005 instrumented WebGPU lines as 0.00% on the Xcode
+# build, where the cause was a missing per-framework define rather than a shadowed one.
+#
+# Emitted with their real values rather than only when set, so that the
+# LLVM_PROFILE_GENERATION/LLVM_COVERAGE #error in Instance.mm still fires here.
+set(_webgpu_cmakeconfig "")
+foreach (_feature IN ITEMS ENABLE_LLVM_COVERAGE ENABLE_LLVM_PROFILE_GENERATION)
+    if (${_feature})
+        string(APPEND _webgpu_cmakeconfig "#define ${_feature} 1\n")
+    else ()
+        string(APPEND _webgpu_cmakeconfig "#define ${_feature} 0\n")
+    endif ()
+endforeach ()
+file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cmakeconfig.h
+    CONTENT "${_webgpu_cmakeconfig}" @ONLY)
+unset(_webgpu_cmakeconfig)
+unset(_feature)
 target_include_directories(WebGPU PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 target_compile_options(WebGPU PRIVATE

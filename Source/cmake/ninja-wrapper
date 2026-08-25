@@ -53,6 +53,32 @@ if (getcwd() =~ m{/CMakeFiles/}) {
 
 # Real compilation
 my $bundlePolicy = $ENV{WK_UNIFIED_SOURCES_BUNDLE_POLICY};
+
+# A coverage build pins the policy, because the policy changes the coverage metadata and the
+# choice below is made per invocation. Measured on one WGSL bundle, same sources, rebuilt
+# incrementally so that the <= 8 command branch chose NoBundle: __llvm_covmap went from 868 to
+# 2,132 bytes and the object from 738,824 to 411,144 bytes, while __profc_ stayed at 307. A
+# larger WebCore bundle was separately measured at 3,232 __profc_ and a 1,244-byte covmap under
+# Bundle against 4,608 and 15,280 bytes under NoBundle. So a tree built full and then touched
+# once describes the same code at two different granularities, and llvm-cov reports whichever
+# each object happens to carry. Nothing detects that: --check-binary-ids compares the profile
+# against the binaries, and here the binaries and the profile agree with each other -- it is
+# the objects inside one image that disagree.
+#
+# Pinned to Bundle, which is what any build of more than eight commands already picks, so a
+# full coverage build is unchanged and only the incremental case stops flipping. NoBundle
+# yields strictly more mapping data and would be the better choice for fidelity, at a cost in
+# build CPU; that is a separate decision, and WK_UNIFIED_SOURCES_BUNDLE_POLICY still overrides.
+if (!defined($bundlePolicy) && open(my $stamp, '<', '.webkit-config-stamp')) {
+    while (my $line = <$stamp>) {
+        if ($line =~ /^ENABLE_COVERAGE=(?:ON|TRUE|YES|1)\s*$/) {
+            $bundlePolicy = "Bundle";
+            last;
+        }
+    }
+    close($stamp);
+}
+
 if (!defined($bundlePolicy)) {
     my $dryRun = `$ninja -n @ARGV 2>&1`;
     my ($totalCommands) = $dryRun =~ m{/(\d+)\]};

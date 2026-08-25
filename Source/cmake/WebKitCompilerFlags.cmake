@@ -346,6 +346,18 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND NOT "${LOWERCASE_CMAKE_HOST_SY
     add_link_options("$<$<CONFIG:Debug>:LINKER:--no-keep-memory>")
 endif ()
 
+# "none" is one of the three modes set-webkit-configuration --lto-mode accepts, and it means
+# no LTO. It reaches CMake as a string, though -- webkitdirs.pm passes -DLTO_MODE=none, since
+# `if (ltoMode())` is true for any non-empty mode -- and every test below is a bare
+# truthiness check, so it read as "some LTO" and produced -flto=none, which clang rejects
+# outright: "unsupported argument 'none' to option '-flto='". The Xcode side has always
+# mapped it correctly (WK_USER_LTO_MODE_none = NO in each Base.xcconfig); this is the CMake
+# side catching up. It matters for coverage because --lto-mode=none is a hard requirement
+# there, so the one mode a coverage build must use was the one that would not configure.
+if (LTO_MODE STREQUAL "none")
+    set(LTO_MODE "")
+endif ()
+
 if (LTO_MODE AND COMPILER_IS_CLANG AND NOT MSVC)
     set(CMAKE_C_FLAGS "-flto=${LTO_MODE} ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-flto=${LTO_MODE} ${CMAKE_CXX_FLAGS}")
@@ -376,7 +388,38 @@ if (COMPILER_IS_CLANG)
     endforeach ()
 endif ()
 
+# This used to be forced off for coverage builds, because ENABLE_COVERAGE=ON with
+# USE_PCH_CODEGEN=ON could not link WebCore.framework:
+#
+#   Undefined symbols: WebCore::RenderElement::createsGroupForStyle(Style::ComputedStyle const&)
+#
+# That was not a coverage bug. A PCH object holds an out-of-line copy of every inline function
+# the prefix header defines, so a caller whose callee is only declared there leaves an
+# unresolved reference; -Wl,-dead_strip deletes the unreferenced copy together with it, and
+# instrumentation perturbed the inliner just enough to pin one. The same shape fails with
+# coverage off once the caller is large enough.
+#
+# That one was WebCore's own function and was fixed at the source. Relinking WebCore without
+# -dead_strip surfaces eighteen more, all JSC inlines reached from a JSC declaration header the
+# prefix includes, and those are not fixable the same way: their definitions live in JSC's
+# *Inlines.h headers, which reference JSC internals WebCore does not link. Measured -- adding
+# JSCellInlines.h and StructureInlines.h to WebCorePrefix.h takes the count from 19 to 216, and
+# a smaller five-header set takes it to 44. -dead_strip is what makes -fpch-codegen viable over
+# a prefix header of declaration headers, not a workaround for a bug in one of them.
+#
+# Coverage does not lose anything to this flag. Comparing two full instrumented builds of this
+# tree, __llvm_covfun is equal or larger with it on -- WebCore +472 KB, WebKit +107 KB, and
+# JavaScriptCore, WebKitLegacy and WebGPU byte-identical -- because the prefix header's inlines
+# get mapping records instead of none. Counter counts dip slightly for JavaScriptCore and
+# WebKit, which is weak-symbol dedup at link time rather than lost mapping.
 option(USE_PCH_CODEGEN "Emit the inline functions a prefix header defines once into a per-target PCH object file" ON)
+
+# Reported because it is cached: an existing build directory keeps the value it was first
+# configured with, so this default does not reach a tree configured while coverage forced it
+# off. The flag decides what every PCH object contains, and therefore what each target links
+# and what coverage mapping it carries, so a tree that silently differs from a fresh one
+# differs in its output.
+message(STATUS "Prefix header codegen (USE_PCH_CODEGEN): ${USE_PCH_CODEGEN}")
 
 if (COMPILER_IS_GCC_OR_CLANG)
     # Careful: this needs to be above where ENABLED_COMPILER_SANITIZERS is set.

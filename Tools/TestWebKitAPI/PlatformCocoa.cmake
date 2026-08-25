@@ -724,6 +724,11 @@ unset(EXECUTABLE_NAME)
 unset(PRODUCT_NAME)
 unset(PRODUCT_BUNDLE_IDENTIFIER)
 
+# Declared with a bare add_library(), so WEBKIT_LIBRARY's call does not reach it. This bundle
+# is dlopened inside a WebContent process, where a default.profraw write is denied, so without
+# its own baked path its counters are lost.
+WEBKIT_BAKE_COVERAGE_PROFILE_PATH(TestWebKitAPIWebProcessPlugIn)
+
 set_target_properties(TestWebKitAPIWebProcessPlugIn PROPERTIES
     BUNDLE TRUE
     BUNDLE_EXTENSION wkbundle

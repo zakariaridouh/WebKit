@@ -180,6 +180,22 @@ def main(argv):
             depfile_target = arg[len("--ninja-depfile-target="):]
         elif arg.startswith("--ninja-depfile-exclude="):
             depfile_excludes.append(arg[len("--ninja-depfile-exclude="):])
+        elif arg.startswith("-fprofile-") or arg == "-fcoverage-mapping":
+            # Clang's instrumentation flags: -fprofile-instr-generate plus
+            # -fcoverage-mapping and -fprofile-list= for coverage,
+            # -fprofile-generate and -fprofile-use= for PGO. WebKitCommon.cmake
+            # puts them in CMAKE_<LANG>_FLAGS and in all three of
+            # CMAKE_{EXE,SHARED,MODULE}_LINKER_FLAGS, so CMake hands them to
+            # swiftc whenever the link language is Swift -- WebKit and WebGPU are
+            # both Swift_SHARED_LIBRARY_LINKER targets -- and swiftc rejects every
+            # one of them outright with "error: unknown argument".
+            #
+            # Dropped rather than forwarded as -Xcc: Swift codegen is deliberately
+            # left uninstrumented (that would take -profile-generate, spelled
+            # without the f), and what an instrumented C++ object actually needs
+            # from the link is libclang_rt.profile, which WebKitCommon.cmake names
+            # separately as an -Xlinker input on Swift link lines.
+            pass
         elif os.name == "nt" and arg.startswith("/") and len(arg) > 1:
             # Work around a bug in CMake: Its MSVC defaults
             # (Platform/Windows-MSVC.cmake) put raw linker switches like

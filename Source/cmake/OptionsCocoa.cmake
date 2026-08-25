@@ -221,7 +221,24 @@ if (NOT ENABLE_WEBGPU)
     unset(_webgpu_fwd)
     unset(_h)
 else ()
-    include_directories(SYSTEM "${CMAKE_BINARY_DIR}/WebGPU/Headers")
+    # Deliberately not SYSTEM. Clang neither instruments nor emits a coverage mapping record
+    # for code it reaches through a system-header include path, unless
+    # -mllvm -system-headers-coverage is also passed, so such code is missing from the report
+    # rather than shown as uncovered. Measured on this toolchain, one inline function in one
+    # header: -I gives two __profc_ symbols, -isystem gives one, and -isystem with that flag
+    # gives two again.
+    #
+    # This is a global include, so it was reaching 4,694 of the build's 4,769 translation
+    # units, while every other WebKit framework's headers arrive via -I (WTF 1,253, bmalloc
+    # 1,483, PAL 926, WebKit 484). WebGPU's own headers are WebKit's code and belong on the
+    # same footing.
+    #
+    # -mllvm -system-headers-coverage would have fixed it the other way round, and was
+    # rejected on cost: it also instruments libc++ and the SDK, which have no exclusion entry
+    # in CoverageExclusions.txt. Measured on one real JavaScriptCore unified bundle, it took
+    # the object from 27.3 MB to 51.5 MB and from 3,947 to 22,174 __profc_ symbols, to recover
+    # the five one-line accessors that WebGPU.h actually defines inline.
+    include_directories("${CMAKE_BINARY_DIR}/WebGPU/Headers")
 endif ()
 
 set(ENABLE_WEBKIT_LEGACY ON)

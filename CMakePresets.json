@@ -107,6 +107,22 @@
             "inherits": ["gtk-debug", "dev"]
         },
         {
+            "name": "gtk-coverage",
+            "displayName": "GTK Coverage (LLVM source-based coverage; requires Clang: CC=clang CXX=clang++)",
+            "inherits": ["gtk", "dev"],
+            "binaryDir": "WebKitBuild/GTK/Coverage",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "RelWithDebInfo"
+                },
+                "ENABLE_COVERAGE": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
             "name": "mac",
             "hidden": true,
             "inherits": ["cocoa"],
@@ -273,6 +289,22 @@
                 "ENABLE_EXPERIMENTAL_FEATURES": {
                     "type": "BOOL",
                     "value": "OFF"
+                }
+            }
+        },
+        {
+            "name": "mac-coverage",
+            "displayName": "macOS Coverage (LLVM source-based coverage, RelWithDebInfo, ccache)",
+            "inherits": ["mac", "dev"],
+            "binaryDir": "WebKitBuild/cmake-mac/Coverage",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "RelWithDebInfo"
+                },
+                "ENABLE_COVERAGE": {
+                    "type": "BOOL",
+                    "value": "ON"
                 }
             }
         },
@@ -518,6 +550,22 @@
             "name": "wpe-dev-debug",
             "displayName": "WPE Development Debug",
             "inherits": ["wpe-debug", "dev"]
+        },
+        {
+            "name": "wpe-coverage",
+            "displayName": "WPE Coverage (LLVM source-based coverage; requires Clang: CC=clang CXX=clang++)",
+            "inherits": ["wpe", "dev"],
+            "binaryDir": "WebKitBuild/WPE/Coverage",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "RelWithDebInfo"
+                },
+                "ENABLE_COVERAGE": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
         }
     ],
     "buildPresets": [
@@ -567,6 +615,11 @@
             "configurePreset": "mac-tsan"
         },
         {
+            "name": "mac-coverage",
+            "displayName": "macOS Coverage",
+            "configurePreset": "mac-coverage"
+        },
+        {
             "name": "gtk-release",
             "displayName": "GTK Release",
             "configurePreset": "gtk-release"
@@ -587,6 +640,11 @@
             "configurePreset": "gtk-dev-debug"
         },
         {
+            "name": "gtk-coverage",
+            "displayName": "GTK Coverage",
+            "configurePreset": "gtk-coverage"
+        },
+        {
             "name": "wpe-release",
             "displayName": "WPE Release",
             "configurePreset": "wpe-release"
@@ -605,6 +663,11 @@
             "name": "wpe-dev-debug",
             "displayName": "WPE Development Debug",
             "configurePreset": "wpe-dev-debug"
+        },
+        {
+            "name": "wpe-coverage",
+            "displayName": "WPE Coverage",
+            "configurePreset": "wpe-coverage"
         },
         {
             "name": "ios-release",

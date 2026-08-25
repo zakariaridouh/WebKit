@@ -185,6 +185,7 @@ class Port(object):
             use_cmake=bool(getattr(self._options, 'use_cmake', False)),
             use_xcode=bool(getattr(self._options, 'use_xcode', False)),
             asan=bool(getattr(self._options, 'asan', False)),
+            coverage=bool(getattr(self._options, 'coverage', False)),
         )
         self.pretty_patch = PrettyPatch(self._executive, self.path_from_webkit_base(), self._filesystem)
 
