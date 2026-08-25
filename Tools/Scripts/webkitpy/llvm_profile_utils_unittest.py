@@ -35,9 +35,10 @@ from unittest import mock
 
 from webkitpy import llvm_profile_utils
 from webkitpy.llvm_profile_utils import (
-    COVERAGE_PROFILE_DIRECTORY, CoverageProfileDirectoryInUse, LLVMCov,
+    COVERAGE_PROFILE_DIRECTORY, CoverageProfileDirectoryInUse, LLVMCov, LLVMCovExecutable,
     acquire_coverage_profile_directory_lock, collect_coverage_profiles,
-    collected_profiles_with_no_object, coverage_profile_lock_path, objects_with_no_profile_data,
+    collected_profiles_with_no_object, coverage_profile_directory_holder,
+    coverage_profile_lock_path, objects_with_no_profile_data,
     prepare_coverage_profile_directory, profile_name_prefix, read_instrumentation,
     release_coverage_profile_directory_lock, survey_instrumentation,
     unreadable_profiles_from_stderr)
@@ -505,6 +506,101 @@ class LLVMCovArgumentsTest(unittest.TestCase):
         self.assertEqual(LLVMCov._sources_arguments([]), [])
 
 
+class ToolchainSelectionTest(unittest.TestCase):
+    """Which llvm-cov runs, in what order, and which are refused.
+
+    There was no test for this at all, and the defect it hides is silent in both directions:
+    preference_ordered_paths() advanced a class attribute *before* yielding, so the first
+    candidate run() tried was index 1 and the intended binary was tried last, while
+    preferred_path() read the same mutated index -- so report and export, which run
+    concurrently, could be served by different binaries within one report.
+    """
+
+    VERSIONS = {
+        # A synthetic major, well above 3.2, so the comparison under test is meaningful
+        # without naming a toolchain.
+        '/xcode/OSX/llvm-cov': 'Apple LLVM version 99.0.0',
+        '/xcode/iOS/llvm-cov': 'Apple LLVM version 99.0.0',
+        '/xcode/Default/llvm-cov': 'Apple LLVM version 99.0.0',
+        '/usr/local/bin/llvm-cov': 'LLVM (http://llvm.org/):\n  LLVM version 3.2svn Apple '
+                                   'Build #3425-36',
+    }
+
+    def executable_class(self, detected, versions=None, returncode=1):
+        versions = self.VERSIONS if versions is None else versions
+
+        class Fake(llvm_profile_utils.ExecutablesFromEnvAndXcode):
+            EXECUTABLE_NAME = 'llvm-cov'
+
+            @classmethod
+            def detect_binaries(cls):
+                return list(detected)
+
+            @classmethod
+            def version_of(cls, path):
+                # Deliberately routed through the real parser rather than returning a number,
+                # because tolerating a non-zero exit is half of what is being tested.
+                completed = subprocess.CompletedProcess([path], returncode,
+                                                        stdout=versions.get(path, ''))
+                with mock.patch('subprocess.run', return_value=completed):
+                    return llvm_profile_utils.ExecutablesFromEnvAndXcode.version_of.__wrapped__(
+                        cls, path)
+
+        return Fake
+
+    def test_the_detected_order_is_the_order_run_tries(self):
+        detected = ['/xcode/OSX/llvm-cov', '/xcode/iOS/llvm-cov', '/xcode/Default/llvm-cov']
+        executable = self.executable_class(detected)
+        self.assertEqual(executable.preference_ordered_paths(), detected)
+        # Repeatedly, which is the property the old rotation broke.
+        self.assertEqual(executable.preference_ordered_paths(), detected)
+        self.assertEqual(executable.preferred_path(), '/xcode/OSX/llvm-cov')
+        self.assertEqual(executable.preferred_path(), '/xcode/OSX/llvm-cov')
+
+    def test_preferred_path_is_the_first_binary_run_tries(self):
+        # These have to agree: report() goes through run() and export_lcov(compress=True) has
+        # to name a binary up front, so a disagreement means one report's summary and its
+        # trace came from different toolchains.
+        executable = self.executable_class(['/xcode/OSX/llvm-cov', '/xcode/iOS/llvm-cov'])
+        self.assertEqual(executable.preferred_path(),
+                         executable.preference_ordered_paths()[0])
+
+    def test_a_binary_older_than_the_toolchain_is_refused(self):
+        executable = self.executable_class(['/xcode/OSX/llvm-cov', '/usr/local/bin/llvm-cov'])
+        self.assertEqual(executable.preference_ordered_paths(), ['/xcode/OSX/llvm-cov'])
+
+    def test_a_version_is_read_from_a_command_that_exits_non_zero(self):
+        # /usr/local/bin/llvm-cov on this machine prints its banner and exits 1. Requiring exit
+        # 0 reads it as having no version, which is why 3.2svn was never refused.
+        executable = self.executable_class(['/usr/local/bin/llvm-cov'], returncode=1)
+        self.assertEqual(executable.version_of('/usr/local/bin/llvm-cov')[0], 3)
+
+    def test_the_only_binary_is_kept_even_when_its_version_is_unreadable(self):
+        executable = self.executable_class(['/xcode/OSX/llvm-cov', '/somewhere/llvm-cov'],
+                                           versions={'/xcode/OSX/llvm-cov': '', '/somewhere/llvm-cov': ''})
+        self.assertEqual(executable.preference_ordered_paths(),
+                         ['/xcode/OSX/llvm-cov', '/somewhere/llvm-cov'])
+        executable = self.executable_class(['/usr/local/bin/llvm-cov'])
+        self.assertEqual(executable.preference_ordered_paths(), ['/usr/local/bin/llvm-cov'])
+
+    def test_no_binary_at_all_is_an_error_rather_than_a_silent_nothing(self):
+        executable = self.executable_class([])
+        self.assertEqual(executable.preference_ordered_paths(), [])
+        with self.assertRaises(RuntimeError):
+            executable.preferred_path()
+        with self.assertRaises(RuntimeError):
+            executable.run(['report'])
+
+    def test_this_machines_real_order_puts_the_toolchain_first(self):
+        # Regression cover for the measured defect: detection found the macOS SDK's copy first
+        # and run() tried it fourth, after /usr/local/bin's LLVM 3.2svn.
+        detected = LLVMCovExecutable.detect_binaries()
+        if not detected:
+            self.skipTest('No llvm-cov on this machine')
+        self.assertEqual(LLVMCovExecutable.preference_ordered_paths()[0], detected[0])
+        self.assertEqual(LLVMCovExecutable.preferred_path(), detected[0])
+
+
 class AtomicOutputTest(unittest.TestCase):
     """A failed export must not leave a well-formed truncated trace at the final filename.
 
@@ -708,6 +804,40 @@ class PrepareCoverageProfileDirectoryTest(unittest.TestCase):
         os.makedirs(self.profile_directory, exist_ok=True)
         with mock.patch('builtins.open', side_effect=PermissionError('denied')):
             self.assertIsNone(acquire_coverage_profile_directory_lock())
+
+    def test_nobody_is_holding_it_when_there_is_no_lock_file(self):
+        self.assertIsNone(coverage_profile_directory_holder())
+        os.makedirs(self.profile_directory, exist_ok=True)
+        self.assertIsNone(coverage_profile_directory_holder())
+
+    def test_a_lock_file_left_by_a_dead_run_names_nobody(self):
+        # The stale-file case, which is the whole reason this asks the kernel and not the file:
+        # flock is released when the holder dies but nothing truncates the text, so the real
+        # /private/tmp/WebKitCoverage/.webkit-coverage-run.lock routinely names a dead pid.
+        os.makedirs(self.profile_directory, exist_ok=True)
+        with open(coverage_profile_lock_path(), 'w') as handle:
+            handle.write('pid 20947 (run-webkit-tests) since 2026-08-22T11:04:00-0700\n')
+        self.assertIsNone(coverage_profile_directory_holder())
+        # And the directory is still claimable, which is the consequence that matters.
+        prepare_coverage_profile_directory()
+
+    def test_a_live_holder_is_named_without_taking_the_lock_from_it(self):
+        os.makedirs(self.profile_directory, exist_ok=True)
+        other = open(coverage_profile_lock_path(), 'a+')
+        self.addCleanup(other.close)
+        other.write('pid 4242 (run-webkit-tests) since now\n')
+        other.flush()
+        fcntl.flock(other.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+        self.assertIn('pid 4242', coverage_profile_directory_holder())
+        # Asking twice gives the same answer, and the holder still holds it.
+        self.assertIn('pid 4242', coverage_profile_directory_holder())
+        with self.assertRaises(CoverageProfileDirectoryInUse):
+            prepare_coverage_profile_directory()
+
+    def test_this_process_holding_it_reports_itself(self):
+        prepare_coverage_profile_directory()
+        self.assertIn('pid {}'.format(os.getpid()), coverage_profile_directory_holder())
 
 
 class LcovCanonicalizationTest(unittest.TestCase):

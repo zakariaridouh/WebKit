@@ -1,0 +1,654 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2026 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+"""Are the lines I just wrote tested? One command, from an unbuilt tree to one number.
+
+    Tools/Scripts/webkit-coverage svg/                # measure my change, running svg/
+    Tools/Scripts/webkit-coverage --dry-run           # what would it do, and what should I run?
+    Tools/Scripts/webkit-coverage --full-suite        # all 106,172 layout tests
+
+Until now this took three things a developer had to know independently, none of which was checked
+and none of which was documented outside PLAN.md: build-webkit --coverage,
+ENABLE_USER_SCRIPT_SANDBOXING=NO, and a WEBKIT_OUTPUTDIR of its own. Forget the first and the
+run completes, exits 0 and collects nothing -- with the only warning arriving after the run,
+which for the layout suite is hours later.
+
+So this does five things, in this order, and prints what it is doing at each step:
+
+1.  Resolves one build tree and says where it came from. webkit-build-directory applies a
+    last-built tiebreaker and will hand out the wrong tree, so nothing here asks it.
+2.  Pre-flights that the binaries are actually instrumented, which takes 0.34 s for all nine
+    products and is the single biggest win in the tool. Also checks the things PLAN 2 says cost
+    hours: an orphaned httpd or pywebsocket3 from a killed run, a held profile-directory lock,
+    and an ambiguous llvm-cov (this machine has an LLVM 3.2svn one on PATH).
+3.  Builds if it has to, forcing the required settings and printing each one with its reason.
+4.  Resolves a test scope and prints it. A suggestion is never applied automatically -- see
+    below.
+5.  Reports patch coverage of the lines the change added, scoped with --sources, and prints one
+    number and one path. The uncovered added lines are the product; the percentage is not.
+
+The scope is a SUGGESTION, always. With tests named on the command line this runs those tests
+and marks every number in the resulting report as a lower bound; with no tests named it prints
+what it would suggest and stops, because the alternatives are to start a two-hour run nobody
+asked for or to silently restrict one, and both are worse than asking. --full-suite is the
+explicit way to say "all of it".
+
+Why a subset changes the numbers: adding tests can only turn a line from uncovered to covered,
+so in a subset run a covered line is exact and an uncovered line is unknown. Every percentage
+from a scoped run is therefore written `>= 41.30%`, the report directory and the trace get a
+-selective infix, --fail-under-lines refuses to gate on it, and it cannot be compared against a
+full-suite baseline. --fail-under-patch does work, because it is sound in the useful direction:
+it can raise a false alarm and it cannot grant a false pass.
+"""
+
+import logging
+import optparse
+import os
+import subprocess
+import sys
+import time
+
+from webkitpy.common.host import Host
+from webkitpy.coverage_requirements import (
+    BUILD_OUTPUT_ENVIRONMENT_VARIABLE, DEFAULT_BUILD_DIRECTORY_NAME, FATAL, INSTRUMENTED_PRODUCTS,
+    NOTE, WARNING, build_directory_from_environment, conflicting_build_settings,
+    coverage_build_command, instrumentation_findings, missing_build_settings, normalize_build_root,
+    orphaned_server_findings, product_name, survey_products, toolchain_findings)
+from webkitpy.coverage_scope import CoverageScope
+from webkitpy.coverage_test_scope import layout_test_names, suggest_scope
+from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
+from webkitpy.llvm_profile_utils import (
+    COVERAGE_PROFILE_DIRECTORY, CoverageProfileDirectoryInUse,
+    acquire_coverage_profile_directory_lock, release_coverage_profile_directory_lock)
+from webkitpy.port import configuration_options, platform_options
+
+_log = logging.getLogger('webkit-coverage')
+
+# Distinct from 1 (the tooling broke) and from COVERAGE_GATE_EXIT_CODE (a gate fired). This one
+# means "I need you to tell me what to run": there is nothing wrong, and nothing has been done.
+NEEDS_A_SCOPE_EXIT_CODE = 3
+
+# The refs to try for "since what", in order, when --since is not given. A branch this checkout
+# does not have must not become a git error message about a ref the developer never typed.
+_DEFAULT_SINCE_REFS = ('main', 'origin/main')
+
+_EPILOG = """
+EXIT CODES
+  0  the report was produced.
+  1  something is wrong: an uninstrumented tree, a failed build, a broken test run.
+  {gate}  a gate fired -- --fail-under-patch was not met.
+  {scope}  no tests were named, so nothing has been run. The suggestion is above; run
+     webkit-coverage again with a scope, or with --full-suite.
+
+WHAT A SCOPED RUN CHANGES
+  Adding tests can only turn a line from uncovered to covered, so in a run over part of the
+  suite a covered line is exact and an uncovered line is unknown. A scoped run therefore
+  produces a report whose every percentage is written >=, in a -selective directory, with a
+  -selective trace, which --fail-under-lines refuses to gate on and compare-coverage-reports
+  refuses to compare against a full-suite baseline.
+
+  --fail-under-patch is the gate that still works, and it is sound but not complete: a line it
+  calls covered really was executed, so it can raise a false alarm and it cannot grant a false
+  pass. For a gate, that is the right direction.
+
+THE SUGGESTION
+  Name-based and advisory, from the 12 watchlist DEFINITIONS blocks that co-map Source/ to
+  LayoutTests/, from directory-name alignment, and from the tests the change itself edits or
+  rebaselines. It is never applied automatically, and it declines whenever it has no rule --
+  which is most of the time, and correctly: PLAN 10.2 measured the mean blast radius of a real
+  change at 86.1% of the suite, with p25 through p90 all at 100%.
+""".format(gate=COVERAGE_GATE_EXIT_CODE, scope=NEEDS_A_SCOPE_EXIT_CODE)
+
+
+class _PreformattedEpilog(optparse.IndentedHelpFormatter):
+    """optparse rewraps the epilog into one blob, and the paragraph breaks carry meaning."""
+
+    def format_epilog(self, epilog):
+        return epilog or ''
+
+
+def parse_args(args):
+    parser = optparse.OptionParser(usage='%prog [options] [TEST ...]', epilog=_EPILOG,
+                                   formatter=_PreformattedEpilog())
+    parser.add_options(platform_options())
+    parser.add_options(configuration_options())
+    parser.add_option('--build-directory', metavar='DIR',
+                      help='The coverage build tree. Either the tree or its configuration '
+                           'directory; both are accepted. Defaults to ${} and then to '
+                           '<checkout>/{}, which is deliberately not the ordinary build '
+                           'directory: an instrumented WebCore is many times the size of an '
+                           'uninstrumented one'.format(BUILD_OUTPUT_ENVIRONMENT_VARIABLE,
+                                                       DEFAULT_BUILD_DIRECTORY_NAME))
+    parser.add_option('--build', type='choice', choices=('auto', 'always', 'never'),
+                      default='auto', metavar='WHEN',
+                      help='auto (the default) builds only when the pre-flight says the tree '
+                           'cannot produce coverage; always builds first; never refuses to '
+                           'build and fails instead')
+    parser.add_option('--build-argument', action='append', dest='build_arguments', default=[],
+                      metavar='ARG',
+                      help='Extra argument for build-webkit, after the required ones so it wins '
+                           'a conflict (repeatable)')
+    parser.add_option('--since', metavar='REF',
+                      help='The change to measure, as a git ref: `main` means everything since '
+                           'main including the working tree and untracked files, `main...HEAD` '
+                           'only the commits. Defaults to {}'.format(' then '.join(
+                               _DEFAULT_SINCE_REFS)))
+    parser.add_option('--full-suite', action='store_true', default=False,
+                      help='Run the whole suite. Required to run it, because a run nobody asked '
+                           'for takes hours')
+    parser.add_option('--api-tests', metavar='ARGS', nargs=1,
+                      help='Also run the API tests, with ARGS passed to run-api-tests. Pass an '
+                           'empty string for all of them. They get a coverage directory of '
+                           'their own, so the report gets a column per suite')
+    parser.add_option('--output-dir', metavar='DIR',
+                      help='Where to write the report. Defaults to coverage-report under the '
+                           'build directory, with a -selective infix for a scoped run')
+    parser.add_option('--coverage-dir', metavar='DIR',
+                      help='Where to collect raw profiles. Defaults to coverage-profiles under '
+                           'the build directory')
+    parser.add_option('--all-sources', action='store_true', default=False,
+                      help='Report on the whole tree rather than only the files the change '
+                           'touched. The scoped report is 8.6 MB and about 15 s; the whole-tree '
+                           'one is 366 MB and 45 s, and answers a question this tool is not '
+                           'asking')
+    parser.add_option('--build-inventory', action='store_true', default=False,
+                      help='Work out which files this configuration never compiled. Off here, '
+                           'unlike in generate-coverage-report: it costs 17 s and its answer is '
+                           'about the whole tree, not about the change')
+    parser.add_option('--fail-under-patch', type='float', metavar='PERCENT',
+                      help='Exit {} if fewer than PERCENT of the added lines that have coverage '
+                           'data were executed. Sound but not complete on a scoped run: a false '
+                           'alarm is possible and a false pass is not'.format(
+                               COVERAGE_GATE_EXIT_CODE))
+    parser.add_option('-n', '--dry-run', action='store_true', default=False,
+                      help='Print the plan -- the tree, the pre-flight, the build command, the '
+                           'change, the scope -- and do nothing')
+    parser.add_option('-v', '--verbose', action='store_true', default=False, help='Verbose logging')
+
+    options, tests = parser.parse_args(args)
+    if options.full_suite and tests:
+        parser.error('--full-suite means every test, so it cannot be combined with a test list')
+    if options.fail_under_patch is not None and not 0 <= options.fail_under_patch <= 100:
+        parser.error('--fail-under-patch is a percentage, so it has to be between 0 and 100')
+    return options, tests
+
+
+def heading(text):
+    print('')
+    print('== {} '.format(text) + '=' * max(0, 76 - len(text)))
+
+
+def bullet(text, indent=2):
+    for index, line in enumerate(_wrap(text, 78 - indent)):
+        print(' ' * indent + ('* ' if index == 0 else '  ') + line)
+
+
+def _wrap(text, width):
+    words, lines, current = text.split(), [], ''
+    for word in words:
+        if current and len(current) + 1 + len(word) > width:
+            lines.append(current)
+            current = word
+        else:
+            current = (current + ' ' + word).strip()
+    if current:
+        lines.append(current)
+    return lines or ['']
+
+
+def report_findings(findings):
+    """Print pre-flight findings and return True if any of them is fatal."""
+    fatal = False
+    for finding in findings:
+        label = {FATAL: 'FATAL', WARNING: 'WARNING', NOTE: 'note'}[finding.severity]
+        bullet('{}: {}'.format(label, finding.summary))
+        bullet(finding.detail, indent=6)
+        if finding.remedy:
+            print('      fix: {}'.format(finding.remedy))
+        fatal = fatal or finding.severity == FATAL
+    return fatal
+
+
+def resolve_build_root(options, checkout_root):
+    """(root, where it came from). The one tree everything in this run will use.
+
+    Absolute, because every command this tool prints should be one a developer can paste
+    somewhere else, and because the harnesses are run with the checkout as their working
+    directory rather than with the developer's.
+    """
+    if options.build_directory:
+        root = normalize_build_root(os.path.abspath(options.build_directory),
+                                    options.configuration)
+        if root.note:
+            bullet(root.note)
+        return root.root, '--build-directory'
+    from_environment = build_directory_from_environment()
+    if from_environment:
+        root = normalize_build_root(os.path.abspath(from_environment), options.configuration)
+        if root.note:
+            bullet(root.note)
+        return root.root, '$' + BUILD_OUTPUT_ENVIRONMENT_VARIABLE
+    return (os.path.join(checkout_root, DEFAULT_BUILD_DIRECTORY_NAME),
+            'the default, since neither --build-directory nor ${} was given'.format(
+                BUILD_OUTPUT_ENVIRONMENT_VARIABLE))
+
+
+def build_command(options):
+    """The build-webkit command line, and the lines explaining what was added to it."""
+    added = missing_build_settings(options.build_arguments)
+    conflicts = conflicting_build_settings(options.build_arguments)
+    command = coverage_build_command(options.configuration,
+                                     extra_arguments=options.build_arguments)
+    explanations = []
+    for setting in added:
+        explanations.append('added {}: {}'.format(setting.argument, setting.why))
+    for given, setting in conflicts:
+        explanations.append('you passed {} and {} is required, and yours is last on the command '
+                            'line so yours wins -- which will not work: {}'.format(
+                                given, setting.argument, setting.why))
+    return command, explanations
+
+
+def default_since_ref(checkout_root):
+    for ref in _DEFAULT_SINCE_REFS:
+        completed = subprocess.run(['git', '-c', 'core.fsmonitor=false', 'rev-parse', '--verify',
+                                    '--quiet', ref], cwd=checkout_root, capture_output=True,
+                                   text=True)
+        if not completed.returncode:
+            return ref
+    return None
+
+
+def changed_paths(checkout_root, ref):
+    """(checkout-relative changed paths, the change's unified diff).
+
+    core.fsmonitor is off, because it is on in this checkout and has been observed reporting a
+    clean tree that was not clean (PLAN 2). A scope resolved from a file list that silently
+    omits the file the developer just edited is the failure this tool exists to prevent.
+    """
+    def git(*arguments):
+        completed = subprocess.run(['git', '-c', 'core.fsmonitor=false', *arguments],
+                                   cwd=checkout_root, capture_output=True, text=True)
+        if completed.returncode:
+            raise RuntimeError('git {} failed: {}'.format(arguments[0],
+                                                          completed.stderr.strip()))
+        return completed.stdout
+
+    diff = git('diff', '--no-ext-diff', '--no-textconv', '--no-color', '-U0', ref)
+    paths = set(git('diff', '--name-only', '--no-renames', ref).split())
+    if '..' not in ref:
+        paths |= set(git('ls-files', '--others', '--exclude-standard', '--full-name').split())
+    return sorted(paths), diff
+
+
+def print_paths(paths, limit=12, indent=6):
+    for path in paths[:limit]:
+        print(' ' * indent + path)
+    if len(paths) > limit:
+        print(' ' * indent + '... and {} more'.format(len(paths) - limit))
+
+
+def print_declined(declined, limit=12):
+    for entry in declined[:limit]:
+        print('      {}: {}'.format(entry.path, entry.reason))
+    if len(declined) > limit:
+        print('      ... and {} more'.format(len(declined) - limit))
+
+
+def print_scope_suggestion(suggestion, limit=20):
+    if suggestion.empty:
+        bullet('No suggestion. Every path in this change is one with no name-based rule, or one '
+               'whose blast radius is the whole suite:')
+        print_declined(suggestion.declined)
+        bullet('So scope it yourself, or run the suite. That is the honest answer and not a '
+               'gap in the tool: PLAN 10.2 measured the mean blast radius of a real change at '
+               '86.1% of the suite, with p25 through p90 all at 100%.')
+        return
+    tests = suggestion.tests
+    bullet('Suggested scope, which is a suggestion and has not been applied ({} '
+           'path(s)):'.format(len(tests)))
+    print_paths(tests, limit=limit)
+    if len(tests) > limit:
+        bullet('That is more paths than are worth retyping, which is itself the answer: a '
+               'change this wide is a change to run the suite for.')
+    for rule, rule_tests in suggestion.rules().items():
+        if not rule_tests:
+            continue
+        bullet('{} ({}):'.format(rule, len(rule_tests)), indent=4)
+        print_paths(rule_tests, limit=6, indent=8)
+    if not suggestion.complete:
+        bullet('INCOMPLETE. {} of the changed paths have no suggestion, so these tests do not '
+               'cover the whole change:'.format(len(suggestion.declined)))
+        print_declined(suggestion.declined)
+
+
+def source_scope_arguments(paths, checkout_root):
+    """--sources arguments for the changed source files, so the report is about the change.
+
+    The files themselves rather than their directories: the question is whether the lines this
+    change added are tested, llvm-cov's --sources takes a file as happily as a directory, and
+    measured against the same profile and binaries a scoped export is 8.6 MB where the whole-tree
+    one is 751 MB.
+    """
+    from webkitpy.coverage_delta import SOURCE_EXTENSIONS
+
+    arguments = []
+    for path in paths:
+        if not path.endswith(SOURCE_EXTENSIONS):
+            continue
+        absolute = os.path.join(checkout_root, path)
+        if os.path.exists(absolute):
+            arguments += ['--sources', absolute]
+    return arguments
+
+
+def run(command, overrides=None, dry_run=False, cwd=None):
+    """Print a command exactly as it will run, then run it. Returns its exit code.
+
+    The environment overrides are printed as a `VAR=value` prefix rather than being applied
+    silently, so that every command this tool prints is one a developer can paste. WEBKIT_OUTPUTDIR
+    is the whole point of that: it is one of the four things nobody knew they had to set, and a
+    printed command that omits it would run against a different tree by hand than it does here.
+    """
+    overrides = overrides or {}
+    prefix = ['{}={}'.format(name, overrides[name]) for name in sorted(overrides)]
+    print('')
+    print('+ {}'.format(' '.join(prefix + command)))
+    if dry_run:
+        print('  (--dry-run, so not run)')
+        return 0
+    sys.stdout.flush()
+    environment = dict(os.environ)
+    environment.update(overrides)
+    return subprocess.call(command, env=environment, cwd=cwd)
+
+
+def probe_profile_directory_lock():
+    """[Finding] for a concurrent coverage run, checked by taking the lock and letting it go.
+
+    Advisory, and deliberately not held: the harness acquires it for the run itself, and flock is
+    per open file, so holding it here would make the harness's own acquisition fail. What this
+    buys is failing in a second rather than after a build -- PLAN 8.2 S8's two concurrent runs
+    destroy each other's profiles in both directions.
+    """
+    from webkitpy.coverage_requirements import Finding
+
+    try:
+        acquire_coverage_profile_directory_lock()
+    except CoverageProfileDirectoryInUse as failure:
+        return [Finding(FATAL, 'another coverage run is in flight on this machine', str(failure),
+                        None)]
+    release_coverage_profile_directory_lock()
+    stale = [name for name in os.listdir(COVERAGE_PROFILE_DIRECTORY)
+             if name.endswith('.profraw')] if os.path.isdir(COVERAGE_PROFILE_DIRECTORY) else []
+    if stale:
+        return [Finding(NOTE, '{} uncollected raw profile(s) in {}'.format(
+            len(stale), COVERAGE_PROFILE_DIRECTORY),
+            'Left by an interrupted run. The test run will delete them before it starts, '
+            'because %Nm merges into an existing profile rather than replacing it, so keeping '
+            'them would fold another run\'s counters into this one\'s.', None)]
+    return []
+
+
+def main(args):
+    options, tests = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(levelname)s: %(message)s')
+
+    host = Host()
+    port = host.port_factory.get(options.platform, options)
+    checkout_root = port.webkit_base()
+    configuration = port.get_option('configuration') or 'Release'
+    options.configuration = configuration
+
+    heading('Build tree')
+    build_root, provenance = resolve_build_root(options, checkout_root)
+    build_path = os.path.join(build_root, configuration)
+    bullet('{} ({}), from {}'.format(build_root, configuration, provenance))
+    bullet('Everything below uses that one tree. webkit-build-directory is not consulted: it '
+           'applies a last-built tiebreaker and will hand out a different tree than the one the '
+           'tests ran against.')
+    overrides = {BUILD_OUTPUT_ENVIRONMENT_VARIABLE: build_root}
+
+    command, explanations = build_command(options)
+    heading('Pre-flight')
+    survey = survey_products(build_path)
+    bullet('Read {} products in {:.2f} s: {} instrumented, {} uninstrumented, {} not '
+           'built.'.format(len(survey.products), survey.seconds, len(survey.instrumented),
+                           len(survey.uninstrumented), len(survey.missing)))
+    findings = instrumentation_findings(survey, build_path, command)
+    needs_build = any(finding.severity == FATAL for finding in findings)
+    if report_findings(findings) and options.build == 'never':
+        bullet('--build=never, so this is where it stops. The tree cannot produce coverage.')
+        return 1
+    for finding in toolchain_findings():
+        report_findings([finding])
+
+    heading('The change')
+    ref = options.since or default_since_ref(checkout_root)
+    if not ref:
+        _log.error('Could not find %s in this checkout, so there is no default for --since. '
+                   'Pass --since=REF.', ' or '.join(_DEFAULT_SINCE_REFS))
+        return 1
+    try:
+        paths, diff = changed_paths(checkout_root, ref)
+    except RuntimeError as error:
+        _log.error('%s', error)
+        return 1
+    if not paths:
+        bullet('Nothing has changed since {}, so there is no patch to measure. This will still '
+               'produce a coverage report; it just will not be about anything in '
+               'particular.'.format(ref))
+    else:
+        bullet('{} changed path(s) since {}.'.format(len(paths), ref))
+        print_paths(paths)
+
+    heading('Test scope')
+    suggestion = suggest_scope(checkout_root, paths, diff)
+    if tests:
+        bullet('You named {}, so that is what will run. The suggestion below is printed for '
+               'comparison only; nothing here narrows what you asked for.'.format(
+                   ' '.join(tests)))
+    print_scope_suggestion(suggestion)
+    if not tests and not options.full_suite:
+        bullet('No tests named, so nothing has been run. Give a scope -- for example '
+               '`webkit-coverage {}` -- or pass --full-suite.'.format(
+                   suggestion.tests[0] if suggestion.tests else 'svg/'))
+        return NEEDS_A_SCOPE_EXIT_CODE
+
+    # The API tests are part of the scope whenever they are named as a subset, and they are part
+    # of the digest whenever they run at all. Without that, two runs of the same layout tests and
+    # different API tests would carry the same test-name digest and would therefore be allowed to
+    # compare against each other, which is exactly the hole the digest exists to close.
+    api_argv, api_names = [], []
+    if options.api_tests is not None:
+        api_arguments = options.api_tests.split()
+        api_argv = ['(api) ' + (' '.join(api_arguments) or 'all')]
+        api_names = ['api:' + argument for argument in api_arguments] or ['api:all']
+
+    scope = CoverageScope.full_suite()
+    if tests or (options.api_tests is not None and options.api_tests.split()):
+        started = time.time()
+        selected = layout_test_names(port, tests) if tests else layout_test_names(port, [])
+        in_suite = layout_test_names(port, [])
+        if tests and not selected:
+            _log.error('The harness\'s own finder finds no tests under %s, so a run would report '
+                       '"Found 0 tests" and exit 0.', ' '.join(tests))
+            return 1
+        scope = CoverageScope.selective(list(tests) + api_argv, tests_run=len(selected),
+                                       tests_in_suite=len(in_suite),
+                                       test_names=selected + api_names, suite_name='layout')
+        bullet('Counted the scope with the harness\'s own finder in {:.1f} s, so both numbers '
+               'mean the same thing. The count is the layout suite\'s; a named API-test subset '
+               'is in the scope and in its digest but not in these two '
+               'numbers.'.format(time.time() - started))
+        for line in scope.banner_lines():
+            bullet(line)
+    else:
+        bullet('--full-suite, so every number in the report is exact rather than a lower bound.')
+    if options.api_tests is None:
+        bullet('The API tests are not being run, so a line only TestWebKitAPI reaches will be '
+               'reported as uncovered. Pass --api-tests="" to run them too. The full-suite figures'
+               ' in PLAN 3 are an API run and a layout run folded together.')
+
+    output_dir = options.output_dir or os.path.join(build_root, 'coverage-report')
+    coverage_dir = options.coverage_dir or os.path.join(build_root, 'coverage-profiles')
+    report_dir = scope.directory(output_dir)
+
+    for finding in probe_profile_directory_lock():
+        if report_findings([finding]):
+            return 1
+    if not options.dry_run:
+        for finding in orphaned_server_findings():
+            report_findings([finding])
+
+    if needs_build or options.build == 'always':
+        heading('Build')
+        if not needs_build:
+            bullet('--build=always, so building even though the tree is already instrumented.')
+        for explanation in explanations:
+            bullet(explanation)
+        bullet('Not silently corrected: those are the settings a coverage build needs, and the '
+               'command below is the one to run by hand next time.')
+        if run(command, overrides=overrides, dry_run=options.dry_run, cwd=checkout_root):
+            _log.error('The build failed. Nothing has been run.')
+            return 1
+        if not options.dry_run:
+            survey = survey_products(build_path)
+            if report_findings(instrumentation_findings(survey, build_path, command)):
+                _log.error('The build succeeded and the tree still cannot produce coverage.')
+                return 1
+    else:
+        heading('Build')
+        bullet('Not building: every required product under {} is already instrumented. Pass '
+               '--build=always to build anyway.'.format(build_path))
+
+    heading('Run')
+    layout_command = [os.path.join('Tools', 'Scripts', 'run-webkit-tests'),
+                      '--' + configuration.lower(), '--coverage',
+                      '--coverage-dir=' + (coverage_dir + '-layout' if options.api_tests is not None
+                                           else coverage_dir),
+                      '--build-directory=' + build_root, *tests]
+    if run(layout_command, overrides=overrides, dry_run=options.dry_run, cwd=checkout_root):
+        # Not fatal. A test failure is a test failure, and the coverage of a run with failures is
+        # still the coverage of that run -- the profiles are collected in a finally block exactly
+        # so that an interrupted run still yields data.
+        bullet('run-webkit-tests exited non-zero. Continuing: the profiles are collected even '
+               'from a failed or interrupted run, so there is still a report to make.')
+    if options.api_tests is not None:
+        api_command = [os.path.join('Tools', 'Scripts', 'run-api-tests'),
+                       '--' + configuration.lower(), '--coverage',
+                       '--coverage-dir=' + coverage_dir + '-api',
+                       '--build-directory=' + build_root]
+        api_command += options.api_tests.split()
+        if run(api_command, overrides=overrides, dry_run=options.dry_run, cwd=checkout_root):
+            bullet('run-api-tests exited non-zero. Continuing, for the same reason.')
+
+    heading('Report')
+    scope_file = os.path.join(coverage_dir, 'test-scope.json')
+    if not options.dry_run:
+        os.makedirs(coverage_dir, exist_ok=True)
+        scope.write(scope_file)
+    report_command = [os.path.join('Tools', 'Scripts', 'generate-coverage-report'),
+                      '--' + configuration.lower(), '--build-directory=' + build_root,
+                      '--output-dir=' + output_dir, '--test-scope-file=' + scope_file]
+    if options.api_tests is not None:
+        report_command += ['--suite=layout:' + coverage_dir + '-layout',
+                           '--suite=api:' + coverage_dir + '-api']
+    else:
+        report_command += ['--coverage-dir=' + coverage_dir]
+    if not options.build_inventory:
+        report_command.append('--no-build-inventory')
+    if not options.all_sources:
+        source_arguments = source_scope_arguments(paths, checkout_root)
+        if source_arguments:
+            bullet('Scoping the report to the {} changed source file(s) with --sources, which is '
+                   'what makes it about the change rather than about the '
+                   'project.'.format(len(source_arguments) // 2))
+            report_command += source_arguments
+        else:
+            bullet('The change touches no C, C++ or Objective-C source file, so there is nothing '
+                   'to scope the report to and it will describe the whole tree.')
+    status = run(report_command, overrides=overrides, dry_run=options.dry_run,
+                 cwd=checkout_root)
+    if status:
+        _log.error('generate-coverage-report failed, so there is nothing to measure the patch '
+                   'against.')
+        return 1
+
+    trace = os.path.join(report_dir, scope.filename('coverage.lcov.gz'))
+    patch_command = [os.path.join('Tools', 'Scripts', 'compare-coverage-reports'),
+                     '--current=' + trace, '--git-diff=' + ref,
+                     '--output-dir=' + report_dir]
+    if options.fail_under_patch is not None:
+        patch_command.append('--fail-under-patch={}'.format(options.fail_under_patch))
+    status = run(patch_command, overrides=overrides, dry_run=options.dry_run,
+                 cwd=checkout_root)
+
+    heading('Result')
+    if options.dry_run:
+        bullet('--dry-run, so nothing above was run. The report would be at {}.'.format(
+            os.path.join(report_dir, 'index.html')))
+        return 0
+    print(summarize(report_dir, scope))
+    return status
+
+
+def summarize(report_dir, scope):
+    """One number and one path. The number is a count of lines, not a percentage.
+
+    The percentage is in the report and in compare-coverage-reports' own output above. What a
+    developer acts on is the list of added lines nothing executed, and its length is the one
+    number worth putting last -- it is a count, so it is exact even on a scoped run, where the
+    percentage is only a bound.
+    """
+    uncovered = None
+    summary_path = os.path.join(report_dir, 'patch-summary.txt')
+    try:
+        with open(summary_path) as handle:
+            for line in handle:
+                if line.startswith('Patch coverage:'):
+                    covered, _, total = line.split('(')[1].split(')')[0].partition(' of ')
+                    uncovered = int(total.split()[0].replace(',', '')) - \
+                        int(covered.replace(',', ''))
+                    break
+    except (OSError, IndexError, ValueError):
+        pass
+
+    lines = ['']
+    if uncovered is None:
+        lines.append('No patch summary was written, so there is no uncovered-line count. See '
+                     'the report.')
+    else:
+        lines.append('{:,} uncovered added line(s){}'.format(
+            uncovered, ' -- at most, since this was a selective run and an unexecuted line may '
+                       'simply not have been asked' if scope.is_selective else ''))
+        lines.append('  named individually in {}'.format(summary_path))
+    lines.append('{}'.format(os.path.join(report_dir, 'index.html')))
+    return '\n'.join(lines)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

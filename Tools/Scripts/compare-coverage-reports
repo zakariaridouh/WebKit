@@ -81,6 +81,8 @@ from webkitpy.common.webkit_finder import WebKitFinder
 from webkitpy.coverage_delta import (absolute_paths, compare, format_summary, load_traces,
                                      write_delta_report)
 from webkitpy.coverage_patch import (PatchCoverage, format_patch_summary, git_diff_added_lines)
+from webkitpy.coverage_provenance import read_trace_comment
+from webkitpy.coverage_scope import scope_from_provenance
 from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
 
 _log = logging.getLogger('compare-coverage-reports')
@@ -121,6 +123,19 @@ survive an edit.
 --changed-files restricts the report to a list of files and carries no line numbers, so it
 is FILE-LEVEL only: it can say how well tested the files you touched are, and it cannot say
 anything about the lines you added. --git-diff is line-level as well as file-level.
+
+A SELECTIVE trace -- one from a run over part of the suite, which the trace's own provenance
+records -- is treated differently by the two modes, because the mathematics differs. Adding
+tests can only turn a line from uncovered to covered, so a covered line in a subset run is
+exact and an uncovered line is unknown.
+
+  * DELTA coverage is refused. A selective current against a full baseline reports every line
+    the subset did not reach as a regression, a fabricated regression the size of the tests
+    that did not run. Two selective traces are compared only when their recorded test-name
+    digests are equal, which is the only available proof that they ran the same tests.
+  * PATCH coverage is allowed, and is sound but not complete: a line it calls covered really
+    was executed, so it can raise a false alarm and it cannot grant a false pass. That is the
+    right direction for a gate, so --fail-under-patch works on a selective trace and says so.
 """
 
 
@@ -221,6 +236,16 @@ def parse_args(args):
     return options
 
 
+def trace_scope(path):
+    """The CoverageScope a trace records, from the provenance comment in its own head.
+
+    A trace with no comment -- one from before provenance existed, or one produced by another
+    tool -- reads as full-suite, which is what such a trace was in practice: there was no way to
+    produce a selective one that said so.
+    """
+    return scope_from_provenance(read_trace_comment(path))
+
+
 def report_delta(options, source_root, baseline_files, current_files, changed_files):
     """Print and write the delta report. 1 if it could not be made, 2 if its gate fired."""
     delta = compare(baseline_files, current_files, changed_files)
@@ -280,7 +305,8 @@ def report_delta(options, source_root, baseline_files, current_files, changed_fi
     return 0
 
 
-def report_patch(options, source_root, added_lines, current_files, line_numbers=True):
+def report_patch(options, source_root, added_lines, current_files, line_numbers=True,
+                 scope=None):
     """Print and write the patch report. 1 if it could not be made, 2 if its gate fired."""
     patch = PatchCoverage(added_lines, current_files, line_numbers=line_numbers)
     if patch.ignored_path_count:
@@ -294,6 +320,12 @@ def report_patch(options, source_root, added_lines, current_files, line_numbers=
         return 1
 
     summary = format_patch_summary(patch, source_root=source_root, max_files=options.max_files)
+    if scope is not None and scope.is_selective:
+        # Above the number, not below it: patch coverage under selection is a lower bound, so an
+        # uncovered added line here may be a line no test that ran reached rather than a line no
+        # test covers. The uncovered line list is still exactly the thing to act on -- it is a
+        # superset of the truly untested lines and never a subset.
+        summary = '\n'.join(scope.banner_lines() + ['', summary])
     print(summary, end='')
     if options.output_dir:
         name = 'patch-summary.txt' if line_numbers else 'changed-files-summary.txt'
@@ -317,10 +349,19 @@ def report_patch(options, source_root, added_lines, current_files, line_numbers=
                    'the %.2f%% required by --fail-under-patch.', percent,
                    patch.covered_line_count, patch.instrumented_line_count,
                    options.fail_under_patch)
+        if scope is not None and scope.is_selective:
+            _log.error('This is a selective run, so that is a lower bound: the gate is sound '
+                       'but not complete here, and this may be a false alarm. Every line it '
+                       'names as covered really was executed.')
         return COVERAGE_GATE_EXIT_CODE
     _log.info('Patch coverage is %.2f%% (%d of %d added lines with coverage data), at or above '
               'the %.2f%% required by --fail-under-patch.', percent, patch.covered_line_count,
               patch.instrumented_line_count, options.fail_under_patch)
+    if scope is not None and scope.is_selective:
+        # Worth saying on a pass as well as on a failure: this direction is the sound one, and a
+        # reader who does not know that will discount the pass along with the number.
+        _log.info('This is a selective run, so that is a lower bound -- which means the pass is '
+                  'not a false one: adding the tests that did not run can only raise it.')
     return 0
 
 
@@ -355,6 +396,21 @@ def main(args):
             return 1
         _log.info('Restricting the comparison to %d changed path(s)', len(changed_files))
 
+    # Read before the traces are parsed, which for a full-suite pair is 5.4 s and 0.98 GB each:
+    # a comparison this refuses should not first spend ten seconds loading what it will not use.
+    current_scope = trace_scope(options.current)
+    if current_scope.is_selective:
+        for line in current_scope.banner_lines():
+            _log.info('%s', line)
+    if options.baseline:
+        baseline_scope = trace_scope(options.baseline)
+        refusal = current_scope.comparison_refusal(baseline_scope)
+        if refusal:
+            _log.error('Refusing to compute a delta: %s', refusal)
+            _log.error('Patch coverage needs no baseline and is sound under selection, so use '
+                       '--current with --git-diff and no --baseline instead.')
+            return 1
+
     try:
         baseline_files, current_files = load_traces(
             options.current, options.baseline, source_root=source_root,
@@ -373,7 +429,8 @@ def main(args):
             return 1
         status = max(status, code)
     if added_lines is not None:
-        code = report_patch(options, source_root, added_lines, current_files)
+        code = report_patch(options, source_root, added_lines, current_files,
+                            scope=current_scope)
         if code == 1:
             return 1
         status = max(status, code)
@@ -382,7 +439,7 @@ def main(args):
         # no line numbers, so the only thing left to report is the file-level view, which is
         # what --baseline=X --current=X used to be a way of asking for.
         code = report_patch(options, source_root, {path: [] for path in changed_files},
-                            current_files, line_numbers=False)
+                            current_files, line_numbers=False, scope=current_scope)
         if code == 1:
             return 1
         status = max(status, code)

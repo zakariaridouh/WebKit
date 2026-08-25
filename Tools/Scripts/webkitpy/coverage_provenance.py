@@ -277,11 +277,19 @@ def provenance_record(checkout_root, build_directory, port_name, configuration, 
                       profile_path, command_line=(), products=None, suites=(),
                       raw_profile_count=None, unreadable_raw_profile_count=None,
                       ignore_filename_regexes=(), sources_scope=(), include_third_party=False,
-                      include_test_support=False, generator=None):
+                      include_test_support=False, generator=None, scope=None):
     """The record, complete except for the trace's own measurements. See add_trace_measurements().
 
     Built before the trace exists, because the trace carries a comment holding most of it.
+
+    scope is a coverage_scope.CoverageScope, and it is the field that makes a trace refuse to be
+    misread: a selective run's coverage is a lower bound, so its percentage means something
+    different from a full run's, and its test-name digest is the only thing that can tell one
+    subset's trace from another's. Absent, it records FULL_SUITE, which is what every trace made
+    before there was a way to say otherwise actually was.
     """
+    from webkitpy.coverage_scope import CoverageScope
+
     record = {'schema': SCHEMA,
               'generated_at': _timestamp(datetime.datetime.now(datetime.timezone.utc).timestamp()),
               'generator': generator,
@@ -307,6 +315,10 @@ def provenance_record(checkout_root, build_directory, port_name, configuration, 
         # Empty means the whole tree; anything else means the report describes a subset, which a
         # consumer must not read as the project total.
         'sources_scope': list(sources_scope),
+        # Which TESTS the numbers are over, which is a different subset from sources_scope's: one
+        # restricts what is described and the other restricts what was executed, and only the
+        # second makes a covered line exact and an uncovered line unknown.
+        'test_scope': (scope or CoverageScope.full_suite()).to_json(),
         'include_third_party': include_third_party,
         'include_test_support': include_test_support,
         'tools': tool_versions(),
@@ -371,6 +383,8 @@ def write_provenance(record, output_directory, filename=PROVENANCE_FILENAME):
 
 def summary_lines(record):
     """The two or three lines worth putting in a run's log, so the terminal is a record too."""
+    from webkitpy.coverage_scope import scope_from_provenance
+
     lines = ['{} at {}{}'.format(
         record.get('source_branch') or 'detached', (record.get('source_revision') or '?')[:12],
         '' if record.get('source_dirty_file_count') == 0 else
@@ -383,4 +397,5 @@ def summary_lines(record):
     if record.get('sources_scope'):
         lines.append('scoped to {}, so these totals are NOT the project total'.format(
             ', '.join(record['sources_scope'])))
+    lines.extend(scope_from_provenance(record).banner_lines())
     return lines
