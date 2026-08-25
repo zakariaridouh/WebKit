@@ -187,6 +187,103 @@ class ParseHoistingTest(_Report):
         self.assertTrue(report.directory_pages >= 2)
 
 
+class SuiteColumnTest(_Report):
+    """One line-coverage column per suite, beside the combined one."""
+
+    def suites(self):
+        # Vector.h: covered by layout only. HashMap.h: covered by neither, and absent from
+        # api's trace altogether, which is not the same thing as being uncovered there.
+        vector = os.path.join(self.root, 'Source/WTF/wtf/Vector.h')
+        hash_map = os.path.join(self.root, 'Source/WTF/wtf/HashMap.h')
+        return [('layout', {vector: (2, 1), hash_map: (2, 0)}),
+                ('api', {vector: (2, 0)})]
+
+    def build(self):
+        self.write_source('Source/WTF/wtf/Vector.h')
+        self.write_source('Source/WTF/wtf/HashMap.h')
+        trace = self.write_trace('Source/WTF/wtf/Vector.h', 'Source/WTF/wtf/HashMap.h')
+        write_report(trace, self.output, source_root=self.root, workers=1,
+                     suite_line_totals=self.suites())
+        return self.page('Source/WTF/wtf/index.html')
+
+    def test_each_suite_gets_a_heading_in_the_order_it_was_given(self):
+        page = self.build()
+        self.assertLess(page.index('>layout %<'), page.index('>api %<'))
+        # And the combined column says what it is, so it cannot be read as one of the suites.
+        self.assertIn('>All suites %<', page)
+        self.assertNotIn('>Lines %<', page)
+
+    def test_the_columns_are_where_the_sort_script_says_they_are(self):
+        # The sort script addresses cells by index, so a heading whose data-col does not match
+        # its position sorts a different column than the one that was clicked.
+        page = self.build()
+        headings = re.findall(r'<th class="[^"]*" data-col="(\d+)" data-numeric="\d">([^<]*)</th>',
+                              page)
+        self.assertEqual([label for _, label in headings],
+                         ['Name', 'Line coverage', 'All suites %', 'Lines', 'Uncovered',
+                          'layout %', 'api %', 'Functions %', 'Branches %', 'Not built'])
+        self.assertEqual([int(column) for column, _ in headings], list(range(len(headings))))
+        row = re.search(r'<tr><td class="file" data-v="Vector\.h".*?</tr>', page).group(0)
+        self.assertEqual(row.count('<td'), len(headings))
+
+    def test_a_suite_with_no_record_for_a_file_shows_no_number(self):
+        # Not 0.00%. A file that suite's profile says nothing about has no denominator there,
+        # which is the same distinction the "not built" column exists to make.
+        page = self.build()
+        row = re.search(r'<tr><td class="file" data-v="HashMap\.h".*?</tr>', page).group(0)
+        cells = re.findall(r'<td[^>]*>(?:<div[^>]*>(?:<i[^>]*></i>)?</div>)?([^<]*)', row)
+        self.assertEqual(cells[5], '0.00%')   # layout, which has a record and covered nothing
+        self.assertEqual(cells[6], '-')       # api, which has no record at all
+
+    def test_a_directory_aggregates_each_suite_separately(self):
+        page = self.build()
+        totals = re.search(r'<tr class="totals">.*?</tr>', page).group(0)
+        cells = re.findall(r'<td[^>]*>(?:<div[^>]*>(?:<i[^>]*></i>)?</div>)?([^<]*)', totals)
+        # 4 instrumented lines over the two files, 2 executed by the merged profile; layout
+        # executed 1 of its 4 and api 0 of the 2 it has records for.
+        self.assertEqual(cells[2], '50.00%')
+        self.assertEqual(cells[5], '25.00%')
+        self.assertEqual(cells[6], '0.00%')
+
+    def test_without_suites_the_columns_are_unchanged(self):
+        self.write_source('Source/WTF/wtf/Vector.h')
+        trace = self.write_trace('Source/WTF/wtf/Vector.h')
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        page = self.page('Source/WTF/wtf/index.html')
+        self.assertIn('>Lines %<', page)
+        self.assertNotIn('All suites', page)
+
+    def test_the_note_says_the_combined_column_is_a_union(self):
+        # Because the first thing anybody does with two columns is add them up.
+        self.assertIn('not the sum', self.build())
+
+    def test_the_not_built_column_survives_the_suite_columns(self):
+        # It is last, so inserting columns before it moves it, and it is reported once rather
+        # than per suite: every suite ran against the same binaries, so a file this
+        # configuration never compiled was not built for any of them.
+        from webkitpy.coverage_build_inventory import AbsenceReport, AbsentFile
+        absence = AbsenceReport()
+        absence.total_file_count = 3
+        absence.reported_file_count = 1
+        absence.compiled_file_count = 2
+        absence.add(AbsentFile('Source/WTF/wtf/Touchy.cpp', 'feature-flag-off',
+                               'ENABLE_TOUCH_EVENTS', 120))
+        absence.add(AbsentFile('Source/WTF/wtf/ThingGtk.cpp', 'other-port', 'GTK', 184))
+        self.write_source('Source/WTF/wtf/Vector.h')
+        self.write_source('Source/WTF/wtf/HashMap.h')
+        trace = self.write_trace('Source/WTF/wtf/Vector.h', 'Source/WTF/wtf/HashMap.h')
+        write_report(trace, self.output, source_root=self.root, workers=1,
+                     absence=absence, suite_line_totals=self.suites())
+        page = self.page('index.html')
+        totals = re.search(r'<tr class="totals">.*?</tr>', page).group(0)
+        cells = re.findall(r'<td[^>]*>(?:<div[^>]*>(?:<i[^>]*></i>)?</div>)?([^<]*)', totals)
+        self.assertEqual(cells[5], '25.00%')   # layout, still where the heading says it is
+        self.assertEqual(cells[6], '0.00%')    # api
+        self.assertEqual(cells[9], '2')        # not built, last and not per suite
+        self.assertIn('first-party implementation', page)
+        self.assertIn('Not built in this configuration', self.page('Source/WTF/wtf/index.html'))
+
+
 class EffectiveSourcePrefixTest(unittest.TestCase):
     def test_the_source_root_is_used_when_every_path_is_under_it(self):
         self.assertEqual(effective_source_prefix(

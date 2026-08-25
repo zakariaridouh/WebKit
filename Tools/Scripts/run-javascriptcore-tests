@@ -306,7 +306,7 @@ Usage: $programName [options] [options to pass to build system]
   --[no-]force-collectContinuously Enable the collectContinuously mode even if it was disabled on this platform.
   --[no-]copy                   Copy (or don't copy) the JavaScriptCore build product before testing (default: $copyJSCDefault)
   --[no-]coverage               Enable (or disable) LLVM Source-based Code Coverage instrumentation for the test run (default: $coverageDefault).
-  --coverage-dir=               Output path for LLVM Source-based Code Coverage instrumentation (default: a temporary directory).
+  --coverage-dir=               Output path for LLVM Source-based Code Coverage data and report (default: a temporary directory).
   --json-output=                Create a file at specified path, listing failed stress tests in JSON format.
   --tarball                     Create a tarball of the bundle produced by running the JSC stress tests.
   --remote=                     Run the JSC stress tests on the specified remote host. Implies --tarball.
@@ -645,6 +645,13 @@ if (!defined($root) && $buildJSC) {
     chdirWebKit();
 
     push(@buildArgs, argumentsForConfiguration());
+    # GetOptions has already taken --coverage out of @ARGV, so it is not among the leftover
+    # arguments that become @buildArgs, and build-jsc runs in a separate process where
+    # webkitdirs cannot see this script's $coverage. Without this the flag reaches the build
+    # only through the Coverage marker file an earlier --coverage build left behind, so
+    # --coverage on an otherwise-clean tree instruments nothing, the run writes no counters,
+    # and the report is empty with nothing to say why.
+    push(@buildArgs, "--coverage") if $coverage;
 
     print "Running: build-jsc " . join(" ", @buildArgs) . "\n";
     my $buildResult = system "perl", File::Spec->catfile("Tools", "Scripts", "build-jsc"), @buildArgs;
@@ -662,8 +669,7 @@ if (defined($gmallocPath)) {
     }
 }
 
-my $htmlDir;
-my $profdataPath;
+my $coverageReportDir;
 
 if ($coverage) {
     if ($coverageDir) {
@@ -672,8 +678,7 @@ if ($coverage) {
         $coverageDir = tempdir();
         print "Generating coverage data into $coverageDir\n";
     }
-    $htmlDir = File::Spec->catfile($coverageDir, "html_report");
-    $profdataPath = File::Spec->catfile($coverageDir, "jsc_tests.profdata");
+    $coverageReportDir = File::Spec->catfile($coverageDir, "report");
     # %c selects continuous mode, which mmaps the counters into the profile file so that a
     # test the harness kills -- rather than letting it exit -- still leaves usable data.
     # Without it a killed jsc process writes a zero-filled profile and its coverage is lost.
@@ -792,35 +797,43 @@ sub reportTestFailures {
   print "\n";
 }
 
-sub convertProfrawToProfdata
-{
-    print "Converting profraw files to profdata.\n";
-    my @command;
-    opendir(PROFRAWS, $coverageDir);
-    my @profrawFiles = grep {/jsc_test_.*\.profraw/} map {File::Spec->catfile($coverageDir, $_)} readdir(PROFRAWS);
-    close(PROFRAWS);
-    push @command, "xcrun";
-    push @command, ("-sdk", xcodeSDK()) if xcodeSDK();
-    push @command, "llvm-profdata", "merge", @profrawFiles, "-o", $profdataPath;
-    system(@command);
-}
-
-sub generateHTMLFromProfdata
-{
-    print "Generating html report from profdata file.\n";
-    my @command;
-    push @command, "xcrun";
-    push @command, ("-sdk", xcodeSDK()) if xcodeSDK();
-    push @command, "llvm-cov", "show", builtDylibPathForName("JavaScriptCore"), "--format=html", "--instr-profile=" . $profdataPath, "--output-dir=" . $htmlDir;
-    system(@command);
-
-    print "HTML report is in file://$htmlDir/index.html\n";
-}
-
 sub processCoverageData
 {
-    convertProfrawToProfdata();
-    generateHTMLFromProfdata();
+    # One report generator for every suite, rather than a page of llvm-cov's own here and a
+    # different report for run-webkit-tests and run-api-tests. What that page could not do:
+    # canonicalize the copied-header paths, so WTF's headers appeared twice and libpas's
+    # pointed at files that do not exist; exclude third-party code, which is instrumented and
+    # linked in; produce an lcov trace, so nothing could be compared against a baseline or
+    # gated on; or say when the binary it was given could not have written the profile it was
+    # given. It also wrote 909 MB of HTML for JavaScriptCore alone where the shared generator
+    # writes 288 MB for the whole tree.
+    #
+    # --products= with --object names exactly one binary. builtDylibPathForName knows where
+    # JavaScriptCore is on every port, which the report generator's Cocoa framework layout
+    # does not, so this works wherever this script does. Only JavaScriptCore ran, so nothing
+    # else belongs in the denominator.
+    #
+    # --no-build-inventory because that inventory answers "did this configuration compile
+    # this file" over the whole build, and against a JavaScriptCore-only trace every file in
+    # WebCore would be missing from the trace while having been compiled, which is neither of
+    # the states it reports.
+    my @command = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "generate-coverage-report"),
+                   "--coverage-dir=" . $coverageDir,
+                   "--output-dir=" . $coverageReportDir,
+                   "--products=",
+                   "--object=" . builtDylibPathForName("JavaScriptCore"),
+                   "--no-build-inventory",
+                   configuration() =~ /^Debug/ ? "--debug" : "--release");
+
+    print "Generating a coverage report: " . join(" ", @command) . "\n";
+    my $reportResult = system(@command);
+    if ($reportResult) {
+        # Not fatal, and not $isTestFailed either: the tests have already run and reported,
+        # and a report that could not be generated is not a test result.
+        print STDERR "Generating the coverage report failed.\n";
+        return;
+    }
+    print "Coverage report is in file://" . File::Spec->catfile($coverageReportDir, "index.html") . "\n";
 }
 
 sub setupEnvironment()

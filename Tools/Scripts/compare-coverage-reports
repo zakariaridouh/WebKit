@@ -70,6 +70,7 @@ from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.webkit_finder import WebKitFinder
 from webkitpy.coverage_delta import (absolute_paths, compare_lcov_files, format_summary,
                                      write_delta_report)
+from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
 
 _log = logging.getLogger('compare-coverage-reports')
 
@@ -142,10 +143,13 @@ def parse_args(args):
                                             'header paths in both traces and to resolve relative '
                                             'changed-file paths. Defaults to this checkout')
     parser.add_option('--fail-under-delta', type='float', metavar='PERCENT',
-                      help='Exit non-zero if line coverage fell by more than PERCENT percentage '
+                      help='Exit {} if line coverage fell by more than PERCENT percentage '
                            'points, so this can gate CI. 0 fails on any drop at all. The gate is '
                            'on the percentage, over whichever files the report covers; '
-                           'line-level regressions are reported but do not fail it by themselves')
+                           'line-level regressions are reported but do not fail it by themselves. '
+                           'For a threshold on absolute coverage rather than on the change, see '
+                           "generate-coverage-report's --fail-under-lines".format(
+                               COVERAGE_GATE_EXIT_CODE))
     parser.add_option('--max-files', type='int', default=25, metavar='N',
                       help='Files to list in the text summary. The HTML report always lists all '
                            'of them (default: %default)')
@@ -240,7 +244,7 @@ def main(args):
     if change < -options.fail_under_delta - _TOLERANCE:
         _log.error('Line coverage over %s fell by %.2fpp, more than the %.2fpp allowed by '
                    '--fail-under-delta.', scope, -change, options.fail_under_delta)
-        return 1
+        return COVERAGE_GATE_EXIT_CODE
     _log.info('Line coverage over %s changed by %+.2fpp, within the %.2fpp allowed by '
               '--fail-under-delta.', scope, change, options.fail_under_delta)
     return 0

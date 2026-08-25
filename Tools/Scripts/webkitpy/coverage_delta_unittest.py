@@ -34,6 +34,7 @@ from webkitpy.coverage_delta import (DELETED, IMPROVED, NEW, REGRESSED, UNCHANGE
                                      absolute_paths, compare, compare_lcov_files,
                                      format_line_numbers, format_summary, write_delta_report)
 from webkitpy.coverage_lcov import FileCoverage
+from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
 
 
 def coverage(lines=(), functions=()):
@@ -404,7 +405,10 @@ class FailUnderDeltaTest(unittest.TestCase):
     _AFTER = {'Source/a.cpp': [(1, 1), (2, 1), (3, 0), (4, 0)]}
 
     def test_a_drop_larger_than_the_allowance_fails(self):
-        self.assertEqual(self._run(self._BEFORE, self._AFTER, '--fail-under-delta', '10'), 1)
+        # COVERAGE_GATE_EXIT_CODE and not 1: 1 means the comparison could not be made at all,
+        # which is somebody else's problem to fix.
+        self.assertEqual(self._run(self._BEFORE, self._AFTER, '--fail-under-delta', '10'),
+                         COVERAGE_GATE_EXIT_CODE)
 
     def test_a_drop_within_the_allowance_passes(self):
         self.assertEqual(self._run(self._BEFORE, self._AFTER, '--fail-under-delta', '30'), 0)
@@ -415,7 +419,8 @@ class FailUnderDeltaTest(unittest.TestCase):
         self.assertEqual(self._run(self._BEFORE, self._AFTER, '--fail-under-delta', '25'), 0)
 
     def test_zero_allows_no_drop_at_all_but_still_tolerates_no_change(self):
-        self.assertEqual(self._run(self._BEFORE, self._AFTER, '--fail-under-delta', '0'), 1)
+        self.assertEqual(self._run(self._BEFORE, self._AFTER, '--fail-under-delta', '0'),
+                         COVERAGE_GATE_EXIT_CODE)
         self.assertEqual(self._run(self._BEFORE, self._BEFORE, '--fail-under-delta', '0'), 0)
 
     def test_an_improvement_never_fails(self):
@@ -437,7 +442,8 @@ class FailUnderDeltaTest(unittest.TestCase):
         # somebody else's regression, and one focused on b.cpp must.
         baseline = {'Source/a.cpp': [(1, 1)], 'Source/b.cpp': [(1, 1), (2, 1)]}
         current = {'Source/a.cpp': [(1, 1)], 'Source/b.cpp': [(1, 1), (2, 0)]}
-        for relative, expected in (('Source/a.cpp', 0), ('Source/b.cpp', 1)):
+        for relative, expected in (('Source/a.cpp', 0),
+                                   ('Source/b.cpp', COVERAGE_GATE_EXIT_CODE)):
             changed = os.path.join(self._directory, 'changed.txt')
             with open(changed, 'w') as handle:
                 handle.write(relative + '\n')
