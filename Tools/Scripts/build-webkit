@@ -195,6 +195,13 @@ if ($showHelp) {
 
 $ENV{'VERBOSE'} = 1 if $verbose;
 
+# Hand --coverage off to webkitdirs so that everything gated on coverageIsEnabled()
+# agrees with it -- most importantly WEBKIT_COVERAGE_BUILD, which is what tells
+# Tools/Scripts/check-for-weak-vtables-and-externals to expect the __llvm_profile_*
+# weak externals. Without this, --coverage set the compiler flag but not the marker
+# state, and the build failed on those symbols. https://webkit.org/b/264202
+setCoverageIsEnabled(1) if $coverageSupport;
+
 if ($useCCache == 1) {
     $ENV{'WK_USE_CCACHE'} = "YES";
 } elsif ($useCCache == 0) {
@@ -265,6 +272,14 @@ if (isAppleCocoaWebKit()) {
 my $result = 0;
 
 if (isCMakeBuild() && !isAnyWindows() && !isWin()) {
+    # There is no CMake support for LLVM source-based coverage yet, and the CMake
+    # branch below never consumed --coverage, so passing it produced a completely
+    # uninstrumented build that looked successful. Fail loudly instead.
+    # https://webkit.org/b/264202
+    die "Error: --coverage is only supported by the Xcode build. Pass --xcode to build-webkit,\n"
+      . "       or unset the CMake build directory. (isCMakeBuild() is currently true, so\n"
+      . "       --coverage would otherwise be silently ignored.)\n" if $coverageSupport;
+
     if (defined $ENV{'BUILD_WEBKIT_PRE_SCRIPT'}) {
         my $preScript = $ENV{'BUILD_WEBKIT_PRE_SCRIPT'};
 
@@ -370,7 +385,8 @@ if (isWin() || isPlayStation() || (isJSCOnly() && isWindows())) {
     exit 0 if isGenerateProjectOnly();
 
     my @local_options = @options;
-    push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
+    # Coverage is already in @options via XcodeOptions(), which also exports
+    # WEBKIT_COVERAGE_BUILD; see setCoverageIsEnabled() above.
     push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
     push @local_options, "WK_LTO_MODE=$ltoMode" if ($ltoMode ne "default");
     push @local_options, XcodeExportCompileCommandsOptions() if $exportCompileCommands;

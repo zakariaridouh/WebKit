@@ -37,6 +37,24 @@
 #import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 
+#if ENABLE(LLVM_PROFILE_GENERATION) && ENABLE(LLVM_COVERAGE)
+#error "LLVM_PROFILE_GENERATION and LLVM_COVERAGE both define __llvm_profile_filename. Enable only one."
+#endif
+
+#if ENABLE(LLVM_COVERAGE)
+#if PLATFORM(IOS_FAMILY)
+#error "LLVM_COVERAGE is macOS-only: the iOS sandbox profiles have no file-write allowance for a coverage directory, so profiles would be silently discarded."
+#else
+// The profiling runtime is linked into every image and reads that image's own copy of this
+// symbol, so WebGPU.framework needs its own baked path or its counters go to
+// default.profraw in the GPU process's working directory, where the write is denied. This
+// belongs to the framework target and not to the WGSL static library, which links into the
+// framework and would make the definition a duplicate.
+// See the matching comment in Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw";
+#endif
+#endif
+
 namespace WebGPU {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Instance);

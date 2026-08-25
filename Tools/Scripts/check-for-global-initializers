@@ -45,6 +45,14 @@ my $target = $ENV{'TARGET_NAME'};
 my @variants = split(" ", $ENV{'BUILD_VARIANTS'});
 my $variant = $variants[0];  # FIXME: Multi-variant builds only check first variant.
 my $coverageBuild = $ENV{'WEBKIT_COVERAGE_BUILD'};
+# Xcode exports build settings into script phases, whereas WEBKIT_COVERAGE_BUILD is
+# only an environment variable and may not survive a sanitized build environment.
+# Treat any LLVM instrumentation build setting as a coverage build too.
+# https://webkit.org/b/264202
+for my $buildSetting (qw(ENABLE_LLVM_COVERAGE CLANG_COVERAGE_MAPPING)) {
+    next unless defined $ENV{$buildSetting};
+    $coverageBuild ||= $ENV{$buildSetting} eq "ON" || $ENV{$buildSetting} eq "YES";
+}
 my $debugRoot = $ENV{'WEBKIT_DEBUG_ROOT'};
 
 my $executablePath = "$ENV{'TARGET_BUILD_DIR'}/$ENV{'EXECUTABLE_PATH'}";

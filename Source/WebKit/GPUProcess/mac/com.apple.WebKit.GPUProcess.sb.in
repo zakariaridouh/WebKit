@@ -1545,3 +1545,7 @@
 #if ENABLE(LLVM_PROFILE_GENERATION)
 (allow file-write* (subpath "/private/tmp/WebKitPGO"))
 #endif
+
+#if ENABLE(LLVM_COVERAGE)
+(allow file-write* (subpath "/private/tmp/WebKitCoverage"))
+#endif
