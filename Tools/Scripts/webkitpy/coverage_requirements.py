@@ -25,9 +25,9 @@
 
 """What a coverage run requires of a build, in one place, and whether a tree meets it.
 
-A working coverage run needs three things nothing checks and nothing documents outside
-PLAN.md: --coverage, ENABLE_USER_SCRIPT_SANDBOXING=NO and a WEBKIT_OUTPUTDIR of its own.
-Getting any of them wrong is silent, and one of them is silent for hours:
+A working coverage run needs three things of a build: --coverage,
+ENABLE_USER_SCRIPT_SANDBOXING=NO and a WEBKIT_OUTPUTDIR of its own. Getting any of them wrong
+is silent, and one of them is silent for hours:
 
   * Forget --coverage and a `run-webkit-tests --coverage` run completes, exits 0 and collects
     nothing. The only signal is one warning from generate-coverage-report, which for the
@@ -50,7 +50,7 @@ The product lists live here too, for the same reason. "Which Mach-Os must exist 
 instrumented" is the same question as "what does a coverage build have to have produced",
 and the pre-flight below and generate-coverage-report's llvm-cov invocation must agree about
 it: a product missing from either list is silently absent from the report rather than
-reported at 0%, which is the 84,332-line bug in PLAN 8.2 S4.
+reported at 0%, which is the 84,332-line bug this tooling shipped for a week.
 """
 
 import logging
@@ -195,8 +195,8 @@ def normalize_build_root(path, configuration=None):
     `--build-directory=.../WebKitBuild-Coverage/Release` resolves to
     `.../WebKitBuild-Coverage/Release/Release` -- a directory that does not exist, which makes
     every product "not found in the build directory" and the report empty. That is the shape
-    every path in PLAN 1 and PLAN 7 is written in, so it is the first thing a reader of those
-    sections types, and the error it produces names neither the doubling nor the flag.
+    every documented path is written in, so it is the first thing a reader of them types, and
+    the error it produces names neither the doubling nor the flag.
 
     Both spellings are accepted here instead, and the adjustment is reported rather than made
     quietly: the developer's mental model of where their build is should survive using the tool.
@@ -350,8 +350,8 @@ def instrumentation_findings(survey, build_path, build_command):
             '{} write default.profraw into whatever their working directory happens to be, '
             'which nothing collects. They are excluded from the report by default, so this '
             'misreports nothing -- but --include-test-support would report them at 0% rather '
-            'than reporting what they ran. PLAN 10.5 records jsc as a live instance of '
-            'this.'.format(', '.join(product_name(relative) for relative in unbaked_extras)),
+            'than reporting what they ran. jsc is a live instance of this.'.format(
+                ', '.join(product_name(relative) for relative in unbaked_extras)),
             None))
     for relative, absolute in survey.unverifiable:
         findings.append(Finding(
@@ -389,7 +389,7 @@ def _output(command, timeout=10, accept_failure=False):
     return completed.stdout
 
 
-# PLAN 2's orphaned-server trap: a killed layout run leaves httpd, pywebsocket3 and a UDP
+# The orphaned-server trap: a killed layout run leaves httpd, pywebsocket3 and a UDP
 # listener behind, and the next run dies about 80 seconds in with `Address already in use`. The
 # harness now detects both the webtransport-h3 mapping and the DNS server on 8053 and names the
 # holder, so this survey is no longer the only thing that would notice -- but it runs before the

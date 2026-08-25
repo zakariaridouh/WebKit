@@ -36,7 +36,7 @@ addition as 0% of 20 and names all twenty line numbers.
 Two consequences beyond the number being the right one.
 
 It needs ONE trace, not two. A baseline comparison costs a full build, an incremental
-build and two full test runs, and by PLAN 8.2 S8 the two runs cannot overlap on one
+build and two full test runs, and the two runs cannot overlap on one
 machine, so the loop is most of a working day. Patch coverage needs the run you were going
 to do anyway.
 
@@ -81,7 +81,7 @@ logger = logging.getLogger(__name__)
 # say; the paths have to be repository-relative whatever diff.relative says; and neither an
 # external diff driver nor a textconv filter nor color may replace the body. core.fsmonitor is
 # off because it is on in this checkout and it has been observed reporting a clean tree that
-# was not clean (PLAN 2), and a patch-coverage report that silently omits a file the author
+# was not clean, and a patch-coverage report that silently omits a file the author
 # just edited is the failure this whole tool exists to prevent.
 _GIT_DIFF_ARGUMENTS = ('-U0', '--src-prefix=a/', '--dst-prefix=b/', '--no-relative',
                        '--no-ext-diff', '--no-textconv', '--no-color')

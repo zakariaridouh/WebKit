@@ -310,7 +310,7 @@ class PortTest(unittest.TestCase):
         self.assertEqual(port._build_path(), '/my-build-directory/Debug-embedded-port')
 
     def test_build_path_accepts_the_configuration_directory_itself(self):
-        # PLAN 1 and PLAN 7 spell every coverage path as .../WebKitBuild-Coverage/Release,
+        # The documented recipes spell every coverage path as .../WebKitBuild-Coverage/Release,
         # because that is where the frameworks are. Appending the configuration to that gave
         # .../Release/Release, which does not exist, so every product was missing and the report
         # was empty rather than wrong.

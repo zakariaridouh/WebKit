@@ -186,7 +186,7 @@ class RefusalTest(_Checkout):
         self.assertEqual(suggestion.declined[0].reason, DECLINED_NOT_CODE)
 
     def test_a_build_file_gets_no_suggestion(self):
-        # PLAN 10.2: a build or config file forces a full suite for 20.2% of commits, and
+        # Measured: a build or config file forces a full suite for 20.2% of commits, and
         # UnifiedWebPreferences.yaml is the single most-touched file in the tree.
         for path in ('Source/WebCore/WebCore.xcodeproj/project.pbxproj',
                      'Source/WTF/Scripts/Preferences/UnifiedWebPreferences.yaml'):
@@ -340,7 +340,7 @@ diff --git a/Source/WebCore/svg/SVGElement.cpp b/Source/WebCore/svg/SVGElement.c
 
 
 class RealTreeTest(unittest.TestCase):
-    """The premises PLAN 10.3 states, checked against the tree rather than believed."""
+    """The premises the suggester rests on, checked against the tree rather than believed."""
 
     def setUp(self):
         self.checkout = WebKitFinder(FileSystem()).webkit_base()
@@ -356,7 +356,7 @@ class RealTreeTest(unittest.TestCase):
             self.assertIn(expected, tests, directory)
 
     def test_the_aligned_directories_that_do_not_align_literally(self):
-        # PLAN 10.3 lists css, html and animation among the directories where alignment "already
+        # css, html and animation were claimed to be directories where alignment "already
         # holds". There is no LayoutTests/css, LayoutTests/html or LayoutTests/animation, so the
         # literal rule produces nothing and the generated forms are what make these work.
         for directory in ('css', 'html', 'animation'):
@@ -366,7 +366,7 @@ class RealTreeTest(unittest.TestCase):
                             directory)
 
     def test_dom_is_refused_even_though_the_directory_aligns(self):
-        # LayoutTests/dom exists, and Document.cpp is still not scopable: PLAN 10.2 measured
+        # LayoutTests/dom exists, and Document.cpp is still not scopable: it was measured
         # every one of the 19 most-changed implementation files as indeterminate.
         self.assertTrue(os.path.exists(os.path.join(self.checkout, 'LayoutTests', 'dom')))
         self.assertEqual(self.suggest('Source/WebCore/dom/Document.cpp'), [])
