@@ -567,16 +567,36 @@ endmacro()
 function(_WEBKIT_TARGET_LINK_FRAMEWORK_INTO target_name framework _public_frameworks_var _private_frameworks_var)
     set_property(GLOBAL PROPERTY ${framework}_LINKED_INTO ${target_name})
 
+    # Accumulate locally and write each list back once. Appending with
+    # set(<var> "${<var>};<dep>" PARENT_SCOPE) inside the loop does not work: PARENT_SCOPE
+    # writes the caller's variable and leaves this scope's copy alone, so the next iteration
+    # reads the value from before the previous one and every append but the last is lost --
+    # and with an empty accumulator the concatenation produces a leading ";", an empty list
+    # element that survives REMOVE_DUPLICATES and reaches the link line as a bare "WebKit::".
+    # Both were latent while the public loop was a no-op.
+    set(_public ${${_public_frameworks_var}})
+    set(_private ${${_private_frameworks_var}})
+
+    # A static framework absorbed into a shared one brings its own dependencies with it: the
+    # public ones become the absorbing target's, and the private ones are absorbed in turn.
     get_property(_framework_public_frameworks GLOBAL PROPERTY ${framework}_FRAMEWORKS)
-    foreach (dependency IN LISTS ${_framework_public_frameworks})
-        set(${_public_frameworks_var} "${${_public_frameworks_var}};${dependency}" PARENT_SCOPE)
-    endforeach ()
+    list(APPEND _public ${_framework_public_frameworks})
 
     get_property(_framework_private_frameworks GLOBAL PROPERTY ${framework}_PRIVATE_FRAMEWORKS)
     foreach (dependency IN LISTS _framework_private_frameworks)
-        set(${_private_frameworks_var} "${${_private_frameworks_var}};${dependency}" PARENT_SCOPE)
+        list(APPEND _private ${dependency})
+        # The recursive call reaches this scope with PARENT_SCOPE, so hand it what has been
+        # accumulated so far and read back what it added. Without this the whole subtree below
+        # depth 1 is computed and discarded.
+        set(${_public_frameworks_var} ${_public})
+        set(${_private_frameworks_var} ${_private})
         _WEBKIT_TARGET_LINK_FRAMEWORK_INTO(${target_name} ${dependency} ${_public_frameworks_var} ${_private_frameworks_var})
+        set(_public ${${_public_frameworks_var}})
+        set(_private ${${_private_frameworks_var}})
     endforeach ()
+
+    set(${_public_frameworks_var} ${_public} PARENT_SCOPE)
+    set(${_private_frameworks_var} ${_private} PARENT_SCOPE)
 endfunction()
 
 macro(_WEBKIT_FRAMEWORK_LINK_FRAMEWORK _target_name)
