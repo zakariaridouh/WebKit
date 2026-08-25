@@ -27,14 +27,16 @@ import json
 import os
 import shutil
 import struct
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
 
 from webkitpy import llvm_profile_utils
 from webkitpy.llvm_profile_utils import (
-    COVERAGE_PROFILE_DIRECTORY, LLVMCov, collect_coverage_profiles, objects_with_no_profile_data,
-    profile_name_prefix, read_instrumentation)
+    COVERAGE_PROFILE_DIRECTORY, LLVMCov, collect_coverage_profiles,
+    collected_profiles_with_no_object, objects_with_no_profile_data, profile_name_prefix,
+    read_instrumentation, survey_instrumentation, unreadable_profiles_from_stderr)
 
 
 def _mach_o(profile_filename=None, instrumented=True, sections=(), fat=False,
@@ -256,6 +258,210 @@ class ObjectsWithNoProfileDataTest(_MachOFixture):
         self.assertEqual(objects_with_no_profile_data([path]), [])
 
 
+class CollectedProfilesWithNoObjectTest(_MachOFixture):
+    """The inverse guard: profile data was collected and nothing in the report claims it.
+
+    This is the direction that catches the 84,332-line bug rather than one instance of it --
+    WebKitLegacy was missing from INSTRUMENTED_PRODUCTS, and an object that is not in the report
+    cannot be asked whether its profile was collected.
+    """
+
+    def webkit(self):
+        return self.write('WebKit', _mach_o(COVERAGE_PROFILE_DIRECTORY + '/WebKit_%4m%c.profraw'))
+
+    def test_a_collected_product_no_object_claims_is_reported(self):
+        orphans = collected_profiles_with_no_object(
+            [self.webkit()], ['/tmp/cov/WebKit_1_0.profraw', '/tmp/cov/WebKitLegacy_2_0.profraw',
+                              '/tmp/cov/WebKitLegacy_2_1.profraw'])
+        self.assertEqual(orphans, [('WebKitLegacy_', ['/tmp/cov/WebKitLegacy_2_0.profraw',
+                                                      '/tmp/cov/WebKitLegacy_2_1.profraw'])])
+
+    def test_a_claimed_prefix_that_is_a_prefix_of_another_product_does_not_claim_it(self):
+        # 'WebKitLegacy_1_0.profraw'.startswith('WebKit') is true and would hide the bug; the
+        # trailing underscore is what makes the two names distinguishable.
+        orphans = collected_profiles_with_no_object(
+            [self.webkit()], ['/tmp/cov/WebKitLegacy_1_0.profraw'])
+        self.assertEqual([group for group, _ in orphans], ['WebKitLegacy_'])
+
+    def test_everything_claimed_reports_nothing(self):
+        self.assertEqual(collected_profiles_with_no_object(
+            [self.webkit()], ['/tmp/cov/WebKit_1_0.profraw', '/tmp/cov/WebKit_1_1.profraw']), [])
+
+    def test_a_uniquified_collected_name_is_still_claimed(self):
+        # collect_coverage_profiles appends -N when two runs accumulate into one directory.
+        self.assertEqual(collected_profiles_with_no_object(
+            [self.webkit()], ['/tmp/cov/WebKit_1_0-2.profraw']), [])
+
+    def test_an_unbaked_binary_claims_nothing_so_its_profiles_are_orphans(self):
+        # The other half of the same bug: WebGPU baked no path, so it claims no prefix at all,
+        # and a WebGPU profile from a fixed build reported against this binary is unclaimed.
+        orphans = collected_profiles_with_no_object(
+            [self.write('WebGPU', _mach_o(''))], ['/tmp/cov/WebGPU_1_0.profraw'])
+        self.assertEqual([group for group, _ in orphans], ['WebGPU_'])
+
+    def test_the_runtime_fallback_profile_is_reported_under_its_own_name(self):
+        # An unbaked binary writes default.profraw into its working directory. There is no
+        # underscore to split on, so the group is the whole name.
+        orphans = collected_profiles_with_no_object([self.webkit()], ['/tmp/cov/default.profraw'])
+        self.assertEqual(orphans, [('default.profraw', ['/tmp/cov/default.profraw'])])
+
+    def test_no_collected_profiles_reports_nothing(self):
+        # Reporting from an already-indexed profile: there is nothing to compare against.
+        self.assertEqual(collected_profiles_with_no_object([self.webkit()], []), [])
+
+    def test_a_binary_that_cannot_be_read_claims_nothing_rather_than_raising(self):
+        orphans = collected_profiles_with_no_object(
+            [os.path.join(self.directory, 'does-not-exist')], ['/tmp/cov/WebKit_1_0.profraw'])
+        self.assertEqual([group for group, _ in orphans], ['WebKit_'])
+
+
+class SurveyInstrumentationTest(_MachOFixture):
+    GOOD = COVERAGE_PROFILE_DIRECTORY + '/WebKit_%4m%c.profraw'
+
+    def test_an_uninstrumented_binary_is_reported_rather_than_skipped(self):
+        # The single most likely first-run mistake is pointing the report at a tree that was not
+        # built with --coverage. A real uninstrumented WebCore reads exactly like this.
+        plain = self.write('WebCore', _mach_o(None, instrumented=False))
+        survey = survey_instrumentation([self.write('WebKit', _mach_o(self.GOOD)), plain])
+        self.assertEqual([path for path, _ in survey.uninstrumented], [plain])
+        self.assertEqual(survey.unverifiable, [])
+        self.assertIn('__llvm_prf_cnts', survey.uninstrumented[0][1])
+
+    def test_a_stripped_binary_is_reported_separately_from_a_broken_one(self):
+        # "Cannot tell" must never read as "broken": a stripped binary is fine.
+        stripped = self.write('Stripped', _mach_o(None))
+        survey = survey_instrumentation([stripped])
+        self.assertEqual(survey.uninstrumented, [])
+        self.assertEqual([path for path, _ in survey.unverifiable], [stripped])
+        self.assertIn('llvm_profile_filename', survey.unverifiable[0][1])
+
+    def test_a_correctly_instrumented_binary_is_in_neither_bucket(self):
+        survey = survey_instrumentation([self.write('WebKit', _mach_o(self.GOOD))])
+        self.assertEqual(survey, ([], []))
+
+    def test_an_unbaked_but_instrumented_binary_is_in_neither_bucket(self):
+        # That is objects_with_no_profile_data()'s finding, not this one's; reporting it twice
+        # would make the two guards disagree about the same binary.
+        survey = survey_instrumentation([self.write('WebGPU', _mach_o(''))])
+        self.assertEqual(survey, ([], []))
+
+    def test_something_that_is_not_a_mach_o_reads_as_uninstrumented(self):
+        script = self.write('script', b'#!/bin/sh\n')
+        self.assertEqual([path for path, _ in survey_instrumentation([script]).uninstrumented],
+                         [script])
+
+
+class UnreadableProfileAccountingTest(unittest.TestCase):
+    """llvm-profdata --failure-mode=all fails only if *every* input fails.
+
+    Verified against the current Apple LLVM: merging one good profile with two garbage ones prints
+    'warning: <path>: truncated profile data' for each and exits 0. So the exit status says
+    nothing, and the number of profiles that contributed is only knowable from these warnings.
+    """
+
+    INPUTS = ['/tmp/cov/A_1_0.profraw', '/tmp/cov/B_2_0.profraw', '/tmp/cov/C_3_0.profraw']
+    STDERR = ('warning: /tmp/cov/B_2_0.profraw: truncated profile data\n'
+              'warning: /tmp/cov/C_3_0.profraw: invalid instrumentation profile data '
+              '(file header is corrupt)\n')
+
+    def test_each_unreadable_input_is_counted_with_its_reason(self):
+        self.assertEqual(unreadable_profiles_from_stderr(self.STDERR, self.INPUTS), [
+            ('/tmp/cov/B_2_0.profraw', 'truncated profile data'),
+            ('/tmp/cov/C_3_0.profraw',
+             'invalid instrumentation profile data (file header is corrupt)')])
+
+    def test_a_warning_about_something_that_is_not_an_input_is_not_a_lost_profile(self):
+        # Otherwise any future diagnostic llvm-profdata adds inflates the count, and the
+        # threshold starts refusing healthy runs.
+        self.assertEqual(unreadable_profiles_from_stderr(
+            'warning: 9418 functions have mismatched data\n', self.INPUTS), [])
+
+    def test_no_stderr_at_all_is_no_lost_profiles(self):
+        self.assertEqual(unreadable_profiles_from_stderr('', self.INPUTS), [])
+        self.assertEqual(unreadable_profiles_from_stderr(None, self.INPUTS), [])
+
+    def test_the_reported_order_is_the_input_order(self):
+        reversed_stderr = '\n'.join(reversed(self.STDERR.splitlines()))
+        self.assertEqual([path for path, _ in
+                          unreadable_profiles_from_stderr(reversed_stderr, self.INPUTS)],
+                         ['/tmp/cov/B_2_0.profraw', '/tmp/cov/C_3_0.profraw'])
+
+
+class MergeRawProfilesTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.directory, ignore_errors=True)
+
+    def write(self, name):
+        path = os.path.join(self.directory, name)
+        with open(path, 'w') as handle:
+            handle.write('not a profile')
+        return path
+
+    def merge(self, stderr, returncode=0, **kwargs):
+        """merge_raw_profiles_in_directory over the directory, with llvm-profdata's answer given.
+
+        The merge itself is llvm-profdata's business and is exercised by the tool; what has to be
+        right here is what this concludes from the answer.
+        """
+        completed = subprocess.CompletedProcess([], returncode, stdout='', stderr=stderr)
+        with mock.patch.object(llvm_profile_utils.LLVMProfileData, 'merge',
+                               return_value=completed):
+            return llvm_profile_utils.merge_raw_profiles_in_directory(
+                self.directory, os.path.join(self.directory, 'out.profdata'), **kwargs)
+
+    def test_only_the_readable_profiles_are_returned_as_having_contributed(self):
+        first, second = self.write('A_1_0.profraw'), self.write('B_2_0.profraw')
+        for _ in range(8):
+            self.write('C_3_{}.profraw'.format(_))
+        merge = self.merge('warning: {}: truncated profile data\n'.format(second))
+        self.assertNotIn(second, merge.merged)
+        self.assertIn(first, merge.merged)
+        self.assertEqual(merge.unreadable, [(second, 'truncated profile data')])
+
+    def test_a_healthy_merge_returns_every_input(self):
+        paths = sorted(self.write('A_1_{}.profraw'.format(index)) for index in range(3))
+        self.assertEqual(self.merge('').merged, paths)
+        self.assertEqual(self.merge('').unreadable, [])
+
+    def test_too_many_unreadable_profiles_is_refused_rather_than_reported(self):
+        # A run in which 99 of 100 profiles were unreadable merges, exits 0, and produces a
+        # confidently low report. This is the only place that can tell.
+        first, second = self.write('A_1_0.profraw'), self.write('B_2_0.profraw')
+        stderr = ''.join('warning: {}: truncated profile data\n'.format(path)
+                         for path in (first, second))
+        with self.assertRaises(RuntimeError) as raised:
+            self.merge(stderr)
+        self.assertIn('2 of 2', str(raised.exception))
+
+    def test_the_threshold_can_be_lifted(self):
+        first, second = self.write('A_1_0.profraw'), self.write('B_2_0.profraw')
+        stderr = 'warning: {}: truncated profile data\n'.format(second)
+        self.assertEqual(self.merge(stderr, unreadable_limit=1.0).merged, [first])
+
+    def test_a_merge_that_failed_outright_still_raises(self):
+        self.write('A_1_0.profraw')
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.merge('error: something else entirely\n', returncode=1)
+
+    def test_an_empty_directory_is_an_error(self):
+        with self.assertRaises(RuntimeError):
+            self.merge('')
+
+    def test_the_compatibility_wrapper_returns_just_the_readable_ones(self):
+        first, second = self.write('A_1_0.profraw'), self.write('B_2_0.profraw')
+        for index in range(8):
+            self.write('C_3_{}.profraw'.format(index))
+        completed = subprocess.CompletedProcess(
+            [], 0, stdout='', stderr='warning: {}: truncated profile data\n'.format(second))
+        with mock.patch.object(llvm_profile_utils.LLVMProfileData, 'merge',
+                               return_value=completed):
+            merged = llvm_profile_utils.merge_all_raw_profiles_in_directory(
+                self.directory, os.path.join(self.directory, 'out.profdata'))
+        self.assertIn(first, merged)
+        self.assertNotIn(second, merged)
+
+
 class LLVMCovArgumentsTest(unittest.TestCase):
     def test_first_object_is_positional_and_the_rest_are_repeated(self):
         # llvm-cov takes the first binary positionally and each additional one as a
@@ -281,6 +487,52 @@ class LLVMCovArgumentsTest(unittest.TestCase):
             '--ignore-filename-regex=/DerivedSources/',
             '-path-equivalence=/build,/src',
         ])
+
+
+class AtomicOutputTest(unittest.TestCase):
+    """A failed export must not leave a well-formed truncated trace at the final filename.
+
+    That is the worst shape a coverage artifact can take: parse_lcov() reads a truncated trace as
+    a perfectly valid smaller one, so the report is over whichever files llvm-cov reached before
+    it died, and nothing downstream can tell the difference.
+    """
+
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.directory, ignore_errors=True)
+        self.output = os.path.join(self.directory, 'coverage.lcov')
+
+    def write(self, returncode):
+        def writer(path):
+            with open(path, 'w') as handle:
+                handle.write('SF:/checkout/a.cpp\nDA:1,1\n')
+            return subprocess.CompletedProcess([], returncode)
+        return LLVMCov._write_atomically(self.output, writer)
+
+    def test_a_successful_write_lands_at_the_final_path(self):
+        self.assertEqual(self.write(0).returncode, 0)
+        self.assertEqual(sorted(os.listdir(self.directory)), ['coverage.lcov'])
+
+    def test_a_failed_write_leaves_nothing_behind(self):
+        self.assertEqual(self.write(1).returncode, 1)
+        self.assertEqual(os.listdir(self.directory), [])
+
+    def test_a_failed_write_does_not_replace_an_earlier_good_one(self):
+        # An incremental workflow re-reports into the same directory, so the previous trace being
+        # replaced by a truncated one is a real way to lose a good artifact.
+        self.write(0)
+        self.write(1)
+        with open(self.output) as handle:
+            self.assertIn('SF:', handle.read())
+
+    def test_an_exception_partway_through_leaves_nothing_behind(self):
+        def explode(path):
+            with open(path, 'w') as handle:
+                handle.write('SF:/checkout/a.cpp\n')
+            raise KeyboardInterrupt
+        with self.assertRaises(KeyboardInterrupt):
+            LLVMCov._write_atomically(self.output, explode)
+        self.assertEqual(os.listdir(self.directory), [])
 
 
 class CollectCoverageProfilesTest(unittest.TestCase):

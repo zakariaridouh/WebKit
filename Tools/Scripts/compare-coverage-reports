@@ -129,6 +129,11 @@ def parse_args(args):
     parser = optparse.OptionParser(usage='%prog --baseline=FILE --current=FILE [options]',
                                    epilog=_EPILOG, formatter=_PreformattedEpilog())
     parser.add_option('--baseline', help='lcov trace from before the change, gzipped or not')
+    parser.add_option('--baseline-source-root', metavar='DIR',
+                      help='The checkout the baseline trace was produced in, if it was not '
+                           'this one. Its paths are rebased onto --source-root before '
+                           'anything is compared. A baseline needs no binaries, so this is '
+                           'what makes a kept, downloaded or bot-produced one usable')
     parser.add_option('--current', help='lcov trace from after the change, gzipped or not')
     parser.add_option('--output-dir', help='Directory to write the HTML delta report into. '
                                            'Nothing is opened in a browser; the path is printed')
@@ -197,7 +202,8 @@ def main(args):
         _log.info('Restricting the comparison to %d changed path(s)', len(changed_files))
 
     try:
-        delta = compare_lcov_files(options.baseline, options.current, source_root, changed_files)
+        delta = compare_lcov_files(options.baseline, options.current, source_root, changed_files,
+                                   baseline_source_root=options.baseline_source_root)
     except RuntimeError as error:
         _log.error('%s', error)
         return 1
@@ -238,9 +244,16 @@ def main(args):
              if delta.focused else 'the whole project')
     change = delta.scope.percent_delta()
     if change is None:
-        _log.warning('No line coverage percentage for %s, so --fail-under-delta cannot be '
-                     'applied.', scope)
-        return 0
+        # It used to warn here and return 0, which made it a gate-shaped object rather than a
+        # gate: with a baseline rooted in another checkout, every file reads as new, the
+        # baseline contributes nothing, and this is the branch that was taken -- so the tool
+        # said "cannot be applied" once, at WARNING, and exited 0. A gate that cannot evaluate
+        # itself has to fail, which is the same rule coverage_thresholds applies to a metric
+        # with nothing to measure.
+        _log.error('There is no baseline line coverage percentage for %s, so '
+                   '--fail-under-delta cannot be evaluated and is failing rather than '
+                   'silently passing. Do the two traces describe the same files?', scope)
+        return COVERAGE_GATE_EXIT_CODE
     if change < -options.fail_under_delta - _TOLERANCE:
         _log.error('Line coverage over %s fell by %.2fpp, more than the %.2fpp allowed by '
                    '--fail-under-delta.', scope, -change, options.fail_under_delta)

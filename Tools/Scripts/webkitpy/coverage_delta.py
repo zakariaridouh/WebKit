@@ -57,9 +57,12 @@ reported separately for that reason.
 """
 
 import html
+import logging
 import os
 
 from webkitpy.coverage_directory_index import SORT_SCRIPT, REPORT_STYLE, format_percent, meter_html
+
+logger = logging.getLogger(__name__)
 
 # The three metrics FileCoverage.totals() reports. lcov carries no region data.
 METRICS = ('lines', 'functions', 'branches')
@@ -326,19 +329,112 @@ def compare(baseline_files, current_files, changed_files=None):
                          ignored_path_count=len(requested) - len(interesting))
 
 
-def compare_lcov_files(baseline_path, current_path, source_root=None, changed_files=None):
+class TracePaths:
+    """One trace's paths on the way in: rebased onto this checkout, and checked against it.
+
+    Two jobs, both about a trace whose paths were not produced by this checkout, and both
+    outside PathCanonicalizer because they are about which checkout a trace came from rather
+    than about where a copied header lives.
+
+    Rebasing makes a foreign trace usable at all. A baseline needs no binaries -- 54 MB
+    gzipped for a full-suite run, against the 45 GB build tree -- so the whole point of one
+    is to keep it after the tree is gone, or to take it from a bot or a colleague. Its paths
+    are then rooted somewhere else, and without rebasing every file in it is a file the
+    current trace has never heard of.
+
+    Counting how many paths were under the expected root catches a wrong --source-root,
+    which is otherwise silent and does move the numbers. The copied-header rules rewrite
+    <build>/usr/local/include/wtf/X.h to <source root>/Source/WTF/wtf/X.h, and that record
+    only unions with the in-tree Source/WTF/wtf/X.h record when the root matches; measured
+    over the same two traces, three different --source-root values gave 3,680 against 3,981
+    files and 752,036 against 767,366 lines, a 0.17pp swing, with nothing said about it.
+    """
+
+    def __init__(self, canonicalizer=None, source_root=None, foreign_root=None):
+        self._canonicalizer = canonicalizer
+        self._source_root = source_root.rstrip('/') if source_root else None
+        self._foreign_root = foreign_root.rstrip('/') if foreign_root else None
+        self.path_count = 0
+        self.rebased_count = 0
+        self.under_source_root_count = 0
+
+    def canonicalize(self, path):
+        self.path_count += 1
+        if self._foreign_root and self._source_root and \
+                path.startswith(self._foreign_root + '/'):
+            path = self._source_root + path[len(self._foreign_root):]
+            self.rebased_count += 1
+        if self._source_root and path.startswith(self._source_root + '/'):
+            self.under_source_root_count += 1
+        return self._canonicalizer.canonicalize(path) if self._canonicalizer else path
+
+    def log_findings(self, label, lcov_path):
+        if self._foreign_root:
+            if self.rebased_count:
+                logger.info('Rebased %d of the %d paths in the %s trace from %s onto %s',
+                            self.rebased_count, self.path_count, label, self._foreign_root,
+                            self._source_root)
+            else:
+                logger.warning('--baseline-source-root %s is not a prefix of any of the %d '
+                               'paths in %s, so nothing was rebased. Name the checkout that '
+                               'trace was produced in.',
+                               self._foreign_root, self.path_count, lcov_path)
+        if self.path_count and self._source_root and not self.under_source_root_count:
+            logger.warning(
+                'None of the %d paths in the %s trace %s are under --source-root %s. That '
+                'root decides where a copied header is placed -- '
+                '<build>/usr/local/include/wtf/X.h becomes <root>/Source/WTF/wtf/X.h -- and '
+                'a record placed under the wrong root does not union with the in-tree one, '
+                'which moves the totals silently: measured over one pair of traces, three '
+                'different --source-root values gave 3,680 against 3,981 files and 752,036 '
+                'against 767,366 lines, a 0.17pp swing.',
+                self.path_count, label, lcov_path, self._source_root)
+
+
+def check_traces_fit(baseline_files, current_files, baseline_path, current_path):
+    """Raise unless the two traces have at least one source path in common.
+
+    Zero overlap is not a comparison with a lot of new files in it, it is two traces about
+    different things, and everything downstream of it is meaningless: measured with a
+    baseline whose root was rewritten to look like a bot artifact, every file reported as
+    `new`, the baseline contributed nothing to any total, --fail-under-delta could not be
+    evaluated -- and the tool exited 0. A gate that passes because it could not find the
+    baseline is worse than no gate.
+    """
+    if baseline_files.keys() & current_files.keys():
+        return
+    raise RuntimeError(
+        'The baseline and current traces have no source file in common, so there is nothing '
+        'to compare: {} has {} path(s) such as {}, and {} has {} path(s) such as {}. Every '
+        'file would be reported as new and the baseline would contribute nothing to any '
+        'total. If the baseline was produced in another checkout, pass '
+        '--baseline-source-root=<that checkout>.'.format(
+            baseline_path, len(baseline_files), min(baseline_files),
+            current_path, len(current_files), min(current_files)))
+
+
+def compare_lcov_files(baseline_path, current_path, source_root=None, changed_files=None,
+                       baseline_source_root=None):
     """Parse and compare two lcov traces, canonicalizing both against one checkout."""
     from webkitpy.coverage_lcov import PathCanonicalizer, parse_lcov
 
     canonicalizer = PathCanonicalizer(source_root) if source_root else None
-    baseline_files = parse_lcov(baseline_path, canonicalizer)
+
+    baseline_paths = TracePaths(canonicalizer, source_root, baseline_source_root)
+    baseline_files = parse_lcov(baseline_path, baseline_paths)
     if not baseline_files:
         raise RuntimeError('{} contained no coverage records'.format(baseline_path))
-    current_files = parse_lcov(current_path, canonicalizer)
+    baseline_paths.log_findings('baseline', baseline_path)
+
+    current_paths = TracePaths(canonicalizer, source_root)
+    current_files = parse_lcov(current_path, current_paths)
     if not current_files:
         raise RuntimeError('{} contained no coverage records'.format(current_path))
+    current_paths.log_findings('current', current_path)
+
     if canonicalizer:
         canonicalizer.log_summary()
+    check_traces_fit(baseline_files, current_files, baseline_path, current_path)
     return compare(baseline_files, current_files, changed_files)
 
 
