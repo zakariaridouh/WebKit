@@ -38,21 +38,27 @@ the report can say so instead of implying the other 23% does not exist.
 Everything comes from the build rather than from re-deriving what the build would have
 done:
 
-  * Whether a file was compiled comes from the per-translation-unit dependency files the
-    compiler wrote (`*.d` under each target's `Objects-normal`). They name the primary
-    source of every object, and for a unified build they also name every member of the
-    bundle, which makes them a complete answer for both. Validated against the full-suite
-    report: every one of the 8,027 implementation files in that report's lcov trace is in
-    this set, so the set has no false negatives.
+  * Whether a file was compiled comes from three records, unioned, because no one of them
+    survives both build systems:
 
-  * The unified-source bundles under `DerivedSources/*/unified-sources/` are read as well.
-    They are a subset of what the dependency files say -- they were measured to add nothing
-    on a complete build -- but they survive a build directory whose intermediates have been
-    pruned, and they cost nothing to read.
+      - The per-translation-unit dependency files the compiler wrote (`*.d` under each
+        target's `Objects-normal`). They name the primary source of every object, and for a
+        unified build they also name every member of the bundle. Validated against the
+        full-suite Xcode report: every one of the 8,027 implementation files in that report's
+        lcov trace is in this set, so it has no false negatives there. On the CMake build it
+        is nearly empty -- ninja pairs `depfile` with `deps = gcc`, so it folds each `.o.d`
+        into the binary `.ninja_deps` and deletes it, leaving 4,718 objects against five `.d`
+        files, none of which is a compiler artefact.
 
-    Reading *only* the bundles would be wrong: WTF, bmalloc, WebGPU and PAL have no
-    unified-sources directory on the Xcode build at all, so 587 compiled files would be
-    reported as never built.
+      - The unified-source bundles under `unified-sources/`, which contain a literal
+        `#include "<path>"` per member. Reading *only* these would be wrong: WTF, bmalloc,
+        WebGPU and PAL have no unified-sources directory on the Xcode build at all, so 587
+        compiled files would be reported as never built.
+
+      - The object files themselves, under `CMakeFiles/<Target>.dir/`. This is the CMake
+        build's real evidence, and it is stronger than a depfile: an object proves the
+        translation unit was compiled, where `compile_commands.json` would only prove it was
+        configured.
 
   * Why an uncompiled file was not compiled comes from the build descriptions that mention
     it -- `Sources*.txt`, `CMakeLists.txt` and every `*.cmake` -- and, failing that, from a
@@ -74,6 +80,13 @@ IMPLEMENTATION_SUFFIXES = ('.cpp', '.cc', '.cxx', '.c', '.mm', '.m', '.swift')
 
 # Directories under the source root that hold no first-party product code.
 _SKIPPED_SOURCE_DIRECTORIES = frozenset(('DerivedSources', '.git', '.svn'))
+
+# Build-directory trees that hold no per-translation-unit record: precompiled headers and
+# modules, the TBD stubs, Xcode's own database, and LTO scratch.
+_SKIPPED_BUILD_DIRECTORIES = frozenset((
+    'SharedPrecompiledHeaders', 'ExplicitPrecompiledModules',
+    'SwiftExplicitPrecompiledModules', 'EagerLinkingTBDs', 'XCBuildData', 'LTO',
+))
 
 # Source/ThirdParty is 12,538 implementation files of vendored code with its own upstreams
 # and, in several cases, its own build system. It is not first-party, so it is not in the
@@ -124,14 +137,44 @@ _DESCRIPTION_PORTS = {
     'GCrypt': 'GnuTLS', 'Cairo': 'Cairo', 'Skia': 'Skia', 'Adwaita': 'Adwaita',
 }
 
-# Xcode target names whose object files end up inside one of the binaries
+# Target names whose object files end up inside one of the binaries
 # generate-coverage-report hands to llvm-cov. Anything else that compiles first-party code
 # -- the JSC test tools, the libpas harness, the XPC service entry-point stubs -- produces
 # coverage the report never sees, which is a different thing from being untested.
+#
+# The CMake names are here as well as the Xcode ones, because CMake splits each framework
+# across several targets and links them together. This list is not guesswork: it is the
+# transitive closure of the CMakeFiles/<T>.dir directories reachable from the five framework
+# link edges in the generated build.ninja, with the Source/ThirdParty targets dropped (their
+# sources are not in the denominator at all).
 REPORTED_TARGETS = frozenset((
+    # Xcode target names.
     'JavaScriptCore', 'libJavaScriptCore', 'WebCore', 'PAL', 'WebKit', 'WebKitPlatform',
     'WebKitSwift', 'WebKitLegacy', 'WebGPU', 'WGSL', 'WTF', 'bmalloc',
+    # CMake target names, additional to the above.
+    'JavaScriptCoreJIT', 'LowLevelInterpreterLib', 'PAL_SwiftInterop',
+    'WebCoreAVFoundation', 'WebCoreDOMAndRendering', 'WebCoreInspector', 'WebCoreJSBindings',
+    'WebCoreStyle', 'WebGPU_SwiftInterop', 'WGSLCore', 'WebKitARC', 'WebKitGPUProcess',
+    'WebKitNetworkProcess', 'WebKitShared', 'WebKitUIProcess', 'WebKitWebProcess',
+    'WebKit_SwiftInterop',
 ))
+
+# Where a unified-source bundle's members live, by the name of the directory holding the
+# bundle. A tuple because the same name resolves differently on the two build systems -- see
+# BuildInventory._resolve_member -- and the first candidate that has the file wins.
+_FRAMEWORK_SOURCE_DIRECTORIES = {
+    'JavaScriptCore': ('Source/JavaScriptCore',),
+    'WebCore': ('Source/WebCore',),
+    'WebKit': ('Source/WebKit',),
+    'WebKitLegacy': ('Source/WebKitLegacy',),
+    'WTF': ('Source/WTF',),
+    # CMake bundles these four and Xcode does not, which is why they were missing.
+    'PAL': ('Source/WebCore/PAL/pal', 'Source/WebCore/PAL'),
+    'WGSL': ('Source/WebGPU/WGSL',),
+    'WebGPU': ('Source/WebGPU/WebGPU', 'Source/WebGPU'),
+    'TestWebKit': ('Tools/TestWebKitAPI',),
+    'TestWebKitAPI': ('Tools/TestWebKitAPI',),
+}
 
 _SOURCES_LIST_NAME = re.compile(r'Sources([A-Za-z]*)\.txt\Z')
 _PLATFORM_CMAKE_NAME = re.compile(r'Platform([A-Za-z]*)\.cmake\Z')
@@ -301,10 +344,30 @@ def enumerate_source_files(checkout_root, source_directory='Source'):
     return files
 
 
+_CMAKE_TARGET_DIRECTORY = re.compile(r'(?:\A|/)CMakeFiles/([^/]+)\.dir/')
+
+# <binary dir>/CMakeFiles/<target>.dir/<source path, with .. written __>.o
+_CMAKE_OBJECT_PATH = re.compile(r'\A(.*)/CMakeFiles/([^/]+)\.dir/(.+)\.(?:o|obj)\Z')
+
+
+def _unmangle(relative_object_path):
+    """CMake writes a `..` in an object's path as `__`. Put them back."""
+    return '/'.join('..' if part == '__' else part
+                    for part in relative_object_path.split('/'))
+
+
 def _target_of(path):
-    """The Xcode target that wrote a build artefact, from the nearest enclosing *.build."""
-    parts = path.split(os.sep)
-    for part in reversed(parts):
+    """The target that wrote a build artefact.
+
+    Xcode names it with the nearest enclosing `<Target>.build`; CMake with
+    `CMakeFiles/<Target>.dir`. Recognising only the Xcode shape attributed every CMake
+    object to the empty target name, which is in no REPORTED_TARGETS, so anything found only
+    that way would have been labelled as compiled into a binary the report excludes.
+    """
+    match = _CMAKE_TARGET_DIRECTORY.search(path)
+    if match:
+        return match.group(1)
+    for part in reversed(path.split(os.sep)):
         if part.endswith('.build'):
             return part[:-len('.build')]
     return ''
@@ -312,12 +375,28 @@ def _target_of(path):
 
 def _iter_dependency_files(root):
     """Compiler-written dependency files under an Xcode or CMake intermediates tree."""
-    skip = frozenset(('DerivedSources', 'SharedPrecompiledHeaders', 'ExplicitPrecompiledModules',
-                      'SwiftExplicitPrecompiledModules', 'EagerLinkingTBDs', 'XCBuildData', 'LTO'))
     for current, directories, names in os.walk(root):
-        directories[:] = [d for d in directories if d not in skip]
+        directories[:] = [d for d in directories
+                          if d not in _SKIPPED_BUILD_DIRECTORIES and d != 'DerivedSources']
         for name in names:
             if name.endswith('.d'):
+                yield os.path.join(current, name)
+
+
+def _iter_object_files(root):
+    """Object files a CMake target wrote, under `CMakeFiles/<Target>.dir/`.
+
+    DerivedSources is *not* pruned here, unlike in the dependency-file walk: CMake puts a
+    unified bundle's object at
+    `CMakeFiles/<T>.dir/__/__/<Component>/DerivedSources/unified-sources/UnifiedSource-x.cpp.o`,
+    so pruning it would hide exactly the objects that prove the bundles were compiled.
+    """
+    for current, directories, names in os.walk(root):
+        directories[:] = [d for d in directories if d not in _SKIPPED_BUILD_DIRECTORIES]
+        if not _CMAKE_TARGET_DIRECTORY.search(current + '/'):
+            continue
+        for name in names:
+            if name.endswith('.o') or name.endswith('.obj'):
                 yield os.path.join(current, name)
 
 
@@ -330,6 +409,7 @@ class BuildInventory:
         self.targets_by_file = {}       # relative source path -> set of target names
         self.dependency_file_count = 0
         self.bundle_count = 0
+        self.object_file_count = 0
         self._scan()
 
     def _record(self, absolute_path, target):
@@ -346,13 +426,47 @@ class BuildInventory:
             return
         self.targets_by_file.setdefault(relative, set()).add(target)
 
+    def _intermediate_roots(self):
+        """The directories holding the build record for *this* configuration.
+
+        CMake keeps its intermediates inside the configuration directory. Xcode keeps them
+        beside it, in `<output>/<Target>.build/<Configuration>/`: measured on the reference
+        instrumented tree, every dependency file is under that shape and none is under
+        `Release/` itself, so the sibling walk cannot simply be dropped.
+
+        It used to walk `os.path.dirname(build_directory)` wholesale, which also swept in
+        every *other* configuration built into the same output directory. On a CMake tree
+        that is `WebKitBuild/cmake-mac`, where Debug/ and Release/ sit beside Coverage/, so a
+        file that only an older configuration ever compiled could be reported as compiled
+        here -- hiding exactly the absence this module exists to surface. Measured against
+        the reference CMake tree, the old walk read 5,636 objects for a Release build that
+        has 4,718 of its own; there the two configurations compile the same sources, so the
+        file set was unchanged, but nothing about the old walk guaranteed that.
+
+        Naming the Xcode shape keeps the sibling record without the sibling configurations.
+        """
+        roots = []
+        if os.path.isdir(self._build_directory):
+            roots.append(self._build_directory)
+        parent = os.path.dirname(self._build_directory)
+        configuration = os.path.basename(self._build_directory)
+        if parent and configuration and os.path.isdir(parent):
+            try:
+                entries = sorted(os.listdir(parent))
+            except OSError:
+                entries = []
+            for entry in entries:
+                if not entry.endswith('.build'):
+                    continue
+                candidate = os.path.join(parent, entry, configuration)
+                if os.path.isdir(candidate):
+                    roots.append(candidate)
+        return roots
+
     def _scan(self):
         if not self._build_directory:
             return
-        # Xcode puts intermediates beside the configuration directory; CMake puts them
-        # inside it. Scan both, and let the union sort it out.
-        roots = [root for root in (self._build_directory, os.path.dirname(self._build_directory))
-                 if root and os.path.isdir(root)]
+        roots = self._intermediate_roots()
         if not roots:
             return
 
@@ -375,42 +489,114 @@ class BuildInventory:
                         self._record(token.decode('utf-8', 'replace'), target)
 
         self._scan_unified_source_bundles()
+        self._scan_object_files(roots)
+
+    def _scan_object_files(self, roots):
+        """Every checked-in source a CMake target has an object file for.
+
+        The dependency-file walk above is the whole record on the Xcode build and almost none
+        of it on the CMake build, where ninja's rules pair `depfile` with `deps = gcc`: it
+        folds each `.o.d` into the binary `.ninja_deps` and deletes the file. Measured on a
+        complete CMake tree, 4,718 objects against five `.d` files, and all five are
+        non-compiler artefacts this module's filters already reject. The objects themselves
+        are the surviving evidence, and unlike compile_commands.json -- which only proves a
+        translation unit was *configured* -- an object proves it was compiled.
+
+        CMake derives an object's name from the source path relative to the target's source
+        directory when the source is under it, and relative to its binary directory
+        otherwise, with each `..` component written `__`. Both are tried and the one that
+        exists wins; measured over the reference tree that resolves all 4,718 objects, 4,259
+        to a checked-in source and 459 to a generated one, with none left over.
+        """
+        for root in roots:
+            for path in _iter_object_files(root):
+                match = _CMAKE_OBJECT_PATH.match(path.replace(os.sep, '/'))
+                if not match:
+                    continue
+                binary_directory, target, inside = match.groups()
+                source = _unmangle(inside)
+                source_directory = os.path.join(
+                    self._checkout_root, os.path.relpath(binary_directory, root))
+                # Relative to the target's source directory, then to its binary directory.
+                for candidate in (os.path.join(source_directory, source),
+                                  os.path.join(binary_directory, source)):
+                    candidate = os.path.normpath(candidate)
+                    if os.path.exists(candidate):
+                        self.object_file_count += 1
+                        self._record(candidate, target)
+                        break
 
     def _scan_unified_source_bundles(self):
         """The bundles name their members as `#include "<path>"`, relative to the framework.
 
-        Redundant with the dependency files on a complete build -- measured to add zero
-        files there -- but it is the part of the record that lives in the product directory
-        rather than in the intermediates, so it survives their being pruned.
+        Redundant with the dependency files on the Xcode build -- measured to add zero files
+        there -- but it is the part of the record that lives in the product directory rather
+        than in the intermediates, so it survives their being pruned. On the CMake build it
+        is not redundant at all: ninja's rules pair `depfile` with `deps = gcc`, so it folds
+        every `.o.d` into the binary `.ninja_deps` and deletes it, leaving 4,718 objects
+        against five `.d` files, none of them a compiler artefact.
+
+        Two directory layouts, both real, both present on the same CMake tree:
+
+          <build>/DerivedSources/<Name>/unified-sources     Xcode, and CMake's TestWebKit
+          <build>/<Name>/DerivedSources/unified-sources     CMake's frameworks
+
+        Only the first was recognised, so all 216 of the CMake tree's bundles were invisible
+        and, with the depfiles gone too, both signals were zero and the report dropped its
+        third state entirely.
         """
-        derived = os.path.join(self._build_directory, 'DerivedSources')
-        if not os.path.isdir(derived):
-            return
-        framework_source_directory = {
-            'JavaScriptCore': 'Source/JavaScriptCore',
-            'WebCore': 'Source/WebCore',
-            'WebKit': 'Source/WebKit',
-            'WebKitLegacy': 'Source/WebKitLegacy',
-            'WebGPU': 'Source/WebGPU',
-            'TestWebKitAPI': 'Tools/TestWebKitAPI',
-        }
-        for framework in sorted(os.listdir(derived)):
-            directory = os.path.join(derived, framework, 'unified-sources')
-            source_directory = framework_source_directory.get(framework)
-            if not source_directory or not os.path.isdir(directory):
+        for name, directory in sorted(self._bundle_directories()):
+            source_directories = _FRAMEWORK_SOURCE_DIRECTORIES.get(name)
+            if not source_directories:
                 continue
-            for name in sorted(os.listdir(directory)):
-                if not name.startswith('UnifiedSource'):
+            for entry in sorted(os.listdir(directory)):
+                if not entry.startswith('UnifiedSource'):
                     continue
                 self.bundle_count += 1
                 try:
-                    with open(os.path.join(directory, name), errors='replace') as handle:
+                    with open(os.path.join(directory, entry), errors='replace') as handle:
                         text = handle.read()
                 except OSError:
                     continue
                 for member in re.findall(r'^#include\s+"([^"]+)"', text, re.MULTILINE):
-                    self._record(os.path.join(self._checkout_root, source_directory, member),
-                                 framework)
+                    resolved = self._resolve_member(source_directories, member)
+                    if resolved:
+                        self._record(resolved, name)
+
+    def _bundle_directories(self):
+        """[(framework name, absolute unified-sources directory)] for both layouts."""
+        found = []
+        derived = os.path.join(self._build_directory, 'DerivedSources')
+        if os.path.isdir(derived):
+            for name in os.listdir(derived):
+                directory = os.path.join(derived, name, 'unified-sources')
+                if os.path.isdir(directory):
+                    found.append((name, directory))
+        try:
+            entries = os.listdir(self._build_directory)
+        except OSError:
+            entries = []
+        for name in entries:
+            directory = os.path.join(self._build_directory, name, 'DerivedSources',
+                                     'unified-sources')
+            if os.path.isdir(directory):
+                found.append((name, directory))
+        return found
+
+    def _resolve_member(self, source_directories, member):
+        """A bundle member resolved against the first candidate directory that has it.
+
+        The candidates are tried rather than fixed because the same framework name means a
+        different directory on the two build systems: CMake's WebGPU bundle holds bare
+        `Adapter.mm`, which is Source/WebGPU/WebGPU/Adapter.mm, and its PAL bundle holds
+        `avfoundation/OutputContext.mm`, which is under Source/WebCore/PAL/pal. Requiring the
+        file to exist is what keeps a wrong guess from being recorded as a compiled file.
+        """
+        for source_directory in source_directories:
+            candidate = os.path.join(self._checkout_root, source_directory, member)
+            if os.path.exists(candidate):
+                return candidate
+        return None
 
     @property
     def compiled(self):
@@ -645,9 +831,10 @@ def find_absent_files(checkout_root, build_directory, reported_paths, third_part
     report.total_file_count = len(universe)
 
     inventory = BuildInventory(checkout_root, build_directory)
-    logger.info('Read %d compiler dependency files and %d unified-source bundles from %s: '
-                '%d first-party implementation files were compiled',
-                inventory.dependency_file_count, inventory.bundle_count, build_directory,
+    logger.info('Read %d compiler dependency files, %d unified-source bundles and %d object '
+                'files from %s: %d first-party implementation files were compiled',
+                inventory.dependency_file_count, inventory.bundle_count,
+                inventory.object_file_count, build_directory,
                 len(inventory.compiled & set(universe)))
 
     filters = [re.compile(pattern) for pattern in third_party_regexes]

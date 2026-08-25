@@ -31,7 +31,8 @@ import unittest
 
 from webkitpy.coverage_build_inventory import (
     AbsenceReport, AbsentFile, BuildDescriptionIndex, BuildInventory, REASON_ORDER,
-    enumerate_source_files, find_absent_files, physical_line_count, whole_file_conditional)
+    REPORTED_TARGETS, enumerate_source_files, find_absent_files, physical_line_count,
+    whole_file_conditional)
 
 
 class _Tree(unittest.TestCase):
@@ -215,6 +216,148 @@ class BuildInventoryTest(_Tree):
         inventory = BuildInventory(self.root, self.absolute('NoSuchBuild/Release'))
         self.assertEqual(inventory.compiled, frozenset())
         self.assertEqual(inventory.dependency_file_count, 0)
+
+    def test_a_sibling_configuration_is_not_credited_to_this_one(self):
+        # The walk used to take os.path.dirname(build_directory) wholesale. On a CMake tree
+        # that is WebKitBuild/cmake-mac, so Debug/ and Release/ sit beside Coverage/ and a
+        # file only an older configuration ever compiled was reported as compiled here --
+        # which is precisely the state the third state exists to make visible.
+        self.write('Source/WebCore/dom/OnlyInDebug.cpp')
+        self.write('WebKitBuild/cmake-mac/Debug/Source/WebCore/CMakeFiles/WebCore.dir/'
+                   'OnlyInDebug.cpp.d',
+                   'x: \\\n  {} \\\n'.format(self.absolute('Source/WebCore/dom/OnlyInDebug.cpp')))
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/cmake-mac/Coverage'))
+        self.assertEqual(inventory.compiled, frozenset())
+
+    def test_xcodes_intermediates_beside_the_configuration_are_still_read(self):
+        # They have to be: on the reference instrumented tree every dependency file is under
+        # <output>/<Target>.build/<Configuration>/ and none under <Configuration>/, so
+        # restricting the walk to the configuration directory alone would find nothing at all.
+        self._depfile('WTF', 'ASCIICType', [self.absolute('Source/WTF/wtf/ASCIICType.cpp')])
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/Release'))
+        self.assertEqual(inventory.compiled, frozenset(('Source/WTF/wtf/ASCIICType.cpp',)))
+
+
+class CMakeBuildInventoryTest(_Tree):
+    """CMake's layout: no surviving depfiles, transposed bundles, objects as the evidence."""
+
+    def _object(self, binary_directory, target, mangled_source):
+        return self.write('{}/CMakeFiles/{}.dir/{}.o'.format(
+            binary_directory, target, mangled_source))
+
+    def test_an_object_file_proves_its_source_was_compiled(self):
+        # ninja pairs depfile with deps = gcc, so it folds every .o.d into .ninja_deps and
+        # deletes it: 4,718 objects against five .d files on a complete tree. The objects are
+        # what is left, and unlike compile_commands.json an object proves a translation unit
+        # was compiled rather than merely configured.
+        self.write('Source/WebCore/dom/Node.cpp')
+        self._object('WebKitBuild/Coverage/Source/WebCore', 'WebCore', 'dom/Node.cpp')
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/Coverage'))
+        self.assertEqual(inventory.object_file_count, 1)
+        self.assertEqual(inventory.compiled, frozenset(('Source/WebCore/dom/Node.cpp',)))
+        self.assertEqual(inventory.targets('Source/WebCore/dom/Node.cpp'),
+                         frozenset(('WebCore',)))
+
+    def test_the_cmake_target_directory_names_the_target(self):
+        # _target_of only knew Xcode's <Target>.build, so every CMake object was attributed
+        # to the empty target name -- which is in no REPORTED_TARGETS, so the file would have
+        # been labelled as compiled only into a binary the report excludes.
+        self.write('Source/WebCore/style/StyleResolver.cpp')
+        self._object('WebKitBuild/Coverage/Source/WebCore', 'WebCoreStyle',
+                     'style/StyleResolver.cpp')
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/Coverage'))
+        self.assertEqual(inventory.targets('Source/WebCore/style/StyleResolver.cpp'),
+                         frozenset(('WebCoreStyle',)))
+
+    def test_a_generated_source_resolves_against_the_binary_directory(self):
+        # CMake names an object after the source path relative to the target's source
+        # directory, or to its binary directory when the source is generated, writing each
+        # '..' as '__'. A generated source is not checked-in code, so it is not recorded --
+        # but it must not be misresolved onto a same-named file in the checkout either.
+        self.write('WebKitBuild/Coverage/WebCore/DerivedSources/unified-sources/'
+                   'UnifiedSource-dom-1.cpp', '')
+        self._object('WebKitBuild/Coverage/Source/WebCore', 'WebCore',
+                     '__/__/WebCore/DerivedSources/unified-sources/UnifiedSource-dom-1.cpp')
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/Coverage'))
+        self.assertEqual(inventory.object_file_count, 1)
+        self.assertEqual(inventory.compiled, frozenset())
+
+    def test_the_transposed_unified_sources_layout_is_read(self):
+        # CMake puts the bundles at <build>/<Component>/DerivedSources/unified-sources, not
+        # <build>/DerivedSources/<Component>/unified-sources. Only the second was recognised,
+        # so all 216 bundles on a complete CMake tree were invisible; with the depfiles gone
+        # too, both signals were zero and the report dropped its third state entirely.
+        self.write('Source/WebCore/dom/Node.cpp')
+        self.write('WebKitBuild/Coverage/WebCore/DerivedSources/unified-sources/'
+                   'UnifiedSource-dom-1.cpp', '#include "dom/Node.cpp"\n')
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/Coverage'))
+        self.assertEqual(inventory.bundle_count, 1)
+        self.assertEqual(inventory.compiled, frozenset(('Source/WebCore/dom/Node.cpp',)))
+
+    def test_both_unified_sources_layouts_coexist_on_one_tree(self):
+        # They really do: CMake writes TestWebKit's bundles in the Xcode shape and every
+        # framework's in its own.
+        self.write('Source/WebCore/dom/Node.cpp')
+        self.write('Tools/TestWebKitAPI/Helpers/cocoa/DaemonTestUtilities.mm')
+        self.write('WebKitBuild/Coverage/WebCore/DerivedSources/unified-sources/'
+                   'UnifiedSource-dom-1.cpp', '#include "dom/Node.cpp"\n')
+        self.write('WebKitBuild/Coverage/DerivedSources/TestWebKit/unified-sources/'
+                   'UnifiedSource-Helpers-1-nonARC.mm',
+                   '#include "Helpers/cocoa/DaemonTestUtilities.mm"\n')
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/Coverage'))
+        self.assertEqual(inventory.bundle_count, 2)
+        self.assertEqual(inventory.compiled, frozenset((
+            'Source/WebCore/dom/Node.cpp',
+            'Tools/TestWebKitAPI/Helpers/cocoa/DaemonTestUtilities.mm')))
+        self.assertEqual(
+            inventory.targets('Tools/TestWebKitAPI/Helpers/cocoa/DaemonTestUtilities.mm'),
+            frozenset(('TestWebKit',)))
+
+    def test_pal_and_webgpu_members_resolve_to_their_real_source_directories(self):
+        # The same framework name means a different directory on the two build systems, which
+        # is why the candidates are tried rather than fixed: CMake's WebGPU bundle holds a
+        # bare Adapter.mm under Source/WebGPU/WebGPU, and its PAL bundle holds
+        # avfoundation/OutputContext.mm under Source/WebCore/PAL/pal.
+        self.write('Source/WebGPU/WebGPU/Adapter.mm')
+        self.write('Source/WebCore/PAL/pal/avfoundation/OutputContext.mm')
+        self.write('WebKitBuild/Coverage/WebGPU/DerivedSources/unified-sources/'
+                   'UnifiedSource-root-1-ARC.mm', '#include "Adapter.mm"\n')
+        self.write('WebKitBuild/Coverage/PAL/DerivedSources/unified-sources/'
+                   'UnifiedSource-avfoundation-1-nonARC.mm',
+                   '#include "avfoundation/OutputContext.mm"\n')
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/Coverage'))
+        self.assertEqual(inventory.compiled, frozenset((
+            'Source/WebGPU/WebGPU/Adapter.mm',
+            'Source/WebCore/PAL/pal/avfoundation/OutputContext.mm')))
+
+    def test_a_member_that_matches_no_candidate_directory_is_not_invented(self):
+        # Requiring the file to exist is what keeps a wrong candidate from being recorded as
+        # a compiled file that the report would then not have to account for.
+        self.write('WebKitBuild/Coverage/WebGPU/DerivedSources/unified-sources/'
+                   'UnifiedSource-root-1-ARC.mm', '#include "NoSuchThing.mm"\n')
+        inventory = BuildInventory(self.root, self.absolute('WebKitBuild/Coverage'))
+        self.assertEqual(inventory.bundle_count, 1)
+        self.assertEqual(inventory.compiled, frozenset())
+
+    def test_cmake_targets_that_link_into_a_framework_count_as_reported(self):
+        # CMake splits each framework across several targets -- WebCore alone has WebCore,
+        # WebCoreDOMAndRendering, WebCoreStyle, WebCoreJSBindings, WebCoreInspector,
+        # WebCoreAVFoundation and PAL -- and links them together. If those names are not
+        # recognised, every file they compile is reported as being only in a binary the
+        # report excludes. The list is the transitive closure of the CMakeFiles/<T>.dir
+        # directories reachable from the five framework link edges in build.ninja.
+        for target in ('WebCoreDOMAndRendering', 'WebCoreStyle', 'WebCoreJSBindings',
+                       'WebCoreInspector', 'WebCoreAVFoundation', 'PAL_SwiftInterop',
+                       'JavaScriptCoreJIT', 'LowLevelInterpreterLib', 'WGSLCore',
+                       'WebGPU_SwiftInterop', 'WebKitARC', 'WebKitShared', 'WebKitUIProcess',
+                       'WebKitWebProcess', 'WebKitGPUProcess', 'WebKitNetworkProcess',
+                       'WebKit_SwiftInterop'):
+            self.assertIn(target, REPORTED_TARGETS)
+
+    def test_test_and_tool_targets_are_still_excluded(self):
+        for target in ('TestWebKit', 'TestWTF', 'WebKitTestRunner', 'jsc', 'wgslc',
+                       'MiniBrowser', 'WebCoreTestSupport'):
+            self.assertNotIn(target, REPORTED_TARGETS)
 
 
 class BuildDescriptionIndexTest(_Tree):
