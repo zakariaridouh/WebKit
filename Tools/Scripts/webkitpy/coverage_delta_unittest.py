@@ -32,7 +32,8 @@ import unittest
 
 from webkitpy.coverage_delta import (DELETED, IMPROVED, NEW, REGRESSED, UNCHANGED,
                                      absolute_paths, compare, compare_lcov_files,
-                                     format_line_numbers, format_summary, write_delta_report)
+                                     format_line_numbers, format_summary, load_traces,
+                                     write_delta_report)
 from webkitpy.coverage_lcov import FileCoverage
 from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
 
@@ -447,6 +448,12 @@ class TraceFitTest(unittest.TestCase):
         self.assertEqual([record.getMessage() for record in logged.records
                           if record.levelno >= logging.WARNING], [])
 
+    def test_only_the_current_trace_is_required(self):
+        current = self._lcov('current.lcov', [('/checkout/Source/a.cpp', [(1, 1)])])
+        baseline_files, current_files = load_traces(current, source_root='/checkout')
+        self.assertIsNone(baseline_files)
+        self.assertEqual(sorted(current_files), ['/checkout/Source/a.cpp'])
+
 
 class FailUnderDeltaTest(unittest.TestCase):
     """--fail-under-delta, exercised through the script's main() the way CI calls it."""
@@ -589,6 +596,11 @@ class FailUnderDeltaTest(unittest.TestCase):
             self.assertEqual(self.script.main(
                 arguments + ['--baseline-source-root', '/bot/WebKit']),
                 COVERAGE_GATE_EXIT_CODE)
+
+    def test_a_baseline_source_root_without_a_baseline_is_rejected(self):
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            self.script.main(['--current', self._lcov('current.lcov', self._AFTER),
+                              '--baseline-source-root', '/bot/WebKit', '--git-diff', 'HEAD'])
 
 
 if __name__ == '__main__':

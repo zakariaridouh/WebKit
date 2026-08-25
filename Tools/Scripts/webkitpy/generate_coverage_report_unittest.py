@@ -30,6 +30,8 @@ import importlib.machinery
 import importlib.util
 import io
 import os
+import shutil
+import tempfile
 import unittest
 
 
@@ -80,6 +82,85 @@ class ProductSelectionTest(_Script):
         # Two products with the same basename would make --products ambiguous.
         names = [self.script.product_name(entry) for entry in self.script.KNOWN_PRODUCTS]
         self.assertEqual(len(names), len(set(names)))
+
+
+class SourceScopeTest(_Script):
+    """--sources scoping, which has to be exact in both directions.
+
+    Too wide and a scoped report is quietly the unscoped one; too narrow and it is empty, which
+    llvm-cov reports as success.
+    """
+
+    def setUp(self):
+        self.checkout = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.checkout, ignore_errors=True)
+        for relative in ('Source/WebCore/dom/Node.cpp', 'Source/WebCore/dom/Element.cpp',
+                         'Source/WebCore/domsomething/Other.cpp',
+                         'Source/WebCore/css/CSSParser.cpp'):
+            path = os.path.join(self.checkout, relative)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as handle:
+                handle.write('int f() { return 0; }\n')
+
+    def resolve(self, *scopes):
+        return self.script.resolve_source_scopes(list(scopes), self.checkout)
+
+    def test_a_path_relative_to_the_checkout_root_resolves_against_it(self):
+        # llvm-cov resolves a relative --sources against its own working directory, so a path
+        # that reads correctly on the command line scopes to nothing when the tool is run from
+        # anywhere but the checkout root.
+        resolved, missing = self.resolve('Source/WebCore/dom')
+        self.assertEqual(resolved, [os.path.join(self.checkout, 'Source/WebCore/dom')])
+        self.assertEqual(missing, [])
+
+    def test_an_absolute_path_is_taken_as_given(self):
+        absolute = os.path.join(self.checkout, 'Source/WebCore/css')
+        self.assertEqual(self.resolve(absolute), ([absolute], []))
+
+    def test_a_single_file_is_a_legal_scope(self):
+        resolved, missing = self.resolve('Source/WebCore/dom/Node.cpp')
+        self.assertEqual(missing, [])
+        self.assertTrue(resolved[0].endswith('Node.cpp'))
+
+    def test_a_path_that_does_not_exist_is_reported_rather_than_passed_through(self):
+        resolved, missing = self.resolve('Source/WebCore/dom', 'Source/WebCore/nope')
+        self.assertEqual(len(resolved), 2)
+        self.assertEqual(missing, [os.path.join(self.checkout, 'Source/WebCore/nope')])
+
+    def test_a_scope_is_a_path_prefix_and_not_a_string_prefix(self):
+        # 'Source/WebCore/domsomething' must not fall inside 'Source/WebCore/dom'.
+        scope = [os.path.join(self.checkout, 'Source/WebCore/dom')]
+        self.assertTrue(self.script.is_under_any(
+            os.path.join(self.checkout, 'Source/WebCore/dom/Node.cpp'), scope))
+        self.assertFalse(self.script.is_under_any(
+            os.path.join(self.checkout, 'Source/WebCore/domsomething/Other.cpp'), scope))
+        # The scope directory itself, and a trailing slash on the scope, both count.
+        self.assertTrue(self.script.is_under_any(scope[0], scope))
+        self.assertTrue(self.script.is_under_any(
+            os.path.join(self.checkout, 'Source/WebCore/dom/Node.cpp'), [scope[0] + '/']))
+
+    def test_the_never_built_denominator_is_recomputed_over_the_scope(self):
+        # find_absent_files() enumerates the whole checkout, so an unrestricted absence report
+        # over a scoped trace would present every healthy file outside the scope as never built,
+        # and the caveat sentence that travels with the headline would be a lie.
+        from webkitpy.coverage_build_inventory import AbsenceReport, AbsentFile
+        absence = AbsenceReport()
+        absence.compiled_file_count = 4
+        absence.total_file_count = 4
+        absence.reported_file_count = 2
+        for relative in ('Source/WebCore/dom/Element.cpp', 'Source/WebCore/css/CSSParser.cpp'):
+            absence.add(AbsentFile(relative, 'other-port', 'gtk', 10))
+
+        restricted = self.script.restrict_absence_to_scope(
+            absence, self.checkout, [os.path.join(self.checkout, 'Source/WebCore/dom')])
+
+        self.assertEqual([absent.path for absent in restricted.files],
+                         ['Source/WebCore/dom/Element.cpp'])
+        # dom holds two files, one of which is absent, so the scope's denominator is 2 and not 4.
+        self.assertEqual(restricted.total_file_count, 2)
+        self.assertEqual(restricted.reported_file_count, 1)
+        self.assertIn('1 of 2 first-party implementation files',
+                      restricted.denominator_sentence())
 
 
 class ArgumentValidationTest(_Script):

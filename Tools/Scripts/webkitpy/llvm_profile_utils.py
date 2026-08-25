@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import fcntl
 import glob
 import gzip
 import logging
@@ -10,7 +11,9 @@ import shlex
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
+import time
 
 from collections import namedtuple
 from functools import cache
@@ -633,16 +636,124 @@ def objects_with_no_profile_data(binary_paths, raw_profile_paths=(),
     return findings
 
 
+# The lock that makes the machine-global profile directory safe to use. It lives inside that
+# directory so that the lock and the thing it protects cannot be separated, and the sandbox
+# already permits writes there.
+COVERAGE_PROFILE_LOCK_FILENAME = '.webkit-coverage-run.lock'
+
+# Held for the lifetime of the process rather than for the lifetime of a call. flock is released
+# when the last descriptor referring to it is closed, so keeping this handle alive is what makes
+# the lock cover the run: prepare_coverage_profile_directory() is called before the tests start
+# and collect_coverage_profiles() after they finish, and there is no single scope spanning both
+# that this module gets to see. It also means a run that is SIGKILLed releases the lock, so there
+# is no stale-lock problem to solve and no need to check whether a recorded pid is still alive.
+_held_profile_directory_lock = None
+
+# count: raw profiles removed. total_bytes: how much they were.
+StaleProfiles = namedtuple('StaleProfiles', ('count', 'total_bytes'))
+
+
+class CoverageProfileDirectoryInUse(RuntimeError):
+    """Another coverage run holds the machine-global profile directory."""
+
+
+def coverage_profile_lock_path():
+    return os.path.join(COVERAGE_PROFILE_DIRECTORY, COVERAGE_PROFILE_LOCK_FILENAME)
+
+
+def acquire_coverage_profile_directory_lock():
+    """Claim the profile directory for this process, or raise CoverageProfileDirectoryInUse.
+
+    Two concurrent coverage runs destroy each other, silently and in both directions. The profile
+    path is baked into the instrumented frameworks, so /private/tmp/WebKitCoverage is not per-run
+    or even per-checkout: it is machine-global. prepare_coverage_profile_directory() unlinks every
+    .profraw in it and collect_coverage_profiles() moves every .profraw out of it, neither with a
+    marker or an mtime filter, because neither can distinguish this run's files from anybody
+    else's. So an API-test run started while a layout run is in progress deletes the layout run's
+    live, mmapped profiles, and whichever run finishes first takes the other's files into its own
+    --coverage-dir -- which is a report that silently combines two runs and makes --suite
+    attribution meaningless, on top of a run that reports no coverage at all.
+
+    Refuse instead. The alternative -- warning and continuing -- is a corrupted artifact either
+    way, and the pid in the message is enough to find the other run.
+    """
+    global _held_profile_directory_lock
+    if _held_profile_directory_lock is not None:
+        return _held_profile_directory_lock
+
+    os.makedirs(COVERAGE_PROFILE_DIRECTORY, exist_ok=True)
+    path = coverage_profile_lock_path()
+    try:
+        handle = open(path, 'a+')
+    except OSError as failure:
+        # The directory is mode 1777 so that sandboxed processes of any user can write profiles
+        # into it, which means the lock file can belong to somebody else. Losing the ability to
+        # detect a concurrent run is worth saying out loud; it is not worth refusing to run.
+        logger.warning('Cannot open %s (%s), so a concurrent coverage run cannot be detected. '
+                       'Two runs at once destroy each other\'s profiles.', path, failure)
+        return None
+
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.seek(0)
+        holder = handle.read(4096).strip() or 'an unidentified process'
+        handle.close()
+        raise CoverageProfileDirectoryInUse(
+            '{} is already in use by {}. Only one coverage run can be in flight on a machine: '
+            'the profile path is baked into the instrumented frameworks, so the directory is '
+            'shared, and each run deletes and then collects every profile in it -- including the '
+            'other run\'s live, mmapped ones. Wait for that run, or kill it.'.format(
+                COVERAGE_PROFILE_DIRECTORY, holder))
+
+    handle.seek(0)
+    handle.truncate()
+    handle.write('pid {} ({}) since {}\n'.format(os.getpid(), os.path.basename(sys.argv[0] or '?'),
+                                                 time.strftime('%Y-%m-%dT%H:%M:%S%z')))
+    handle.flush()
+    _held_profile_directory_lock = handle
+    return handle
+
+
+def release_coverage_profile_directory_lock():
+    """Drop the lock early. Only tests need this; a run holds it until the process exits."""
+    global _held_profile_directory_lock
+    if _held_profile_directory_lock is not None:
+        _held_profile_directory_lock.close()
+        _held_profile_directory_lock = None
+
+
 def prepare_coverage_profile_directory():
-    """Remove any profiles left over from an earlier run, so a run's output is its own."""
+    """Claim the profile directory, then remove any profiles left over from an earlier run.
+
+    The clearing is load-bearing and must not be removed: %Nm merges into an existing profile
+    rather than replacing it, so a profile left behind by an earlier run or by a rebuild would be
+    folded into this run's counters. What it needs is the lock above, because on its own it cannot
+    tell an abandoned profile from one a concurrent run is still writing to.
+    """
+    acquire_coverage_profile_directory_lock()
+    stale = StaleProfiles(0, 0)
     if os.path.isdir(COVERAGE_PROFILE_DIRECTORY):
+        count, total_bytes = 0, 0
         for name in os.listdir(COVERAGE_PROFILE_DIRECTORY):
-            if name.endswith('.profraw'):
-                os.unlink(os.path.join(COVERAGE_PROFILE_DIRECTORY, name))
-    else:
-        os.makedirs(COVERAGE_PROFILE_DIRECTORY, exist_ok=True)
+            if not name.endswith('.profraw'):
+                continue
+            path = os.path.join(COVERAGE_PROFILE_DIRECTORY, name)
+            try:
+                total_bytes += os.path.getsize(path)
+            except OSError:
+                pass
+            os.unlink(path)
+            count += 1
+        stale = StaleProfiles(count, total_bytes)
     # The instrumented processes create the file, but not a missing directory's parents.
     os.chmod(COVERAGE_PROFILE_DIRECTORY, 0o1777)
+    if stale.count:
+        # Said out loud with a count, because this is data being thrown away: an interrupted run
+        # whose profiles were never collected looks exactly like a rebuild's leftovers from here.
+        logger.info('Removed %d stale raw profile(s) (%d MB) from %s', stale.count,
+                    stale.total_bytes // (1024 * 1024), COVERAGE_PROFILE_DIRECTORY)
+    return stale
 
 
 def collect_coverage_profiles(destination_directory):
@@ -732,8 +843,23 @@ class LLVMCov:
         return arguments
 
     @classmethod
+    def _sources_arguments(cls, sources):
+        """The trailing --sources list, which must be last and must not be spelled --sources=PATH.
+
+        Verified against the current Apple LLVM: --sources=PATH is accepted, silently ignored, and
+        produces the whole report -- 1,022,546 lines for WebCore against 35,978 for the same scope
+        passed as a separate argument -- with nothing on stderr. So the only spelling that works is
+        the flag followed by one argument per path, at the end of the command line.
+
+        The paths are matched against the absolute source paths recorded in the coverage mapping,
+        and a relative one is resolved against llvm-cov's own working directory, so callers pass
+        absolute paths.
+        """
+        return ['--sources', *sources] if sources else []
+
+    @classmethod
     def show_html(cls, objects, profile_path, output_directory, ignore_filename_regexes=(),
-                  path_equivalences=(), show_instantiations=False):
+                  path_equivalences=(), show_instantiations=False, sources=()):
         command = ['show', *cls._common_arguments(objects, profile_path, ignore_filename_regexes, path_equivalences),
                    '--format=html', f'--output-dir={output_directory}']
         # Per-instantiation sub-views are on by default and are expensive on template-heavy
@@ -742,13 +868,14 @@ class LLVMCov:
         # (There is no --skip-expansions in Apple LLVM; expansions are opt-in already.)
         if not show_instantiations:
             command.append('--show-instantiations=false')
-        return LLVMCovExecutable.run(command, capture_output=True, text=True)
+        return LLVMCovExecutable.run([*command, *cls._sources_arguments(sources)],
+                                     capture_output=True, text=True)
 
     @classmethod
     def export_lcov(cls, objects, profile_path, output_file, ignore_filename_regexes=(),
-                    path_equivalences=(), compress=False, header_line=None):
+                    path_equivalences=(), compress=False, header_line=None, sources=()):
         command = ['export', *cls._common_arguments(objects, profile_path, ignore_filename_regexes, path_equivalences),
-                   '--format=lcov']
+                   '--format=lcov', *cls._sources_arguments(sources)]
         # header_line goes in ahead of llvm-cov's output rather than being prepended afterwards,
         # which would mean rewriting a 751MB stream. Nothing that reads a trace looks at a line
         # before the first SF: record, so a '#' comment there is carried by the artifact for free.
@@ -791,12 +918,12 @@ class LLVMCov:
 
     @classmethod
     def export_summary_json(cls, objects, profile_path, output_file, ignore_filename_regexes=(),
-                            path_equivalences=()):
+                            path_equivalences=(), sources=()):
         # --summary-only keeps this to per-file totals rather than per-line data, so it is
         # cheap next to the full export and is all a directory rollup needs.
         command = ['export', *cls._common_arguments(objects, profile_path,
                                                     ignore_filename_regexes, path_equivalences),
-                   '--format=text', '--summary-only']
+                   '--format=text', '--summary-only', *cls._sources_arguments(sources)]
 
         def write(path):
             with open(path, 'w') as json_file:
@@ -807,10 +934,11 @@ class LLVMCov:
 
     @classmethod
     def report(cls, objects, profile_path, ignore_filename_regexes=(), path_equivalences=(),
-               check_binary_ids=False):
+               check_binary_ids=False, sources=()):
         command = ['report', *cls._common_arguments(objects, profile_path, ignore_filename_regexes, path_equivalences)]
         # Makes llvm-cov emit a per-object "profile data may be out of date" warning, which is
         # the only reliable way to notice that the tree was rebuilt after the tests ran.
         if check_binary_ids:
             command.append('--check-binary-ids')
-        return LLVMCovExecutable.run(command, capture_output=True, text=True)
+        return LLVMCovExecutable.run([*command, *cls._sources_arguments(sources)],
+                                     capture_output=True, text=True)

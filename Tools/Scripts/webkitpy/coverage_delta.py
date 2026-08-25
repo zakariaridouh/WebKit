@@ -54,6 +54,11 @@ attribution but the coverage of the lines present in current, which is well defi
 either way; the attribution is a hint about where to look. Function-level regressions
 are keyed by mangled name rather than by line, so those do survive an edit, and are
 reported separately for that reason.
+
+For "are the lines I just wrote tested", which is the question that limitation gets in the
+way of, see coverage_patch: it intersects the diff's own hunks with one trace, needs no
+baseline and no second test run, and cannot be distorted by a line shift because there is
+only one set of line numbers involved.
 """
 
 import html
@@ -413,28 +418,43 @@ def check_traces_fit(baseline_files, current_files, baseline_path, current_path)
             current_path, len(current_files), min(current_files)))
 
 
-def compare_lcov_files(baseline_path, current_path, source_root=None, changed_files=None,
-                       baseline_source_root=None):
-    """Parse and compare two lcov traces, canonicalizing both against one checkout."""
+def load_traces(current_path, baseline_path=None, source_root=None, baseline_source_root=None):
+    """(baseline files or None, current files) from one or two lcov traces.
+
+    Both traces go through one PathCanonicalizer against one checkout root, because two
+    traces from different builds disagree about where a copied header lives and without that
+    every such header is a deleted file plus an unrelated new one.
+    """
     from webkitpy.coverage_lcov import PathCanonicalizer, parse_lcov
 
     canonicalizer = PathCanonicalizer(source_root) if source_root else None
-
-    baseline_paths = TracePaths(canonicalizer, source_root, baseline_source_root)
-    baseline_files = parse_lcov(baseline_path, baseline_paths)
-    if not baseline_files:
-        raise RuntimeError('{} contained no coverage records'.format(baseline_path))
-    baseline_paths.log_findings('baseline', baseline_path)
 
     current_paths = TracePaths(canonicalizer, source_root)
     current_files = parse_lcov(current_path, current_paths)
     if not current_files:
         raise RuntimeError('{} contained no coverage records'.format(current_path))
+
+    baseline_files = None
+    if baseline_path:
+        baseline_paths = TracePaths(canonicalizer, source_root, baseline_source_root)
+        baseline_files = parse_lcov(baseline_path, baseline_paths)
+        if not baseline_files:
+            raise RuntimeError('{} contained no coverage records'.format(baseline_path))
+        baseline_paths.log_findings('baseline', baseline_path)
     current_paths.log_findings('current', current_path)
 
     if canonicalizer:
         canonicalizer.log_summary()
-    check_traces_fit(baseline_files, current_files, baseline_path, current_path)
+    if baseline_files is not None:
+        check_traces_fit(baseline_files, current_files, baseline_path, current_path)
+    return baseline_files, current_files
+
+
+def compare_lcov_files(baseline_path, current_path, source_root=None, changed_files=None,
+                       baseline_source_root=None):
+    """Parse and compare two lcov traces, canonicalizing both against one checkout."""
+    baseline_files, current_files = load_traces(current_path, baseline_path, source_root,
+                                                baseline_source_root)
     return compare(baseline_files, current_files, changed_files)
 
 
@@ -480,7 +500,7 @@ def _column_delta(value):
     return '       -' if value is None else '{:+6.2f}pp'.format(value)
 
 
-def _display_path(path, source_root):
+def display_path(path, source_root):
     if source_root and path.startswith(source_root.rstrip('/') + '/'):
         return os.path.relpath(path, source_root)
     return path
@@ -540,7 +560,7 @@ def format_summary(delta, source_root=None, max_files=25):
                 _column_delta(file_delta.percent_delta()),
                 len(file_delta.regressed_lines),
                 len(file_delta.new_uncovered_lines),
-                _display_path(file_delta.path, source_root)))
+                display_path(file_delta.path, source_root)))
             if file_delta.regressed_lines:
                 lines.append('{:<9} covered -> uncovered at {}'.format(
                     '', format_line_numbers(file_delta.regressed_lines, limit=6)))
@@ -555,7 +575,7 @@ def format_summary(delta, source_root=None, max_files=25):
                      'instrumented includes {}:'.format(len(delta.missing_paths),
                                                         '' if one else 's', 'it' if one else 'them'))
         for path in delta.missing_paths[:max_files]:
-            lines.append('  {}'.format(_display_path(path, source_root)))
+            lines.append('  {}'.format(display_path(path, source_root)))
         if len(delta.missing_paths) > max_files:
             lines.append('  ... and {} more'.format(len(delta.missing_paths) - max_files))
 
@@ -699,7 +719,7 @@ def _file_row(file_delta, scale, source_root):
     # aggregate counters the shared cells need, so wrap it in a DeltaTotals of one.
     totals = DeltaTotals()
     totals.add(file_delta)
-    label = _display_path(file_delta.path, source_root)
+    label = display_path(file_delta.path, source_root)
     status_css = ('down' if file_delta.status in (REGRESSED, DELETED)
                   else ('up' if file_delta.status == IMPROVED else ''))
     cells = ['<td data-v="{0}">{0}</td>'.format(html.escape(label)),
@@ -771,7 +791,7 @@ def _details(reported, source_root, line_limit):
         if not file_delta.regressed_lines and not file_delta.regressed_functions:
             continue
         parts = ['<p class="p">{}</p>'.format(
-            html.escape(_display_path(file_delta.path, source_root)))]
+            html.escape(display_path(file_delta.path, source_root)))]
         if file_delta.regressed_lines:
             parts.append('<p><span class="down">covered &rarr; uncovered</span> '
                          '<code>{}</code></p>'.format(html.escape(
@@ -863,7 +883,7 @@ def write_delta_report(delta, output_directory, source_root=None, line_limit=24)
         tiles=_tiles(delta.scope),
         scale=html.escape('±{:.2f}pp'.format(scale)),
         directories=_table(_LEADING_DIRECTORY_HEADERS,
-                           [_directory_row(_display_path(path, source_root) or '/', totals, scale)
+                           [_directory_row(display_path(path, source_root) or '/', totals, scale)
                             for path, totals in directories],
                            'No directory changed.'),
         files=_table(_LEADING_FILE_HEADERS,
