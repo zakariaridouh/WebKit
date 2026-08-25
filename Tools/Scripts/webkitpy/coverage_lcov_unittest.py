@@ -30,8 +30,8 @@ import tempfile
 import unittest
 
 from webkitpy.coverage_lcov import (
-    PathCanonicalizer, open_lcov, parse_lcov, parse_lcov_source_files,
-    third_party_copied_header_ignore_regexes)
+    PathCanonicalizer, _INSTALLED_HEADER_RULES, compiled_copy_candidates, open_lcov, parse_lcov,
+    parse_lcov_source_files, project_totals, third_party_copied_header_ignore_regexes)
 
 
 class _Checkout(unittest.TestCase):
@@ -159,6 +159,55 @@ class FrameworkHeaderCanonicalizationTest(_Checkout):
             self.absolute('Source/WebGPU/WebGPU/WebGPU.h'))
 
 
+class GeneratorFixtureTest(_Checkout):
+    """A copied framework header is never a generator's expected-output fixture.
+
+    Three were, in the shipped report. The worst said "437 of 446 instrumented lines never
+    executed" over 176 rows, on a page under css/scripts/test/TestCSSPropertiesResults, while
+    the directory page above it classified that fixture's siblings as "Generator fixture or
+    benchmark". One page presented a generator test-fixture directory as product code at 2%.
+    """
+    WEBCORE_COPY = '/tmp/Build/Release/WebCore.framework/PrivateHeaders/'
+
+    def test_a_generated_header_does_not_land_on_the_css_generators_fixture(self):
+        # The real CSSPropertyNames.h is generated into DerivedSources, which is excluded from
+        # the report, so the fixture was the only candidate in the checkout and it won.
+        self.write('Source/WebCore/css/scripts/test/TestCSSPropertiesResults/CSSPropertyNames.h')
+        canonicalizer = PathCanonicalizer(self.root)
+        copied = self.WEBCORE_COPY + 'CSSPropertyNames.h'
+        self.assertEqual(canonicalizer.canonicalize(copied), copied)
+        self.assertEqual(canonicalizer.unresolved_framework_headers, {copied})
+
+    def test_a_generated_header_does_not_land_on_the_bindings_generators_fixture(self):
+        # coverage_build_inventory.BuildDescriptionIndex guards against this exact collision
+        # from the other side, and names this file in its docstring.
+        self.write('Source/WebCore/bindings/scripts/test/JS/JSDOMWindow.h')
+        canonicalizer = PathCanonicalizer(self.root)
+        copied = self.WEBCORE_COPY + 'JSDOMWindow.h'
+        self.assertEqual(canonicalizer.canonicalize(copied), copied)
+
+    def test_the_ipc_generators_fixture_directory_is_pruned_too(self):
+        self.write('Source/WebKit/Scripts/webkit/tests/TestWithStreamMessages.h')
+        canonicalizer = PathCanonicalizer(self.root)
+        copied = '/tmp/Build/Release/WebKit.framework/PrivateHeaders/TestWithStreamMessages.h'
+        self.assertEqual(canonicalizer.canonicalize(copied), copied)
+
+    def test_a_real_header_still_wins_over_a_fixture_of_the_same_name(self):
+        self.write('Source/WebCore/css/CSSPropertyNames.h')
+        self.write('Source/WebCore/css/scripts/test/TestCSSPropertiesResults/CSSPropertyNames.h')
+        canonicalizer = PathCanonicalizer(self.root)
+        self.assertEqual(canonicalizer.canonicalize(self.WEBCORE_COPY + 'CSSPropertyNames.h'),
+                         self.absolute('Source/WebCore/css/CSSPropertyNames.h'))
+
+    def test_a_directory_merely_called_testing_is_product_code_and_is_kept(self):
+        # Source/WebCore/testing compiles into WebCoreTestSupport, exactly as
+        # coverage_build_inventory's own fixture list notes.
+        self.write('Source/WebCore/testing/Internals.h')
+        canonicalizer = PathCanonicalizer(self.root)
+        self.assertEqual(canonicalizer.canonicalize(self.WEBCORE_COPY + 'Internals.h'),
+                         self.absolute('Source/WebCore/testing/Internals.h'))
+
+
 class BuildDirectoryResidueTest(_Checkout):
     BUILD = '/tmp/Build/Release'
 
@@ -208,6 +257,62 @@ class ThirdPartyCopiedHeaderTest(_Checkout):
         self.assertEqual(third_party_copied_header_ignore_regexes(self.root), [])
 
 
+class CompiledCopyCandidateTest(_Checkout):
+    """Where the text that was actually compiled is, given the path it is reported under.
+
+    canonicalize() names the checkout path, which is the right path to report a copied header
+    under and the wrong text to render it from: the copy was made once, at build time. On the
+    shipped report Source/WTF/wtf/Expected.h had been rewritten from 403 lines to 31, and the
+    403-line text the profile describes was still in <build>/usr/local/include/wtf/Expected.h.
+    """
+    BUILD = '/tmp/Build/Release'
+
+    def candidates(self, path):
+        return list(compiled_copy_candidates(path, self.BUILD))
+
+    def test_a_wtf_header_maps_to_the_installed_copy(self):
+        self.assertIn(self.BUILD + '/usr/local/include/wtf/Expected.h',
+                      self.candidates('/checkout/Source/WTF/wtf/Expected.h'))
+
+    def test_a_wtf_subdirectory_is_kept(self):
+        self.assertIn(self.BUILD + '/usr/local/include/wtf/text/AtomString.h',
+                      self.candidates('/checkout/Source/WTF/wtf/text/AtomString.h'))
+
+    def test_a_libpas_header_is_tried_under_both_names_the_copy_phase_uses(self):
+        # The copy phase flattens libpas into bmalloc/, so that is where it is found in
+        # practice; pas/ is in the table for the day that changes.
+        candidates = self.candidates('/checkout/Source/bmalloc/libpas/src/libpas/pas_utils.h')
+        self.assertIn(self.BUILD + '/usr/local/include/bmalloc/pas_utils.h', candidates)
+        self.assertIn(self.BUILD + '/usr/local/include/pas/pas_utils.h', candidates)
+
+    def test_a_framework_header_is_found_by_basename_in_both_header_directories(self):
+        candidates = self.candidates('/checkout/Source/WebCore/css/CSSPropertyNames.h')
+        self.assertEqual(candidates[:2],
+                         [self.BUILD + '/WebCore.framework/PrivateHeaders/CSSPropertyNames.h',
+                          self.BUILD + '/WebCore.framework/Headers/CSSPropertyNames.h'])
+
+    def test_an_implementation_file_has_no_copy_because_nothing_copies_one(self):
+        self.assertEqual(self.candidates('/checkout/Source/WebCore/dom/Document.cpp'), [])
+
+    def test_the_installed_rule_is_tried_before_the_framework_rule(self):
+        # A PAL header is under Source/WebCore, so both rules match it, and the installed one
+        # is the location PAL's own copy phase writes to.
+        candidates = self.candidates('/checkout/Source/WebCore/PAL/pal/text/TextEncoding.h')
+        self.assertEqual(candidates[0], self.BUILD + '/usr/local/include/pal/text/TextEncoding.h')
+
+    def test_nothing_is_offered_without_a_build_directory(self):
+        self.assertEqual(list(compiled_copy_candidates('/checkout/Source/WTF/wtf/Vector.h', None)),
+                         [])
+
+    def test_the_two_directions_are_derived_from_one_table(self):
+        # Every installed-header rule canonicalize() knows about has an inverse here, so the
+        # two cannot drift apart the day a copy phase changes.
+        for location, sources in _INSTALLED_HEADER_RULES:
+            for source in sources:
+                self.assertIn(self.BUILD + location + 'Probe.h',
+                              self.candidates('/checkout/' + source + 'Probe.h'))
+
+
 class ParseLcovTest(_Checkout):
     TRACE = ('SF:/checkout/Source/WTF/wtf/Vector.h\n'
              'FN:12,_ZN3WTF6VectorIiE5clearEv\n'
@@ -227,6 +332,7 @@ class ParseLcovTest(_Checkout):
         self.assertEqual(coverage.lines, {12: 3, 13: 0})
         self.assertEqual(coverage.functions,
                          {'_ZN3WTF6VectorIiE5clearEv': 3, '_ZN3WTF6VectorIiE6shrinkEm': 0})
+        self.assertEqual(coverage.function_lines, {12: 3, 20: 0})
         self.assertEqual(coverage.branches, {('12', '0', '0'): 3, ('12', '0', '1'): 0})
         self.assertEqual(coverage.totals()['lines'], (2, 1))
 
@@ -234,6 +340,90 @@ class ParseLcovTest(_Checkout):
         path = self.write('trace.lcov', self.TRACE + self.TRACE.replace('DA:13,0', 'DA:13,9'))
         files = parse_lcov(path)
         self.assertEqual(files['/checkout/Source/WTF/wtf/Vector.h'].lines, {12: 3, 13: 9})
+
+
+class FunctionMetricTest(_Checkout):
+    """llvm-cov merges a template's instantiations and lcov does not.
+
+    lcov emits one FN:/FNDA: pair per instantiation and then an FNF:/FNH: pair counting the
+    distinct start lines, so keying by mangled name counted a Vector<T> method once per
+    instantiation. Measured over the shipped trace: 1,978,649 functions against llvm-cov's
+    255,297, a 7.75x denominator, and 55.06% where summary.txt in the same output directory
+    said 72.09%. --fail-under-functions=70 failed a build llvm-cov called 72.09%.
+    """
+    # The first record of the shipped trace, verbatim, shortened. Four instantiations at two
+    # start lines; llvm-cov's own FNF:/FNH: for it are 2 and 1.
+    TRACE = ('SF:/checkout/Source/JavaScriptCore/API/APICallbackFunction.h\n'
+             'FN:46,_ZN3JSC19APICallbackFunction8callImplINS_20ObjCCallbackFunctionEEEx\n'
+             'FN:86,_ZN3JSC19APICallbackFunction13constructImplINS_20ObjCCallbackFunctionEEEx\n'
+             'FN:86,_ZN3JSC19APICallbackFunction13constructImplINS_21JSCallbackConstructorEEEx\n'
+             'FN:46,_ZN3JSC19APICallbackFunction8callImplINS_18JSCallbackFunctionEEEx\n'
+             'FNDA:191,_ZN3JSC19APICallbackFunction8callImplINS_20ObjCCallbackFunctionEEEx\n'
+             'FNDA:0,_ZN3JSC19APICallbackFunction13constructImplINS_20ObjCCallbackFunctionEEEx\n'
+             'FNDA:0,_ZN3JSC19APICallbackFunction13constructImplINS_21JSCallbackConstructorEEEx\n'
+             'FNDA:837570,_ZN3JSC19APICallbackFunction8callImplINS_18JSCallbackFunctionEEEx\n'
+             'FNF:2\n'
+             'FNH:1\n'
+             'DA:46,837761\n'
+             'end_of_record\n')
+
+    def coverage(self, trace=None):
+        files = parse_lcov(self.write('trace.lcov', trace or self.TRACE))
+        return files[list(files)[0]]
+
+    def test_the_count_reproduces_llvm_covs_own_fnf_and_fnh(self):
+        # Which is the whole point: the trace states them two lines down.
+        self.assertEqual(self.coverage().totals()['functions'], (2, 1))
+
+    def test_the_mangled_names_are_all_still_there_for_the_delta_tool(self):
+        # coverage_delta compares the two sides by name, because a mangled name survives a
+        # source edit and a line number does not.
+        self.assertEqual(len(self.coverage().functions), 4)
+
+    def test_a_start_line_is_covered_if_any_instantiation_at_it_ran(self):
+        coverage = self.coverage()
+        self.assertEqual(coverage.function_lines[46], 837570)
+        self.assertEqual(coverage.function_lines[86], 0)
+
+    def test_an_fnda_before_its_fn_is_still_folded_in(self):
+        # Nothing in the format says llvm-cov emits every FN: first, though it does today.
+        reordered = ('SF:/checkout/a.cpp\n'
+                     'FNDA:7,_Z1fv\n'
+                     'FN:3,_Z1fv\n'
+                     'end_of_record\n')
+        self.assertEqual(self.coverage(reordered).function_lines, {3: 7})
+
+    def test_an_fnda_with_no_fn_is_counted_by_name_but_not_by_line(self):
+        # It has no start line to be counted at, and inventing one would invent a function.
+        orphan = 'SF:/checkout/a.cpp\nFNDA:7,_Z1fv\nend_of_record\n'
+        coverage = self.coverage(orphan)
+        self.assertEqual(coverage.functions, {'_Z1fv': 7})
+        self.assertEqual(coverage.function_lines, {})
+
+    def test_duplicate_records_for_one_file_are_unioned_by_start_line(self):
+        # A copied header's two records instantiate different templates, so they carry
+        # different mangled names at the same start lines. Summing would double-count.
+        second = self.TRACE.replace('FNDA:0,_ZN3JSC19APICallbackFunction13constructImplINS_'
+                                    '20ObjCCallbackFunctionEEEx',
+                                    'FNDA:5,_ZN3JSC19APICallbackFunction13constructImplINS_'
+                                    '20ObjCCallbackFunctionEEEx')
+        coverage = self.coverage(self.TRACE + second)
+        self.assertEqual(coverage.totals()['functions'], (2, 2))
+
+    def test_an_unparsable_start_line_does_not_lose_the_function_by_name(self):
+        broken = 'SF:/checkout/a.cpp\nFN:not a number,_Z1fv\nFNDA:2,_Z1fv\nend_of_record\n'
+        coverage = self.coverage(broken)
+        self.assertEqual(coverage.functions, {'_Z1fv': 2})
+        self.assertEqual(coverage.function_lines, {})
+
+    def test_lines_only_carries_no_function_data_at_all(self):
+        files = parse_lcov(self.write('trace.lcov', self.TRACE), lines_only=True)
+        coverage = files[list(files)[0]]
+        self.assertEqual((coverage.functions, coverage.function_lines), ({}, {}))
+
+    def test_project_totals_counts_functions_the_same_way(self):
+        totals = project_totals({'a': self.coverage()})
+        self.assertEqual(totals['functions'], (2, 1))
 
 
 class GzippedTraceTest(_Checkout):

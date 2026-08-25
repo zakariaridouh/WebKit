@@ -103,6 +103,35 @@ _NON_COCOA_SOURCE_DIRECTORIES = frozenset((
     'wayland', 'win', 'wpe', 'x11',
 ))
 
+# Directory names that hold expected output for the IDL, IPC and CSS generators, or an API
+# test's own headers. A copied framework header is never one of these, and pruning them is
+# not the same call as _prefer_cocoa()'s below: an ambiguous candidate is a header the tool
+# declines to place, while a *fixture* candidate is a header it places wrongly, in a
+# directory the not-built table on the page above classifies as "Generator fixture or
+# benchmark". Three of them were live in the shipped report:
+#
+#   StyleComputedStyleProperties+GettersInlines.h  446 DA lines onto a 176-line fixture
+#   CSSPropertyNames.h                              8 DA lines onto a 268-line fixture
+#   JSDOMWindow.h                                   3 DA lines onto a 102-line fixture
+#
+# The first said "437 of 446 instrumented lines never executed" over 176 rows, which read as
+# a generator test-fixture directory being product code at 2%.
+#
+# coverage_build_inventory.BuildDescriptionIndex already guards against exactly this
+# collision from the other side -- its docstring names bindings/scripts/test/JS/JSDOMWindow.cpp
+# -- by resolving a basename against the directories of the description that names it. There
+# is no description to resolve a copied header against, so this prunes instead.
+#
+# Measured over the five framework trees: 13,301 resolvable basenames become 13,089. Of the
+# 212 that stop resolving, 209 were never asked about, and every one of them lives in
+# bindings/scripts/test/JS, Scripts/webkit/tests, css/scripts/test/TestCSSPropertiesResults,
+# JavaScriptCore/API/tests, wasm/debugger/tests or dav1d/tests. One basename starts resolving
+# because the fixture was what made it ambiguous.
+#
+# 'testing' is deliberately absent, as it is in coverage_build_inventory: Source/WebCore/testing
+# is real product code compiled into WebCoreTestSupport.
+_FIXTURE_SOURCE_DIRECTORIES = frozenset(('test', 'tests'))
+
 
 def _prefer_cocoa(paths):
     """The one candidate a macOS build could have compiled, or None if still ambiguous.
@@ -111,6 +140,10 @@ def _prefer_cocoa(paths):
     with it any basename that is unique only inside it, which would turn a resolved header
     into an unresolved one. Filtering candidates after the fact can only ever improve on
     the ambiguous case.
+
+    That reasoning holds for another port's directory, which really might have been the source
+    of a header, and not for a generator fixture, which never was -- see
+    _FIXTURE_SOURCE_DIRECTORIES, which is pruned from the walk for that reason.
     """
     if len(paths) == 1:
         return paths[0]
@@ -126,7 +159,9 @@ def _build_basename_index(checkout_root, framework):
         return {}
     seen = defaultdict(list)
     for current, directories, files in os.walk(directory):
-        directories[:] = [d for d in directories if d not in ('.git', 'DerivedSources')]
+        directories[:] = [d for d in directories
+                          if d not in ('.git', 'DerivedSources')
+                          and d.lower() not in _FIXTURE_SOURCE_DIRECTORIES]
         for name in files:
             if name.endswith(('.h', '.hpp')):
                 seen[name].append(os.path.relpath(os.path.join(current, name), checkout_root))
@@ -136,6 +171,62 @@ def _build_basename_index(checkout_root, framework):
         if resolved:
             index[name] = resolved
     return index
+
+
+def _installed_copy_rules():
+    """(source marker, install prefixes) pairs, inverting _INSTALLED_HEADER_RULES.
+
+    Derived from that table rather than written out again, so the two directions cannot drift
+    apart the day a copy phase changes.
+    """
+    inverted = {}
+    for location, candidates in _INSTALLED_HEADER_RULES:
+        for candidate in candidates:
+            inverted.setdefault('/' + candidate, []).append(location.lstrip('/'))
+    return tuple((marker, tuple(prefixes)) for marker, prefixes in inverted.items())
+
+
+_INSTALLED_COPY_RULES = _installed_copy_rules()
+
+
+def compiled_copy_candidates(path, build_directory):
+    """Where the build directory would hold its own copy of path's text, in preference order.
+
+    canonicalize() maps a copied header back to the checkout, which is the right path to
+    report it under and the wrong text to render it from: the copy was made once, at build
+    time, and every translation unit that included it saw the copy. If the checkout's file has
+    been edited since -- which is guaranteed as soon as anybody keeps working after a coverage
+    run -- the copy is the only text on disk the coverage records are about.
+
+    Measured on the shipped report: Source/WTF/wtf/Expected.h had been rewritten from 403
+    lines to 31 by bug 322297, and 394 instrumented lines were rendered against the 31-line
+    file, dropping 57 rows, while the 403-line text the profile describes was still sitting in
+    <build>/usr/local/include/wtf/Expected.h. Eight files were in that state.
+
+    Matched on the path suffix rather than resolved against a checkout root, because the
+    caller renders from the report's own tree prefix and should not have to know where the
+    checkout is.
+
+    A candidate is only a candidate. A framework header's copy is found by basename, exactly
+    as canonicalize() finds the source by basename, so the caller has to check that the text
+    it finds accounts for the records it has before preferring it over the checkout's.
+    """
+    if not build_directory:
+        return
+    for marker, prefixes in _INSTALLED_COPY_RULES:
+        index = path.find(marker)
+        if index == -1:
+            continue
+        tail = path[index + len(marker):]
+        for prefix in prefixes:
+            yield os.path.join(build_directory, prefix + tail)
+    if not path.endswith(('.h', '.hpp')):
+        return
+    basename = os.path.basename(path)
+    for framework, source_directory in _FRAMEWORK_SOURCE_DIRECTORY.items():
+        if '/{}/'.format(source_directory) in path:
+            for kind in ('PrivateHeaders', 'Headers'):
+                yield os.path.join(build_directory, framework + '.framework', kind, basename)
 
 
 # Copied-header directories under <build>/usr/local/include that hold WebKit's own code.
@@ -250,11 +341,33 @@ class PathCanonicalizer:
 
 class FileCoverage:
     """Per-line, per-function and per-branch hit counts for one source file."""
-    __slots__ = ('lines', 'functions', 'branches')
+    __slots__ = ('lines', 'functions', 'function_lines', 'branches')
 
     def __init__(self):
         self.lines = {}      # line number -> execution count
-        self.functions = {}  # mangled name -> execution count
+        # Mangled name -> execution count. Kept for coverage_delta, whose regressed_functions
+        # compares the two sides by name because a mangled name survives a source edit and a
+        # line number does not. Deliberately NOT what totals() counts; see function_lines.
+        self.functions = {}
+        # FN: start line -> the highest count of any function starting there, which is what
+        # llvm-cov counts as one function.
+        #
+        # llvm-cov MERGES template instantiations and lcov does not: lcov emits one FN:/FNDA:
+        # pair per instantiation and then an FNF:/FNH: pair counting the distinct starts.
+        # Keying by name therefore counts a Vector<T> method once per instantiation --
+        # measured over the shipped trace, 1,978,649 functions against llvm-cov's 255,297, a
+        # 7.75x denominator, and 55.06% where summary.txt in the same output directory says
+        # 72.09%. It measured template fan-out, not test reach, and --fail-under-functions=70
+        # failed a build that llvm-cov called 72.09%.
+        #
+        # Start-line keying reproduces llvm-cov's own count to 0.07%: summing the distinct
+        # starts per record gives 255,112 against llvm-cov's 255,297, and the residue is
+        # functions that begin on the same line in different columns, which lcov cannot
+        # express because FN: carries no column. Over the whole report, where duplicate
+        # records for one canonical file are unioned rather than summed, it gives 239,300 at
+        # 73.84% -- higher than summary.txt's 72.09% for exactly the reason the line figure is
+        # lower than its 67.41%. See project_totals().
+        self.function_lines = {}
         self.branches = {}   # (line, block, branch) -> taken count
 
     def merge(self, other):
@@ -267,14 +380,32 @@ class FileCoverage:
         for name, count in other.functions.items():
             if count > self.functions.get(name, -1):
                 self.functions[name] = count
+        for line, count in other.function_lines.items():
+            if count > self.function_lines.get(line, -1):
+                self.function_lines[line] = count
         for key, count in other.branches.items():
             if count > self.branches.get(key, -1):
                 self.branches[key] = count
 
+    def fold_function_lines(self, starts):
+        """Fill in function_lines from functions, given {mangled name: FN: start line}.
+
+        Called once per record, when the record ends, rather than as the FN:/FNDA: lines
+        arrive, so that it does not depend on llvm-cov emitting every FN: before the FNDA:
+        that refers to it. It does today -- 0 of the 18,237 records in the shipped trace have
+        an FNDA: whose name no FN: in the same record declared -- but nothing in the format
+        says so.
+        """
+        for name, count in self.functions.items():
+            line = starts.get(name)
+            if line is not None and count > self.function_lines.get(line, -1):
+                self.function_lines[line] = count
+
     def totals(self):
         return {
             'lines': (len(self.lines), sum(1 for c in self.lines.values() if c)),
-            'functions': (len(self.functions), sum(1 for c in self.functions.values() if c)),
+            'functions': (len(self.function_lines),
+                          sum(1 for c in self.function_lines.values() if c)),
             'branches': (len(self.branches), sum(1 for c in self.branches.values() if c)),
         }
 
@@ -283,12 +414,22 @@ def project_totals(coverage_by_path):
     """{metric: (count, covered)} over a whole parsed trace.
 
     Deliberately over the parsed, canonicalized, duplicate-unioned trace and not over
-    llvm-cov's own report, because the two have different denominators: llvm-cov counts a
-    copied header once per framework that includes it, which on a full-suite run is
-    2,098,175 lines against this function's 1,889,061, and 72.09% function coverage against
-    55.05% -- llvm-cov counts a template instantiation as a function, and lcov's records are
-    keyed by mangled name. Anything gating on coverage has to gate on the number the report
-    displays, or the gate and the report disagree.
+    llvm-cov's own report, because the two have different denominators, and in both directions.
+
+    llvm-cov counts a copied header once per framework that includes it, and its per-file LF:
+    is a sum of per-function line counts rather than a count of distinct lines, so a lambda
+    body inside its enclosing function is counted twice -- FTLLowerDFGToB3.cpp reports LF:24,853
+    over 20,863 distinct lines. On the shipped trace that is 2,098,175 lines against this
+    function's 1,888,952, of which 73% is the double-counting and 27% is the copied-header
+    merging.
+
+    Functions go the other way, and by less: llvm-cov merges a template's instantiations, so
+    its 255,297 is a count of distinct function starts summed per record, while this unions
+    them per canonical file and gets 239,300. Which is 73.84% here against summary.txt's
+    72.09%, for the same reason the line figure is 67.15% against its 67.41%.
+
+    Anything gating on coverage has to gate on the number the report displays, or the gate and
+    the report disagree.
     """
     # Seeded from FileCoverage rather than from a constant, so an empty trace still answers
     # for every metric and the set of metrics cannot drift from the ones it can produce.
@@ -343,6 +484,9 @@ def parse_lcov(lcov_path, canonicalizer=None, lines_only=False):
     """
     files = {}
     current = None
+    # {mangled name: FN: start line} within the record being read, folded into the record's
+    # function_lines when it ends. See FileCoverage.fold_function_lines().
+    starts = {}
     with open_lcov(lcov_path) as handle:
         for line in handle:
             line = line.rstrip('\n')
@@ -351,6 +495,7 @@ def parse_lcov(lcov_path, canonicalizer=None, lines_only=False):
                 if canonicalizer:
                     path = canonicalizer.canonicalize(path)
                 current = (path, FileCoverage())
+                starts = {}
             elif current is None:
                 continue
             elif line.startswith('DA:'):
@@ -361,6 +506,7 @@ def parse_lcov(lcov_path, canonicalizer=None, lines_only=False):
                     pass
             elif line == 'end_of_record':
                 path, coverage = current
+                coverage.fold_function_lines(starts)
                 if path in files:
                     files[path].merge(coverage)
                 else:
@@ -375,8 +521,12 @@ def parse_lcov(lcov_path, canonicalizer=None, lines_only=False):
                 except ValueError:
                     pass
             elif line.startswith('FN:'):
-                _, _, name = line[3:].partition(',')
+                number, _, name = line[3:].partition(',')
                 current[1].functions.setdefault(name, 0)
+                try:
+                    starts[name] = int(number)
+                except ValueError:
+                    pass
             elif line.startswith('BRDA:'):
                 parts = line[5:].split(',')
                 if len(parts) == 4:

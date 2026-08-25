@@ -31,7 +31,7 @@ import tempfile
 import unittest
 
 from webkitpy.coverage_directory_index import (
-    effective_source_prefix, write_directory_index, write_report)
+    effective_source_prefix, generated_source_totals, write_directory_index, write_report)
 
 
 class _Report(unittest.TestCase):
@@ -44,6 +44,15 @@ class _Report(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.output, ignore_errors=True)
         logging.disable(logging.INFO)
         self.addCleanup(logging.disable, logging.NOTSET)
+        # The line-view writer warns when it withholds a page, which one test here provokes
+        # deliberately. Keep it off the console rather than disabling it: logging falls back to
+        # lastResort and prints to stderr when a record reaches no handler at all.
+        view_logger = logging.getLogger('webkitpy.coverage_source_view')
+        self.addCleanup(setattr, view_logger, 'propagate', view_logger.propagate)
+        view_logger.propagate = False
+        silence = logging.NullHandler()
+        view_logger.addHandler(silence)
+        self.addCleanup(view_logger.removeHandler, silence)
 
     def write_source(self, relative, contents='int f();\nint g();\n'):
         path = os.path.join(self.root, relative)
@@ -81,14 +90,57 @@ class FileLinkTest(_Report):
 
     def test_a_file_with_no_line_view_is_rendered_as_text(self):
         # No source on disk, so no page was written and a link would be a link to a 404.
+        from webkitpy.coverage_source_view import UNREADABLE_SOURCE
         trace = self.write_trace('Source/WTF/wtf/Gone.h')
         report = write_report(trace, self.output, source_root=self.root, workers=1)
         self.assertEqual(report.source_pages, 0)
-        self.assertEqual(report.skipped_paths, {os.path.join(self.root, 'Source/WTF/wtf/Gone.h')})
+        self.assertEqual(report.skipped_paths,
+                         {os.path.join(self.root, 'Source/WTF/wtf/Gone.h'): UNREADABLE_SOURCE})
         page = self.page('Source/WTF/wtf/index.html')
         self.assertNotIn('<a href="Gone.h.html">', page)
         self.assertIn('nosource', page)
         self.assertIn('Gone.h', page)
+
+    def test_the_index_says_why_a_file_has_no_line_view(self):
+        # "There is coverage here but no page" is otherwise a dead end for whoever is reading
+        # it, and the two reasons want different actions: one is a cleaned build directory, the
+        # other is a tree that has moved on since the binaries were built.
+        from webkitpy.coverage_source_view import RECORDS_PAST_END_OF_FILE
+        self.write_source('Source/WTF/wtf/Shrunk.h', 'one line only\n')
+        trace = self.write_trace('Source/WTF/wtf/Shrunk.h')
+        with open(trace, 'a') as handle:
+            handle.write('SF:{}\nDA:900,0\nend_of_record\n'.format(
+                os.path.join(self.root, 'Source/WTF/wtf/Shrunk.h')))
+        report = write_report(trace, self.output, source_root=self.root, workers=1)
+        self.assertEqual(report.skipped_paths,
+                         {os.path.join(self.root, 'Source/WTF/wtf/Shrunk.h'):
+                          RECORDS_PAST_END_OF_FILE})
+        page = self.page('Source/WTF/wtf/index.html')
+        self.assertIn('title="No line view: the coverage records run past the end of the file',
+                      page)
+
+    def test_a_bare_set_of_paths_gets_the_reason_the_caller_names(self):
+        # --no-source-views writes the index and no line views at all, and passes the whole set
+        # of paths. "The source could not be read" is untrue there, and a tooltip that lies is
+        # worse than no tooltip.
+        from webkitpy.coverage_source_view import LINE_VIEWS_NOT_WRITTEN
+        self.write_source('Source/WTF/wtf/Vector.h')
+        trace = self.write_trace('Source/WTF/wtf/Vector.h')
+        write_directory_index(trace, self.output, source_root=self.root,
+                              unlinkable={os.path.join(self.root, 'Source/WTF/wtf/Vector.h')},
+                              unlinkable_reason=LINE_VIEWS_NOT_WRITTEN)
+        page = self.page('Source/WTF/wtf/index.html')
+        self.assertIn('title="No line view: {}"'.format(LINE_VIEWS_NOT_WRITTEN), page)
+        self.assertNotIn('<a href="Vector.h.html">', page)
+
+    def test_a_bare_set_of_paths_defaults_to_the_unreadable_reason(self):
+        from webkitpy.coverage_source_view import UNREADABLE_SOURCE
+        self.write_source('Source/WTF/wtf/Vector.h')
+        trace = self.write_trace('Source/WTF/wtf/Vector.h')
+        write_directory_index(trace, self.output, source_root=self.root,
+                              unlinkable=[os.path.join(self.root, 'Source/WTF/wtf/Vector.h')])
+        self.assertIn('title="No line view: {}"'.format(UNREADABLE_SOURCE),
+                      self.page('Source/WTF/wtf/index.html'))
 
     def test_a_directory_and_a_file_of_the_same_name_do_not_collide(self):
         self.write_source('Source/WTF/wtf/Vector.h')
@@ -181,7 +233,7 @@ class ParseHoistingTest(_Report):
         trace = self.write_trace('Source/WTF/wtf/Vector.h', 'Source/WTF/wtf/HashMap.h')
         report = write_report(trace, self.output, source_root=self.root, workers=1)
         self.assertEqual(report.source_pages, 2)
-        self.assertEqual(report.skipped_paths, set())
+        self.assertEqual(report.skipped_paths, {})
         self.assertTrue(report.source_bytes > 0)
         # index.html at the root, Source, Source/WTF and Source/WTF/wtf collapse to two pages.
         self.assertTrue(report.directory_pages >= 2)
@@ -284,6 +336,82 @@ class SuiteColumnTest(_Report):
         self.assertIn('Not built in this configuration', self.page('Source/WTF/wtf/index.html'))
 
 
+class GeneratedSourcesTest(_Report):
+    """The fourth state, which is bigger than the third.
+
+    generate-coverage-report excludes /DerivedSources/ from the trace, so the implementation
+    files the build generates are in none of the three states the report distinguishes: not
+    reported on, not in the universe the not-built denominator comes from, and not in the
+    not-built list. 2,217 files and 1,138,068 physical lines on the measured build, against the
+    764,144 the not-built caveat carefully accounts for.
+    """
+
+    def absence(self):
+        from webkitpy.coverage_build_inventory import AbsenceReport, AbsentFile
+        absence = AbsenceReport()
+        absence.total_file_count = 3
+        absence.reported_file_count = 1
+        absence.compiled_file_count = 2
+        absence.add(AbsentFile('Source/WTF/wtf/ThingGtk.cpp', 'other-port', 'GTK', 184))
+        return absence
+
+    def build_directory(self, generated=('WebCore/JSDocument.cpp', 'WebKit/FooMessages.cpp')):
+        build = os.path.join(self.root, 'WebKitBuild', 'Release')
+        for relative in generated:
+            path = os.path.join(build, 'DerivedSources', relative)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as handle:
+                handle.write('int f();\nint g();\nint h();\n')
+        return build
+
+    def report(self, build=None):
+        self.write_source('Source/WTF/wtf/Vector.h')
+        trace = self.write_trace('Source/WTF/wtf/Vector.h')
+        write_report(trace, self.output, source_root=self.root, workers=1,
+                     absence=self.absence(), build_directory=build)
+        return self.page('index.html')
+
+    def test_the_generated_files_get_a_row_of_their_own(self):
+        page = self.report(self.build_directory())
+        self.assertIn('Generated by the build, excluded from the report', page)
+        self.assertIn('data-v="2">2</td>', page)
+        self.assertIn('data-v="6">6</td>', page)
+
+    def test_the_caveat_says_they_are_in_neither_count(self):
+        page = self.report(self.build_directory())
+        self.assertIn('A further 2 files of generated implementation files', page)
+        self.assertIn('in neither count', page)
+
+    def test_they_are_not_summed_into_the_not_built_total(self):
+        # A different question: these were built and instrumented, and the report filters them
+        # out. Adding them to "not built" would make that word mean two things.
+        page = self.report(self.build_directory())
+        self.assertIn('Why 1 file of the tree is not in this report, plus 2 files the build '
+                      'generated', page)
+
+    def test_unified_source_bundles_are_not_counted_twice(self):
+        # Each bundle is a list of #includes of files already counted, so counting the bundles
+        # would count the same code twice: 1,219 bundles on the measured build.
+        build = self.build_directory()
+        bundles = os.path.join(build, 'DerivedSources', 'WebCore', 'unified-sources')
+        os.makedirs(bundles)
+        with open(os.path.join(bundles, 'UnifiedSource1.cpp'), 'w') as handle:
+            handle.write('#include "JSDocument.cpp"\n')
+        self.assertEqual(generated_source_totals(build), (2, 6))
+
+    def test_a_pruned_build_directory_shows_no_row_rather_than_a_zero(self):
+        # "None were generated" is not what was measured, and a zero would say it was.
+        self.assertIsNone(generated_source_totals(os.path.join(self.root, 'WebKitBuild')))
+        page = self.report(os.path.join(self.root, 'WebKitBuild'))
+        self.assertNotIn('Generated by the build', page)
+        self.assertIn('first-party implementation', page)
+
+    def test_no_build_directory_at_all_still_reports_the_third_state(self):
+        page = self.report(None)
+        self.assertNotIn('Generated by the build', page)
+        self.assertIn('Another port only', page)
+
+
 class EffectiveSourcePrefixTest(unittest.TestCase):
     def test_the_source_root_is_used_when_every_path_is_under_it(self):
         self.assertEqual(effective_source_prefix(
@@ -292,13 +420,100 @@ class EffectiveSourcePrefixTest(unittest.TestCase):
     def test_a_trailing_slash_on_the_source_root_is_ignored(self):
         self.assertEqual(effective_source_prefix(['/a/b/Source/x.cpp'], '/a/b/'), '/a/b')
 
-    def test_the_common_prefix_is_used_when_a_path_is_outside_the_source_root(self):
+    def test_the_source_root_is_used_even_when_a_path_is_outside_it(self):
+        # This used to fall back to the common prefix, which is '/' as soon as the build
+        # directory is on another volume -- and write_directory_index then dropped the whole
+        # third state with no message.
         self.assertEqual(effective_source_prefix(
-            ['/a/b/Source/WTF/wtf/Vector.h', '/other/generated/Foo.cpp'], '/a/b'), '/')
+            ['/a/b/Source/WTF/wtf/Vector.h', '/Volumes/Scratch/Build/generated/Foo.h'], '/a/b'),
+            '/a/b')
 
     def test_the_common_prefix_is_used_when_there_is_no_source_root(self):
         self.assertEqual(effective_source_prefix(
             ['/a/b/Source/WTF/x.h', '/a/b/Source/WTF/y.h']), '/a/b/Source/WTF')
+
+
+class OutsideTheCheckoutTest(_Report):
+    """A covered path that is not under the source root must not move the root.
+
+    There is always some: 120 paths in the shipped report are copied framework headers and
+    WebKitAdditions sources with no checkout path at all. When the build directory is inside
+    the checkout they are under the root anyway; put it on another volume and the tree used to
+    re-root at '/', which set absence to None and silently deleted the "23.4% of the tree is
+    not built" caveat, the reason card and the Not-built column, while not-built.tsv went on
+    being written. Any WEBKIT_OUTPUTDIR outside the checkout did it.
+    """
+
+    def absence(self):
+        from webkitpy.coverage_build_inventory import AbsenceReport, AbsentFile
+        absence = AbsenceReport()
+        absence.total_file_count = 3
+        absence.reported_file_count = 1
+        absence.compiled_file_count = 2
+        absence.add(AbsentFile('Source/WTF/wtf/ThingGtk.cpp', 'other-port', 'GTK', 184))
+        return absence
+
+    def build(self, outside_relative='generated/Copied.h'):
+        """A trace with one path under the root and one on another volume."""
+        self.write_source('Source/WTF/wtf/Vector.h')
+        elsewhere = os.path.join(self.elsewhere, outside_relative)
+        os.makedirs(os.path.dirname(elsewhere), exist_ok=True)
+        with open(elsewhere, 'w') as handle:
+            handle.write('int f();\nint g();\n')
+        trace = os.path.join(self.root, 'coverage.lcov')
+        with open(trace, 'w') as handle:
+            for path in (os.path.join(self.root, 'Source/WTF/wtf/Vector.h'), elsewhere):
+                handle.write('SF:{}\nFN:1,_Z1fv\nFNDA:1,_Z1fv\nDA:1,1\nDA:2,0\n'
+                             'end_of_record\n'.format(path))
+        return trace, elsewhere
+
+    def setUp(self):
+        super(OutsideTheCheckoutTest, self).setUp()
+        self.elsewhere = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.elsewhere, ignore_errors=True)
+
+    def test_the_not_built_caveat_survives_a_path_outside_the_checkout(self):
+        trace, _ = self.build()
+        write_report(trace, self.output, source_root=self.root, workers=1,
+                     absence=self.absence())
+        page = self.page('index.html')
+        self.assertIn('first-party implementation', page)
+        self.assertIn('Another port only', page)
+        self.assertIn('Not built', page)
+
+    def test_the_residue_hangs_off_one_synthetic_node(self):
+        from webkitpy.coverage_source_view import OUTSIDE_SOURCE_ROOT_DIRECTORY
+        trace, _ = self.build()
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        # One row, whose label begins at the synthetic node. Its single-child chain collapses
+        # onto one page exactly as Source/WTF/wtf does, so there is no page per level of the
+        # absolute path it came from.
+        self.assertIn('data-v="{}/'.format(OUTSIDE_SOURCE_ROOT_DIRECTORY), self.page('index.html'))
+        self.assertTrue(os.path.isdir(os.path.join(self.output, OUTSIDE_SOURCE_ROOT_DIRECTORY)))
+        # And the real tree is still rooted where it was, not at '/'.
+        self.assertTrue(os.path.isfile(os.path.join(self.output, 'Source/WTF/wtf/index.html')))
+
+    def test_the_line_view_of_an_outside_path_is_beside_the_row_that_links_to_it(self):
+        trace, _ = self.build()
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        broken = []
+        for dirpath, _, filenames in os.walk(self.output):
+            for name in filenames:
+                if not name.endswith('.html'):
+                    continue
+                with open(os.path.join(dirpath, name)) as handle:
+                    text = handle.read()
+                for link in re.findall(r'(?:href)="([^"#]+)"', text):
+                    if not os.path.exists(os.path.normpath(os.path.join(dirpath, link))):
+                        broken.append((os.path.join(dirpath, name), link))
+        self.assertEqual(broken, [])
+
+    def test_the_totals_still_include_the_outside_path(self):
+        # It is coverage the report has: those headers are product code whose only path is the
+        # copy. Rooting it somewhere legible must not drop it from the denominator.
+        trace, _ = self.build()
+        report = write_report(trace, self.output, source_root=self.root, workers=1)
+        self.assertEqual(report.totals['lines'], (4, 2))
 
 
 if __name__ == '__main__':
