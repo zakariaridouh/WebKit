@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
 import glob
+import gzip
 import logging
 import math
 import os
 import shlex
 import shutil
+import struct
 import subprocess
+import tempfile
 
+from collections import namedtuple
 from functools import cache
 
 logger = logging.getLogger(__name__)
@@ -82,6 +86,20 @@ class ExecutablesFromEnvAndXcode:
         for _ in range(count):
             cls.PREFERRED_EXECUTABLE_INDEX = (cls.PREFERRED_EXECUTABLE_INDEX + 1) % count
             yield cls.detect_binaries()[cls.PREFERRED_EXECUTABLE_INDEX]
+
+    @classmethod
+    def preferred_path(cls):
+        """The single binary to use when the caller cannot retry a failure.
+
+        run() tries each candidate until one succeeds, which a caller streaming gigabytes
+        into a compressor cannot do: by the time the exit status is known the output has
+        already been written. Such a caller takes the preferred candidate and reports the
+        failure instead.
+        """
+        binaries = cls.detect_binaries()
+        if not binaries:
+            raise RuntimeError(f'Found no {cls.EXECUTABLE_NAME} in the toolchain or on PATH')
+        return binaries[cls.PREFERRED_EXECUTABLE_INDEX % len(binaries)]
 
     @classmethod
     def run(cls, command, *args, check=False, stdout=None, stderr=None, capture_output=False,
@@ -197,6 +215,12 @@ class LLVMCovExecutable(ExecutablesFromEnvAndXcode):
     EXECUTABLE_NAME = 'llvm-cov'
 
 
+# gzip level for the lcov trace. 6 is zlib's default and the knee of the curve here: measured
+# on a 750,905,698-byte full-suite trace, level 1 gives 10.25x in 2.0s, level 6 gives 13.80x
+# in 5.8s, and level 9 gives 14.20x -- 2.8% smaller -- in 12.2s.
+LCOV_COMPRESSION_LEVEL = 6
+
+
 # Coverage-instrumented WebKit frameworks carry this directory in their baked-in
 # __llvm_profile_filename (see Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm).
 # It is also the only path the WebContent, GPU and Networking sandbox profiles allow
@@ -204,6 +228,234 @@ class LLVMCovExecutable(ExecutablesFromEnvAndXcode):
 # pointed anywhere else has its profile silently denied. Test harnesses therefore let
 # the processes write here and collect afterwards.
 COVERAGE_PROFILE_DIRECTORY = '/private/tmp/WebKitCoverage'
+
+
+# Enough Mach-O to answer two questions about a binary the report is about to describe: is it
+# instrumented for coverage, and where will it write its profile.
+#
+# Both matter because getting the second one wrong is silent and expensive. WebGPU.framework
+# and WebKitLegacy.framework were instrumented, passed to llvm-cov, and reported at 0.00% and
+# 0.13% over 84,332 lines, because neither project defined ENABLE_LLVM_COVERAGE, so neither
+# baked a path into __llvm_profile_filename. The compiler-rt profile runtime defines that
+# symbol weakly as an empty string, so an unbaked framework does not fail to write a profile
+# in any visible way -- it writes default.profraw relative to whatever the process's working
+# directory is, which nothing collects, and which the sandbox denies for the WebContent, GPU
+# and Networking processes anyway. Every line in it is then reported as untested.
+_FAT_MAGIC = b'\xca\xfe\xba\xbe'
+_FAT_MAGIC_64 = b'\xca\xfe\xba\xbf'
+_MACHO_MAGIC_64_LITTLE_ENDIAN = b'\xcf\xfa\xed\xfe'
+_LC_SEGMENT_64 = 0x19
+_LC_SYMTAB = 0x02
+# nlist_64.n_type fields. N_STAB is a mask: any of those bits set means the entry is a symbolic
+# debugging entry rather than a symbol. N_TYPE masks off the kind, of which only N_SECT is defined
+# in a section and so has an address in n_value.
+_N_STAB = 0xe0
+_N_TYPE = 0x0e
+_N_SECT = 0x0e
+
+# The counters section. Coverage builds rename its segment to __MMAP_DATA so that continuous
+# mode can map it, so match on the section name and ignore the segment.
+COVERAGE_COUNTERS_SECTION = '__llvm_prf_cnts'
+PROFILE_FILENAME_SYMBOL = b'___llvm_profile_filename'
+
+# instrumented: carries coverage counters at all.
+# profile_filename: the baked-in __llvm_profile_filename, '' when nothing baked one in, or
+#     None when the symbol is not in the symbol table -- which a stripped binary also looks
+#     like, so None means "cannot tell" and never "broken".
+Instrumentation = namedtuple('Instrumentation', ('instrumented', 'profile_filename'))
+
+
+def _macho_slice_offsets(handle):
+    handle.seek(0)
+    magic = handle.read(4)
+    if magic not in (_FAT_MAGIC, _FAT_MAGIC_64):
+        return [0]
+    count = struct.unpack('>I', handle.read(4))[0]
+    wide = magic == _FAT_MAGIC_64
+    offsets = []
+    for _ in range(count):
+        entry = handle.read(32 if wide else 20)
+        offsets.append(struct.unpack_from('>Q' if wide else '>I', entry, 8)[0])
+    return offsets
+
+
+def _macho_load_commands(handle, base):
+    """([(section name, address, size, file offset)], symtab fields) for one architecture."""
+    handle.seek(base)
+    if handle.read(4) != _MACHO_MAGIC_64_LITTLE_ENDIAN:
+        return None
+    handle.seek(base + 16)
+    number_of_commands, size_of_commands = struct.unpack('<II', handle.read(8))
+    handle.seek(base + 32)
+    commands = handle.read(size_of_commands)
+
+    sections = []
+    symtab = None
+    position = 0
+    for _ in range(number_of_commands):
+        if position + 8 > len(commands):
+            break
+        command, size = struct.unpack_from('<II', commands, position)
+        if size < 8:
+            break
+        if command == _LC_SEGMENT_64:
+            number_of_sections = struct.unpack_from('<I', commands, position + 64)[0]
+            offset = position + 72
+            for _ in range(number_of_sections):
+                if offset + 80 > len(commands):
+                    break
+                name = commands[offset:offset + 16].rstrip(b'\0').decode('utf-8', errors='replace')
+                address, section_size = struct.unpack_from('<QQ', commands, offset + 32)
+                file_offset = struct.unpack_from('<I', commands, offset + 48)[0]
+                sections.append((name, address, section_size, file_offset))
+                offset += 80
+        elif command == _LC_SYMTAB:
+            symtab = struct.unpack_from('<IIII', commands, position + 8)
+        position += size
+    return sections, symtab
+
+
+def _symbol_address(handle, base, symtab, symbol):
+    """The section-relative address a symbol is defined at, or None if nothing defines it.
+
+    Three things have to be true of an entry before its n_value is an address, and the
+    original version of this checked none of them.
+
+    It must not be a stab. An unstripped framework carries a GSYM stab for
+    ___llvm_profile_filename next to the real symbol; a stab's value field is not an address,
+    and for N_GSYM it is 0. Taking the first entry whose name matched found WebGPU's stab,
+    resolved 0, mapped it into no section and reported "cannot tell" for a framework whose
+    path strings(1) prints. That misread WebKit, WebKitLegacy and WebGPU and not
+    JavaScriptCore or WebCore, and the reason is neither random nor string-table layout: the
+    stabs are a contiguous block at the tail of the local-symbol region, so what decides the
+    order is the symbol's linkage. JavaScriptCore and WebCore define it in a .cpp, which
+    OptionsCocoa.cmake compiles with -fvisibility=hidden, so the symbol is N_PEXT and sorts
+    into the local region ahead of the stabs. WebGPU, WebKit and WebKitLegacy define it in a
+    .mm, which that flag's generator expression does not cover, so it is N_EXT and sorts after
+    them. Give OBJCXX -fvisibility=hidden and the three would start reading correctly on their
+    own.
+
+    It must be defined in a section. N_UNDF, N_PBUD and N_INDR are not stabs, and their
+    n_value is a size, an ordinal or another string index. An undefined entry's 0 happens to
+    map into no section of a dylib, so it degraded to None by luck; in an object file, whose
+    sections start at 0, it would have decoded arbitrary bytes as the profile filename.
+
+    Its name must actually be the one asked for. Matching a single string-table index is not
+    the same as matching a name, because the table is not fully deduplicated -- 280 names in
+    WebGPU alone occupy more than one index. Every index holding the name is collected, so a
+    second copy cannot hide the definition.
+    """
+    symbol_offset, number_of_symbols, string_offset, string_size = symtab
+    handle.seek(base + string_offset)
+    strings = handle.read(string_size)
+    # The string table starts with a NUL, so every name in it is NUL-preceded.
+    needle = b'\0' + symbol + b'\0'
+    wanted = set()
+    index = strings.find(needle)
+    while index != -1:
+        wanted.add(index + 1)
+        index = strings.find(needle, index + 1)
+    if not wanted:
+        return None
+    handle.seek(base + symbol_offset)
+    table = handle.read(number_of_symbols * 16)
+    for position in range(0, len(table) - 15, 16):
+        if struct.unpack_from('<I', table, position)[0] not in wanted:
+            continue
+        n_type = table[position + 4]
+        if n_type & _N_STAB or n_type & _N_TYPE != _N_SECT:
+            continue
+        return struct.unpack_from('<Q', table, position + 8)[0]
+    return None
+
+
+def read_instrumentation(binary_path):
+    """What a Mach-O says about its own coverage instrumentation. Returns an Instrumentation.
+
+    Reads the load commands, the symbol table and one string, so it costs milliseconds even on
+    a gigabyte of WebCore. A file that is not a 64-bit little-endian Mach-O reads as
+    uninstrumented rather than raising: the question being asked is "will this contribute a
+    profile", and something that is not a Mach-O will not.
+    """
+    with open(binary_path, 'rb') as handle:
+        for base in _macho_slice_offsets(handle):
+            parsed = _macho_load_commands(handle, base)
+            if parsed is None:
+                continue
+            sections, symtab = parsed
+            instrumented = any(name == COVERAGE_COUNTERS_SECTION for name, _, _, _ in sections)
+            address = _symbol_address(handle, base, symtab, PROFILE_FILENAME_SYMBOL) if symtab else None
+            if address is None:
+                return Instrumentation(instrumented, None)
+            for _, section_address, section_size, file_offset in sections:
+                if section_address <= address < section_address + section_size:
+                    handle.seek(base + file_offset + (address - section_address))
+                    data = handle.read(4096)
+                    end = data.find(b'\0')
+                    return Instrumentation(
+                        instrumented, data[:end if end != -1 else None].decode('utf-8', errors='replace'))
+            return Instrumentation(instrumented, None)
+    return Instrumentation(False, None)
+
+
+def profile_name_prefix(profile_filename):
+    """The fixed leading part of a baked-in __llvm_profile_filename's basename.
+
+    '/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw' -> 'WebGPU_', which is what the raw
+    profiles a run collects are actually named, so it is how a collected profile is matched
+    back to the binary that wrote it.
+    """
+    return os.path.basename(profile_filename).split('%')[0]
+
+
+def objects_with_no_profile_data(binary_paths, raw_profile_paths=(),
+                                 profile_directory=COVERAGE_PROFILE_DIRECTORY):
+    """[(path, reason)] for instrumented binaries that can contribute no profile data.
+
+    Not "did not this time" -- that is a test-coverage question and 0% is the right answer to
+    it. These are configuration errors: the binary is instrumented, so llvm-cov will describe
+    every line in it, and nothing it writes can ever reach the profile.
+
+    Two rules, both exact and both free:
+
+    - Its __llvm_profile_filename does not name a file inside the directory a run collects
+      from. Empty means no project baked one in, and the profile runtime's weak definition
+      wins; anything else outside that directory is not collected and, for the WebContent, GPU
+      and Networking processes, not even permitted.
+    - The name it does bake in matched none of the raw profiles this run collected, so nothing
+      that loaded it ever wrote one. Needs the raw profiles, so this rule is skipped when
+      reporting from an already-indexed profile.
+    """
+    collected = [os.path.basename(path) for path in raw_profile_paths]
+    findings = []
+    for path in binary_paths:
+        try:
+            instrumentation = read_instrumentation(path)
+        except (OSError, struct.error) as failure:
+            logger.debug(f'Could not read instrumentation from {path}: {failure}')
+            continue
+        # profile_filename is None for a binary whose symbol table does not carry the symbol,
+        # which is also what a stripped binary looks like, so that is "cannot tell".
+        if not instrumentation.instrumented or instrumentation.profile_filename is None:
+            continue
+        filename = instrumentation.profile_filename
+        if not filename:
+            findings.append((path, 'nothing baked a path into its __llvm_profile_filename, so '
+                                   'the profile runtime writes default.profraw relative to the '
+                                   "process's working directory, which nothing collects. Does "
+                                   'its project define ENABLE_LLVM_COVERAGE?'))
+            continue
+        if not filename.startswith(profile_directory + '/'):
+            findings.append((path, 'its __llvm_profile_filename is {}, which is outside {}, the '
+                                   'only directory a run collects from and the only one the '
+                                   'sandbox lets a WebContent, GPU or Networking process write '
+                                   'to'.format(filename, profile_directory)))
+            continue
+        prefix = profile_name_prefix(filename)
+        if collected and prefix and not any(name.startswith(prefix) for name in collected):
+            findings.append((path, 'it writes {}*, and this run collected no profile with that '
+                                   'name, so nothing that loaded it ever wrote one'.format(prefix)))
+    return findings
 
 
 def prepare_coverage_profile_directory():
@@ -287,11 +539,31 @@ class LLVMCov:
         return LLVMCovExecutable.run(command, capture_output=True, text=True)
 
     @classmethod
-    def export_lcov(cls, objects, profile_path, output_file, ignore_filename_regexes=(), path_equivalences=()):
+    def export_lcov(cls, objects, profile_path, output_file, ignore_filename_regexes=(), path_equivalences=(),
+                    compress=False):
         command = ['export', *cls._common_arguments(objects, profile_path, ignore_filename_regexes, path_equivalences),
                    '--format=lcov']
-        with open(output_file, 'w') as lcov_file:
-            return LLVMCovExecutable.run(command, stdout=lcov_file, stderr=subprocess.PIPE, text=True)
+        if not compress:
+            with open(output_file, 'w') as lcov_file:
+                return LLVMCovExecutable.run(command, stdout=lcov_file, stderr=subprocess.PIPE, text=True)
+
+        # Pipe llvm-cov straight into the compressor, so the uncompressed trace never lands
+        # on disk. A full-suite trace is 751MB of which 709MB is mangled function names, so
+        # it compresses 13.8x to 54MB at level 6; that costs 5.8s of CPU inside the 22.8s the
+        # export itself takes, so it is free in wall-clock terms and it keeps the report's
+        # peak disk use to the size of the report. Level 9 measured 12.2s for 2.8% less.
+        argv = [LLVMCovExecutable.preferred_path(), *command]
+        with tempfile.TemporaryFile() as diagnostics:
+            # stderr goes to a file, not a pipe: nothing reads it while the trace is being
+            # copied, and llvm-cov filling a pipe buffer would deadlock the copy.
+            process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=diagnostics)
+            with gzip.open(output_file, 'wb', compresslevel=LCOV_COMPRESSION_LEVEL) as compressed:
+                shutil.copyfileobj(process.stdout, compressed, 1024 * 1024)
+            process.stdout.close()
+            returncode = process.wait()
+            diagnostics.seek(0)
+            stderr = diagnostics.read().decode('utf-8', errors='replace')
+        return subprocess.CompletedProcess(argv, returncode, stdout='', stderr=stderr)
 
     @classmethod
     def export_summary_json(cls, objects, profile_path, output_file, ignore_filename_regexes=(),

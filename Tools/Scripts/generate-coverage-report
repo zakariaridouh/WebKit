@@ -42,8 +42,12 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 from webkitpy.common.host import Host
-from webkitpy.coverage_directory_index import write_directory_index
-from webkitpy.llvm_profile_utils import LLVMCov, merge_all_raw_profiles_in_directory
+from webkitpy.coverage_build_inventory import find_absent_files
+from webkitpy.coverage_directory_index import write_report
+from webkitpy.coverage_lcov import (
+    PathCanonicalizer, parse_lcov_source_files, third_party_copied_header_ignore_regexes)
+from webkitpy.llvm_profile_utils import (
+    LLVMCov, merge_all_raw_profiles_in_directory, objects_with_no_profile_data)
 from webkitpy.port import configuration_options, platform_options
 
 _log = logging.getLogger('generate-coverage-report')
@@ -82,6 +86,11 @@ TEST_SUPPORT_PRODUCTS = (
 # directory are attributed to the copy, so libwebrtc's headers arrive as
 # .../usr/local/include/webrtc/... and slip past a Source/ThirdParty/ pattern entirely --
 # that was 12,900 lines of 5%-covered code silently dragging the totals down.
+#
+# Nor is naming the copy locations that have been seen enough, which is why
+# coverage_lcov.third_party_copied_header_ignore_regexes() adds the rest from the build
+# directory's own layout: libwebrtc also installs headers under api/, rtc_base/, p2p/,
+# logging/ and video/, and 26 of those were still in a full-suite report.
 THIRD_PARTY_IGNORE_REGEXES = (
     'Source/ThirdParty/',
     '/usr/local/include/webrtc/',
@@ -168,14 +177,35 @@ def parse_args(args):
                            'WebCore -- so this only stops filtering it out, at the cost of a much '
                            'larger report')
     parser.add_option('--no-html', action='store_false', dest='html', default=True,
-                      help='Skip the HTML report')
+                      help='Skip the HTML report: the directory index and the per-file line views')
+    parser.add_option('--llvm-cov-html', action='store_true', default=False,
+                      help="Also produce llvm-cov's own per-file HTML pages, in html/. They are "
+                           'off by default because they are 909 MB of the 1.7 GB a full-suite '
+                           'report used to be, against 288 MB for the line views this generates '
+                           "from the trace. What they add is sub-line detail lcov cannot express: "
+                           'on a full-suite run, 23,081 covered lines contain a region that never '
+                           'executed. Reach for this when tracking down one of those')
     parser.add_option('--show-instantiations', action='store_true', default=False,
-                      help='Include per-template-instantiation sub-views in the HTML report. They are '
-                           'omitted by default because they are expensive on template-heavy code '
-                           '(395 MB versus 300 MB of HTML for JavaScriptCore alone) and do not affect '
-                           'aggregate per-file line coverage')
+                      help='Include per-template-instantiation sub-views in the llvm-cov HTML '
+                           'pages, so this only does anything together with --llvm-cov-html. They '
+                           'are omitted by default because they are expensive on template-heavy '
+                           'code (395 MB versus 300 MB of HTML for JavaScriptCore alone) and do '
+                           'not affect aggregate per-file line coverage')
     parser.add_option('--no-lcov', action='store_false', dest='lcov', default=True,
                       help='Skip the lcov export')
+    parser.add_option('--no-compress-lcov', action='store_false', dest='compress_lcov', default=True,
+                      help='Write coverage.lcov instead of coverage.lcov.gz. The trace is gzipped '
+                           'by default because it is 94%% mangled function names and so compresses '
+                           '13.8x -- 751 MB to 54 MB on a full-suite run -- and because piping '
+                           'llvm-cov into the compressor keeps the uncompressed trace off disk '
+                           'entirely. Everything that reads a trace sniffs for gzip, so an '
+                           'uncompressed one is only needed by other tools')
+    parser.add_option('--no-build-inventory', action='store_false', dest='build_inventory',
+                      default=True,
+                      help='Do not work out which files this configuration never compiled. '
+                           'That third state is what stops 23%% of the tree being invisible '
+                           'rather than visibly untested, so this is only for a build '
+                           'directory whose intermediates have been pruned')
     parser.add_option('--keep-raw-profiles', action='store_true', default=False,
                       help='Keep the .profraw files. They are deleted once indexed by default: the raw '
                            'format has no compatibility guarantees, so it should not be archived')
@@ -196,6 +226,60 @@ def parse_args(args):
     if options.profdata and not os.path.isfile(options.profdata):
         parser.error('--profdata {} does not exist'.format(options.profdata))
     return options
+
+
+def summarize_absent_files(port, lcov_path, ignore_regexes, output_directory):
+    """Work out and report the files the coverage data cannot describe at all.
+
+    Returns an AbsenceReport, or None if the build directory does not carry enough of a
+    record to answer the question -- in which case say so rather than implying the tree is
+    fully covered by what the report does show.
+    """
+    canonicalizer = PathCanonicalizer(port.webkit_base())
+    reported = parse_lcov_source_files(lcov_path, canonicalizer)
+    absence = find_absent_files(port.webkit_base(), port._build_path(), reported, ignore_regexes)
+    if not absence.compiled_file_count:
+        _log.warning('Found no compiler dependency files or unified-source bundles under %s, '
+                     'so the report cannot show which files this configuration never built. '
+                     'Percentages below are over an unknown fraction of the tree.',
+                     port._build_path())
+        return None
+
+    _log.info('%s', absence.denominator_sentence())
+    for _, label, files, lines in absence.reasons():
+        _log.info('    %6d files  %9d physical lines  %s', files, lines, label)
+
+    listing = os.path.join(output_directory, 'not-built.tsv')
+    with open(listing, 'w') as handle:
+        handle.write('path\treason\tdetail\tphysical_lines\n')
+        for absent in absence.files:
+            handle.write('{}\t{}\t{}\t{}\n'.format(
+                absent.path, absent.reason, absent.detail, absent.physical_lines))
+    _log.info('Wrote %s', listing)
+    return absence
+
+
+def warn_about_objects_with_no_profile_data(objects, raw_profiles):
+    """Say so when a binary in the report cannot have contributed anything to the profile.
+
+    This has to be said out loud, because the report cannot say it. An instrumented binary that
+    writes no profile is reported at 0.00%, which is indistinguishable from code that is tested
+    by nothing -- and 0.00% over tens of thousands of lines reads as a test gap, so it is acted
+    on as one. WebGPU.framework spent a full run reported at 0.00% across 45,005 lines and
+    WebKitLegacy.framework at 0.13% across 39,327, and in both cases the answer was that
+    neither project defined ENABLE_LLVM_COVERAGE, so neither had a profile path baked in.
+    84,332 lines of instrumented code, described as untested, with nothing said about it.
+    """
+    findings = objects_with_no_profile_data(objects, raw_profiles)
+    if not findings:
+        return
+    _log.warning('%d of the %d binaries in this report can have contributed no profile data at '
+                 'all, so every line they contain is about to be reported as untested:',
+                 len(findings), len(objects))
+    for path, reason in findings:
+        _log.warning('    %s', path)
+        _log.warning('        %s', reason)
+    _log.warning('    Exclude them, or fix their configuration -- do not read their coverage.')
 
 
 def main(args):
@@ -225,12 +309,21 @@ def main(args):
         raw_profiles = merge_all_raw_profiles_in_directory(options.coverage_dir, profile_path)
         _log.info('Indexed %d raw profiles into %s', len(raw_profiles), profile_path)
 
+    warn_about_objects_with_no_profile_data(objects, raw_profiles)
+
     ignore_regexes = list(DEFAULT_IGNORE_REGEXES) + list(options.ignore_regexes)
     if not options.include_third_party:
         ignore_regexes += list(THIRD_PARTY_IGNORE_REGEXES)
+        copied = third_party_copied_header_ignore_regexes(port._build_path())
+        if copied:
+            _log.info('Excluding %d third-party copied-header directories the build installed: '
+                      '%s', len(copied),
+                      ', '.join(regex.rsplit('/', 1)[-1] for regex in copied))
+            ignore_regexes += copied
 
     summary_path = os.path.join(options.output_dir, 'summary.txt')
-    lcov_path = os.path.join(options.output_dir, 'coverage.lcov')
+    lcov_path = os.path.join(options.output_dir,
+                             'coverage.lcov.gz' if options.compress_lcov else 'coverage.lcov')
     html_dir = os.path.join(options.output_dir, 'html')
 
     # These three llvm-cov invocations are independent and each takes minutes over
@@ -242,7 +335,7 @@ def main(args):
 
     def make_lcov():
         return LLVMCov.export_lcov(objects, profile_path, lcov_path, ignore_regexes,
-                                   options.path_equivalence)
+                                   options.path_equivalence, compress=options.compress_lcov)
 
     def make_html():
         return LLVMCov.show_html(objects, profile_path, html_dir, ignore_regexes,
@@ -250,9 +343,10 @@ def main(args):
                                  show_instantiations=options.show_instantiations)
 
     work = {'summary': make_summary}
-    # The directory index is built from the lcov trace, so it is needed even with --no-lcov.
+    # The directory index and the line views are both built from the lcov trace, so it is
+    # needed even with --no-lcov.
     work['lcov'] = make_lcov
-    if options.html:
+    if options.llvm_cov_html:
         work['html'] = make_html
 
     _log.info('Running %d llvm-cov invocations concurrently: %s',
@@ -306,16 +400,33 @@ def main(args):
     for line in results['summary'].stdout.splitlines()[-3:]:
         print(line)
     _log.info('Wrote %s', summary_path)
-    _log.info('Wrote %s', lcov_path)
+    _log.info('Wrote %s (%.1f MB)', lcov_path, os.path.getsize(lcov_path) / 1e6)
+
+    # The third state. llvm-cov can tell a covered line from an instrumented-but-unexecuted
+    # one, but a file this configuration never compiled has no coverage mapping at all, so it
+    # is absent from the trace rather than present at 0%. On the measured macOS Release build
+    # that is 2,446 of 10,473 first-party implementation files and 764,144 physical lines, so
+    # without this the percentages above are quoted over 77% of the tree without saying so.
+    #
+    # These files are deliberately not given synthetic 0% rows: 134 of them produced no
+    # coverage mapping even though they were compiled, because there is nothing in them to
+    # count -- wtf/ASCIICType.cpp is a lookup table -- so a 0% row would invent a denominator.
+    absence = None
+    if options.build_inventory:
+        absence = summarize_absent_files(port, lcov_path, ignore_regexes, options.output_dir)
 
     if options.html:
-        # A per-directory index over llvm-cov's output. llvm-cov's own index lists every
-        # source file in one page, which for WebKit is ~18,000 rows and about 8MB of HTML.
-        pages = write_directory_index(lcov_path, options.output_dir,
-                                      source_root=port.webkit_base())
-        _log.info('Wrote %d directory pages; start at %s',
-                  pages, os.path.join(options.output_dir, 'index.html'))
-        _log.info('Wrote %s', os.path.join(html_dir, 'index.html'))
+        # A per-directory index plus one line-by-line view per file, both rendered from the
+        # trace this run already has to parse. llvm-cov's own index lists every source file in
+        # one 8MB page, and its per-file pages are 909MB of the report.
+        report = write_report(lcov_path, options.output_dir, source_root=port.webkit_base(),
+                              absence=absence, build_directory=port._build_path(),
+                              index_link='html/index.html' if options.llvm_cov_html else None)
+        _log.info('Wrote %d directory pages and %d line views (%.1f MB); start at %s',
+                  report.directory_pages, report.source_pages, report.source_bytes / 1e6,
+                  os.path.join(options.output_dir, 'index.html'))
+        if options.llvm_cov_html:
+            _log.info('Wrote %s', os.path.join(html_dir, 'index.html'))
 
     if not options.lcov:
         os.unlink(lcov_path)

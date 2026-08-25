@@ -127,8 +127,8 @@ def changed_files_from_file(source_root, path):
 def parse_args(args):
     parser = optparse.OptionParser(usage='%prog --baseline=FILE --current=FILE [options]',
                                    epilog=_EPILOG, formatter=_PreformattedEpilog())
-    parser.add_option('--baseline', help='lcov trace from before the change')
-    parser.add_option('--current', help='lcov trace from after the change')
+    parser.add_option('--baseline', help='lcov trace from before the change, gzipped or not')
+    parser.add_option('--current', help='lcov trace from after the change, gzipped or not')
     parser.add_option('--output-dir', help='Directory to write the HTML delta report into. '
                                            'Nothing is opened in a browser; the path is printed')
     parser.add_option('--changed-files', metavar='FILE',
