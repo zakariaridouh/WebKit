@@ -42,7 +42,11 @@ METRICS = ('lines', 'functions', 'branches')
 
 # Roles from the reference data-visualization palette. Bar length carries the
 # magnitude, so this is a single series: one constant fill, and no legend.
-_STYLE = """
+#
+# REPORT_STYLE, SORT_SCRIPT, meter_html() and format_percent() are shared with
+# coverage_delta.py, so that the delta report looks like part of the same tool rather
+# than a second one. Keep them public.
+REPORT_STYLE = """
 :root {
   color-scheme: light;
   --surface-1: #fcfcfb;
@@ -131,7 +135,7 @@ td a:hover { color: var(--meter-fill); text-decoration: underline; }
 .hint a { color: var(--meter-fill); }
 """
 
-_SORT_SCRIPT = """
+SORT_SCRIPT = """
 document.querySelectorAll('th[data-col]').forEach(function (th) {
   th.addEventListener('click', function () {
     var table = th.closest('table');
@@ -173,11 +177,11 @@ def _percent(count, covered):
     return (100.0 * covered / count) if count else None
 
 
-def _format_percent(value):
+def format_percent(value):
     return '-' if value is None else '{:.2f}%'.format(value)
 
 
-def _meter(value):
+def meter_html(value):
     if value is None:
         return '<div class="meter"></div>'
     return '<div class="meter"><i style="width:{:.2f}%"></i></div>'.format(max(value, 0.0))
@@ -223,9 +227,9 @@ def _row(label, link, node_or_summary, is_directory, index_of_sort_column=0):
         value = _percent(count, covered)
         if metric == 'lines':
             cells.append('<td data-v="{}">{}</td>'.format(
-                -1 if value is None else '{:.4f}'.format(value), _meter(value)))
+                -1 if value is None else '{:.4f}'.format(value), meter_html(value)))
         cells.append('<td class="n pct" data-v="{}">{}</td>'.format(
-            -1 if value is None else '{:.4f}'.format(value), _format_percent(value)))
+            -1 if value is None else '{:.4f}'.format(value), format_percent(value)))
         if metric == 'lines':
             cells.append('<td class="n" data-v="{}">{:,}</td>'.format(count, count))
             cells.append('<td class="n" data-v="{}">{:,}</td>'.format(count - covered, count - covered))
@@ -279,7 +283,7 @@ def _page(title, subtitle, crumbs_html, rows_html, totals_row, depth, note):
 </html>
 """.format(title=html.escape(title), subtitle=html.escape(subtitle), crumbs=crumbs_html,
            headers=''.join(header_cells), rows=rows_html, totals=totals_row,
-           style=_STYLE, script=_SORT_SCRIPT, note=note)
+           style=REPORT_STYLE, script=SORT_SCRIPT, note=note)
 
 
 def _write_node(node, output_root, full_parts, source_prefix, file_prefix, index_link, written):

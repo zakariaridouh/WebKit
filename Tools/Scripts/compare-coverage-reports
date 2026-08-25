@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2026 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+"""Compare two coverage runs and report what the change did to coverage.
+
+generate-coverage-report answers "what is covered". This answers "what did my change do
+to that", and "is the code I just wrote tested" -- which is the question review actually
+asks, and the one llvm-cov cannot answer at all because it has no notion of a baseline.
+
+Generate an lcov trace before and after the change, then compare them:
+
+    Tools/Scripts/generate-coverage-report --coverage-dir=/tmp/cov --output-dir=/tmp/before
+    ... apply the change, rebuild, rerun the tests ...
+    Tools/Scripts/generate-coverage-report --coverage-dir=/tmp/cov --output-dir=/tmp/after
+
+    Tools/Scripts/compare-coverage-reports --baseline=/tmp/before/coverage.lcov \\
+        --current=/tmp/after/coverage.lcov --git-diff=main --output-dir=/tmp/delta
+
+The interesting number is almost never the project total, which barely moves; it is what
+happened to the files the change touched, which is what --changed-files and --git-diff
+restrict the report to.
+
+Two kinds of finding are reported, separately and never added together, because they
+call for different fixes:
+
+  * a regressed line was in both traces, executed in the baseline and not now. An
+    existing test stopped reaching existing code.
+  * an uncovered new line is only in the current trace and was never executed. New code
+    that nothing tests.
+
+Both are attributed by line NUMBER, because that is all lcov records. That is exact for
+a file whose source did not change between the two runs, and approximate for one that
+did: inserting a line shifts every line below it, and the shifted numbers then look like
+a mix of regressions and new lines even though the coverage did not change. So for a
+file the change touched, treat the line-level attribution as a pointer to where to look,
+and take the coverage of the lines present in the current run -- reported as "After",
+and independent of any line matching -- as the number that means something. Functions
+are matched by mangled name instead and do survive an edit.
+"""
+
+import logging
+import optparse
+import os
+import subprocess
+import sys
+
+from webkitpy.common.system.filesystem import FileSystem
+from webkitpy.common.webkit_finder import WebKitFinder
+from webkitpy.coverage_delta import (absolute_paths, compare_lcov_files, format_summary,
+                                     write_delta_report)
+
+_log = logging.getLogger('compare-coverage-reports')
+
+# --fail-under-delta is a float compared against a float, and a delta computed from equal
+# integer ratios is not always exactly 0.0, so leave room for the last bit rather than
+# failing a build over one.
+_TOLERANCE = 1e-9
+
+# optparse prints this after the option list. It repeats the docstring's caveat because
+# nobody reads the docstring, and a reviewer who trusts a per-line number for a file whose
+# source moved will chase a regression that never happened.
+_EPILOG = """
+Two findings are counted separately and never added together: a REGRESSED line was in
+both traces, executed in the baseline and not now, so an existing test stopped reaching
+existing code; an UNCOVERED NEW line is only in the current trace and was never executed,
+so it is new code that nothing tests. They call for different fixes.
+
+Both are attributed by line NUMBER, because that is all lcov records. That is exact for a
+file whose source did not change between the two runs and only approximate for one that
+did, since inserting a line shifts every line below it and the shifted numbers then look
+like a mixture of regressions and new lines. For a file the change touched, take the
+line-level attribution as a pointer to where to look and the "After" column -- the
+coverage of the lines present in the current run, which no line matching goes into -- as
+the number that means something. Functions are matched by mangled name instead, so those
+do survive an edit.
+"""
+
+
+class _PreformattedEpilog(optparse.IndentedHelpFormatter):
+    """optparse rewraps the epilog into one blob, and the paragraph breaks carry meaning."""
+
+    def format_epilog(self, epilog):
+        return epilog or ''
+
+
+def changed_files_from_git(source_root, ref):
+    """git diff --name-only <ref>, as absolute paths.
+
+    The ref is passed through verbatim, so a reviewer can use `main` for "everything since
+    main including my working tree" and CI can use `main...HEAD` for "only my commits".
+    """
+    completed = subprocess.run(['git', 'diff', '--name-only', ref],
+                               cwd=source_root, capture_output=True, text=True)
+    if completed.returncode:
+        raise RuntimeError('git diff --name-only {} failed: {}'.format(
+            ref, completed.stderr.strip()))
+    return absolute_paths(completed.stdout.splitlines(), source_root)
+
+
+def changed_files_from_file(source_root, path):
+    with open(path) as handle:
+        return absolute_paths(handle, source_root)
+
+
+def parse_args(args):
+    parser = optparse.OptionParser(usage='%prog --baseline=FILE --current=FILE [options]',
+                                   epilog=_EPILOG, formatter=_PreformattedEpilog())
+    parser.add_option('--baseline', help='lcov trace from before the change')
+    parser.add_option('--current', help='lcov trace from after the change')
+    parser.add_option('--output-dir', help='Directory to write the HTML delta report into. '
+                                           'Nothing is opened in a browser; the path is printed')
+    parser.add_option('--changed-files', metavar='FILE',
+                      help='File listing the changed paths, one per line, absolute or relative '
+                           'to the checkout. Restricts the report, and therefore '
+                           '--fail-under-delta, to those files')
+    parser.add_option('--git-diff', metavar='REF',
+                      help='Derive the changed paths from git diff --name-only REF. This is what '
+                           'makes the tool usable in review. Combines with --changed-files')
+    parser.add_option('--source-root', help='Top of the checkout, used to canonicalize copied '
+                                            'header paths in both traces and to resolve relative '
+                                            'changed-file paths. Defaults to this checkout')
+    parser.add_option('--fail-under-delta', type='float', metavar='PERCENT',
+                      help='Exit non-zero if line coverage fell by more than PERCENT percentage '
+                           'points, so this can gate CI. 0 fails on any drop at all. The gate is '
+                           'on the percentage, over whichever files the report covers; '
+                           'line-level regressions are reported but do not fail it by themselves')
+    parser.add_option('--max-files', type='int', default=25, metavar='N',
+                      help='Files to list in the text summary. The HTML report always lists all '
+                           'of them (default: %default)')
+    parser.add_option('-v', '--verbose', action='store_true', default=False, help='Verbose logging')
+
+    options, remaining = parser.parse_args(args)
+    if remaining:
+        parser.error('Unexpected arguments: {}'.format(' '.join(remaining)))
+    for name in ('baseline', 'current'):
+        value = getattr(options, name)
+        if not value:
+            parser.error('--{} is required'.format(name))
+        if not os.path.isfile(value):
+            parser.error('--{} {} does not exist'.format(name, value))
+    if options.changed_files and not os.path.isfile(options.changed_files):
+        parser.error('--changed-files {} does not exist'.format(options.changed_files))
+    if options.fail_under_delta is not None and options.fail_under_delta < 0:
+        parser.error('--fail-under-delta is a size, so it cannot be negative')
+    return options
+
+
+def main(args):
+    options = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(levelname)s: %(message)s')
+
+    source_root = options.source_root or WebKitFinder(FileSystem()).webkit_base()
+
+    changed_files = None
+    if options.changed_files or options.git_diff:
+        changed_files = set()
+        try:
+            if options.changed_files:
+                changed_files |= changed_files_from_file(source_root, options.changed_files)
+            if options.git_diff:
+                changed_files |= changed_files_from_git(source_root, options.git_diff)
+        except (EnvironmentError, RuntimeError) as error:
+            # A mistyped ref is the most likely way to get here, and a traceback would say
+            # much less about it than the message git already produced.
+            _log.error('%s', error)
+            return 1
+        if not changed_files:
+            _log.error('No changed files to compare.')
+            return 1
+        _log.info('Restricting the comparison to %d changed path(s)', len(changed_files))
+
+    try:
+        delta = compare_lcov_files(options.baseline, options.current, source_root, changed_files)
+    except RuntimeError as error:
+        _log.error('%s', error)
+        return 1
+    if delta.ignored_path_count:
+        _log.info('Ignored %d changed path(s) that are not C, C++ or Objective-C sources',
+                  delta.ignored_path_count)
+    if changed_files and not delta.scope_paths:
+        # Distinguishing these two matters: the first is a normal outcome for a change that
+        # only touched tests, and the second usually means --source-root is wrong.
+        if delta.ignored_path_count == len(changed_files):
+            _log.error('None of the changed paths are C, C++ or Objective-C sources, so none '
+                       'of them can have coverage data.')
+        else:
+            _log.error('None of the changed source files appear in either trace, so there is '
+                       'nothing to compare. Was the build instrumented, and does --source-root '
+                       'match the paths in the traces?')
+        return 1
+
+    summary = format_summary(delta, source_root=source_root, max_files=options.max_files)
+    print(summary, end='')
+
+    if options.output_dir:
+        page = write_delta_report(delta, options.output_dir, source_root=source_root)
+        # Deliberately not opened: a tool that launches a browser is unusable from a build
+        # bot and was an explicit review objection on https://webkit.org/b/206389.
+        with open(os.path.join(options.output_dir, 'summary.txt'), 'w') as handle:
+            handle.write(summary)
+        _log.info('Wrote %s', page)
+
+    if options.fail_under_delta is None:
+        return 0
+
+    # The gate follows the report's scope, so `--changed-files X --fail-under-delta 0` reads
+    # as "the files I touched must not lose coverage". Note that scope includes the
+    # denominator: a file that grows by untested lines drops its own percentage without any
+    # line regressing, and with an allowance of 0 that fails too, which is the point.
+    scope = ('the {} changed file(s) with coverage data'.format(delta.scope.file_count)
+             if delta.focused else 'the whole project')
+    change = delta.scope.percent_delta()
+    if change is None:
+        _log.warning('No line coverage percentage for %s, so --fail-under-delta cannot be '
+                     'applied.', scope)
+        return 0
+    if change < -options.fail_under_delta - _TOLERANCE:
+        _log.error('Line coverage over %s fell by %.2fpp, more than the %.2fpp allowed by '
+                   '--fail-under-delta.', scope, -change, options.fail_under_delta)
+        return 1
+    _log.info('Line coverage over %s changed by %+.2fpp, within the %.2fpp allowed by '
+              '--fail-under-delta.', scope, change, options.fail_under_delta)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
