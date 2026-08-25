@@ -1,0 +1,332 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2026 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+"""Turn LLVM raw profiles from an instrumented test run into a coverage report.
+
+Build with coverage instrumentation, run the tests, then generate the report:
+
+    Tools/Scripts/build-webkit --xcode --release --coverage --lto-mode=none
+    Tools/Scripts/run-api-tests --release --coverage --coverage-dir=/tmp/cov WTF
+    Tools/Scripts/run-webkit-tests --release --coverage --coverage-dir=/tmp/cov fast/forms
+    Tools/Scripts/generate-coverage-report --release --coverage-dir=/tmp/cov --output-dir=/tmp/covreport
+"""
+
+import logging
+import optparse
+import os
+import re
+import sys
+
+from concurrent.futures import ThreadPoolExecutor
+
+from webkitpy.common.host import Host
+from webkitpy.coverage_directory_index import write_directory_index
+from webkitpy.llvm_profile_utils import LLVMCov, merge_all_raw_profiles_in_directory
+from webkitpy.port import configuration_options, platform_options
+
+_log = logging.getLogger('generate-coverage-report')
+
+# Every instrumented binary that llvm-cov must be given. Omitting one does not fail or warn:
+# llvm-cov simply reports nothing for the files only that binary contains, so the code looks
+# absent rather than uncovered. WebKitLegacy was missing here, which silently discarded all
+# 302 of its files -- 41MB of instrumented product code with eight __llvm_prf sections.
+#
+# WTF and bmalloc need no entry: they are static libraries, so their coverage mapping lives
+# inside the binaries that link them.
+INSTRUMENTED_PRODUCTS = (
+    'JavaScriptCore.framework/Versions/A/JavaScriptCore',
+    'WebCore.framework/Versions/A/WebCore',
+    'WebKit.framework/Versions/A/WebKit',
+    'WebKitLegacy.framework/Versions/A/WebKitLegacy',
+    'WebGPU.framework/Versions/A/WebGPU',
+)
+
+# Instrumented too, and loaded during a test run, but they are test scaffolding or tools
+# rather than shipping code, so including them would put their line counts in the product
+# denominator. Skipped by default -- but reported as skipped, because silently dropping
+# instrumented data is exactly the bug above.
+TEST_SUPPORT_PRODUCTS = (
+    'libWebCoreTestSupport.dylib',
+    'jsc',
+    'webpushd',
+    'adattributiond',
+)
+
+# Report-time exclusions. On the Xcode build CLANG_COVERAGE_MAPPING is a command-line
+# override applied to every target in the scheme, so this is the only place third-party code
+# can be excluded.
+#
+# Matching only 'Source/ThirdParty/' is not enough. Headers that get copied into the build
+# directory are attributed to the copy, so libwebrtc's headers arrive as
+# .../usr/local/include/webrtc/... and slip past a Source/ThirdParty/ pattern entirely --
+# that was 12,900 lines of 5%-covered code silently dragging the totals down.
+THIRD_PARTY_IGNORE_REGEXES = (
+    'Source/ThirdParty/',
+    '/usr/local/include/webrtc/',
+    '/usr/local/include/libwebrtc/',
+    '/ThirdParty/',
+)
+
+DEFAULT_IGNORE_REGEXES = (
+    '/DerivedSources/',
+    '/Applications/Xcode.app/',
+    r'\.sdk/',
+    '/usr/include/',
+)
+
+
+def instrumented_binary_paths(port, extra_objects, include_test_support):
+    """Locate every instrumented Mach-O to pass to llvm-cov.
+
+    All of them must go into a single llvm-cov invocation. Omitting one silently
+    under-reports the files only it contains, and reporting per-binary and stitching the
+    results afterwards double-counts the header-inline functions that llvm-profdata has
+    already merged by function name.
+    """
+    objects = []
+    missing = []
+    for relative in INSTRUMENTED_PRODUCTS:
+        path = port._build_path(*relative.split('/'))
+        if os.path.exists(path):
+            objects.append(path)
+        else:
+            missing.append(relative)
+    if missing:
+        # Loud, not debug: a product that exists but was not found here is indistinguishable
+        # in the report from a product with no coverage at all.
+        _log.warning('Not found in the build directory, so absent from the report: %s',
+                     ', '.join(missing))
+
+    skipped = []
+    for relative in TEST_SUPPORT_PRODUCTS:
+        path = port._build_path(*relative.split('/'))
+        if not os.path.exists(path):
+            continue
+        if include_test_support:
+            objects.append(path)
+        else:
+            skipped.append(relative)
+    if skipped:
+        _log.info('Skipping test-support and tool binaries (pass --include-test-support to '
+                  'include them): %s', ', '.join(skipped))
+
+    for path in extra_objects:
+        if not os.path.exists(path):
+            raise RuntimeError('--object {} does not exist'.format(path))
+        objects.append(path)
+
+    return objects
+
+
+def parse_args(args):
+    parser = optparse.OptionParser(usage='%prog [options] --coverage-dir=DIR --output-dir=DIR')
+    parser.add_options(platform_options())
+    parser.add_options(configuration_options())
+    parser.add_option('--coverage-dir', help='Directory holding the .profraw files from an instrumented test run')
+    parser.add_option('--profdata', help='Report from an already-indexed profile instead of raw profiles. Use this '
+                                         'when a run was sharded and the shards were merged incrementally, which is '
+                                         'how a full-suite run avoids accumulating hundreds of GB of raw profiles')
+    parser.add_option('--output-dir', help='Directory to write the report into')
+    parser.add_option('--build-directory', help='Path to the build directory, if not the default')
+    parser.add_option('--object', action='append', dest='extra_objects', default=[],
+                      help='Additional instrumented binary to include (repeatable)')
+    parser.add_option('--path-equivalence', action='append', default=[], metavar='FROM,TO',
+                      help='Passed through to llvm-cov, for reporting on a different machine than the '
+                           'one that built. Note this only affects where llvm-cov looks for source text; '
+                           'it does not rewrite the paths shown in the report (repeatable)')
+    parser.add_option('--ignore-filename-regex', action='append', dest='ignore_regexes', default=[],
+                      help='Additional exclusion regex, on top of the defaults (repeatable)')
+    parser.add_option('--include-test-support', action='store_true', default=False,
+                      help='Also report on instrumented test-support and tool binaries '
+                           '(libWebCoreTestSupport, jsc, webpushd, adattributiond). Off by default '
+                           'so their line counts stay out of the product denominator')
+    parser.add_option('--include-third-party', action='store_true', default=False,
+                      help='Report on Source/ThirdParty too. The code is already instrumented -- '
+                           'libwebrtc and libANGLE both carry __llvm_prf sections and are linked into '
+                           'WebCore -- so this only stops filtering it out, at the cost of a much '
+                           'larger report')
+    parser.add_option('--no-html', action='store_false', dest='html', default=True,
+                      help='Skip the HTML report')
+    parser.add_option('--show-instantiations', action='store_true', default=False,
+                      help='Include per-template-instantiation sub-views in the HTML report. They are '
+                           'omitted by default because they are expensive on template-heavy code '
+                           '(395 MB versus 300 MB of HTML for JavaScriptCore alone) and do not affect '
+                           'aggregate per-file line coverage')
+    parser.add_option('--no-lcov', action='store_false', dest='lcov', default=True,
+                      help='Skip the lcov export')
+    parser.add_option('--keep-raw-profiles', action='store_true', default=False,
+                      help='Keep the .profraw files. They are deleted once indexed by default: the raw '
+                           'format has no compatibility guarantees, so it should not be archived')
+    parser.add_option('--allow-profile-mismatch', action='store_true', default=False,
+                      help='Report anyway when the profile does not match the binaries. The default '
+                           'is to refuse, because the resulting numbers look plausible but are wrong')
+    parser.add_option('-v', '--verbose', action='store_true', default=False, help='Verbose logging')
+
+    options, remaining = parser.parse_args(args)
+    if remaining:
+        parser.error('Unexpected arguments: {}'.format(' '.join(remaining)))
+    if bool(options.coverage_dir) == bool(options.profdata):
+        parser.error('pass exactly one of --coverage-dir or --profdata')
+    if not options.output_dir:
+        parser.error('--output-dir is required')
+    if options.coverage_dir and not os.path.isdir(options.coverage_dir):
+        parser.error('--coverage-dir {} is not a directory'.format(options.coverage_dir))
+    if options.profdata and not os.path.isfile(options.profdata):
+        parser.error('--profdata {} does not exist'.format(options.profdata))
+    return options
+
+
+def main(args):
+    options = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(levelname)s: %(message)s')
+
+    host = Host()
+    port = host.port_factory.get(options.platform, options)
+
+    objects = instrumented_binary_paths(port, options.extra_objects, options.include_test_support)
+    if not objects:
+        _log.error('Found no instrumented frameworks under %s.', port._build_path())
+        _log.error('Build with --coverage first, or pass --build-directory.')
+        return 1
+    for path in objects:
+        _log.info('Including %s', path)
+
+    os.makedirs(options.output_dir, exist_ok=True)
+
+    if options.profdata:
+        profile_path = options.profdata
+        raw_profiles = []
+        _log.info('Reporting from the already-indexed profile %s', profile_path)
+    else:
+        profile_path = os.path.join(options.output_dir, 'coverage.profdata')
+        raw_profiles = merge_all_raw_profiles_in_directory(options.coverage_dir, profile_path)
+        _log.info('Indexed %d raw profiles into %s', len(raw_profiles), profile_path)
+
+    ignore_regexes = list(DEFAULT_IGNORE_REGEXES) + list(options.ignore_regexes)
+    if not options.include_third_party:
+        ignore_regexes += list(THIRD_PARTY_IGNORE_REGEXES)
+
+    summary_path = os.path.join(options.output_dir, 'summary.txt')
+    lcov_path = os.path.join(options.output_dir, 'coverage.lcov')
+    html_dir = os.path.join(options.output_dir, 'html')
+
+    # These three llvm-cov invocations are independent and each takes minutes over
+    # WebKit-sized binaries, so run them at once rather than one after another. They are
+    # separate processes; the threads here only wait on them.
+    def make_summary():
+        return LLVMCov.report(objects, profile_path, ignore_regexes, options.path_equivalence,
+                              check_binary_ids=True)
+
+    def make_lcov():
+        return LLVMCov.export_lcov(objects, profile_path, lcov_path, ignore_regexes,
+                                   options.path_equivalence)
+
+    def make_html():
+        return LLVMCov.show_html(objects, profile_path, html_dir, ignore_regexes,
+                                 options.path_equivalence,
+                                 show_instantiations=options.show_instantiations)
+
+    work = {'summary': make_summary}
+    # The directory index is built from the lcov trace, so it is needed even with --no-lcov.
+    work['lcov'] = make_lcov
+    if options.html:
+        work['html'] = make_html
+
+    _log.info('Running %d llvm-cov invocations concurrently: %s',
+              len(work), ', '.join(sorted(work)))
+    with ThreadPoolExecutor(max_workers=len(work)) as pool:
+        futures = {name: pool.submit(function) for name, function in work.items()}
+        results = {name: future.result() for name, future in futures.items()}
+
+    for name, result in results.items():
+        if result.returncode:
+            _log.error('llvm-cov %s failed: %s', name, result.stderr)
+            return 1
+
+    # A profile collected from different binaries than the ones being reported on still
+    # produces a complete-looking report: llvm-cov matches what it can, drops the rest, and
+    # says so only on stderr. The numbers are then quietly wrong, and it is easy to cause by
+    # simply rebuilding between running the tests and generating the report.
+    #
+    # The signal to use is llvm-cov's per-object "profile data may be out of date" warning.
+    # Do NOT use its "N functions have mismatched data" count: some mismatch is expected and
+    # harmless here, because WTF and bmalloc are statically linked into several frameworks, so
+    # one function name legitimately has a different structural hash per image while
+    # llvm-profdata merged those counters by name. A correct full report shows tens of
+    # thousands of those.
+    stale_objects = set()
+    mismatched = 0
+    for result in results.values():
+        for line in (result.stderr or '').splitlines():
+            match = re.search(r'warning: (.*): profile data may be out of date', line)
+            if match:
+                stale_objects.add(match.group(1))
+            count = re.search(r'(\d+) functions have mismatched data', line)
+            if count:
+                mismatched = max(mismatched, int(count.group(1)))
+
+    if mismatched:
+        _log.info('%d functions have mismatched data. Some of that is expected: WTF and bmalloc '
+                  'are linked into several frameworks, so the same function has a different hash '
+                  'in each.', mismatched)
+
+    if stale_objects:
+        _log.error('These binaries are newer than the profile, so the report would be wrong:')
+        for path in sorted(stale_objects):
+            _log.error('    %s', path)
+        _log.error('Re-run the tests against the current build, or pass --allow-profile-mismatch.')
+        if not options.allow_profile_mismatch:
+            return 1
+
+    with open(summary_path, 'w') as summary_file:
+        summary_file.write(results['summary'].stdout)
+    for line in results['summary'].stdout.splitlines()[-3:]:
+        print(line)
+    _log.info('Wrote %s', summary_path)
+    _log.info('Wrote %s', lcov_path)
+
+    if options.html:
+        # A per-directory index over llvm-cov's output. llvm-cov's own index lists every
+        # source file in one page, which for WebKit is ~18,000 rows and about 8MB of HTML.
+        pages = write_directory_index(lcov_path, options.output_dir,
+                                      source_root=port.webkit_base())
+        _log.info('Wrote %d directory pages; start at %s',
+                  pages, os.path.join(options.output_dir, 'index.html'))
+        _log.info('Wrote %s', os.path.join(html_dir, 'index.html'))
+
+    if not options.lcov:
+        os.unlink(lcov_path)
+
+    if not options.keep_raw_profiles:
+        for path in raw_profiles:
+            os.unlink(path)
+        _log.info('Deleted %d raw profiles', len(raw_profiles))
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

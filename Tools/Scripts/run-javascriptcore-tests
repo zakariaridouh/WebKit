@@ -674,7 +674,10 @@ if ($coverage) {
     }
     $htmlDir = File::Spec->catfile($coverageDir, "html_report");
     $profdataPath = File::Spec->catfile($coverageDir, "jsc_tests.profdata");
-    $envVars .=  " LLVM_PROFILE_FILE=" . File::Spec->catfile($coverageDir, "jsc_test_%9m.profraw");
+    # %c selects continuous mode, which mmaps the counters into the profile file so that a
+    # test the harness kills -- rather than letting it exit -- still leaves usable data.
+    # Without it a killed jsc process writes a zero-filled profile and its coverage is lost.
+    $envVars .=  " LLVM_PROFILE_FILE=" . File::Spec->catfile($coverageDir, "jsc_test_%9m%c.profraw");
 } else {
     if ($coverageDir) {
         die "--coverage-dir= is set but --coverage is not set\n"

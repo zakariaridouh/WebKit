@@ -35,6 +35,7 @@ from webkitpy.api_tests.manager import Manager
 from webkitpy.api_tests.test_expectations import APITestExpectations
 from webkitpy.common.host import Host
 from webkitpy.layout_tests.views.metered_stream import MeteredStream
+from webkitpy.llvm_profile_utils import collect_coverage_profiles, prepare_coverage_profile_directory
 from webkitpy.port import configuration_options, platform_options, base, win
 from webkitpy.results.options import upload_options
 
@@ -63,6 +64,13 @@ def main(argv, stdout, stderr):
 
     if options.lint_test_files or options.fix_expectations:
         return lint_expectations(port, options, args, stderr)
+
+    if options.coverage_dir and not options.coverage:
+        print('--coverage-dir was passed but --coverage was not', file=stderr)
+        return EXCEPTIONAL_EXIT_STATUS
+
+    if options.coverage and not options.coverage_dir:
+        options.coverage_dir = port.host.filesystem.join(port.results_directory(), 'coverage')
 
     if options.print_expectations:
         return print_expectations(port, options, args, stderr)
@@ -146,7 +154,16 @@ def run(port, options, args, logging_stream):
 
         manager = Manager(port, options, stream)
 
-        result = manager.run(args, json_output=options.json_output)
+        if options.coverage:
+            prepare_coverage_profile_directory()
+
+        try:
+            result = manager.run(args, json_output=options.json_output)
+        finally:
+            # Collect even on failure: continuous-mode profiles are complete as of the
+            # moment a process died, so a crashed run still has usable coverage data.
+            if options.coverage:
+                collect_coverage_profiles(options.coverage_dir)
         _log.debug("Testing completed, Exit status: %d" % result)
         return result
     finally:
@@ -219,6 +236,15 @@ def parse_args(args):
                              help='Exit after the first N failures instead of running all tests'),
         optparse.make_option('--additional-env-var', type='string', action='append', default=[],
                              help='Passes that environment variable to the tests (--additional-env-var=NAME=VALUE)'),
+        optparse.make_option('--coverage', action='store_true', default=False,
+                             help='Collect LLVM source-based coverage profiles from this run. Requires a '
+                                  'build made with build-webkit --coverage. Use '
+                                  'Tools/Scripts/generate-coverage-report to turn the collected profiles '
+                                  'into a report'),
+        optparse.make_option('--coverage-dir', type='string',
+                             help='Directory to collect coverage profiles into. Successive runs '
+                                  'accumulate, so an API-test run and a layout-test run can share one '
+                                  'directory and produce a single report'),
         optparse.make_option('--test-parallel-safety', type='string', action='append', default=[],
                              help='Run specified test(s) constantly in parallel against all allowlist tests to test parallel safety'),
 

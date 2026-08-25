@@ -237,7 +237,20 @@ class Port(object):
         """ Returns the amount of time in seconds to wait before killing the process in driver.stop()."""
         # We want to wait for at least 3 seconds, but if we are really slow, we want to be slow on cleanup as
         # well (for things like ASAN, Valgrind, etc.)
-        return 3.0 * float(self.get_option('time_out_ms', '0')) / self.default_timeout_ms()
+        timeout = 3.0 * float(self.get_option('time_out_ms', '0')) / self.default_timeout_ms()
+        if self.get_option('coverage'):
+            # A coverage-instrumented process has a large continuous-mode profile mapped, and
+            # flushing those dirty pages on exit can take far longer than an uninstrumented
+            # shutdown. A driver that misses this deadline is killed, and that turned into an
+            # in-flight exception which tore down the whole worker pool mid-run. Firefox uses a
+            # 10x multiplier on child-process shutdown under coverage; give it a floor here.
+            #
+            # Keep this even now that --coverage no longer scales time_out_ms: the expression
+            # above yields 3.0s at the standard 30s test timeout, where the old 10x multiplier
+            # made it 30.0s, so this floor is the only thing left holding the deadline open for
+            # an instrumented driver. Do not remove it along with the multiplier.
+            timeout = max(timeout, 90.0)
+        return timeout
 
     def should_retry_crashes(self):
         return False

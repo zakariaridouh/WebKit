@@ -130,6 +130,30 @@ class MacTest(darwin_testcase.DarwinTest):
         )
         self.assertEqual(child_processes, 1)
 
+    def test_default_child_processes_under_coverage(self):
+        # A full instrumented layout-test run at full parallelism exhausted memory and lost its
+        # workers ("sandbox_extension_consume failed: 12 (Cannot allocate memory)"), because
+        # every process in every driver's tree maps the instrumented frameworks plus its own
+        # preallocated continuous-mode profile -- rdar://173715411. The cap is a performance and
+        # memory decision, not a correctness one, so it stays, but it must not be silent.
+        def port_with_cores(cores, coverage):
+            port = self.make_port(port_name='mac-lion',
+                                  options=MockOptions(configuration='Release', coverage=coverage))
+            port._executive.cpu_count = lambda: cores
+            port.host.platform.total_bytes_memory = lambda: 256 * 1024 * 1024 * 1024
+            return port
+
+        self.assertEqual(port_with_cores(32, False).default_child_processes(), 24)
+
+        with OutputCapture(level=logging.INFO) as captured:
+            self.assertEqual(port_with_cores(32, True).default_child_processes(), 8)
+        self.assertIn('capping child processes at 8 (from 24)', captured.root.log.getvalue())
+
+        # A machine small enough that the cap does not bind should say nothing about it.
+        with OutputCapture(level=logging.INFO) as captured:
+            self.assertEqual(port_with_cores(4, True).default_child_processes(), 4)
+        self.assertNotIn('capping child processes', captured.root.log.getvalue())
+
     def test_32bit(self):
         port = self.make_port(options=MockOptions(architecture='x86'))
 

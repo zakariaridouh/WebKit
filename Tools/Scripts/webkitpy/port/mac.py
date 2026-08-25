@@ -279,10 +279,25 @@ class MacPort(DarwinPort):
             # <rdar://problem/25750302>
             default_count = min(default_count, 12)
 
+        if self.get_option('coverage'):
+            # Coverage-instrumented frameworks are an order of magnitude larger (WebCore is
+            # 978MB versus 112MB), every process in a driver's process tree maps them, and each
+            # additionally maps a preallocated continuous-mode profile. Running at full
+            # parallelism exhausted memory partway through a full layout-test run, reporting
+            # "sandbox_extension_consume failed: 12 (Cannot allocate memory)" and then losing
+            # its workers -- the huge-binary XPC launch failure of rdar://173715411.
+            if default_count > 8:
+                _log.info('Coverage run: capping child processes at 8 (from %s); instrumented '
+                          'frameworks are an order of magnitude larger and full parallelism '
+                          'exhausts memory. Pass --child-processes to override.' % default_count)
+            default_count = min(default_count, 8)
+
         # Make sure we have enough ram to support that many instances:
         total_memory = self.host.platform.total_bytes_memory()
         if total_memory:
             bytes_per_drt = 256 * 1024 * 1024  # Assume each DRT needs 256MB to run.
+            if self.get_option('coverage'):
+                bytes_per_drt = 2048 * 1024 * 1024  # Instrumented frameworks are much larger.
             overhead = 2048 * 1024 * 1024  # Assume we need 2GB free for the O/S
             supportable_instances = max((total_memory - overhead) / bytes_per_drt, 1)  # Always use one process, even if we don't have space for it.
             if supportable_instances < default_count:
