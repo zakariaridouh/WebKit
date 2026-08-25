@@ -184,18 +184,33 @@ if (isCMakeBuild()) {
     exit exitStatus(0);
 }
 
-if (isAppleCocoaWebKit()) {
-    my @options = XcodeOptions();
-    # FIXME: additionalSupportOptions is unused. Coverage and static analysis options are broken.
-    # https://webkit.org/b/259562
-    my @additionalSupportOptions = ();
-    push @additionalSupportOptions, XcodeCoverageSupportOptions() if $coverageSupport;
-    push @additionalSupportOptions, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
-    push @additionalSupportOptions, XcodeExportCompileCommandsOptions() if $exportCompileCommands;
+my @xcodeBuildSettings = ();
 
-    push @options, ($forceCLoop ? "ENABLE_JIT=ENABLE_JIT=0" : "ENABLE_JIT=ENABLE_JIT");
-    push @options, ($forceCLoop ? "ENABLE_C_LOOP=ENABLE_C_LOOP" : "ENABLE_C_LOOP=ENABLE_C_LOOP=0");
-    push @options, ($ftlJIT ? "ENABLE_FTL_JIT=ENABLE_FTL_JIT" : "ENABLE_FTL_JIT=ENABLE_FTL_JIT=0");
+if (isAppleCocoaWebKit()) {
+    # Hand --coverage off to webkitdirs before XcodeOptions(), which is what exports
+    # WEBKIT_COVERAGE_BUILD and tells check-for-weak-vtables-and-externals to expect
+    # the __llvm_profile_* weak externals. https://webkit.org/b/264202
+    setCoverageIsEnabled(1) if $coverageSupport;
+
+    # Called for its side effects: exporting WEBKIT_COVERAGE_BUILD and consuming the
+    # webkitdirs-owned arguments out of @ARGV. Makefile.shared computes the xcodebuild
+    # flags itself via XcodeOptionString(), so the return value is not needed here.
+    XcodeOptions();
+
+    # These are xcodebuild build settings (as opposed to xcodebuild flags), so they
+    # can be forwarded through Makefile.shared's ARGS variable by buildUpToProject.
+    # They used to be accumulated into an @additionalSupportOptions that nothing ever
+    # read, which is why --coverage, --analyze and --export-compile-commands did
+    # nothing on the Xcode path. https://webkit.org/b/259562
+    push @xcodeBuildSettings, XcodeCoverageSupportOptions() if $coverageSupport;
+    push @xcodeBuildSettings, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
+    # --export-compile-commands needs no entry here: Makefile.shared already keys off the
+    # EXPORT_COMPILE_COMMANDS environment variable set above, and XcodeExportCompileCommandsOptions()
+    # contains spaces, which would word-split when make expands $(ARGS).
+
+    push @xcodeBuildSettings, ($forceCLoop ? "ENABLE_JIT=ENABLE_JIT=0" : "ENABLE_JIT=ENABLE_JIT");
+    push @xcodeBuildSettings, ($forceCLoop ? "ENABLE_C_LOOP=ENABLE_C_LOOP" : "ENABLE_C_LOOP=ENABLE_C_LOOP=0");
+    push @xcodeBuildSettings, ($ftlJIT ? "ENABLE_FTL_JIT=ENABLE_FTL_JIT" : "ENABLE_FTL_JIT=ENABLE_FTL_JIT=0");
 
     sub option($$$)
     {
@@ -207,7 +222,7 @@ if (isAppleCocoaWebKit()) {
     foreach (@features) {
         if ($_->{javascript}) {
             my $option = option($_->{define}, ${$_->{value}}, $_->{default});
-            push @options, $option unless $option eq "";
+            push @xcodeBuildSettings, $option unless $option eq "";
         }
     }
 }
@@ -250,6 +265,8 @@ sub buildUpToProject
         }
 
         my $command = "make SCHEME=\"$schemeName\" " . (lc configuration()) . " GCC_PREPROCESSOR_ADDITIONS=\"@compilerFlags\" @extraCommands";
+        # Makefile.shared forwards ARGS verbatim as xcodebuild build settings.
+        $command .= " ARGS=\"@xcodeBuildSettings\"" if @xcodeBuildSettings;
 
         print "\n";
         print "building ", $projectName, "\n";

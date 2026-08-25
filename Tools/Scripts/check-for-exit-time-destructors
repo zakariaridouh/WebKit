@@ -64,6 +64,14 @@ END
 } else {
     # Running from Xcode build phase script with no arguments.
     $coverageBuild = $ENV{'WEBKIT_COVERAGE_BUILD'};
+    # Xcode exports build settings into script phases, whereas WEBKIT_COVERAGE_BUILD is
+    # only an environment variable and may not survive a sanitized build environment.
+    # Treat any LLVM instrumentation build setting as a coverage build too.
+    # https://webkit.org/b/264202
+    for my $buildSetting (qw(ENABLE_LLVM_COVERAGE CLANG_COVERAGE_MAPPING)) {
+        next unless defined $ENV{$buildSetting};
+        $coverageBuild ||= $ENV{$buildSetting} eq "ON" || $ENV{$buildSetting} eq "YES";
+    }
     $executablePath = "$ENV{'TARGET_BUILD_DIR'}/$ENV{'EXECUTABLE_PATH'}";
     $tempDir = $ENV{'TARGET_TEMP_DIR'};
 

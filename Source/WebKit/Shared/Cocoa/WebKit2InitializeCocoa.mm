@@ -39,12 +39,26 @@
 #import <WebCore/WebCoreThreadSystemInterface.h>
 #endif
 
+#if ENABLE(LLVM_PROFILE_GENERATION) && ENABLE(LLVM_COVERAGE)
+#error "LLVM_PROFILE_GENERATION and LLVM_COVERAGE both define __llvm_profile_filename. Enable only one."
+#endif
+
 #if ENABLE(LLVM_PROFILE_GENERATION)
 #if PLATFORM(IOS_FAMILY)
 #import <wtf/LLVMProfilingUtils.h>
 extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/WebKit_%m_pid%p%c.profraw";
 #else
 extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/WebKit_%m_pid%p%c.profraw";
+#endif
+#elif ENABLE(LLVM_COVERAGE)
+#if PLATFORM(IOS_FAMILY)
+#error "LLVM_COVERAGE is macOS-only: the iOS sandbox profiles have no file-write allowance for a coverage directory, so profiles would be silently discarded."
+#else
+// %4m pools writes into four per-module files rather than one per process, which
+// is what keeps total profile volume bounded across a parallel test run; %c is
+// continuous mode, so profiles survive the SIGKILL the test harness uses to stop
+// web processes. See Tools/Scripts/generate-coverage-report.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw";
 #endif
 #endif
 

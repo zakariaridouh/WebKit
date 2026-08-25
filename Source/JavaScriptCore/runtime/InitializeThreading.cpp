@@ -61,12 +61,23 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
+#if ENABLE(LLVM_PROFILE_GENERATION) && ENABLE(LLVM_COVERAGE)
+#error "LLVM_PROFILE_GENERATION and LLVM_COVERAGE both define __llvm_profile_filename. Enable only one."
+#endif
+
 #if ENABLE(LLVM_PROFILE_GENERATION)
 #if PLATFORM(IOS_FAMILY)
 #include <wtf/LLVMProfilingUtils.h>
 extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
 #else
 extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
+#endif
+#elif ENABLE(LLVM_COVERAGE)
+#if PLATFORM(IOS_FAMILY)
+#error "LLVM_COVERAGE is macOS-only: the iOS sandbox profiles have no file-write allowance for a coverage directory, so profiles would be silently discarded."
+#else
+// See the matching comment in Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/JavaScriptCore_%4m%c.profraw";
 #endif
 #endif
 

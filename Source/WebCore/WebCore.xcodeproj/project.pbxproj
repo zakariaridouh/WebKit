@@ -6564,7 +6564,7 @@
 		DE5F860D1FA2386B006DB63A /* UnifiedSource478.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE5F85D21FA23856006DB63A /* UnifiedSource478.cpp */; };
 		DE5F860E1FA2386B006DB63A /* UnifiedSource479.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE5F85CF1FA23850006DB63A /* UnifiedSource479.cpp */; };
 		DE5F860F1FA2386B006DB63A /* UnifiedSource480.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE5F85D31FA23859006DB63A /* UnifiedSource480.cpp */; };
-		DE5F86111FA239DA006DB63A /* InternalSettingsGenerated.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 53E29E5C167A8A1900586D3D /* InternalSettingsGenerated.cpp */; settings = {COMPILER_FLAGS = "-fno-profile-instr-generate -fno-coverage-mapping"; }; };
+		DE5F86111FA239DA006DB63A /* InternalSettingsGenerated.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 53E29E5C167A8A1900586D3D /* InternalSettingsGenerated.cpp */; };
 		DE5F86121FA239E7006DB63A /* JSGCObservation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51714EAE1CF6654A004723C4 /* JSGCObservation.cpp */; };
 		DE5F861D1FA2815B006DB63A /* WebAccessibilityObjectWrapperMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = AA478A7E16CD70C3007D1BB4 /* WebAccessibilityObjectWrapperMac.mm */; };
 		DE5F861E1FA281FD006DB63A /* WebAccessibilityObjectWrapperBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = 29A812460FBB9CA900510293 /* WebAccessibilityObjectWrapperBase.mm */; };

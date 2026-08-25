@@ -90,6 +90,7 @@ my (
     $iosTouchEventsSupport,
     $jitSupport,
     $jpegXLSupport,
+    $llvmCoverageSupport,
     $llvmProfileGenerationSupport,
     $legacyCustomProtocolManagerSupport,
     $legacyEncryptedMediaSupport,
@@ -262,6 +263,9 @@ my @features = (
 
     { option => "jit", desc => "Toggle JustInTime JavaScript support",
       define => "ENABLE_JIT", value => \$jitSupport },
+
+    { option => "llvm-coverage", desc => "Include LLVM's source-based coverage instrumentation",
+      define => "ENABLE_LLVM_COVERAGE", value => \$llvmCoverageSupport },
 
     { option => "llvm-profile-generation", desc => "Include LLVM's instrumentation to generate profiles for PGO",
       define => "ENABLE_LLVM_PROFILE_GENERATION", value => \$llvmProfileGenerationSupport },
