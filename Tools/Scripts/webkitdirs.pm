@@ -1188,6 +1188,12 @@ sub determineConfigurationForVisualStudio
 
 sub usesPerConfigurationBuildDirectory
 {
+    # The Xcode build always appends $(CONFIGURATION) to SYMROOT, so products land in
+    # WEBKIT_OUTPUTDIR/$configuration even when WEBKIT_OUTPUTDIR is set explicitly.
+    # Treating it as a per-configuration directory here made every consumer of
+    # productDir() -- webkit-build-directory, run-webkit-tests, run-api-tests -- look one
+    # directory above the built frameworks.
+    return 0 if isAppleCocoaWebKit() && !isCMakeBuild();
     return (defined $ENV{"WEBKIT_OUTPUTDIR"});
 }
 
