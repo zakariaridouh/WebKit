@@ -63,8 +63,9 @@ if (!defined $executablePathAge || !defined $buildTimestampAge || $executablePat
     # The profiling runtime's weak externals are expected under any LLVM
     # instrumentation mode. coverageIsEnabled() only sees the marker file written by
     # set-webkit-configuration, so also honor the build settings, which Xcode exports
-    # into this script phase's environment. https://webkit.org/b/264202
-    my $skipProfileSymbols = coverageIsEnabled();
+    # into this script phase's environment, and WEBKIT_COVERAGE_BUILD, which
+    # webkitdirs.pm's XcodeOptions() exports. https://webkit.org/b/264202
+    my $skipProfileSymbols = coverageIsEnabled() || ($coverageBuild ? 1 : 0);
     for my $buildSetting (qw(ENABLE_LLVM_PROFILE_GENERATION ENABLE_LLVM_COVERAGE CLANG_COVERAGE_MAPPING)) {
         next unless defined $ENV{$buildSetting};
         $skipProfileSymbols ||= $ENV{$buildSetting} eq "ON" || $ENV{$buildSetting} eq "YES";
@@ -117,7 +118,10 @@ if (!defined $executablePathAge || !defined $buildTimestampAge || $executablePat
     }
 }
 
-if ($sawError and !$coverageBuild) {
+# A coverage build used to make every error here non-fatal, which turned the whole check
+# off rather than excusing the profiling runtime's symbols -- and those are already excused
+# by name above.
+if ($sawError) {
     unlink $executablePath;
     exit 1;
 }

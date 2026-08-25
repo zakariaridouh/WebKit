@@ -21,6 +21,7 @@
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import errno
 import json
 import logging
 import os
@@ -36,6 +37,11 @@ except ImportError:
     print("Error importing DNSLogger, DNSServer, Resolver")
 
 _log = logging.getLogger(__name__)
+
+# The layout tests' own DNS resolver, which answers for web-platform.test and its aliases. Named
+# here because it is not one of the WPT config.json ports, so nothing else in this file or in
+# http_server_base's mappings knows about it.
+DNS_SERVER_PORT = 8053
 
 
 def doc_root(port_obj):
@@ -157,8 +163,22 @@ class WebPlatformTestServer(http_server_base.HttpServerBase):
 
         if use_local_dns_resolver:
             logger = DNSLogger(logf=suppress_dns_resolver_logs)
-            self._dns_server = DNSServer(Resolver(
-                allowed_hosts=port_obj.localhost_aliases()), port=8053, address="127.0.0.1", logger=logger)
+            # dnslib's DNSServer binds in its constructor, so this is the one layout-test port
+            # that is claimed before start() and therefore before
+            # _check_that_all_ports_are_available() can say anything about it. Left as bare
+            # `OSError: [Errno 48] Address already in use` it is the failure PLAN 2 records: a
+            # traceback about 80 s into a run, naming no port, no holder and no remedy.
+            try:
+                self._dns_server = DNSServer(Resolver(
+                    allowed_hosts=port_obj.localhost_aliases()), port=DNS_SERVER_PORT,
+                    address="127.0.0.1", logger=logger)
+            except OSError as failure:
+                if failure.errno not in (errno.EADDRINUSE, errno.EALREADY):
+                    raise
+                raise http_server_base.ServerError(
+                    'The layout tests\' DNS server could not start. {}'.format(
+                        http_server_base.HttpServerBase.port_in_use_message(DNS_SERVER_PORT,
+                                                                            is_udp=True)))
 
         self._pid_file = pidfile
         if not self._pid_file:
