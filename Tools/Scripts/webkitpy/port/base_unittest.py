@@ -309,6 +309,39 @@ class PortTest(unittest.TestCase):
         )
         self.assertEqual(port._build_path(), '/my-build-directory/Debug-embedded-port')
 
+    def test_build_path_accepts_the_configuration_directory_itself(self):
+        # PLAN 1 and PLAN 7 spell every coverage path as .../WebKitBuild-Coverage/Release,
+        # because that is where the frameworks are. Appending the configuration to that gave
+        # .../Release/Release, which does not exist, so every product was missing and the report
+        # was empty rather than wrong.
+        Config._clear_cache_for_testing()
+        port = self.make_port(
+            executive=MockExecutive2(output='/default-build-path/Release'),
+            options=optparse.Values({'build_directory': '/my-build-directory/Release',
+                                     'configuration': 'Release'}),
+        )
+        self.assertEqual(port._build_path(), '/my-build-directory/Release')
+
+        Config._clear_cache_for_testing()
+        port = self.make_port(
+            executive=MockExecutive2(output='/default-build-path/Release'),
+            options=optparse.Values({'build_directory': '/my-build-directory/Release/',
+                                     'configuration': 'Release'}),
+        )
+        self.assertEqual(port._build_path('WebCore.framework'),
+                         '/my-build-directory/Release/WebCore.framework')
+
+    def test_build_path_still_appends_a_configuration_that_is_not_there(self):
+        # Only the trailing component matching *this* configuration is accepted, so a directory
+        # that happens to end in something else is untouched.
+        Config._clear_cache_for_testing()
+        port = self.make_port(
+            executive=MockExecutive2(output='/default-build-path/Release'),
+            options=optparse.Values({'build_directory': '/my-build-directory/Debug',
+                                     'configuration': 'Release'}),
+        )
+        self.assertEqual(port._build_path(), '/my-build-directory/Debug/Release')
+
     def test_jhbuild_wrapper(self):
         port = self.make_port(port_name='foo')
         port.port_name = 'foo'

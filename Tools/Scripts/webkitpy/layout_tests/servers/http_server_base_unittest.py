@@ -26,12 +26,16 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
 import socket
+import subprocess
 import unittest
+
+from unittest import mock
 
 from webkitpy.common.host_mock import MockHost
 from webkitpy.port import test
-from webkitpy.layout_tests.servers.http_server_base import HttpServerBase
+from webkitpy.layout_tests.servers.http_server_base import HttpServerBase, ServerError
 
 
 class TestHttpServerBase(unittest.TestCase):
@@ -93,5 +97,121 @@ class TestHttpServerBase(unittest.TestCase):
 
             self.assertFalse(HttpServerBase._is_udp_port_listening(free_port))
             self.assertTrue(HttpServerBase._is_udp_port_listening(held_port))
+            # This process holds it, so a liveness check that asks "held by us?" agrees.
+            self.assertTrue(HttpServerBase._is_udp_port_listening(held_port,
+                                                                  owner_pid=os.getpid()))
         finally:
             held.close()
+
+    def test_a_udp_port_held_by_someone_else_is_not_our_server(self):
+        # The orphaned-server case: a killed run leaves a process holding the UDP port, and
+        # EADDRINUSE alone reads that as "our server is up", so the run proceeds against it.
+        with mock.patch.object(HttpServerBase, 'processes_holding_port',
+                               return_value=[('4242', 'wpt')]):
+            with mock.patch.object(HttpServerBase, '_parent_pids', return_value={4242: 1}):
+                held = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                try:
+                    try:
+                        held.bind(('127.0.0.1', 0))
+                    except (PermissionError, OSError) as e:
+                        self.skipTest("Environment does not permit binding a UDP socket: %s" % e)
+                    port = held.getsockname()[1]
+                    self.assertFalse(HttpServerBase._is_udp_port_listening(port, owner_pid=99999))
+                finally:
+                    held.close()
+
+    def test_a_holder_we_cannot_name_is_still_treated_as_our_server(self):
+        # No lsof, no ps, or a holder owned by another user. A wrong False here ends the run
+        # with "Failed to start"; a wrong True is what the code did before and is recoverable.
+        held = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            try:
+                held.bind(('127.0.0.1', 0))
+            except (PermissionError, OSError) as e:
+                self.skipTest("Environment does not permit binding a UDP socket: %s" % e)
+            port = held.getsockname()[1]
+            with mock.patch.object(HttpServerBase, 'processes_holding_port', return_value=[]):
+                self.assertTrue(HttpServerBase._is_udp_port_listening(port, owner_pid=99999))
+            with mock.patch.object(HttpServerBase, 'processes_holding_port',
+                                   return_value=[('4242', 'wpt')]):
+                with mock.patch.object(HttpServerBase, '_parent_pids', return_value=None):
+                    self.assertTrue(HttpServerBase._is_udp_port_listening(port, owner_pid=99999))
+        finally:
+            held.close()
+
+    def test_a_pid_is_its_own_descendant_and_a_stranger_is_not(self):
+        self.assertTrue(HttpServerBase._is_pid_or_descendant(os.getpid(), os.getpid()))
+        self.assertIsNone(HttpServerBase._is_pid_or_descendant('not-a-pid', os.getpid()))
+
+        # The shape that matters: the process holding a QUIC port is a grandchild of the wpt
+        # manager we spawned, so the walk has to climb rather than compare one level.
+        parents = {400: 300, 300: 200, 200: 1}
+        self.assertTrue(HttpServerBase._is_pid_or_descendant('400', '200', parents))
+        self.assertFalse(HttpServerBase._is_pid_or_descendant('200', '400', parents))
+        self.assertFalse(HttpServerBase._is_pid_or_descendant('999', '200', parents))
+
+    def test_pid_ancestry_says_it_cannot_tell_rather_than_no(self):
+        # The distinction the caller depends on: an unreadable process table must not read as
+        # "this port belongs to somebody else", which would end a working run.
+        with mock.patch('subprocess.run', side_effect=OSError('no ps')):
+            self.assertIsNone(HttpServerBase._parent_pids())
+            self.assertIsNone(HttpServerBase._is_pid_or_descendant('400', '200'))
+
+    def test_parent_pids_reads_the_whole_table_in_one_call(self):
+        completed = subprocess.CompletedProcess([], 0, stdout='  400   300\n  300     1\nbogus\n')
+        with mock.patch('subprocess.run', return_value=completed) as run:
+            self.assertEqual(HttpServerBase._parent_pids(), {400: 300, 300: 1})
+        self.assertEqual(run.call_count, 1)
+
+    def test_a_udp_mapping_is_probed_with_a_udp_socket(self):
+        # The defect this replaces: a TCP bind to a port a UDP server holds succeeds, so the
+        # check passed, our server never bound, and _is_server_running_on_all_ports() saw the
+        # orphan and called it a success.
+        host = MockHost()
+        server = HttpServerBase(test.TestPort(host))
+        held = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            try:
+                held.bind(('127.0.0.1', 0))
+            except (PermissionError, OSError) as e:
+                self.skipTest("Environment does not permit binding a UDP socket: %s" % e)
+            port = held.getsockname()[1]
+
+            server._mappings = [{'port': port}]
+            server._check_that_all_ports_are_available()  # TCP mapping: genuinely available.
+
+            server._mappings = [{'port': port, 'udp': True}]
+            with self.assertRaises(ServerError) as raised:
+                server._check_that_all_ports_are_available()
+            self.assertIn('UDP port %d is already in use' % port, str(raised.exception))
+        finally:
+            held.close()
+
+    def test_a_port_in_use_message_names_the_holder_and_the_remedy(self):
+        with mock.patch.object(HttpServerBase, 'processes_holding_port',
+                               return_value=[('4242', 'httpd')]):
+            message = HttpServerBase.port_in_use_message(8000)
+        self.assertIn('TCP port 8000 is already in use', message)
+        self.assertIn('httpd (pid 4242)', message)
+        self.assertIn('kill -9 4242', message)
+        self.assertIn('pkill -9 -f pywebsocket3', message)
+
+    def test_a_port_in_use_message_says_so_when_it_cannot_name_a_holder(self):
+        with mock.patch.object(HttpServerBase, 'processes_holding_port', return_value=[]):
+            message = HttpServerBase.port_in_use_message(8053, is_udp=True)
+        self.assertIn('UDP port 8053 is already in use', message)
+        self.assertIn('lsof -nP -iUDP:8053', message)
+
+    def test_processes_holding_port_parses_lsof_field_output(self):
+        completed = subprocess.CompletedProcess([], 0, stdout='p4242\nchttpd\np4243\ncpython3\n')
+        with mock.patch('shutil.which', return_value='/usr/sbin/lsof'):
+            with mock.patch('subprocess.run', return_value=completed):
+                self.assertEqual(HttpServerBase.processes_holding_port(8000),
+                                 [('4242', 'httpd'), ('4243', 'python3')])
+
+    def test_processes_holding_port_never_raises(self):
+        with mock.patch('shutil.which', return_value='/usr/sbin/lsof'):
+            with mock.patch('subprocess.run', side_effect=OSError('no lsof')):
+                self.assertEqual(HttpServerBase.processes_holding_port(8000), [])
+        with mock.patch('shutil.which', return_value=None):
+            self.assertEqual(HttpServerBase.processes_holding_port(8000), [])

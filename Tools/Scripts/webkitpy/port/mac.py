@@ -90,8 +90,8 @@ class MacPort(DarwinPort):
         if architecture == 'arm64' and apple_additions():
             architecture = 'arm64e'
         if architecture == 'x86':
-            return ['ARCHS=i386']
-        return ['ARCHS={}'.format(architecture)]
+            return ['ARCHS=i386'] + super(MacPort, self)._build_driver_flags()
+        return ['ARCHS={}'.format(architecture)] + super(MacPort, self)._build_driver_flags()
 
     def default_baseline_search_path(self, **kwargs):
         versions_to_fallback = []

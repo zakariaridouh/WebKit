@@ -1490,7 +1490,9 @@ sub XcodeOptions
     }
 
     # When this environment variable is set Tools/Scripts/check-for-weak-vtables-and-externals
-    # treats errors as non-fatal when it encounters missing symbols related to coverage.
+    # excuses the profiling runtime's own weak externals by name. It does not disable the
+    # check: a coverage build used to make every error in the four check-for-* scripts
+    # non-fatal, which turned real checks off wholesale.
     appendToEnvironmentVariableList("WEBKIT_COVERAGE_BUILD", "1") if $coverageIsEnabled;
 
     die "Cannot enable both ASAN and TSAN at the same time\n" if $asanIsEnabled && $tsanIsEnabled;

@@ -1233,7 +1233,7 @@ class Port(object):
             root_directory = self._config.build_directory(self.get_option('configuration'))
             build_directory = self.get_option('build_directory')
             if build_directory:
-                root_directory = self._filesystem.join(build_directory, root_directory.split('/')[-1])
+                root_directory = self._resolve_build_directory(build_directory, root_directory)
 
             # We take advantage of the behavior that self._options is passed by reference to worker
             # subprocesses to use it as data store to cache the computed root directory path. This
@@ -1249,6 +1249,30 @@ class Port(object):
             return self._filesystem.join(root_directory, *comps)
 
         return self._filesystem.join(self._filesystem.abspath(root_directory), *comps)
+
+    def _resolve_build_directory(self, build_directory, default_root_directory):
+        """--build-directory joined with the configuration directory, accepting either spelling.
+
+        The configuration is appended to --build-directory, so `--build-directory
+        .../WebKitBuild-Coverage/Release` used to resolve to
+        `.../WebKitBuild-Coverage/Release/Release`: a directory that does not exist, which makes
+        every product missing, produces an empty report rather than an error, and names neither
+        the doubling nor the flag. Every path in a coverage build is written that way -- the
+        configuration directory is where the frameworks are, so it is what a developer has in
+        their scrollback -- so accept it, say what was done, and resolve to the same tree.
+
+        Keyed on the trailing component matching the configuration this run wants, so no list of
+        configuration names is needed and it cannot fire on an ordinary directory that happens
+        to be called something else.
+        """
+        configuration_directory = default_root_directory.split('/')[-1]
+        given = build_directory.rstrip('/') or build_directory
+        if self._filesystem.basename(given) != configuration_directory:
+            return self._filesystem.join(given, configuration_directory)
+        _log.debug('--build-directory %s already names the %s configuration directory, which is '
+                   'what the configuration would have been appended to; using it as given.',
+                   given, configuration_directory)
+        return given
 
     def _path_to_driver(self, configuration=None):
         """Returns the full path to the test driver (DumpRenderTree)."""
@@ -1478,15 +1502,40 @@ class Port(object):
         environment = self.host.copy_current_environment()
         env = environment.to_dictionary()
         try:
-            self._run_script("build-imagediff", env=env)
+            self._run_script("build-imagediff", args=self._coverage_build_flags(), env=env)
             self._path_to_image_diff.clear()
         except ScriptError as e:
             _log.error(e.message_with_output(output_limit=None))
             return False
         return True
 
+    def _coverage_build_flags(self):
+        """--coverage, when this run is measuring a coverage build.
+
+        Not forwarding it does not produce an instrumented-versus-uninstrumented mismatch:
+        WebKitTestRunner, DumpRenderTree, TestWebKitAPI and their injected bundles all set
+        WK_DEFAULT_COVERAGE_OPT_OUT = YES, so they are uninstrumented in a coverage build by
+        design, and both driver schemes set buildImplicitDependencies = "NO", so a driver
+        rebuild cannot touch the instrumented frameworks. What it does produce is flag churn.
+        Measured with xcodebuild -showBuildSettings on the WebKitTestRunner target, with and
+        without CLANG_COVERAGE_MAPPING=YES ENABLE_LLVM_COVERAGE=YES: OTHER_CFLAGS and
+        OTHER_CPLUSPLUSFLAGS go from empty to
+        `-fprofile-instr-generate=/private/tmp/WebKitCoverage/WebKitTestRunner_%4m%c.profraw
+        -fno-profile-instr-generate -fno-coverage-mapping` and OTHER_LDFLAGS gains
+        -Wl,-rename_section. So `run-webkit-tests --coverage --build` recompiles and relinks
+        both drivers with a different flag vector, and the next `build-webkit --coverage`
+        recompiles them back -- every time. (GCC_PREPROCESSOR_DEFINITIONS does not change:
+        those projects set it without $(inherited), so ENABLE_LLVM_COVERAGE=1 never reaches
+        them.)
+
+        It also carries the settings a coverage build needs but an ordinary one does not, which
+        since XcodeCoverageSupportOptions() includes ENABLE_USER_SCRIPT_SANDBOXING=NO means the
+        driver rebuild stops failing on every script phase inside a sandbox.
+        """
+        return ['--coverage'] if self.get_option('coverage') else []
+
     def _build_driver_flags(self):
-        return []
+        return self._coverage_build_flags()
 
     def test_search_path(self, device_type=None):
         return self.baseline_search_path(device_type=device_type)
@@ -1527,10 +1576,31 @@ class Port(object):
         configuration = self.test_configuration()
         host = self.host or host
 
+        # An instrumented run is not a plain Release run and must not be recorded as one. Its
+        # binaries are an order of magnitude larger, its per-test slowdown is 1.15x median and
+        # 1.35x at p90, and its child-process count is capped at 8 -- so its timeouts, flakes
+        # and regressions belong to its own history rather than polluting mac-wk2's.
+        #
+        # style rather than result_report_flavor, deliberately. flavor describes a run that
+        # tested something different (site-isolation, gpuprocess, wpe-legacy-api), which is
+        # orthogonal to how the binaries were built, and every setter of it raises if the slot
+        # is taken -- so `--coverage --site-isolation` would have had to break one of them.
+        # style is the axis ASan and guard-malloc already use, is an if/elif chain by
+        # construction, and leaves flavor free: that run reports style 'coverage' and flavor
+        # 'site-isolation', and both survive.
+        #
+        # test_configuration() below is deliberately *not* given a coverage style, even though
+        # it is where ASan sets one. Its style is a TestExpectations specifier: 986 expectation
+        # lines in LayoutTests carry a [ Debug ] or [ Release ] qualifier, and none carries
+        # [ Coverage ], so a coverage style there would stop every one of them applying and
+        # manufacture unexpected results across the suite. What the upload needs is a
+        # different question from what the expectations need.
         if self.get_option('guard_malloc'):
             style = 'guard-malloc'
         elif self._config.asan:
             style = 'asan'
+        elif self.get_option('coverage'):
+            style = 'coverage'
         else:
             style = configuration.build_type
 

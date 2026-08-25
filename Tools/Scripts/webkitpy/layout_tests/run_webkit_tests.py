@@ -542,6 +542,15 @@ def _set_up_derived_options(port, options):
     if options.coverage_dir and not options.coverage:
         raise RuntimeError('--coverage-dir was passed but --coverage was not')
 
+    if options.coverage:
+        # Checked now rather than when the profiles are collected, which is in a finally block
+        # after the run. A mistyped or unwritable --coverage-dir used to be discovered there,
+        # which cost the whole run twice over: the layout suite takes hours, and the exception
+        # left the finally block and replaced the run's result, so main() reported 254 and
+        # printed a traceback for a run whose tests had all passed. Creating the directory here
+        # turns both of those into an immediate error.
+        _verify_coverage_directory_is_writable(port.host.filesystem, options.coverage_dir)
+
     if port.port_name == "mac" and options.use_gpu_process and options.remote_layer_tree:
         host = Host()
         host.initialize_scm()
@@ -639,6 +648,25 @@ def _set_up_derived_options(port, options):
         options.verbose = True
 
 
+def _verify_coverage_directory_is_writable(filesystem, coverage_dir):
+    """Create --coverage-dir and prove a file can be written into it, or raise RuntimeError.
+
+    Proven by writing, not by asking: os.access() and a parent-directory check both answer a
+    different question than "will shutil.move() into here work at the end of the run", and this
+    is the one place where being wrong costs a whole test run.
+    """
+    probe = filesystem.join(coverage_dir, '.webkit-coverage-writable')
+    try:
+        filesystem.maybe_make_directory(coverage_dir)
+        filesystem.write_binary_file(probe, b'')
+        filesystem.remove(probe)
+    except (OSError, IOError) as error:
+        raise RuntimeError(
+            '--coverage-dir {} cannot be written to: {}. The profiles this run collects are '
+            'moved there when it finishes, so this is being reported now rather than after the '
+            'run.'.format(coverage_dir, error))
+
+
 def run(port, options, args, logging_stream):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG if options.debug_rwt_logging else logging.INFO)
@@ -680,8 +708,22 @@ def run(port, options, args, logging_stream):
             # Collect even when the run failed or was interrupted: continuous-mode
             # profiles are complete as of the moment the process died, so a crashed or
             # timed-out run still has usable coverage data.
+            #
+            # And never let the collection replace the run's outcome. An exception raised in a
+            # finally block discards whatever the try block produced -- run_details for a
+            # successful run, or the KeyboardInterrupt from a Ctrl-C -- so a failure to move the
+            # profiles used to turn a passing run into exit 254 with a traceback, and the tests'
+            # own results were reported by nobody. The profiles are the less important of the
+            # two, and they are still on disk, so say where they are and let the run stand.
             if options.coverage:
-                collect_coverage_profiles(options.coverage_dir)
+                try:
+                    collect_coverage_profiles(options.coverage_dir)
+                except (OSError, IOError) as error:
+                    _log.error('Could not collect coverage profiles into %s: %s',
+                               options.coverage_dir, error)
+                    _log.error('This run\'s profiles are still in %s. Move them somewhere '
+                               'before the next coverage run, which clears that directory.',
+                               COVERAGE_PROFILE_DIRECTORY)
         _log.debug("Testing completed, Exit status: %d" % run_details.exit_code)
         return run_details
     finally:
