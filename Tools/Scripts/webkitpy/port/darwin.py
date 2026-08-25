@@ -276,7 +276,15 @@ class DarwinPort(ApplePort):
         if host.platform.is_mac():
             command = ['/usr/bin/sudo', '-n'] + command
 
-        exit_status = host.executive.run_command(command, return_exit_code=True)
+        try:
+            exit_status = host.executive.run_command(command, return_exit_code=True)
+        except (IOError, ScriptError, OSError) as e:
+            # sudo is not runnable everywhere -- a restricted or sandboxed environment can
+            # raise rather than return a non-zero status. Failing to collect a diagnostic
+            # must not abort the test run, so fall through to sample instead. This is much
+            # easier to hit on a coverage build, where slower processes time out more often.
+            _log.warning('Unable to run tailspin: ' + str(e))
+            exit_status = 1
         if not exit_status:  # Symbolicate tailspin log using spindump
             spindump_command = [
                 '/usr/sbin/spindump',
