@@ -279,6 +279,27 @@ class FileCoverage:
         }
 
 
+def project_totals(coverage_by_path):
+    """{metric: (count, covered)} over a whole parsed trace.
+
+    Deliberately over the parsed, canonicalized, duplicate-unioned trace and not over
+    llvm-cov's own report, because the two have different denominators: llvm-cov counts a
+    copied header once per framework that includes it, which on a full-suite run is
+    2,098,175 lines against this function's 1,889,061, and 72.09% function coverage against
+    55.05% -- llvm-cov counts a template instantiation as a function, and lcov's records are
+    keyed by mangled name. Anything gating on coverage has to gate on the number the report
+    displays, or the gate and the report disagree.
+    """
+    # Seeded from FileCoverage rather than from a constant, so an empty trace still answers
+    # for every metric and the set of metrics cannot drift from the ones it can produce.
+    totals = {metric: [0, 0] for metric in FileCoverage().totals()}
+    for coverage in coverage_by_path.values():
+        for metric, (count, covered) in coverage.totals().items():
+            totals[metric][0] += count
+            totals[metric][1] += covered
+    return {metric: tuple(entry) for metric, entry in totals.items()}
+
+
 def open_lcov(lcov_path):
     """Open an lcov trace for reading, transparently decompressing a gzipped one.
 
@@ -309,8 +330,17 @@ def parse_lcov_source_files(lcov_path, canonicalizer=None):
     return paths
 
 
-def parse_lcov(lcov_path, canonicalizer=None):
-    """Parse an lcov trace into {canonical path: FileCoverage}, unioning duplicates."""
+def parse_lcov(lcov_path, canonicalizer=None, lines_only=False):
+    """Parse an lcov trace into {canonical path: FileCoverage}, unioning duplicates.
+
+    lines_only skips the function and branch records. It exists for the per-suite traces: a
+    report over several suites parses one trace per suite plus the merged one, and the branch
+    map alone is 1,043,499 entries on a full-suite run while the per-suite columns show line
+    coverage. It is also the only metric that is comparable across suites -- llvm-cov's set of
+    function records is profile-dependent, measured at 396,692 records from one suite's
+    profile against 396,696 from the merge of two, because a handful of inline template
+    instantiations appear only once some profile has a record for them.
+    """
     files = {}
     current = None
     with open_lcov(lcov_path) as handle:
@@ -329,6 +359,15 @@ def parse_lcov(lcov_path, canonicalizer=None):
                     current[1].lines[int(number)] = int(count)
                 except ValueError:
                     pass
+            elif line == 'end_of_record':
+                path, coverage = current
+                if path in files:
+                    files[path].merge(coverage)
+                else:
+                    files[path] = coverage
+                current = None
+            elif lines_only:
+                continue
             elif line.startswith('FNDA:'):
                 count, _, name = line[5:].partition(',')
                 try:
@@ -343,11 +382,4 @@ def parse_lcov(lcov_path, canonicalizer=None):
                 if len(parts) == 4:
                     taken = 0 if parts[3] == '-' else int(parts[3] or 0)
                     current[1].branches[(parts[0], parts[1], parts[2])] = taken
-            elif line == 'end_of_record':
-                path, coverage = current
-                if path in files:
-                    files[path].merge(coverage)
-                else:
-                    files[path] = coverage
-                current = None
     return files
