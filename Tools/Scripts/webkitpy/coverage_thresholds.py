@@ -42,9 +42,17 @@ COVERAGE_GATE_EXIT_CODE = 2
 # The metrics an absolute threshold can be set on, and regions are deliberately not among
 # them. lcov carries line, function and branch records but no region records, so the only
 # region total available is llvm-cov's own, in summary.txt, over a denominator that counts a
-# copied header once per framework that includes it: 2,098,175 lines against the report's
-# 1,889,061 on a full-suite run. A --fail-under-regions would gate on a number that appears
-# nowhere else in the report.
+# copied header once per framework that includes it and sums per-function line counts rather
+# than counting distinct lines: 2,098,175 lines against the report's 1,888,952 on a full-suite
+# run. A --fail-under-regions would gate on a number that appears nowhere else in the report.
+#
+# --fail-under-functions is gated on a count that merges a template's instantiations, as
+# llvm-cov's does. Before that was fixed it was keyed by mangled name and counted every
+# instantiation separately -- 1,978,649 functions against llvm-cov's 255,297, a 7.75x
+# denominator -- so --fail-under-functions=70 failed a build that summary.txt, in the same
+# output directory, called 72.09%. It still does not equal summary.txt exactly (73.84% against
+# 72.09%), because the report unions the duplicate records for one canonical file and llvm-cov
+# sums them; that difference is the point of gating on the report's own numbers.
 GATED_METRICS = ('lines', 'functions', 'branches')
 
 
