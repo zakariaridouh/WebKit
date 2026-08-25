@@ -29,7 +29,9 @@ Two things to know before the first run:
   you so, rather than starting something that takes hours.
 - **A coverage build wants a build directory of its own.** An instrumented WebCore is many
   times the size of a normal one, so sharing a tree replaces the binaries every other build
-  uses. Pass `--build-directory=WebKitBuild-Coverage` (any path you like) and reuse it.
+  uses. `webkit-coverage` already defaults to a sibling `WebKitBuild-Coverage/`; pass
+  `--build-directory=<path>` only if you want a different one. On the direct
+  `build-webkit --coverage` path it is yours to set, via `WEBKIT_OUTPUTDIR`.
 
 ---
 
@@ -64,7 +66,10 @@ Tools/Scripts/generate-coverage-report --release --cmake --coverage-dir=/tmp/cov
 ```
 
 The CMake build puts its products in `WebKitBuild/cmake-mac/Coverage`, and
-`generate-coverage-report --cmake` finds that on its own; `--no-coverage-build` opts out.
+`generate-coverage-report --cmake` finds that on its own; `--no-coverage-build` opts out. Note
+that this one *is* nested under `WebKitBuild/`, unlike the Xcode path's sibling directory, so
+`rm -rf WebKitBuild` takes it with everything else — which for a tree whose profiles are paired
+with those binaries means re-running the tests, not just the build.
 
 Successive runs accumulate into one `--coverage-dir`, so an API run and a layout run share a
 report. Give each run its own directory instead and name them, and each gets a column:
