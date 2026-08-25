@@ -294,13 +294,20 @@ def _collapse_single_child_chain(node):
     return prefix, node
 
 
-def _percent_cell(count, covered):
+def _percent_cell(count, covered, scope=None):
+    """One percentage cell. scope, when given, is what puts the >= on a lower bound.
+
+    data-v stays the bare number whatever the text says, so the column still sorts numerically
+    and a qualified cell sorts beside an unqualified one.
+    """
     value = _percent(count, covered)
+    text = format_percent(value) if scope is None else scope.format_percent(value)
     return '<td class="n pct" data-v="{}">{}</td>'.format(
-        -1 if value is None else '{:.4f}'.format(value), format_percent(value))
+        -1 if value is None else '{:.4f}'.format(value), text)
 
 
-def _row(label, link, node_or_summary, is_directory, suite_names=(), no_link_reason=''):
+def _row(label, link, node_or_summary, is_directory, suite_names=(), no_link_reason='',
+         scope=None):
     cells = []
     kind = 'dir' if is_directory else 'file'
     if link is None:
@@ -325,14 +332,14 @@ def _row(label, link, node_or_summary, is_directory, suite_names=(), no_link_rea
         if metric == 'lines':
             cells.append('<td data-v="{}">{}</td>'.format(
                 -1 if value is None else '{:.4f}'.format(value), meter_html(value)))
-        cells.append(_percent_cell(count, covered))
+        cells.append(_percent_cell(count, covered, scope))
         if metric == 'lines':
             cells.append('<td class="n" data-v="{}">{:,}</td>'.format(count, count))
             cells.append('<td class="n" data-v="{}">{:,}</td>'.format(count - covered, count - covered))
             # Beside the combined figure, because the combined one is what they are read
             # against: the question is which suite is not reaching this code.
             for name in suite_names:
-                cells.append(_percent_cell(*totals_for(suite_metric(name))))
+                cells.append(_percent_cell(*totals_for(suite_metric(name)), scope=scope))
     # Deliberately a file count and not a percentage: these files have no coverage mapping,
     # so they have no denominator to be a percentage of. And deliberately not per suite: every
     # suite ran against the same binaries, so a file that was not built was not built for any
@@ -551,7 +558,7 @@ def _page(title, subtitle, crumbs_html, rows_html, totals_row, note,
 
 def _write_node(node, output_root, full_parts, source_prefix, index_link, written,
                 absence=None, unlinkable=None, ancestor_pages=frozenset(), suite_names=(),
-                generated=None):
+                generated=None, scope=None):
     """Write one index.html per directory node.
 
     full_parts is the path from the source root, so it is also the on-disk location and the
@@ -564,6 +571,10 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
     unlinkable is {path: why it has no line view}, as write_source_views returns it.
     generated is (files, physical lines) from generated_source_totals(), for the reason card on
     the root page.
+
+    scope is a coverage_scope.CoverageScope. For a selective run it puts >= on the page's totals,
+    marks the title, and states the shortfall in test counts on EVERY page rather than only on
+    the root one, because a page deep in the tree is what somebody links to.
     """
     unlinkable = unlinkable or {}
     directory = os.path.join(output_root, *full_parts)
@@ -590,7 +601,7 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
         rows.append(_row(label, label + '/index.html', child, True, suite_names))
         _write_node(child, output_root, full_parts + tuple(child_prefix),
                     source_prefix, index_link, written, absence, unlinkable,
-                    ancestor_pages | {full_parts}, suite_names, generated)
+                    ancestor_pages | {full_parts}, suite_names, generated, scope)
 
     for name, totals in sorted(node.files, key=lambda entry: (-uncovered_lines(entry[1]), entry[0])):
         # The line view is written beside this page by coverage_source_view, so the link is
@@ -612,7 +623,8 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
             crumbs.append('<a href="{}index.html">{}</a>'.format('../' * (depth - index - 1), piece))
 
     display = '/'.join(full_parts) if full_parts else 'All source'
-    totals = '<tr class="totals">' + _row('Total', '#', node, True, suite_names)[len('<tr>'):]
+    totals = '<tr class="totals">' + _row('Total', '#', node, True, suite_names,
+                                          scope=scope)[len('<tr>'):]
     totals = totals.replace('<td class="dir" data-v="Total"><a href="#">Total</a></td>',
                             '<td data-v="">Total</td>')
     note = ('Directories aggregate their descendants. Click a column heading to sort. '
@@ -624,10 +636,21 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
                  'suites reach counts once. "Not built" has no per-suite column because every '
                  'suite ran against the same binaries, so a file that was not built was not '
                  'built for any of them.')
+    if scope is not None and scope.is_selective:
+        note += (' Every percentage on this page is a lower bound, including the per-file rows, '
+                 'which are not marked individually to keep the table readable -- the Total row '
+                 'is. A row at 0% means no test that ran reached that file, which is not the '
+                 'same as no test reaching it.')
     if index_link:
         note += ' <a href="{}{}">Flat llvm-cov index</a>'.format(up, index_link)
-    subtitle = '{:,} lines, {:,} uncovered'.format(
-        node.totals['lines'][0], node.totals['lines'][0] - node.totals['lines'][1])
+    if scope is not None and scope.is_selective:
+        # "Uncovered" would be a false label here: a line no test executed may simply not have
+        # been asked. The line count itself is exact either way.
+        subtitle = '{:,} lines, {:,} not executed by the tests that ran'.format(
+            node.totals['lines'][0], node.totals['lines'][0] - node.totals['lines'][1])
+    else:
+        subtitle = '{:,} lines, {:,} uncovered'.format(
+            node.totals['lines'][0], node.totals['lines'][0] - node.totals['lines'][1])
     if node.absent_totals[0]:
         subtitle += ', {} not built here ({:,} physical lines)'.format(
             _files(node.absent_totals[0]), node.absent_totals[1])
@@ -647,7 +670,14 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
             extra_cards += _reason_card(absence.reasons(), absence.explanations, generated)
         extra_cards += _absent_card(node.absent, absence.labels)
 
-    page = _page('Coverage: ' + display, subtitle, ' / '.join(crumbs), '\n'.join(rows), totals,
+    title = 'Coverage: ' + display
+    if scope is not None:
+        # On every page, not just the root: a page deep in the tree is what somebody links to,
+        # and the caveat has to travel with the number rather than with the report.
+        caveat = ' '.join(scope.banner_lines() + ([caveat] if caveat else [])) or caveat
+        title = scope.qualify_title(title)
+
+    page = _page(title, subtitle, ' / '.join(crumbs), '\n'.join(rows), totals,
                  note, caveat=caveat, extra_cards=extra_cards, suite_names=suite_names)
     with open(os.path.join(directory, 'index.html'), 'w') as handle:
         handle.write(page)
@@ -683,7 +713,8 @@ def effective_source_prefix(paths, source_root=None):
 
 def write_directory_index(lcov_path, output_directory, source_root=None, index_link=None,
                           absence=None, coverage_by_path=None, unlinkable=(),
-                          unlinkable_reason=None, build_directory=None, suite_line_totals=()):
+                          unlinkable_reason=None, build_directory=None, suite_line_totals=(),
+                          scope=None):
     """Write the drill-down index from an lcov trace. Returns the number of pages written.
 
     source_root anchors the tree, so the hierarchy is the same shape whichever files a
@@ -708,6 +739,9 @@ def write_directory_index(lcov_path, output_directory, source_root=None, index_l
     suite_line_totals is [(suite name, {path: (lines, covered)})], in the order the columns
     should appear. The trace itself is the merge of those suites, so the Lines % column is
     their union and each suite column is one of them.
+
+    scope is a coverage_scope.CoverageScope, and is what makes a selective run's numbers render
+    as the lower bounds they are.
     """
     from webkitpy.coverage_lcov import PathCanonicalizer, parse_lcov
     from webkitpy.coverage_source_view import UNREADABLE_SOURCE, relative_source_path
@@ -766,13 +800,13 @@ def write_directory_index(lcov_path, output_directory, source_root=None, index_l
             absence = None
     written = []
     _write_node(root, output_directory, (), source_prefix, index_link, written,
-                absence, unlinkable, suite_names=suite_names, generated=generated)
+                absence, unlinkable, suite_names=suite_names, generated=generated, scope=scope)
     return len(written)
 
 
 def write_report(lcov_path, output_directory, source_root=None, absence=None,
                  index_link=None, workers=None, build_directory=None, suite_line_totals=(),
-                 coverage_by_path=None, built_at=None):
+                 coverage_by_path=None, built_at=None, scope=None):
     """Write the whole HTML report: the directory index and every file's line view.
 
     One entry point because both halves need the same parse, and parsing a full-suite trace
@@ -816,6 +850,6 @@ def write_report(lcov_path, output_directory, source_root=None, absence=None,
     directory_pages = write_directory_index(
         lcov_path, output_directory, source_root=source_root, index_link=index_link,
         absence=absence, coverage_by_path=coverage_by_path, unlinkable=skipped,
-        build_directory=build_directory, suite_line_totals=suite_line_totals)
+        build_directory=build_directory, suite_line_totals=suite_line_totals, scope=scope)
     return ReportPages(directory_pages, source_pages, source_bytes, skipped,
                        project_totals(coverage_by_path))

@@ -20,6 +20,11 @@ from functools import cache
 
 logger = logging.getLogger(__name__)
 
+# 'Apple LLVM version N.N.N', '  LLVM version 3.2svn Apple Build #3425-36'. Only the major
+# number is compared: a candidate thirteen major versions behind cannot read a profile the
+# current clang wrote, and a minor difference within a toolchain is not worth refusing over.
+_VERSION_LINE = re.compile(r'\bversion\s+(?P<major>\d+)')
+
 
 def locate_binary_xcrun(sdk, binary_name):
     completed_process = subprocess.run(['/usr/bin/xcrun', '-sdk', sdk, '--find', binary_name],
@@ -54,7 +59,6 @@ def simplify_profile_weights(profile_weights):
 
 
 class ExecutablesFromEnvAndXcode:
-    PREFERRED_EXECUTABLE_INDEX = 0
     EXECUTABLE_NAME = None
 
     @classmethod
@@ -85,11 +89,79 @@ class ExecutablesFromEnvAndXcode:
         return binaries
 
     @classmethod
+    @cache
+    def version_of(cls, path):
+        """(major, full version line) for a binary, or (None, None).
+
+        --version has to be read from a command that is allowed to fail: measured on this
+        machine, /usr/local/bin/llvm-cov prints its banner and then exits 1, so requiring exit
+        0 reads it as having no version at all -- which is exactly the binary whose version
+        needs comparing.
+        """
+        try:
+            completed = subprocess.run([path, '--version'], check=False, text=True,
+                                       capture_output=True, timeout=30)
+        except (OSError, subprocess.SubprocessError) as failure:
+            logger.debug(f'Could not ask {path} for its version: {failure}')
+            return (None, None)
+        for line in (completed.stdout or '').splitlines():
+            # 'Apple LLVM version N.N.N' on one line for a modern build; for LLVM 3.2svn the
+            # first line is the vendor banner and the version is on the next one.
+            match = _VERSION_LINE.search(line)
+            if match:
+                return (int(match.group('major')), line.strip())
+        return (None, None)
+
+    @classmethod
+    @cache
+    def usable_binaries(cls):
+        """detect_binaries() with anything older than the toolchain's own copy removed.
+
+        The toolchain's copy is first, because xcrun is consulted before PATH, so its major
+        version is the reference. A candidate several major versions behind cannot read a
+        profile the current clang wrote and would either fail or misreport; on this machine
+        /usr/local/bin/llvm-cov can be LLVM 3.2svn against the toolchain's own, thirteen major
+        versions apart,
+        and it only ever did no harm because it failed cleanly.
+
+        Never returns an empty list when detection found something: an unreadable version is
+        not evidence of a bad binary, and a machine whose only llvm-cov is old should be told
+        so rather than told there is none.
+        """
+        binaries = cls.detect_binaries()
+        if not binaries:
+            return []
+        reference_major, reference_version = cls.version_of(binaries[0])
+        usable, rejected = [binaries[0]], []
+        for path in binaries[1:]:
+            major, version = cls.version_of(path)
+            if reference_major is not None and major is not None and major < reference_major:
+                rejected.append((path, version))
+                continue
+            usable.append(path)
+        for path, version in rejected:
+            logger.warning('Ignoring %s (%s): it is older than the toolchain\'s %s (%s), and '
+                           'the raw profile format has no compatibility guarantees between '
+                           'toolchains.', path, version or 'no readable version', binaries[0],
+                           reference_version or 'no readable version')
+        logger.info('Using %s (%s)%s', usable[0],
+                    reference_version or 'no readable version',
+                    '' if len(usable) == 1 else ', with {} fallback(s)'.format(len(usable) - 1))
+        return usable
+
+    @classmethod
     def preference_ordered_paths(cls):
-        count = len(cls.detect_binaries())
-        for _ in range(count):
-            cls.PREFERRED_EXECUTABLE_INDEX = (cls.PREFERRED_EXECUTABLE_INDEX + 1) % count
-            yield cls.detect_binaries()[cls.PREFERRED_EXECUTABLE_INDEX]
+        """The binaries run() will try, best first.
+
+        Deliberately stateless. This used to advance a class attribute before yielding, so the
+        first candidate any caller tried was index 1 and the intended binary was tried last:
+        measured as the iOS SDK's copy, then XcodeDefault's, then /usr/local/bin's LLVM 3.2svn,
+        then the macOS SDK's, against a detection order that put the macOS SDK's first. Worse,
+        preferred_path() read the same
+        mutated index while report and export run concurrently, so one report's summary and its
+        trace could come from different llvm-cov binaries, nondeterministically.
+        """
+        return list(cls.usable_binaries())
 
     @classmethod
     def preferred_path(cls):
@@ -98,12 +170,12 @@ class ExecutablesFromEnvAndXcode:
         run() tries each candidate until one succeeds, which a caller streaming gigabytes
         into a compressor cannot do: by the time the exit status is known the output has
         already been written. Such a caller takes the preferred candidate and reports the
-        failure instead.
+        failure instead. It is the same binary run() tries first, which is the point.
         """
-        binaries = cls.detect_binaries()
+        binaries = cls.usable_binaries()
         if not binaries:
             raise RuntimeError(f'Found no {cls.EXECUTABLE_NAME} in the toolchain or on PATH')
-        return binaries[cls.PREFERRED_EXECUTABLE_INDEX % len(binaries)]
+        return binaries[0]
 
     @classmethod
     def run(cls, command, *args, check=False, stdout=None, stderr=None, capture_output=False,
@@ -123,6 +195,9 @@ class ExecutablesFromEnvAndXcode:
                          f'return_code: {completed_process.returncode}\n'
                          f'stdout: {completed_process.stdout}\n'
                          f'stderr: {completed_process.stderr}\n')
+
+        if completed_process is None:
+            raise RuntimeError(f'Found no {cls.EXECUTABLE_NAME} in the toolchain or on PATH')
 
         if check:
             completed_process.check_returncode()
@@ -721,6 +796,47 @@ def release_coverage_profile_directory_lock():
     if _held_profile_directory_lock is not None:
         _held_profile_directory_lock.close()
         _held_profile_directory_lock = None
+
+
+def coverage_profile_directory_holder():
+    """The run currently holding the profile directory, as a string, or None if there is none.
+
+    For a pre-flight that wants to *report* a concurrent run without becoming one. Neither of
+    the other two entry points can be used for that:
+    acquire_coverage_profile_directory_lock() answers by taking the lock, which truncates the
+    file and writes this process into it, so asking destroys the answer; and
+    release_coverage_profile_directory_lock() is for tests -- dropping a lock a live run is
+    holding is the exact failure the lock exists to prevent.
+
+    Race-free because the question is asked of the kernel rather than of the file. A *shared*
+    flock cannot be granted while another process holds the exclusive one, so:
+
+      * granted  -> nobody holds it, and the answer is None no matter what the file says. That
+        distinction matters, because a lock file outlives the run that wrote it: flock is
+        released when the process dies but nothing truncates the text, so
+        /private/tmp/WebKitCoverage/.webkit-coverage-run.lock routinely names a dead pid.
+      * refused  -> a run holds it, and the text was written under that same exclusive lock, so
+        it describes that run and not a previous one.
+    """
+    if _held_profile_directory_lock is not None:
+        # This process is the holder. Report what we wrote rather than conflicting with our own
+        # descriptor, which flock would do since it locks per open file description.
+        _held_profile_directory_lock.seek(0)
+        return _held_profile_directory_lock.read(4096).strip() or 'this process'
+
+    try:
+        handle = open(coverage_profile_lock_path(), 'r')
+    except OSError:
+        return None
+    try:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except OSError:
+            return handle.read(4096).strip() or 'an unidentified process'
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        return None
+    finally:
+        handle.close()
 
 
 def prepare_coverage_profile_directory():

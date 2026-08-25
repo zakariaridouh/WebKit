@@ -74,16 +74,28 @@ def thresholds_from_options(options):
     return thresholds
 
 
-def check_absolute_thresholds(thresholds, totals):
+def check_absolute_thresholds(thresholds, totals, scope=None):
     """0, or COVERAGE_GATE_EXIT_CODE if any threshold in thresholds was not met.
 
     totals is {metric: (count, covered)}, as coverage_lcov.project_totals() returns it -- the
     report's own numbers, not llvm-cov's, so that the gate and the report agree.
 
+    scope is a coverage_scope.CoverageScope. A selective run's coverage is a lower bound over a
+    whole-tree denominator, so there is no number for an absolute threshold to be compared
+    against and every gate fires rather than passing: an uncovered line in a subset run is
+    unknown, not untested, so `--fail-under-lines=60` over a run of one directory would be
+    asking whether the tests that did not run would have covered 60% of the tree. Failing is the
+    same rule this function already applies to a metric with nothing to measure.
+
     Every gated metric is logged whether it passed or not, so that raising a threshold does
     not need a second run to find out what the headroom was. A metric with nothing to measure
     fails rather than passes: a gate that silently does nothing is worse than one that fires.
     """
+    if scope is not None and scope.is_selective and thresholds:
+        for metric in GATED_METRICS:
+            if metric in thresholds:
+                logger.error('%s', scope.gate_refusal(option_name(metric)))
+        return COVERAGE_GATE_EXIT_CODE
     failed = False
     for metric in GATED_METRICS:
         if metric not in thresholds:

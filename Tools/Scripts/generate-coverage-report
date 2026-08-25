@@ -25,9 +25,10 @@
 
 """Turn LLVM raw profiles from an instrumented test run into a coverage report.
 
-Build with coverage instrumentation, run the tests, then generate the report:
+Build with coverage instrumentation, run the tests, then generate the report. Or let
+Tools/Scripts/webkit-coverage do all four steps, which is the shorter path:
 
-    Tools/Scripts/build-webkit --xcode --release --coverage --lto-mode=none
+    Tools/Scripts/build-webkit --xcode --release --coverage
     Tools/Scripts/run-api-tests --release --coverage --coverage-dir=/tmp/cov WTF
     Tools/Scripts/run-webkit-tests --release --coverage --coverage-dir=/tmp/cov fast/forms
     Tools/Scripts/generate-coverage-report --release --coverage-dir=/tmp/cov --output-dir=/tmp/covreport
@@ -56,6 +57,10 @@ from webkitpy.coverage_lcov import (
     third_party_copied_header_ignore_regexes)
 from webkitpy.coverage_provenance import (
     add_trace_measurements, provenance_record, summary_lines, trace_comment, write_provenance)
+from webkitpy.coverage_requirements import (
+    INSTRUMENTED_PRODUCTS, KNOWN_PRODUCTS, TEST_SUPPORT_PRODUCTS, normalize_build_root,
+    product_name)
+from webkitpy.coverage_scope import CoverageScope
 from webkitpy.coverage_suites import (
     SuiteSpecError, check_union_equals_combined, line_totals, log_union_check,
     merge_suite_profiles, parse_suite_specs, resolve_suites)
@@ -69,34 +74,6 @@ from webkitpy.port import configuration_options, platform_options
 
 _log = logging.getLogger('generate-coverage-report')
 
-# Every instrumented binary that llvm-cov must be given. Omitting one does not fail or warn:
-# llvm-cov simply reports nothing for the files only that binary contains, so the code looks
-# absent rather than uncovered. WebKitLegacy was missing here, which silently discarded all
-# 302 of its files -- 41MB of instrumented product code with eight __llvm_prf sections.
-#
-# WTF and bmalloc need no entry: they are static libraries, so their coverage mapping lives
-# inside the binaries that link them.
-INSTRUMENTED_PRODUCTS = (
-    'JavaScriptCore.framework/Versions/A/JavaScriptCore',
-    'WebCore.framework/Versions/A/WebCore',
-    'WebKit.framework/Versions/A/WebKit',
-    'WebKitLegacy.framework/Versions/A/WebKitLegacy',
-    'WebGPU.framework/Versions/A/WebGPU',
-)
-
-# Instrumented too, and loaded during a test run, but they are test scaffolding or tools
-# rather than shipping code, so including them would put their line counts in the product
-# denominator. Skipped by default -- but reported as skipped, because silently dropping
-# instrumented data is exactly the bug above.
-TEST_SUPPORT_PRODUCTS = (
-    'libWebCoreTestSupport.dylib',
-    'jsc',
-    'webpushd',
-    'adattributiond',
-)
-
-# Everything --products may name. Both lists, because --products restricts both.
-KNOWN_PRODUCTS = INSTRUMENTED_PRODUCTS + TEST_SUPPORT_PRODUCTS
 
 # Report-time exclusions. On the Xcode build CLANG_COVERAGE_MAPPING is a command-line
 # override applied to every target in the scheme, so this is the only place third-party code
@@ -165,6 +142,19 @@ There is deliberately no bare --fail-under either. The four metrics span 15 perc
 on a full-suite run -- 72.09% of functions, 67.41% of lines, 57.60% of regions, 52.80% of
 branches -- so one flag meaning whichever of them the tool happened to pick would gate the
 wrong thing without saying so.
+
+--test-scope-file says which TESTS the profiles came from, and it changes what every number
+here means. Adding tests can only turn a line from uncovered to covered, so for a run over part
+of the suite a covered line is exact and an uncovered line is unknown. A selective report
+therefore writes every total as `>= 41.30%`, marks its title, names the shortfall in test
+counts, gets a -selective infix in its directory name and its trace filename, and fails
+--fail-under-lines rather than gating on a lower bound over a whole-tree denominator. Use
+--fail-under-patch in compare-coverage-reports instead: it is sound under selection, since a
+line it calls covered really was executed.
+
+Without the flag the report says full-suite, which is what every report before this was. If the
+tests were in fact a subset, nothing here can tell, and the percentages will be quoted as exact.
+webkit-coverage always passes it.
 """.format(gate=COVERAGE_GATE_EXIT_CODE)
 
 
@@ -173,15 +163,6 @@ class _PreformattedEpilog(optparse.IndentedHelpFormatter):
 
     def format_epilog(self, epilog):
         return epilog or ''
-
-
-def product_name(relative):
-    """The name --products matches on: JavaScriptCore, WebCore, jsc, ...
-
-    The basename, which is the framework's binary for a framework and the tool itself for a
-    tool, so one spelling covers both kinds of entry.
-    """
-    return os.path.basename(relative)
 
 
 def resolve_source_scopes(scopes, source_root):
@@ -286,7 +267,12 @@ def parse_args(args):
                            'profiles. PATH is a --coverage-dir from that suite\'s run, or an '
                            'already-indexed .profdata. Repeatable, and the combined column is '
                            'the union of all of them. See the note below')
-    parser.add_option('--build-directory', help='Path to the build directory, if not the default')
+    parser.add_option('--build-directory',
+                      help='Path to the build directory, if not the default. Either the tree or '
+                           'its configuration directory: the configuration is appended to '
+                           'whatever is given, so .../WebKitBuild-Coverage/Release would '
+                           'otherwise resolve to .../WebKitBuild-Coverage/Release/Release and '
+                           'find no products at all')
     parser.add_option('--object', action='append', dest='extra_objects', default=[],
                       help='Additional instrumented binary to include (repeatable)')
     parser.add_option('--products', metavar='LIST',
@@ -373,6 +359,14 @@ def parse_args(args):
                            'run with --failure-mode=all, which fails only if every input fails, so '
                            'a collection that mostly failed otherwise produces a confidently low '
                            'report and exit 0'.format(100.0 * UNREADABLE_RAW_PROFILE_LIMIT))
+    parser.add_option('--test-scope-file', metavar='FILE',
+                      help='JSON record of which tests the profiles came from, as '
+                           'webkit-coverage writes it. A selective run\'s coverage is a lower '
+                           'bound -- adding tests can only turn a line from uncovered to '
+                           'covered -- so with a selective scope every total is written >=, the '
+                           'output directory and trace get a -selective infix, and '
+                           '--fail-under-lines fails because there is no exact number to gate '
+                           'on. Without this the report says full-suite. See the note below')
     parser.add_option('-v', '--verbose', action='store_true', default=False, help='Verbose logging')
 
     options, remaining = parser.parse_args(args)
@@ -390,6 +384,28 @@ def parse_args(args):
         parser.error('--coverage-dir {} is not a directory'.format(options.coverage_dir))
     if options.profdata and not os.path.isfile(options.profdata):
         parser.error('--profdata {} does not exist'.format(options.profdata))
+    # Both spellings of --build-directory, adjusted here rather than being allowed to become a
+    # doubled path: the port appends the configuration to whatever this is, so
+    # .../WebKitBuild-Coverage/Release resolves to .../WebKitBuild-Coverage/Release/Release,
+    # which exists nowhere and reports every product as not found. That is the shape every path
+    # in PLAN 1 is written in.
+    options.build_directory_note = None
+    if options.build_directory:
+        build_root = normalize_build_root(options.build_directory, options.configuration)
+        options.build_directory_note = build_root.note
+        options.build_directory = build_root.root
+    # Parsed here, so that a malformed or unreadable scope file fails before a report is built
+    # rather than being silently downgraded to "full suite", which is the one reading that turns
+    # a lower bound into a number somebody quotes.
+    options.scope = CoverageScope.full_suite()
+    if options.test_scope_file:
+        if not os.path.isfile(options.test_scope_file):
+            parser.error('--test-scope-file {} does not exist'.format(options.test_scope_file))
+        try:
+            options.scope = CoverageScope.read(options.test_scope_file)
+        except (ValueError, OSError) as error:
+            parser.error('--test-scope-file {} could not be read: {}'.format(
+                options.test_scope_file, error))
     # Checked here rather than where the profiles are indexed, so that a typo fails before
     # anything has been read or written.
     try:
@@ -591,6 +607,26 @@ def summarize_suites(source_root, suite_lcov_paths, combined_by_path):
     return [(name, line_totals(suites_by_path[name])) for name, _ in suite_lcov_paths]
 
 
+def summary_banner_lines(scope, summary_text):
+    """The block that goes above llvm-cov's table in summary.txt. Empty for a full-suite run.
+
+    summary.txt is the file people grep, because it is 5 MB against a 366 MB report, so it is
+    also the file most likely to be read without its report. The block restates llvm-cov's own
+    TOTAL line with every percentage marked as the lower bound it is, and leaves the table
+    itself exactly as llvm-cov produced it.
+    """
+    if not scope.is_selective:
+        return []
+    lines = ['# ' + line for line in scope.banner_lines()]
+    total = next((line for line in reversed(summary_text.splitlines())
+                  if line.startswith('TOTAL')), None)
+    if total:
+        lines.append('# The TOTAL line below, restated as the lower bounds it is:')
+        lines.append('#   ' + scope.qualify_percentages(total).strip())
+    lines.append('#')
+    return lines
+
+
 def main(args):
     options = parse_args(args)
     logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
@@ -598,6 +634,24 @@ def main(args):
 
     host = Host()
     port = host.port_factory.get(options.platform, options)
+
+    if options.build_directory_note:
+        _log.info('%s', options.build_directory_note)
+
+    # The -selective infix on the output directory, applied before anything is written into it.
+    # An artifact is moved, mailed and attached to bugs, and then all it has to say what it is
+    # is its own name and the provenance record inside it. A directory called `report` that
+    # holds lower bounds is indistinguishable from one that holds exact numbers.
+    if options.scope.is_selective:
+        renamed = options.scope.directory(options.output_dir)
+        if renamed != options.output_dir:
+            _log.info('Selective run, so writing to %s rather than %s: a report of lower bounds '
+                      'must not be mistakable for a full-suite one after it has been moved.',
+                      renamed, options.output_dir)
+            options.output_dir = renamed
+    # The banner itself is not printed here: summary_lines() prints it from the provenance
+    # record, which is the copy that is also written into the artifacts, and saying it twice
+    # teaches a reader to skip it.
 
     # Resolved and checked before any work: a --sources path that matches nothing makes llvm-cov
     # produce an empty report rather than complain, so a typo would otherwise cost a full run and
@@ -674,13 +728,16 @@ def main(args):
             ignore_regexes += copied
 
     summary_path = os.path.join(options.output_dir, 'summary.txt')
-    lcov_path = os.path.join(options.output_dir,
-                             'coverage.lcov.gz' if options.compress_lcov else 'coverage.lcov')
+    # The infix on the trace too, and for the same reason as the directory: the trace is the one
+    # artifact that outlives everything else -- 54 MB gzipped against a 45 GB build tree, kept as
+    # a baseline forever -- so its filename has to say whether its numbers are exact.
+    lcov_path = os.path.join(options.output_dir, options.scope.filename(
+        'coverage.lcov.gz' if options.compress_lcov else 'coverage.lcov'))
     html_dir = os.path.join(options.output_dir, 'html')
     suite_lcov_paths = [
-        (suite.name, os.path.join(options.output_dir, 'coverage-{}.lcov.gz'.format(suite.name)
-                                  if options.compress_lcov else
-                                  'coverage-{}.lcov'.format(suite.name)))
+        (suite.name, os.path.join(options.output_dir, options.scope.filename(
+            'coverage-{}.lcov.gz'.format(suite.name) if options.compress_lcov else
+            'coverage-{}.lcov'.format(suite.name))))
         for suite in suites] if len(suites) > 1 else []
 
     # Built now, before the trace exists, because the trace carries a comment holding most of it:
@@ -696,6 +753,7 @@ def main(args):
         sources_scope=sources,
         include_third_party=options.include_third_party,
         include_test_support=options.include_test_support,
+        scope=options.scope,
         generator=os.path.basename(__file__))
     for line in summary_lines(provenance):
         _log.info('%s', line)
@@ -784,9 +842,17 @@ def main(args):
             return 1
 
     with open(summary_path, 'w') as summary_file:
+        # llvm-cov's own table, with the scope written above it. Prepended rather than rewritten:
+        # every percentage in that table is a lower bound under selection and there are tens of
+        # thousands of them, so the honest thing is to restate the TOTAL line once at the top and
+        # leave llvm-cov's output byte-for-byte what llvm-cov produced.
+        for line in summary_banner_lines(options.scope, results['summary'].stdout):
+            summary_file.write(line + '\n')
         summary_file.write(results['summary'].stdout)
-    for line in results['summary'].stdout.splitlines()[-3:]:
+    for line in options.scope.banner_lines():
         print(line)
+    for line in results['summary'].stdout.splitlines()[-3:]:
+        print(options.scope.qualify_percentages(line))
     _log.info('Wrote %s', summary_path)
     _log.info('Wrote %s (%.1f MB)', lcov_path, os.path.getsize(lcov_path) / 1e6)
     for name, path in suite_lcov_paths:
@@ -844,7 +910,7 @@ def main(args):
                               absence=absence, build_directory=port._build_path(),
                               index_link='html/index.html' if options.llvm_cov_html else None,
                               coverage_by_path=combined_by_path,
-                              suite_line_totals=suite_line_totals)
+                              suite_line_totals=suite_line_totals, scope=options.scope)
         _log.info('Wrote %d directory pages and %d line views (%.1f MB); start at %s',
                   report.directory_pages, report.source_pages, report.source_bytes / 1e6,
                   os.path.join(options.output_dir, 'index.html'))
@@ -861,7 +927,8 @@ def main(args):
             lcov_path, options.output_dir, source_root=port.webkit_base(), absence=absence,
             build_directory=port._build_path(), coverage_by_path=combined_by_path,
             unlinkable=set(combined_by_path), suite_line_totals=suite_line_totals,
-            index_link='html/index.html' if options.llvm_cov_html else None)
+            index_link='html/index.html' if options.llvm_cov_html else None,
+            scope=options.scope)
         _log.info('Wrote %d directory pages and no line views (--no-source-views); start at %s',
                   pages, os.path.join(options.output_dir, 'index.html'))
 
@@ -882,7 +949,7 @@ def main(args):
     # Last, and only after everything has been written: a failed gate must leave the report
     # behind, because the report is how somebody works out why it fired.
     if thresholds:
-        return check_absolute_thresholds(thresholds, totals)
+        return check_absolute_thresholds(thresholds, totals, scope=options.scope)
     return 0
 
 
