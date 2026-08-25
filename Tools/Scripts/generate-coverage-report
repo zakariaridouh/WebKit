@@ -75,9 +75,13 @@ from webkitpy.port import configuration_options, platform_options
 _log = logging.getLogger('generate-coverage-report')
 
 
-# Report-time exclusions. On the Xcode build CLANG_COVERAGE_MAPPING is a command-line
-# override applied to every target in the scheme, so this is the only place third-party code
-# can be excluded.
+# Report-time exclusions. Both build systems now also exclude third-party code at compile
+# time -- the Xcode build through WK_DEFAULT_COVERAGE_OPT_OUT, which works because a target's
+# OTHER_CFLAGS is appended after the flags CLANG_COVERAGE_MAPPING injects and clang is
+# last-wins, and the CMake build through -fprofile-list=Source/cmake/CoverageExclusions.txt.
+# So this is no longer the only place third-party code can be excluded. It is still needed:
+# compile-time exclusion cannot catch a header that was copied into the build directory and
+# is attributed to the copy, and it does not apply to a tree built before the opt-out landed.
 #
 # Matching only 'Source/ThirdParty/' is not enough. Headers that get copied into the build
 # directory are attributed to the copy, so libwebrtc's headers arrive as
@@ -257,6 +261,16 @@ def parse_args(args):
                                    epilog=_EPILOG, formatter=_PreformattedEpilog())
     parser.add_options(platform_options())
     parser.add_options(configuration_options())
+    # Every tree this tool can describe is a coverage build tree, so ask for one by default
+    # rather than making the caller say so. It matters on the CMake build, where coverage
+    # products live in a directory of their own (WebKitBuild/cmake-mac/Coverage,
+    # WebKitBuild/GTK/Coverage) instead of in Release: without this, --cmake --release
+    # resolved cmake-mac/Release and the tool reported "Found no instrumented frameworks"
+    # against a perfectly good coverage build.
+    parser.set_defaults(coverage=True)
+    parser.add_option('--no-coverage-build', action='store_false', dest='coverage',
+                      help='Report on a tree that is not a coverage build directory, e.g. an '
+                           'Xcode build where --coverage does not move the products')
     parser.add_option('--coverage-dir', help='Directory holding the .profraw files from an instrumented test run')
     parser.add_option('--profdata', help='Report from an already-indexed profile instead of raw profiles. Use this '
                                          'when a run was sharded and the shards were merged incrementally, which is '
