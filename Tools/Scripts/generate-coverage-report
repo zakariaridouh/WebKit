@@ -54,6 +54,8 @@ from webkitpy.coverage_directory_index import write_report
 from webkitpy.coverage_lcov import (
     PathCanonicalizer, parse_lcov, parse_lcov_source_files, project_totals,
     third_party_copied_header_ignore_regexes)
+from webkitpy.coverage_provenance import (
+    add_trace_measurements, provenance_record, summary_lines, trace_comment, write_provenance)
 from webkitpy.coverage_suites import (
     SuiteSpecError, check_union_equals_combined, line_totals, log_union_check,
     merge_suite_profiles, parse_suite_specs, resolve_suites)
@@ -61,7 +63,8 @@ from webkitpy.coverage_thresholds import (
     COVERAGE_GATE_EXIT_CODE, GATED_METRICS, check_absolute_thresholds, destination_name,
     option_name, thresholds_from_options)
 from webkitpy.llvm_profile_utils import (
-    LLVMCov, merge_all_raw_profiles_in_directory, objects_with_no_profile_data)
+    LLVMCov, UNREADABLE_RAW_PROFILE_LIMIT, collected_profiles_with_no_object,
+    merge_raw_profiles_in_directory, objects_with_no_profile_data, survey_instrumentation)
 from webkitpy.port import configuration_options, platform_options
 
 _log = logging.getLogger('generate-coverage-report')
@@ -319,6 +322,12 @@ def parse_args(args):
     parser.add_option('--allow-profile-mismatch', action='store_true', default=False,
                       help='Report anyway when the profile does not match the binaries. The default '
                            'is to refuse, because the resulting numbers look plausible but are wrong')
+    parser.add_option('--allow-unreadable-profiles', action='store_true', default=False,
+                      help='Report from the readable remainder when more than {:.0f}%% of the raw '
+                           'profiles cannot be read. The default is to refuse: llvm-profdata is '
+                           'run with --failure-mode=all, which fails only if every input fails, so '
+                           'a collection that mostly failed otherwise produces a confidently low '
+                           'report and exit 0'.format(100.0 * UNREADABLE_RAW_PROFILE_LIMIT))
     parser.add_option('-v', '--verbose', action='store_true', default=False, help='Verbose logging')
 
     options, remaining = parser.parse_args(args)
@@ -409,6 +418,70 @@ def warn_about_objects_with_no_profile_data(objects, raw_profiles):
     _log.warning('    Exclude them, or fix their configuration -- do not read their coverage.')
 
 
+def report_instrumentation_survey(objects, build_directory):
+    """Say so when a binary in the report is not instrumented, or cannot be checked.
+
+    Returns False when nothing in the report is instrumented at all, which is not a warning:
+    llvm-cov has no coverage mapping for an uninstrumented binary, so the report would be empty
+    rather than wrong, and the cause is always the same -- this is a tree that was not built
+    with --coverage. It is the easiest mistake to make on a first run, because
+    webkit-build-directory applies a last-built tiebreaker and will happily hand out a different
+    tree than the one the tests ran against.
+    """
+    survey = survey_instrumentation(objects)
+    if survey.uninstrumented and len(survey.uninstrumented) == len(objects):
+        _log.error('None of the %d binaries under %s is instrumented for coverage, so there is '
+                   'nothing to report on:', len(objects), build_directory)
+        for path, _ in survey.uninstrumented:
+            _log.error('    %s', path)
+        _log.error('Build with --coverage, or point --build-directory at the tree the tests ran '
+                   'against.')
+        return False
+    if survey.uninstrumented:
+        _log.warning('%d of the %d binaries in this report are not instrumented, so every file '
+                     'only they contain is absent from the report rather than reported at 0%%:',
+                     len(survey.uninstrumented), len(objects))
+        for path, reason in survey.uninstrumented:
+            _log.warning('    %s', path)
+            _log.warning('        %s', reason)
+        _log.warning('    Is %s the tree the tests ran against?', build_directory)
+    for path, reason in survey.unverifiable:
+        _log.info('Cannot check where %s writes its profile: %s', path, reason)
+    return True
+
+
+def warn_about_collected_profiles_with_no_object(objects, raw_profiles):
+    """Say so when this run collected profile data no binary in the report claims.
+
+    The inverse of warn_about_objects_with_no_profile_data(), and the direction that catches the
+    84,332-line bug rather than one instance of it. That bug had two halves: WebGPU and
+    WebKitLegacy baked no profile path (caught by the other guard, which asks each object whether
+    anything with its name was written), and INSTRUMENTED_PRODUCTS below did not list
+    WebKitLegacy at all (caught by nothing -- an object that is not in the report cannot be asked
+    a question about itself).
+
+    This asks the profiles instead. Every product that ran wrote profiles named after itself, so
+    a group of collected profiles that no binary in the report claims is a product whose data was
+    collected, merged, and then described by nothing: 302 files and 41 MB of instrumented product
+    code, reported as absent. That failure is currently prevented only by a hardcoded tuple
+    staying in step with what the build links, which is not a mechanism.
+    """
+    orphans = collected_profiles_with_no_object(objects, raw_profiles)
+    if not orphans:
+        return
+    total = sum(len(paths) for _, paths in orphans)
+    _log.warning('%d of the %d raw profiles this run collected were written by something no '
+                 'binary in this report claims to be, so their coverage is in the indexed '
+                 'profile and in none of the report:', total, len(raw_profiles))
+    for group, paths in orphans:
+        megabytes = sum(os.path.getsize(path) for path in paths
+                        if os.path.exists(path)) / 1e6
+        _log.warning('    %s*: %d profiles, %.1f MB, for example %s', group, len(paths),
+                     megabytes, os.path.basename(paths[0]))
+    _log.warning('    Add the binary that writes each of those to --products/INSTRUMENTED_PRODUCTS '
+                 'or pass it with --object, or the code in it is reported as not existing.')
+
+
 def summarize_suites(source_root, suite_lcov_paths, combined_by_path):
     """[(suite name, {path: (lines, covered)})], after checking the combined column is their union.
 
@@ -460,6 +533,7 @@ def main(args):
     os.makedirs(options.output_dir, exist_ok=True)
 
     suites = []
+    unreadable_profiles = []
     if options.suite:
         try:
             suites = resolve_suites(options.suite, options.output_dir)
@@ -475,10 +549,23 @@ def main(args):
         _log.info('Reporting from the already-indexed profile %s', profile_path)
     else:
         profile_path = os.path.join(options.output_dir, 'coverage.profdata')
-        raw_profiles = merge_all_raw_profiles_in_directory(options.coverage_dir, profile_path)
+        try:
+            merge = merge_raw_profiles_in_directory(
+                options.coverage_dir, profile_path,
+                unreadable_limit=1.0 if options.allow_unreadable_profiles else
+                UNREADABLE_RAW_PROFILE_LIMIT)
+        except RuntimeError as error:
+            _log.error('%s', error)
+            _log.error('Pass --allow-unreadable-profiles to report from the readable remainder '
+                       'anyway.')
+            return 1
+        raw_profiles, unreadable_profiles = merge.merged, merge.unreadable
         _log.info('Indexed %d raw profiles into %s', len(raw_profiles), profile_path)
 
+    if not report_instrumentation_survey(objects, port._build_path()):
+        return 1
     warn_about_objects_with_no_profile_data(objects, raw_profiles)
+    warn_about_collected_profiles_with_no_object(objects, raw_profiles)
 
     ignore_regexes = list(DEFAULT_IGNORE_REGEXES) + list(options.ignore_regexes)
     if not options.include_third_party:
@@ -500,6 +587,22 @@ def main(args):
                                   'coverage-{}.lcov'.format(suite.name)))
         for suite in suites] if len(suites) > 1 else []
 
+    # Built now, before the trace exists, because the trace carries a comment holding most of it:
+    # a .lcov.gz that ends up on a bot as a baseline has to be able to say what it is a baseline
+    # for. The trace's own measurements are added afterwards and only reach the JSON record.
+    provenance = provenance_record(
+        port.webkit_base(), port._build_path(), port.name(), port.get_option('configuration'),
+        objects, profile_path, command_line=args, products=options.products,
+        suites=[(suite.name, suite.source) for suite in suites],
+        raw_profile_count=len(raw_profiles),
+        unreadable_raw_profile_count=len(unreadable_profiles),
+        ignore_filename_regexes=ignore_regexes,
+        include_third_party=options.include_third_party,
+        include_test_support=options.include_test_support,
+        generator=os.path.basename(__file__))
+    for line in summary_lines(provenance):
+        _log.info('%s', line)
+
     # These llvm-cov invocations are independent and each takes minutes over WebKit-sized
     # binaries, so run them at once rather than one after another. They are separate
     # processes; the threads here only wait on them. One more per suite, over the same objects
@@ -510,7 +613,8 @@ def main(args):
 
     def make_lcov():
         return LLVMCov.export_lcov(objects, profile_path, lcov_path, ignore_regexes,
-                                   options.path_equivalence, compress=options.compress_lcov)
+                                   options.path_equivalence, compress=options.compress_lcov,
+                                   header_line=trace_comment(provenance))
 
     def make_html():
         return LLVMCov.show_html(objects, profile_path, html_dir, ignore_regexes,
@@ -520,7 +624,8 @@ def main(args):
     def make_suite_lcov(suite_profile, output_path):
         return lambda: LLVMCov.export_lcov(objects, suite_profile, output_path, ignore_regexes,
                                            options.path_equivalence,
-                                           compress=options.compress_lcov)
+                                           compress=options.compress_lcov,
+                                           header_line=trace_comment(provenance))
 
     work = {'summary': make_summary}
     # The directory index and the line views are both built from the lcov trace, so it is
@@ -588,6 +693,12 @@ def main(args):
     for name, path in suite_lcov_paths:
         _log.info('Wrote %s (%.1f MB), suite %s', path, os.path.getsize(path) / 1e6, name)
 
+    # Written even with --no-lcov, and written before anything that can fail below it: an
+    # artifact whose provenance is missing is one nobody can check, which is the state every
+    # other output of this tool used to be in.
+    _log.info('Wrote %s', write_provenance(
+        add_trace_measurements(provenance, lcov_path), options.output_dir))
+
     # The third state. llvm-cov can tell a covered line from an instrumented-but-unexecuted
     # one, but a file this configuration never compiled has no coverage mapping at all, so it
     # is absent from the trace rather than present at 0%. On the measured macOS Release build
@@ -649,6 +760,10 @@ def main(args):
         for path in raw_profiles:
             os.unlink(path)
         _log.info('Deleted %d raw profiles', len(raw_profiles))
+        if unreadable_profiles:
+            # Kept deliberately: they are the only evidence of what went wrong, and they are
+            # not in the indexed profile, so nothing else records that they existed.
+            _log.info('Kept %d unreadable raw profiles', len(unreadable_profiles))
 
     # Last, and only after everything has been written: a failed gate must leave the report
     # behind, because the report is how somebody works out why it fired.

@@ -360,6 +360,94 @@ class LcovRoundTripTest(unittest.TestCase):
             compare_lcov_files(empty, baseline, source_root='/checkout')
 
 
+class TraceFitTest(unittest.TestCase):
+    """Two traces that do not describe the same checkout must say so, not report `new`."""
+
+    def setUp(self):
+        self._directory = tempfile.mkdtemp()
+        # The library logs at INFO on the happy path, and that does not belong in test output.
+        logging.disable(logging.CRITICAL)
+        self.addCleanup(logging.disable, logging.NOTSET)
+
+    def _capturing_logs(self, level='WARNING'):
+        """assertLogs needs logging on, which setUp turns off for the quiet tests."""
+        logging.disable(logging.NOTSET)
+        return self.assertLogs('webkitpy', level=level)
+
+    def _lcov(self, name, records):
+        path = os.path.join(self._directory, name)
+        with open(path, 'w') as handle:
+            for filename, lines in records:
+                handle.write('SF:{}\n'.format(filename))
+                for number, count in lines:
+                    handle.write('DA:{},{}\n'.format(number, count))
+                handle.write('end_of_record\n')
+        return path
+
+    def _traces(self):
+        baseline = self._lcov('baseline.lcov', [('/bot/WebKit/Source/a.cpp', [(1, 1), (2, 1)])])
+        current = self._lcov('current.lcov', [('/checkout/Source/a.cpp', [(1, 1), (2, 0)])])
+        return baseline, current
+
+    def test_traces_with_no_source_path_in_common_are_an_error(self):
+        # Measured: with the baseline's root rewritten to look like a bot artifact, every file
+        # reported as `new`, the baseline contributed nothing to any total, --fail-under-delta
+        # could not be evaluated, and the tool exited 0.
+        baseline, current = self._traces()
+        with self.assertRaises(RuntimeError) as raised:
+            compare_lcov_files(baseline, current, source_root='/checkout')
+        self.assertIn('no source file in common', str(raised.exception))
+        self.assertIn('--baseline-source-root', str(raised.exception))
+
+    def test_one_shared_path_is_enough_to_be_a_comparison(self):
+        # A real branch adds and deletes files, so a partial overlap is normal and only a
+        # total absence of one means the two traces are about different things.
+        baseline = self._lcov('baseline.lcov', [('/checkout/Source/a.cpp', [(1, 1)]),
+                                                ('/checkout/Source/gone.cpp', [(1, 1)])])
+        current = self._lcov('current.lcov', [('/checkout/Source/a.cpp', [(1, 0)]),
+                                              ('/checkout/Source/new.cpp', [(1, 0)])])
+        delta = compare_lcov_files(baseline, current, source_root='/checkout')
+        self.assertEqual(delta.overall.file_count, 3)
+
+    def test_a_baseline_from_another_checkout_is_rebased_onto_this_one(self):
+        # A baseline needs no binaries, so the whole point of keeping one is to use it after
+        # the 45 GB build tree is gone, or to take one from a bot. Its paths are rooted
+        # elsewhere, and without rebasing there is no way to use it at all.
+        baseline, current = self._traces()
+        delta = compare_lcov_files(baseline, current, source_root='/checkout',
+                                   baseline_source_root='/bot/WebKit')
+        self.assertEqual(sorted(delta.file_deltas), ['/checkout/Source/a.cpp'])
+        self.assertEqual(delta.file_deltas['/checkout/Source/a.cpp'].regressed_lines, [2])
+
+    def test_a_baseline_source_root_that_matches_nothing_warns(self):
+        baseline, current = self._traces()
+        with self._capturing_logs() as logged:
+            with self.assertRaises(RuntimeError):
+                compare_lcov_files(baseline, current, source_root='/checkout',
+                                   baseline_source_root='/somewhere/else')
+        self.assertTrue(any('--baseline-source-root' in message for message in logged.output),
+                        logged.output)
+
+    def test_a_source_root_that_is_a_prefix_of_nothing_in_the_trace_warns(self):
+        # Silent otherwise, and it does move the numbers: --source-root decides where a copied
+        # header is placed, and a record placed under the wrong root does not union with the
+        # in-tree one.
+        baseline = self._lcov('baseline.lcov', [('/checkout/Source/a.cpp', [(1, 1)])])
+        current = self._lcov('current.lcov', [('/checkout/Source/a.cpp', [(1, 0)])])
+        with self._capturing_logs() as logged:
+            compare_lcov_files(baseline, current, source_root='/somewhere/else')
+        self.assertTrue(any('--source-root' in message for message in logged.output),
+                        logged.output)
+
+    def test_a_matching_source_root_says_nothing(self):
+        baseline = self._lcov('baseline.lcov', [('/checkout/Source/a.cpp', [(1, 1)])])
+        current = self._lcov('current.lcov', [('/checkout/Source/a.cpp', [(1, 0)])])
+        with self._capturing_logs(level='INFO') as logged:
+            compare_lcov_files(baseline, current, source_root='/checkout')
+        self.assertEqual([record.getMessage() for record in logged.records
+                          if record.levelno >= logging.WARNING], [])
+
+
 class FailUnderDeltaTest(unittest.TestCase):
     """--fail-under-delta, exercised through the script's main() the way CI calls it."""
 
@@ -468,6 +556,39 @@ class FailUnderDeltaTest(unittest.TestCase):
     def test_a_bad_git_ref_is_a_message_not_a_traceback(self):
         self.assertEqual(self._run(self._BEFORE, self._AFTER,
                                    '--git-diff', 'no-such-ref-exists-anywhere'), 1)
+
+    def test_a_gate_that_cannot_be_evaluated_fails_rather_than_passing(self):
+        # It used to log one WARNING and exit 0 here, which made it a gate-shaped object
+        # rather than a gate: a baseline rooted in another checkout takes exactly this branch.
+        # coverage_thresholds already applies the same rule to a metric with nothing to
+        # measure, so follow it and use the same exit code.
+        baseline = {'Source/a.cpp': [(1, 1)]}
+        current = {'Source/a.cpp': [(1, 1)], 'Source/new.cpp': [(1, 0), (2, 0)]}
+        changed = os.path.join(self._directory, 'changed.txt')
+        with open(changed, 'w') as handle:
+            handle.write('Source/new.cpp\n')
+        # The scope is a file that is only in current, so there is no baseline percentage.
+        self.assertEqual(self._run(baseline, current, '--changed-files', changed,
+                                   '--fail-under-delta', '0.5'), COVERAGE_GATE_EXIT_CODE)
+        # Without the flag the same run is a report and not a failure.
+        self.assertEqual(self._run(baseline, current, '--changed-files', changed), 0)
+
+    def test_a_baseline_rooted_in_another_checkout_is_an_error_not_a_silent_pass(self):
+        # The whole failure, end to end: every file would read as `new`, the gate could not be
+        # evaluated, and the tool exited 0.
+        baseline = os.path.join(self._directory, 'baseline.lcov')
+        with open(baseline, 'w') as handle:
+            handle.write('SF:/bot/WebKit/Source/a.cpp\nDA:1,1\nDA:2,1\nend_of_record\n')
+        current = self._lcov('current.lcov', self._AFTER)
+        arguments = ['--baseline', baseline, '--current', current,
+                     '--source-root', self._directory, '--fail-under-delta', '0.5']
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.script.main(arguments), 1)
+            # ... and with the root named it becomes a real comparison, which here has a real
+            # 50pp drop in it and fires the gate rather than exiting 0 on a wall of `new`.
+            self.assertEqual(self.script.main(
+                arguments + ['--baseline-source-root', '/bot/WebKit']),
+                COVERAGE_GATE_EXIT_CODE)
 
 
 if __name__ == '__main__':
