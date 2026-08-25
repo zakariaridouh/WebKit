@@ -23,6 +23,11 @@
 
 #include "../../../Configurations/CommonBase.xcconfig"
 
+// Third-party target: opt every target in this project out of coverage
+// instrumentation. The reasoning and the measurement are in
+// Configurations/CommonBase.xcconfig.
+WK_DEFAULT_COVERAGE_OPT_OUT = YES;
+
 CODE_SIGN_IDENTITY = -;
 
 ALWAYS_SEARCH_USER_PATHS = NO;

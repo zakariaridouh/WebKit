@@ -29,6 +29,11 @@
 WK_AVAILABILITY_OVERLAY_FLAGS = ;
 WK_AVAILABILITY_OVERLAY_SWIFT_FLAGS = ;
 
+// Third-party target: opt every target in this project out of coverage
+// instrumentation. The reasoning and the measurement are in
+// Configurations/CommonBase.xcconfig.
+WK_DEFAULT_COVERAGE_OPT_OUT = YES;
+
 AD_HOC_CODE_SIGNING_ALLOWED = YES;
 CODE_SIGN_IDENTITY = -;
 
