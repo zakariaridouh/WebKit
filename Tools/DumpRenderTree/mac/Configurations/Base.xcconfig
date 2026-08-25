@@ -80,6 +80,10 @@ DEBUG_DEFINES[config=Debug] = $(WK_ENABLE_CONJECTURE_ASSERT_YES);
 
 WK_DEFAULT_GCC_OPTIMIZATION_LEVEL[config=Debug] = 0;
 
+// Coverage measures WebKit, not the harness that drives it. See
+// Configurations/CommonBase.xcconfig.
+WK_DEFAULT_COVERAGE_OPT_OUT = YES;
+
 SDKROOT = macosx.internal;
 ADDITIONAL_SDKS = $(WK_ADDITIONAL_SDKS);
 

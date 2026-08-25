@@ -9,6 +9,11 @@
 
 #include "../../../../../Configurations/CommonBase.xcconfig"
 
+// Third-party target: opt every target in this project out of coverage
+// instrumentation. The reasoning and the measurement are in
+// Configurations/CommonBase.xcconfig.
+WK_DEFAULT_COVERAGE_OPT_OUT = YES;
+
 GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 
 HEADER_SEARCH_PATHS = $(SRCROOT)/.. $(SRCROOT)/../include $(BUILT_PRODUCTS_DIR)/usr/local/include
