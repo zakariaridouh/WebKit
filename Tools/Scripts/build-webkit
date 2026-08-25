@@ -127,7 +127,7 @@ Usage: $programName [options] [options to pass to build system]
   --visionos-simulator              Use "xrsimulator" (visionOS only) 
   --watchos-device                  Use "watchos.internal" SDK if installed, else "watchos" SDK (watchOS only)
   --watchos-simulator               Use "watchsimulator" (watchOS only)
-  --coverage                        Enable code coverage support (Mac only)
+  --coverage                        Enable LLVM source-based code coverage (Xcode and CMake builds; Source/ThirdParty is left uninstrumented on CMake)
   --analyze                         Enable static anaylsis (Apple platforms only)
   --lto-mode=<mode>                 Set Link Time Optimization mode (full, thin, or none) (LLVM only)
   --cross-target=<target_machine>   Use the cross-toolchain-helper to build WebKit for the specified machine (Linux platforms only)
@@ -272,14 +272,10 @@ if (isAppleCocoaWebKit()) {
 my $result = 0;
 
 if (isCMakeBuild() && !isAnyWindows() && !isWin()) {
-    # There is no CMake support for LLVM source-based coverage yet, and the CMake
-    # branch below never consumed --coverage, so passing it produced a completely
-    # uninstrumented build that looked successful. Fail loudly instead.
-    # https://webkit.org/b/264202
-    die "Error: --coverage is only supported by the Xcode build. Pass --xcode to build-webkit,\n"
-      . "       or unset the CMake build directory. (isCMakeBuild() is currently true, so\n"
-      . "       --coverage would otherwise be silently ignored.)\n" if $coverageSupport;
-
+    # --coverage reaches CMake through generateBuildSystemFromCMakeProject(), which
+    # turns coverageIsEnabled() into -DENABLE_COVERAGE=ON, and through
+    # determineConfigurationProductDir(), which puts the products in a Coverage
+    # directory of their own. https://webkit.org/b/264202
     if (defined $ENV{'BUILD_WEBKIT_PRE_SCRIPT'}) {
         my $preScript = $ENV{'BUILD_WEBKIT_PRE_SCRIPT'};
 

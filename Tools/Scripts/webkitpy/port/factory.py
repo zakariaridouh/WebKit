@@ -90,6 +90,15 @@ def configuration_options():
                              help='Use the Xcode build tree (e.g. WebKitBuild/<configuration>); overrides last-built auto-detection'),
         optparse.make_option('--asan', action='store_true', default=False, dest='asan',
                              help='Use the ASan (AddressSanitizer) build tree (with --cmake: WebKitBuild/cmake-mac/ASan). Does not require --debug/--release.'),
+        # Spelled --coverage-build rather than --coverage because run-webkit-tests
+        # already defines --coverage ("collect profiles from this run") in its own
+        # option group; optparse rejects a duplicate option string, but two options
+        # sharing a dest is fine, so both spellings land in options.coverage and mean
+        # "this is a coverage build tree".
+        optparse.make_option('--coverage-build', action='store_true', default=False, dest='coverage',
+                             help='Use the LLVM coverage build tree (with --cmake: WebKitBuild/cmake-mac/Coverage, '
+                                  'WebKitBuild/GTK/Coverage). Does not require --debug/--release. run-webkit-tests '
+                                  'spells this --coverage.'),
         optparse.make_option('--64-bit', action='store_const', const='x86_64', default=None, dest="architecture",
                              help='use 64-bit binaries by default (x86_64 instead of x86)'),
         optparse.make_option('--32-bit', action='store_const', const='x86', default=None, dest="architecture",

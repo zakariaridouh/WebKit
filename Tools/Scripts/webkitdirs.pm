@@ -1231,12 +1231,19 @@ sub determineConfigurationProductDir
     } elsif (usesPerConfigurationBuildDirectory()) {
         $configurationProductDir = "$baseProductDir";
     } elsif (isGtk() or isWPE() or isJSCOnly() or shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
-        $configurationProductDir = "$baseProductDir/$portName/$configuration";
+        # A coverage build's products are not interchangeable with a normal build's --
+        # every object carries counters and coverage mapping -- so it gets its own
+        # directory rather than clobbering Release or Debug. Same reasoning as the Cocoa
+        # CMake sanitizer directories below, and it matches the gtk-coverage /
+        # wpe-coverage CMake presets.
+        my $portConfiguration = coverageIsEnabled() ? "Coverage" : $configuration;
+        $configurationProductDir = "$baseProductDir/$portName/$portConfiguration";
     } elsif (isAppleCocoaWebKit() && isCMakeBuild()) {
-        # Sanitizer presets build into a dedicated dir, e.g. cmake-mac/ASan.
+        # Sanitizer and coverage presets build into a dedicated dir, e.g. cmake-mac/ASan.
         my $cmakeConfiguration = $configuration;
         $cmakeConfiguration = "ASan" if asanIsEnabled();
         $cmakeConfiguration = "TSan" if tsanIsEnabled();
+        $cmakeConfiguration = "Coverage" if coverageIsEnabled();
         $configurationProductDir = File::Spec->catdir($baseProductDir, cmakeCocoaTreeName(), $cmakeConfiguration);
     } else {
         $configurationProductDir = xcodeConfigurationProductDir();
@@ -2988,6 +2995,11 @@ sub generateBuildSystemFromCMakeProject
     push @args, "-DENABLE_SANITIZERS=undefined" if ubsanIsEnabled();
     push @args, "-DENABLE_SANITIZERS=fuzzer" if libFuzzerIsEnabled();
 
+    # ENABLE_COVERAGE turns on -fprofile-instr-generate -fcoverage-mapping globally and
+    # excludes Source/ThirdParty via -fprofile-list. On macOS it also implies
+    # ENABLE_LLVM_COVERAGE, which bakes /private/tmp/WebKitCoverage into the frameworks.
+    push @args, "-DENABLE_COVERAGE=ON" if coverageIsEnabled();
+
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 
     if (shouldUseVcpkg()) {
@@ -3273,12 +3285,16 @@ sub determineIsCMakeBuild()
         determineBaseProductDir();
         determineConfiguration();
 
-        # CMake sanitizer presets build into cmake-mac/ASan or cmake-mac/TSan, so
-        # resolve the tree the way determineConfigurationProductDir() does. Xcode
-        # toggles ASan within Debug/Release, so its path is unchanged.
+        # CMake sanitizer and coverage presets build into cmake-mac/ASan, cmake-mac/TSan or
+        # cmake-mac/Coverage, so resolve the tree the way determineConfigurationProductDir()
+        # does -- it has always had the Coverage case and this had only the sanitizer ones, so
+        # a coverage-only CMake tree was looked for under cmake-mac/Release, not found, and
+        # never detected. Xcode toggles ASan and coverage within Debug/Release, so its path is
+        # unchanged.
         my $cmakeConfiguration = $configuration;
         $cmakeConfiguration = "ASan" if asanIsEnabled();
         $cmakeConfiguration = "TSan" if tsanIsEnabled();
+        $cmakeConfiguration = "Coverage" if coverageIsEnabled();
         my $cmakeTreeName = cmakeCocoaTreeName();
         my $cmakeBuild = File::Spec->catdir($baseProductDir, $cmakeTreeName, $cmakeConfiguration);
         my $xcodeBuild = xcodeConfigurationProductDir();
