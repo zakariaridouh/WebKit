@@ -402,7 +402,7 @@ def parse_args(args):
     # doubled path: the port appends the configuration to whatever this is, so
     # .../WebKitBuild-Coverage/Release resolves to .../WebKitBuild-Coverage/Release/Release,
     # which exists nowhere and reports every product as not found. That is the shape every path
-    # in PLAN 1 is written in.
+    # in the documented recipes is written in.
     options.build_directory_note = None
     if options.build_directory:
         build_root = normalize_build_root(options.build_directory, options.configuration)

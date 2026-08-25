@@ -344,7 +344,7 @@ class InstrumentationFindingsTest(unittest.TestCase):
 
     def test_an_unbaked_test_support_binary_is_one_note_and_not_four_warnings(self):
         # jsc, libWebCoreTestSupport, webpushd and adattributiond really are in this state in the
-        # shipped build (PLAN 10.5), and they are excluded from the report by default, so nothing
+        # shipped build, and they are excluded from the report by default, so nothing
         # they do is misreported. Four identical warnings would train a reader to skip them.
         for relative in INSTRUMENTED_PRODUCTS:
             self.write_good(relative)

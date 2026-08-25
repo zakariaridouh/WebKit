@@ -166,7 +166,7 @@ class WebPlatformTestServer(http_server_base.HttpServerBase):
             # dnslib's DNSServer binds in its constructor, so this is the one layout-test port
             # that is claimed before start() and therefore before
             # _check_that_all_ports_are_available() can say anything about it. Left as bare
-            # `OSError: [Errno 48] Address already in use` it is the failure PLAN 2 records: a
+            # `OSError: [Errno 48] Address already in use` it is the documented failure: a
             # traceback about 80 s into a run, naming no port, no holder and no remedy.
             try:
                 self._dns_server = DNSServer(Resolver(

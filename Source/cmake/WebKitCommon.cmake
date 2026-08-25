@@ -457,27 +457,14 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
             "Configure a separate build directory for each.")
     endif ()
 
-    # ENABLE_LLVM_COVERAGE defines __llvm_profile_filename in one translation unit per
-    # framework. Under LTO the link sees the definition more than once and fails on the
-    # duplicate -- the same clash the PGO path above demotes with
-    # -Wl,--allow-multiple-definition, which no Mach-O linker here offers (OptionsCommon.cmake
-    # only sets LD_SUPPORTS_ALLOW_MULTIPLE_DEFINITION when `<cc> -Wl,--help` advertises it on
-    # stdout, and on this host that stdout is empty). Only PGO and the sanitizers were
-    # refused, so a developer who had run `set-webkit-configuration --lto-mode=thin` got that
-    # link failure with nothing connecting it to the flag. LTO_MODE has already been
-    # normalised in WebKitCompilerFlags.cmake, so "none" does not reach here as a mode.
-    # No coverage+LTO refusal here, deliberately. One was added and then measured away: the
-    # justification was that ENABLE_LLVM_COVERAGE's per-framework __llvm_profile_filename
-    # definitions collide under LTO, and on this port they cannot, because there is exactly one
-    # definition per image -- checked across all five frameworks, with none of libWTF.a,
-    # libbmalloc.a, libPAL.a or libWGSLCore.a contributing another. A duplicate needs two strong
-    # definitions in one link, which is the single-image-port case the
-    # LD_SUPPORTS_ALLOW_MULTIPLE_DEFINITION handling above already covers, and it fails the same
-    # way with or without LTO. Verified rather than assumed: ENABLE_COVERAGE=ON with
-    # LTO_MODE=thin builds and links JavaScriptCore.framework in 2:36, exit 0, no duplicate
-    # symbols, 33,120 __profc_ symbols and its baked profile path intact. The Xcode path reaches
-    # the same conclusion independently (see PLAN.md section 6).
-
+    # Coverage under LTO is deliberately not refused. A refusal was added here and then
+    # measured away: it assumed ENABLE_LLVM_COVERAGE's per-framework __llvm_profile_filename
+    # definitions collide under LTO, and on this port they cannot, because each image has
+    # exactly one -- checked across all five frameworks, with none of libWTF.a, libbmalloc.a,
+    # libPAL.a or libWGSLCore.a contributing another. A duplicate needs two strong definitions
+    # in one link and fails the same way with or without LTO. Measured: ENABLE_COVERAGE=ON with
+    # LTO_MODE=thin links JavaScriptCore.framework in 2:36, no duplicate symbols, 33,120
+    # __profc_ symbols, baked profile path intact.
 
     if (ENABLE_COVERAGE)
         # CMAKE_CURRENT_LIST_DIR, not CMAKE_SOURCE_DIR: this file is also included

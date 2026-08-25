@@ -50,7 +50,7 @@ always MORE tests -- a wrong suggestion that is too wide costs minutes, and one 
 narrow produces a coverage number that is a lower bound nobody knows is a lower bound.
 
 Every suggested path is checked against the filesystem before it is offered, which caught the
-one place where PLAN 10.3's premise is looser than it reads. Directory-name alignment holds
+one place where that premise is looser than it reads. Directory-name alignment holds
 literally for 6 of the 10 directories it names -- svg, dom, editing, accessibility, mathml and
 workers all have a LayoutTests directory of that name -- and does not for css, html, animation
 or xml: there is no LayoutTests/css, LayoutTests/html or LayoutTests/animation, and no
@@ -75,14 +75,14 @@ LAYOUT_TESTS_DIRECTORY = 'LayoutTests'
 WATCHLIST_PATH = os.path.join('Tools', 'Scripts', 'webkitpy', 'common', 'config', 'watchlist')
 
 # Directories whose blast radius is the whole suite, so nothing under them gets a suggestion.
-# From PLAN 10.3, and matched against whole path components rather than as a substring: a
+# Matched against whole path components rather than as a substring: a
 # component test keeps Source/WebCore/css/StyleRule.cpp out of the "style" case, which a
 # substring test would swallow, and it correctly does not treat Source/WebKit/.../WebPage.cpp as
 # the "page" case -- that path gets no suggestion anyway, because no rule produces one for it.
 #
-# Note dom appears both here and in PLAN 10.3's list of aligned directories. This list wins:
+# Note dom appears both here and among the aligned directories. This list wins:
 # every one of the top 19 most-changed implementation files in the tree is indeterminate by
-# PLAN 10.2's measurement, and Document.cpp is one of them, so declining is the honest answer and
+# the measurement, and Document.cpp is one of them, so declining is the honest answer and
 # it is also the safe direction.
 UNSCOPABLE_COMPONENTS = re.compile(
     r'platform|rendering|style|layout|page|bindings|loader|dom|testing', re.IGNORECASE)
@@ -114,7 +114,7 @@ _BASELINE_SUFFIX = re.compile(r'-expected(-mismatch)?\.[A-Za-z0-9]+$')
 _TEST_FILE_EXTENSIONS = ('.html', '.xhtml', '.svg', '.xml', '.htm', '.mht', '.pdf', '.php')
 
 DECLINED_NOT_CODE = 'not a C, C++ or Objective-C source file'
-DECLINED_UNSCOPABLE = ('under {}, whose blast radius is the whole suite -- PLAN 10.2 measured '
+DECLINED_UNSCOPABLE = ('under {}, whose blast radius is the whole suite -- measurement put '
                        'every one of the 19 most-changed implementation files in the tree as '
                        'indeterminate')
 DECLINED_NO_RULE = 'no name-based rule maps it to any layout tests'
@@ -284,7 +284,7 @@ def _literal_test_paths(candidates, checkout_root):
 def _aligned_candidates(relative_path):
     """Layout-test paths that a Source/ path's own directory name suggests, before filtering.
 
-    Source/WebCore/<name>/ and Source/WebCore/Modules/<name>/ are the two shapes PLAN 10.3 names.
+    Source/WebCore/<name>/ and Source/WebCore/Modules/<name>/ are the two shapes that align.
     The plural and the fast/ and imported-wpt forms are generated as well, because the literal
     form is absent for four of the ten directories the plan lists -- there is no LayoutTests/css,
     LayoutTests/html or LayoutTests/animation -- and generating candidates that are then checked
@@ -485,7 +485,7 @@ def layout_test_names(port, paths):
     tests'. Both numbers have to come from the same place as each other and from the same place
     the harness gets them, or the shortfall is a comparison of two different definitions of
     "a test". Measured at about 7 s of CPU for the whole suite over a warm filesystem, and 2,893
-    for `svg`, which is exactly the figure PLAN 10.2 reports.
+    for `svg`, which is exactly the measured figure.
 
     Note this is the finder's count BEFORE expectations are applied, so it is larger than the
     number a run reports having executed -- 106,172 against the 95,936 of the full-suite run,

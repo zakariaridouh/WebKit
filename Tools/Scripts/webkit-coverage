@@ -30,7 +30,7 @@
     Tools/Scripts/webkit-coverage --full-suite        # all 106,172 layout tests
 
 Until now this took three things a developer had to know independently, none of which was checked
-and none of which was documented outside PLAN.md: build-webkit --coverage,
+and none of which was documented in the tree: build-webkit --coverage,
 ENABLE_USER_SCRIPT_SANDBOXING=NO, and a WEBKIT_OUTPUTDIR of its own. Forget the first and the
 run completes, exits 0 and collects nothing -- with the only warning arriving after the run,
 which for the layout suite is hours later.
@@ -40,9 +40,9 @@ So this does five things, in this order, and prints what it is doing at each ste
 1.  Resolves one build tree and says where it came from. webkit-build-directory applies a
     last-built tiebreaker and will hand out the wrong tree, so nothing here asks it.
 2.  Pre-flights that the binaries are actually instrumented, which takes 0.34 s for all nine
-    products and is the single biggest win in the tool. Also checks the things PLAN 2 says cost
+    products and is the single biggest win in the tool. Also checks the things known to cost
     hours: an orphaned httpd or pywebsocket3 from a killed run, a held profile-directory lock,
-    and an ambiguous llvm-cov (this machine has an LLVM 3.2svn one on PATH).
+    and an ambiguous llvm-cov.
 3.  Builds if it has to, forcing the required settings and printing each one with its reason.
 4.  Resolves a test scope and prints it. A suggestion is never applied automatically -- see
     below.
@@ -117,8 +117,8 @@ THE SUGGESTION
   Name-based and advisory, from the 12 watchlist DEFINITIONS blocks that co-map Source/ to
   LayoutTests/, from directory-name alignment, and from the tests the change itself edits or
   rebaselines. It is never applied automatically, and it declines whenever it has no rule --
-  which is most of the time, and correctly: PLAN 10.2 measured the mean blast radius of a real
-  change at 86.1% of the suite, with p25 through p90 all at 100%.
+  which is most of the time, and correctly: the measured mean blast radius of a real change is
+  86.1% of the suite, with p25 through p90 all at 100%.
 """.format(gate=COVERAGE_GATE_EXIT_CODE, scope=NEEDS_A_SCOPE_EXIT_CODE)
 
 
@@ -285,7 +285,7 @@ def changed_paths(checkout_root, ref):
     """(checkout-relative changed paths, the change's unified diff).
 
     core.fsmonitor is off, because it is on in this checkout and has been observed reporting a
-    clean tree that was not clean (PLAN 2). A scope resolved from a file list that silently
+    clean tree that was not clean. A scope resolved from a file list that silently
     omits the file the developer just edited is the failure this tool exists to prevent.
     """
     def git(*arguments):
@@ -323,7 +323,7 @@ def print_scope_suggestion(suggestion, limit=20):
                'whose blast radius is the whole suite:')
         print_declined(suggestion.declined)
         bullet('So scope it yourself, or run the suite. That is the honest answer and not a '
-               'gap in the tool: PLAN 10.2 measured the mean blast radius of a real change at '
+               'gap in the tool: the measured mean blast radius of a real change is '
                '86.1% of the suite, with p25 through p90 all at 100%.')
         return
     tests = suggestion.tests
@@ -390,8 +390,8 @@ def probe_profile_directory_lock():
 
     Advisory, and deliberately not held: the harness acquires it for the run itself, and flock is
     per open file, so holding it here would make the harness's own acquisition fail. What this
-    buys is failing in a second rather than after a build -- PLAN 8.2 S8's two concurrent runs
-    destroy each other's profiles in both directions.
+    buys is failing in a second rather than after a build -- two concurrent runs destroy
+    each other's profiles in both directions.
     """
     from webkitpy.coverage_requirements import Finding
 
@@ -511,7 +511,7 @@ def main(args):
     if options.api_tests is None:
         bullet('The API tests are not being run, so a line only TestWebKitAPI reaches will be '
                'reported as uncovered. Pass --api-tests="" to run them too. The full-suite figures'
-               ' in PLAN 3 are an API run and a layout run folded together.')
+               ' are an API run and a layout run folded together.')
 
     output_dir = options.output_dir or os.path.join(build_root, 'coverage-report')
     coverage_dir = options.coverage_dir or os.path.join(build_root, 'coverage-profiles')
