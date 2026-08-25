@@ -113,6 +113,54 @@ TEST_SUPPORT_PRODUCTS = (
     'adattributiond',
 )
 
+# Instrumented, and they write profiles that a run collects, but no report describes them and none
+# can: the test driver and its injected bundles, the XPC services, the API and JSC test binaries and
+# the build's own tools. Unlike TEST_SUPPORT_PRODUCTS there is no flag that opts them in.
+#
+# They are here so that the collected-but-unclaimed guard in generate-coverage-report can tell its
+# two cases apart. "This run wrote Foo_*.profraw and nothing in the report claims to be Foo" is the
+# bug that guard exists for -- a product missing from INSTRUMENTED_PRODUCTS, whose code is then
+# reported as not existing. "This run wrote WebKitTestRunner_*.profraw" is not that; it is the
+# report doing what it is asked. Before this list the guard warned about both, which on a healthy
+# CMake run meant most of what was collected, and a guard that fires on every healthy run stops
+# being read.
+#
+# These are profile-name groups, not paths: a coverage build bakes
+# /private/tmp/WebKitCoverage/<name>_%4m%c.profraw into each. The list is the CMake build's, taken
+# from the <target>_CoverageProfilePath.cpp files WEBKIT_BAKE_COVERAGE_PROFILE_PATH generates, and
+# verified against a full mac-coverage build. The Xcode build names its XPC services after
+# PRODUCT_NAME instead -- com.apple.WebKit.WebContent and siblings -- so this is incomplete there
+# and the guard will still warn about those. Recorded rather than hidden: a wrong entry here
+# silences a real finding, so it fails toward warning.
+UNREPORTED_PROFILE_WRITERS = (
+    'GPUProcess',
+    'ImageDiff',
+    'MallocBench',
+    'NetworkProcess',
+    'TestIPC',
+    'TestJavaScriptCore',
+    'TestRunnerInjectedBundle',
+    'TestWGSL',
+    'TestWTF',
+    'TestWebCore',
+    'TestWebKit',
+    'TestWebKitAPIInjectedBundle',
+    'TestWebKitAPIWebProcessPlugIn',
+    'TestWebKitLegacy',
+    'WebKitTestRunner',
+    'WebProcess',
+    'WebProcessCaptivePortal',
+    'WebProcessEnhancedSecurity',
+    'testair',
+    'testapi',
+    'testb3',
+    'testdfg',
+    'testmasm',
+    'testwasmdebugger',
+    'testRegExp',
+    'wgslc',
+)
+
 # Everything --products may name. Both lists, because --products restricts both.
 KNOWN_PRODUCTS = INSTRUMENTED_PRODUCTS + TEST_SUPPORT_PRODUCTS
 

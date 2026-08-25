@@ -58,8 +58,8 @@ from webkitpy.coverage_lcov import (
 from webkitpy.coverage_provenance import (
     add_trace_measurements, provenance_record, summary_lines, trace_comment, write_provenance)
 from webkitpy.coverage_requirements import (
-    INSTRUMENTED_PRODUCTS, KNOWN_PRODUCTS, TEST_SUPPORT_PRODUCTS, normalize_build_root,
-    product_name)
+    INSTRUMENTED_PRODUCTS, KNOWN_PRODUCTS, TEST_SUPPORT_PRODUCTS, UNREPORTED_PROFILE_WRITERS,
+    normalize_build_root, product_name)
 from webkitpy.coverage_scope import CoverageScope
 from webkitpy.coverage_suites import (
     SuiteSpecError, check_union_equals_combined, line_totals, log_union_check,
@@ -69,7 +69,8 @@ from webkitpy.coverage_thresholds import (
     option_name, thresholds_from_options)
 from webkitpy.llvm_profile_utils import (
     LLVMCov, UNREADABLE_RAW_PROFILE_LIMIT, collected_profiles_with_no_object,
-    merge_raw_profiles_in_directory, objects_with_no_profile_data, survey_instrumentation)
+    merge_raw_profiles_in_directory, objects_with_no_profile_data,
+    partition_unclaimed_profiles, survey_instrumentation)
 from webkitpy.port import configuration_options, platform_options
 
 _log = logging.getLogger('generate-coverage-report')
@@ -581,17 +582,27 @@ def warn_about_collected_profiles_with_no_object(objects, raw_profiles):
     orphans = collected_profiles_with_no_object(objects, raw_profiles)
     if not orphans:
         return
-    total = sum(len(paths) for _, paths in orphans)
+    unexplained, expected = partition_unclaimed_profiles(orphans, UNREPORTED_PROFILE_WRITERS)
+    if expected:
+        _log.info('%d of the %d raw profiles this run collected were written by binaries this '
+                  'report does not describe, which is by design: %s',
+                  sum(len(paths) for _, paths in expected), len(raw_profiles),
+                  ', '.join(group + '*' for group, _ in expected))
+    if not unexplained:
+        return
+    total = sum(len(paths) for _, paths in unexplained)
     _log.warning('%d of the %d raw profiles this run collected were written by something no '
                  'binary in this report claims to be, so their coverage is in the indexed '
                  'profile and in none of the report:', total, len(raw_profiles))
-    for group, paths in orphans:
+    for group, paths in unexplained:
         megabytes = sum(os.path.getsize(path) for path in paths
                         if os.path.exists(path)) / 1e6
         _log.warning('    %s*: %d profiles, %.1f MB, for example %s', group, len(paths),
                      megabytes, os.path.basename(paths[0]))
     _log.warning('    Add the binary that writes each of those to --products/INSTRUMENTED_PRODUCTS '
-                 'or pass it with --object, or the code in it is reported as not existing.')
+                 'or pass it with --object, or the code in it is reported as not existing. If it is '
+                 'a driver, service or test binary no report should describe, add its name to '
+                 'UNREPORTED_PROFILE_WRITERS instead.')
 
 
 def summarize_suites(source_root, suite_lcov_paths, combined_by_path):

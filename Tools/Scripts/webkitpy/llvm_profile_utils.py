@@ -614,6 +614,29 @@ def collected_profiles_with_no_object(binary_paths, raw_profile_paths):
     return sorted(groups.items())
 
 
+def partition_unclaimed_profiles(orphans, unreported_writer_names):
+    """Split collected_profiles_with_no_object()'s result into unexplained and expected.
+
+    ([(group, paths)] nothing describes, [(group, paths)] a known non-report writer wrote).
+
+    An orphan group is only interesting if nothing accounts for it. A run collects
+    WebKitTestRunner_*, WebProcess_*, TestWTF_* and the rest because a coverage build bakes a
+    profile path into every executable and bundle, and the report describes none of them by design
+    -- so warning about those is warning about the tool working. Warning about all of them together
+    is worse than warning about neither, because the one that matters is a product whose code the
+    report is silently missing, and it arrives in the same paragraph as twenty that do not matter.
+
+    Matching is on the group, so it is exact: collected_profile_group() already reduced
+    'WebProcess_4820_0.profraw' to 'WebProcess_', and a coverage build bakes
+    '<name>_%4m%c.profraw', so 'WebProcess' in the list means that group and no other. A name in
+    the list that nothing writes costs nothing; a writer missing from the list still warns.
+    """
+    expected_groups = {name + '_' for name in unreported_writer_names}
+    unexplained = [entry for entry in orphans if entry[0] not in expected_groups]
+    expected = [entry for entry in orphans if entry[0] in expected_groups]
+    return unexplained, expected
+
+
 # uninstrumented: [(path, reason)] for binaries with no coverage instrumentation at all.
 # unverifiable: [(path, reason)] for instrumented binaries whose profile path cannot be read.
 InstrumentationSurvey = namedtuple('InstrumentationSurvey', ('uninstrumented', 'unverifiable'))
