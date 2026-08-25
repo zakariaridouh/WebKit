@@ -34,11 +34,12 @@ import unittest
 from unittest import mock
 
 from webkitpy import llvm_profile_utils
+from webkitpy.coverage_requirements import UNREPORTED_PROFILE_WRITERS
 from webkitpy.llvm_profile_utils import (
     COVERAGE_PROFILE_DIRECTORY, CoverageProfileDirectoryInUse, LLVMCov, LLVMCovExecutable,
     acquire_coverage_profile_directory_lock, collect_coverage_profiles,
     collected_profiles_with_no_object, coverage_profile_directory_holder,
-    coverage_profile_lock_path, objects_with_no_profile_data,
+    coverage_profile_lock_path, objects_with_no_profile_data, partition_unclaimed_profiles,
     prepare_coverage_profile_directory, profile_name_prefix, read_instrumentation,
     release_coverage_profile_directory_lock, survey_instrumentation,
     unreadable_profiles_from_stderr)
@@ -318,6 +319,49 @@ class CollectedProfilesWithNoObjectTest(_MachOFixture):
         orphans = collected_profiles_with_no_object(
             [os.path.join(self.directory, 'does-not-exist')], ['/tmp/cov/WebKit_1_0.profraw'])
         self.assertEqual([group for group, _ in orphans], ['WebKit_'])
+
+
+class PartitionUnclaimedProfilesTest(unittest.TestCase):
+    ORPHANS = [
+        ('WebKitTestRunner_', ['/tmp/cov/WebKitTestRunner_1_0.profraw']),
+        ('WebProcess_', ['/tmp/cov/WebProcess_1_0.profraw', '/tmp/cov/WebProcess_1_1.profraw']),
+        ('WebKitLegacy_', ['/tmp/cov/WebKitLegacy_1_0.profraw']),
+    ]
+
+    def test_a_known_non_report_writer_is_expected_and_a_framework_is_not(self):
+        # The whole point: WebKitLegacy missing from INSTRUMENTED_PRODUCTS is the bug the guard
+        # exists for, and it must survive the same call that quietens the driver and the service.
+        unexplained, expected = partition_unclaimed_profiles(
+            self.ORPHANS, ('WebKitTestRunner', 'WebProcess'))
+        self.assertEqual([group for group, _ in unexplained], ['WebKitLegacy_'])
+        self.assertEqual([group for group, _ in expected], ['WebKitTestRunner_', 'WebProcess_'])
+
+    def test_matching_is_on_the_whole_group_and_not_a_prefix(self):
+        # 'WebKit' in the list must not swallow WebKitLegacy_ or WebKitTestRunner_.
+        unexplained, expected = partition_unclaimed_profiles(self.ORPHANS, ('WebKit',))
+        self.assertEqual(len(unexplained), 3)
+        self.assertEqual(expected, [])
+
+    def test_an_empty_list_leaves_everything_unexplained(self):
+        unexplained, expected = partition_unclaimed_profiles(self.ORPHANS, ())
+        self.assertEqual(unexplained, self.ORPHANS)
+        self.assertEqual(expected, [])
+
+    def test_the_runtime_fallback_profile_is_never_expected(self):
+        # default.profraw has no underscore, so no '<name>_' entry can match it, which is right:
+        # nothing bakes that name, so something wrote it by accident.
+        orphans = [('default.profraw', ['/tmp/cov/default.profraw'])]
+        unexplained, expected = partition_unclaimed_profiles(orphans, UNREPORTED_PROFILE_WRITERS)
+        self.assertEqual(unexplained, orphans)
+        self.assertEqual(expected, [])
+
+    def test_the_shipped_list_covers_the_drivers_and_services_a_run_collects(self):
+        collected = [(name + '_', ['/tmp/cov/{}_1_0.profraw'.format(name)]) for name in
+                     ('WebKitTestRunner', 'TestRunnerInjectedBundle', 'WebProcess', 'GPUProcess',
+                      'NetworkProcess', 'TestWTF')]
+        unexplained, expected = partition_unclaimed_profiles(collected, UNREPORTED_PROFILE_WRITERS)
+        self.assertEqual(unexplained, [])
+        self.assertEqual(len(expected), len(collected))
 
 
 class SurveyInstrumentationTest(_MachOFixture):
