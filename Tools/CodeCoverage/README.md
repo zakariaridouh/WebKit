@@ -64,9 +64,14 @@ Tools/CodeCoverage/run-cmake-coverage.sh --api-tests WTF --no-layout-tests --sou
 Tools/CodeCoverage/run-cmake-coverage.sh                          # the whole suite; hours
 ```
 
-It exits non-zero on any failure and prints the path to the HTML report. Note that
-`Tools/Scripts/webkit-coverage` is the Xcode-only equivalent and answers a different question
--- how well tested are the lines this patch added.
+It exits non-zero on any failure and prints the path to the HTML report.
+
+For the other question -- are the lines I just wrote tested -- `webkit-coverage` takes
+`--cmake` and runs the whole thing against this tree, scoping the report to the change:
+
+```sh
+Tools/Scripts/webkit-coverage --cmake fast/dom
+```
 
 The steps underneath it:
 
