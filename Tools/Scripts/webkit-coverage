@@ -26,6 +26,7 @@
 """Are the lines I just wrote tested? One command, from an unbuilt tree to one number.
 
     Tools/Scripts/webkit-coverage svg/                # measure my change, running svg/
+    Tools/Scripts/webkit-coverage --cmake svg/        # the same against the CMake build
     Tools/Scripts/webkit-coverage --dry-run           # what would it do, and what should I run?
     Tools/Scripts/webkit-coverage --full-suite        # all 106,172 layout tests
 
@@ -34,6 +35,12 @@ and none of which was documented in the tree: build-webkit --coverage,
 ENABLE_USER_SCRIPT_SANDBOXING=NO, and a WEBKIT_OUTPUTDIR of its own. Forget the first and the
 run completes, exits 0 and collects nothing -- with the only warning arriving after the run,
 which for the layout suite is hours later.
+
+--cmake runs the whole thing against the CMake build instead, where none of those three apply:
+the mac-coverage preset carries ENABLE_COVERAGE=ON and its own binaryDir, and there is no
+sandbox-exec around a script phase to disable. What does apply is that the preset must be
+configured, so the build step here is a configure and then a build -- a tree configured without
+it builds perfectly and produces nothing.
 
 So this does five things, in this order, and prints what it is doing at each step:
 
@@ -192,7 +199,34 @@ def parse_args(args):
         parser.error('--full-suite means every test, so it cannot be combined with a test list')
     if options.fail_under_patch is not None and not 0 <= options.fail_under_patch <= 100:
         parser.error('--fail-under-patch is a percentage, so it has to be between 0 and 100')
+    if options.use_cmake and cmake_preset(options) is None:
+        parser.error('--cmake has no coverage preset for platform {}. Coverage on the CMake '
+                     'build is macOS-only: ENABLE_LLVM_COVERAGE is keyed on WEBKIT_SDK_IS_MACOS '
+                     'in Source/cmake/WebKitFeatures.cmake.'.format(options.platform))
     return options, tests
+
+
+# --cmake resolves the tree through the port, and the port needs to be told it is a coverage
+# tree: --coverage-build is what puts it in cmake-mac/Coverage rather than cmake-mac/Release.
+# Every tree this tool can describe is one, so it is a default rather than a flag, which is the
+# same reasoning generate-coverage-report uses.
+_PORT_DEFAULTS = {'coverage': True}
+
+
+def cmake_preset(options):
+    """The CMake preset that configures a coverage build for this platform, or None.
+
+    The preset names are in CMakePresets.json. Only the mac one can work: the three coverage
+    presets exist, but ENABLE_LLVM_COVERAGE is gated on WEBKIT_SDK_IS_MACOS, so gtk-coverage
+    and wpe-coverage configure a tree with no instrumentation in it. They are named here anyway
+    so that the failure is CMake's, about the thing that is actually unsupported, rather than
+    this tool guessing at a preset name.
+    """
+    platform = options.platform or 'mac'
+    for prefix in ('mac', 'gtk', 'wpe'):
+        if platform.startswith(prefix):
+            return prefix + '-coverage'
+    return None
 
 
 def heading(text):
@@ -237,6 +271,11 @@ def resolve_build_root(options, checkout_root):
     Absolute, because every command this tool prints should be one a developer can paste
     somewhere else, and because the harnesses are run with the checkout as their working
     directory rather than with the developer's.
+
+    With --cmake the answer comes from the port, which is what generate-coverage-report and
+    both harnesses will do for themselves, so the four of them cannot disagree about which tree
+    this run is about. Without it the tree is chosen here, deliberately, because
+    webkit-build-directory applies a last-built tiebreaker.
     """
     if options.build_directory:
         root = normalize_build_root(os.path.abspath(options.build_directory),
@@ -244,6 +283,11 @@ def resolve_build_root(options, checkout_root):
         if root.note:
             bullet(root.note)
         return root.root, '--build-directory'
+    if options.use_cmake:
+        for name, value in _PORT_DEFAULTS.items():
+            setattr(options, name, value)
+        port = Host().port_factory.get(options.platform, options)
+        return port._build_path(), "the {} preset's own directory".format(cmake_preset(options))
     from_environment = build_directory_from_environment()
     if from_environment:
         root = normalize_build_root(os.path.abspath(from_environment), options.configuration)
@@ -256,7 +300,20 @@ def resolve_build_root(options, checkout_root):
 
 
 def build_command(options):
-    """The build-webkit command line, and the lines explaining what was added to it."""
+    """([command, ...], the lines explaining what was added to them).
+
+    A list, because a CMake build is a configure and then a build, and the configure is not
+    optional: the preset is what turns coverage on, and a tree configured without it builds
+    perfectly and produces nothing.
+    """
+    if options.use_cmake:
+        preset = cmake_preset(options)
+        return ([['cmake', '--preset', preset],
+                 ['cmake', '--build', '--preset', preset]],
+                ['the {} preset carries ENABLE_COVERAGE=ON, so there is nothing to add to it -- '
+                 'which is the point of using it rather than a list of -D flags'.format(preset),
+                 'ENABLE_USER_SCRIPT_SANDBOXING=NO is not needed here: it exists because Xcode '
+                 'wraps script phases in sandbox-exec, and CMake does not'])
     added = missing_build_settings(options.build_arguments)
     conflicts = conflicting_build_settings(options.build_arguments)
     command = coverage_build_command(options.configuration,
@@ -268,7 +325,7 @@ def build_command(options):
         explanations.append('you passed {} and {} is required, and yours is last on the command '
                             'line so yours wins -- which will not work: {}'.format(
                                 given, setting.argument, setting.why))
-    return command, explanations
+    return [command], explanations
 
 
 def default_since_ref(checkout_root):
@@ -425,14 +482,27 @@ def main(args):
 
     heading('Build tree')
     build_root, provenance = resolve_build_root(options, checkout_root)
-    build_path = os.path.join(build_root, configuration)
+    # A CMake tree keeps its products in the configured directory itself; an Xcode one keeps them
+    # in a subdirectory per configuration, because WEBKIT_OUTPUTDIR becomes SYMROOT and xcodebuild
+    # always appends $(CONFIGURATION) to that.
+    build_path = build_root if options.use_cmake else os.path.join(build_root, configuration)
     bullet('{} ({}), from {}'.format(build_root, configuration, provenance))
     bullet('Everything below uses that one tree. webkit-build-directory is not consulted: it '
            'applies a last-built tiebreaker and will hand out a different tree than the one the '
            'tests ran against.')
-    overrides = {BUILD_OUTPUT_ENVIRONMENT_VARIABLE: build_root}
+    # WEBKIT_OUTPUTDIR is how the Xcode build is pointed at a tree of its own. Setting it for a
+    # CMake run would be worse than useless: the preset's binaryDir already decides, and an
+    # environment variable that half the tools read is how two of them end up disagreeing.
+    overrides = {} if options.use_cmake else {BUILD_OUTPUT_ENVIRONMENT_VARIABLE: build_root}
+    # --cmake has to reach the harnesses and the report even when the tree was named
+    # explicitly: it decides the directory layout they expect, not just which directory.
+    build_style = ['--cmake'] if options.use_cmake else []
+    if options.build_directory or not options.use_cmake:
+        build_style.append('--build-directory=' + build_root)
 
-    command, explanations = build_command(options)
+    commands, explanations = build_command(options)
+    # The remedy printed by the pre-flight is the command that builds, not the one that configures.
+    command = commands[-1]
     heading('Pre-flight')
     survey = survey_products(build_path)
     bullet('Read {} products in {:.2f} s: {} instrumented, {} uninstrumented, {} not '
@@ -532,9 +602,10 @@ def main(args):
             bullet(explanation)
         bullet('Not silently corrected: those are the settings a coverage build needs, and the '
                'command below is the one to run by hand next time.')
-        if run(command, overrides=overrides, dry_run=options.dry_run, cwd=checkout_root):
-            _log.error('The build failed. Nothing has been run.')
-            return 1
+        for one in commands:
+            if run(one, overrides=overrides, dry_run=options.dry_run, cwd=checkout_root):
+                _log.error('The build failed. Nothing has been run.')
+                return 1
         if not options.dry_run:
             survey = survey_products(build_path)
             if report_findings(instrumentation_findings(survey, build_path, command)):
@@ -550,7 +621,7 @@ def main(args):
                       '--' + configuration.lower(), '--coverage',
                       '--coverage-dir=' + (coverage_dir + '-layout' if options.api_tests is not None
                                            else coverage_dir),
-                      '--build-directory=' + build_root, *tests]
+                      *build_style, *tests]
     if run(layout_command, overrides=overrides, dry_run=options.dry_run, cwd=checkout_root):
         # Not fatal. A test failure is a test failure, and the coverage of a run with failures is
         # still the coverage of that run -- the profiles are collected in a finally block exactly
@@ -561,7 +632,7 @@ def main(args):
         api_command = [os.path.join('Tools', 'Scripts', 'run-api-tests'),
                        '--' + configuration.lower(), '--coverage',
                        '--coverage-dir=' + coverage_dir + '-api',
-                       '--build-directory=' + build_root]
+                       *build_style]
         api_command += options.api_tests.split()
         if run(api_command, overrides=overrides, dry_run=options.dry_run, cwd=checkout_root):
             bullet('run-api-tests exited non-zero. Continuing, for the same reason.')
@@ -572,7 +643,7 @@ def main(args):
         os.makedirs(coverage_dir, exist_ok=True)
         scope.write(scope_file)
     report_command = [os.path.join('Tools', 'Scripts', 'generate-coverage-report'),
-                      '--' + configuration.lower(), '--build-directory=' + build_root,
+                      '--' + configuration.lower(), *build_style,
                       '--output-dir=' + output_dir, '--test-scope-file=' + scope_file]
     if options.api_tests is not None:
         report_command += ['--suite=layout:' + coverage_dir + '-layout',

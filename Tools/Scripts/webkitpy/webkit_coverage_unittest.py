@@ -106,10 +106,18 @@ class ExitCodeTest(_Script):
 
 
 class BuildCommandTest(_Script):
-    def command(self, arguments=()):
+    def command(self, arguments=(), use_cmake=False, platform=None):
         options = optparse.Values({'configuration': 'Release',
-                                   'build_arguments': list(arguments)})
-        return self.script.build_command(options)
+                                   'build_arguments': list(arguments),
+                                   'use_cmake': use_cmake,
+                                   'platform': platform})
+        commands, explanations = self.script.build_command(options)
+        if not use_cmake:
+            # The Xcode path is one command, and a second one appearing would mean something
+            # ran that these assertions never looked at.
+            self.assertEqual(len(commands), 1)
+            return commands[0], explanations
+        return commands, explanations
 
     def test_the_command_carries_every_required_setting(self):
         command, _ = self.command()
@@ -137,6 +145,32 @@ class BuildCommandTest(_Script):
         command, _ = self.command(['ENABLE_WEBGPU=NO'])
         self.assertEqual(command[-1], 'ENABLE_WEBGPU=NO')
 
+    def test_cmake_configures_before_it_builds(self):
+        # Both, in that order, and not one: the preset is what turns coverage on, so a tree
+        # configured without it builds perfectly and produces nothing.
+        commands, _ = self.command(use_cmake=True)
+        self.assertEqual(commands, [['cmake', '--preset', 'mac-coverage'],
+                                    ['cmake', '--build', '--preset', 'mac-coverage']])
+
+    def test_cmake_needs_none_of_the_xcode_settings(self):
+        commands, explanations = self.command(use_cmake=True)
+        flattened = [argument for command in commands for argument in command]
+        for argument in ('--coverage', '--xcode', 'ENABLE_USER_SCRIPT_SANDBOXING=NO'):
+            self.assertNotIn(argument, flattened)
+        # Still explained rather than silently absent, which is the rule the tool is built on.
+        self.assertTrue(any('ENABLE_USER_SCRIPT_SANDBOXING' in explanation
+                            for explanation in explanations))
+
+    def test_the_cmake_preset_follows_the_platform(self):
+        self.assertEqual(self.script.cmake_preset(optparse.Values({'platform': None})),
+                         'mac-coverage')
+        self.assertEqual(self.script.cmake_preset(optparse.Values({'platform': 'mac-sequoia'})),
+                         'mac-coverage')
+        self.assertEqual(self.script.cmake_preset(optparse.Values({'platform': 'gtk'})),
+                         'gtk-coverage')
+        # No preset rather than a guessed one, so parse_args can refuse with a reason.
+        self.assertIsNone(self.script.cmake_preset(optparse.Values({'platform': 'win'})))
+
 
 class BuildRootTest(_Script):
     def setUp(self):
@@ -147,9 +181,11 @@ class BuildRootTest(_Script):
             self.addCleanup(os.environ.__setitem__, BUILD_OUTPUT_ENVIRONMENT_VARIABLE,
                             self.original)
 
-    def resolve(self, build_directory=None):
+    def resolve(self, build_directory=None, use_cmake=False, platform=None):
         options = optparse.Values({'build_directory': build_directory,
-                                   'configuration': 'Release'})
+                                   'configuration': 'Release',
+                                   'use_cmake': use_cmake,
+                                   'platform': platform})
         with contextlib.redirect_stdout(io.StringIO()):
             return self.script.resolve_build_root(options, self.checkout)
 
