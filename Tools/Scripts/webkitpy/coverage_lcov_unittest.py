@@ -208,6 +208,55 @@ class GeneratorFixtureTest(_Checkout):
                          self.absolute('Source/WebCore/testing/Internals.h'))
 
 
+class CMakeStagedHeaderTest(_Checkout):
+    """The CMake build stages copied headers under <build>/<project>/Headers/<subdir>/.
+
+    None of the Xcode markers appear in those paths, so before this was taught every one of
+    them was reported under the build directory -- and 131 of WTF's were reported there *and*
+    under Source/WTF/wtf, from the translation units that reach them through -I Source/WTF.
+    One file, two rows, counted twice in the denominator with its coverage split between them.
+    """
+
+    BUILD = '/tmp/WebKitBuild/cmake-mac/Coverage'
+
+    def canonicalize(self, relative_source, staged):
+        self.write(relative_source)
+        canonicalizer = PathCanonicalizer(self.root, build_directory=self.BUILD)
+        return canonicalizer.canonicalize(self.BUILD + staged)
+
+    def test_a_staged_wtf_header_is_reported_under_the_checkout(self):
+        self.assertEqual(self.canonicalize('Source/WTF/wtf/Vector.h', '/WTF/Headers/wtf/Vector.h'),
+                         self.absolute('Source/WTF/wtf/Vector.h'))
+
+    def test_a_staged_pal_header_is_reported_under_the_checkout(self):
+        self.assertEqual(
+            self.canonicalize('Source/WebCore/PAL/pal/SessionID.h', '/PAL/Headers/pal/SessionID.h'),
+            self.absolute('Source/WebCore/PAL/pal/SessionID.h'))
+
+    def test_a_staged_bmalloc_header_can_come_from_libpas(self):
+        # bmalloc stages libpas's headers under its own name, so the first candidate misses and
+        # the second one has to be tried.
+        self.assertEqual(
+            self.canonicalize('Source/bmalloc/libpas/src/libpas/pas_utils.h',
+                              '/bmalloc/Headers/bmalloc/pas_utils.h'),
+            self.absolute('Source/bmalloc/libpas/src/libpas/pas_utils.h'))
+
+    def test_a_subdirectory_under_the_staged_root_is_preserved(self):
+        self.assertEqual(
+            self.canonicalize('Source/WTF/wtf/text/StringImpl.h',
+                              '/WTF/Headers/wtf/text/StringImpl.h'),
+            self.absolute('Source/WTF/wtf/text/StringImpl.h'))
+
+    def test_webkitadditions_stays_under_the_build_directory_with_a_reason(self):
+        # It is copied from a repository this checkout does not have, so naming a checkout path
+        # for it would be inventing one.
+        canonicalizer = PathCanonicalizer(self.root, build_directory=self.BUILD)
+        staged = self.BUILD + '/WebKitAdditions/Headers/WebKitAdditions/GestureEvent.h'
+        self.assertEqual(canonicalizer.canonicalize(staged), staged)
+        self.assertEqual(canonicalizer.build_directory_paths,
+                         {PathCanonicalizer.WEBKIT_ADDITIONS: {staged}})
+
+
 class BuildDirectoryResidueTest(_Checkout):
     BUILD = '/tmp/Build/Release'
 
@@ -255,6 +304,25 @@ class ThirdPartyCopiedHeaderTest(_Checkout):
 
     def test_a_build_directory_with_no_installed_headers_yields_nothing(self):
         self.assertEqual(third_party_copied_header_ignore_regexes(self.root), [])
+
+    def test_the_cmake_layout_is_filtered_too(self):
+        # There is no usr/local/include on a CMake build, so this returned nothing at all and
+        # ANGLE's and libwebrtc's copied headers were reported as first-party WebKit code.
+        build = os.path.join(self.root, 'cmake-mac', 'Coverage')
+        for relative in ('WTF/Headers', 'bmalloc/Headers', 'PAL/Headers', 'WebGPU/Headers',
+                         'ANGLE/Headers', 'libwebrtc/PrivateHeaders'):
+            os.makedirs(os.path.join(build, relative))
+        self.assertEqual(third_party_copied_header_ignore_regexes(build),
+                         ['/ANGLE/Headers/', '/libwebrtc/PrivateHeaders/'])
+
+    def test_a_bundle_is_left_to_the_framework_rule(self):
+        # WebCore.framework/Headers is placed by _FRAMEWORK_HEADER_PATTERN, and excluding it
+        # here would drop first-party code from the report.
+        build = os.path.join(self.root, 'cmake-mac', 'Coverage')
+        for relative in ('WebCore.framework/Headers', 'MiniBrowser.app/Headers',
+                         'com.apple.WebKit.WebContent.xpc/Headers'):
+            os.makedirs(os.path.join(build, relative))
+        self.assertEqual(third_party_copied_header_ignore_regexes(build), [])
 
 
 class CompiledCopyCandidateTest(_Checkout):

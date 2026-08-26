@@ -71,6 +71,17 @@ _INSTALLED_HEADER_RULES = (
     # every other framework's TUs see them here: 23 files and 533 lines of the trace, at
     # 82.93%, which without this rule are reported under the build directory.
     ('/usr/local/include/pal/', ('Source/WebCore/PAL/pal/',)),
+    # The CMake build stages the same headers under <build>/<project>/Headers/<subdir>/ and
+    # compiles against those, so none of the markers above appear in its paths and every one of
+    # these files was reported under the build directory instead. Measured on a CMake report:
+    # 399 wtf, 184 bmalloc, 38 pal headers, and 131 of them also present under Source/WTF/wtf
+    # from the translation units that reach them through -I Source/WTF -- one file, two rows,
+    # counted twice in the denominator with its coverage split between them.
+    ('/WTF/Headers/wtf/', ('Source/WTF/wtf/',)),
+    ('/bmalloc/Headers/bmalloc/', ('Source/bmalloc/bmalloc/',
+                                   'Source/bmalloc/libpas/src/libpas/')),
+    ('/PAL/Headers/pal/', ('Source/WebCore/PAL/pal/',)),
+    ('/WebGPU/Headers/WebGPU/', ('Source/WebGPU/WebGPU/',)),
 )
 
 # Copied framework headers, where the original subdirectory is NOT derivable from the path
@@ -245,20 +256,54 @@ FIRST_PARTY_COPIED_HEADER_NAMES = frozenset((
 ))
 
 
+# The same allow-list for the CMake layout, where a project stages its headers under
+# <build>/<project>/Headers rather than into a shared usr/local/include. Separate from the
+# names above because these are project directories rather than the include subdirectory
+# names: pal's headers arrive under PAL/Headers/pal, not pal/pal.
+FIRST_PARTY_COPIED_HEADER_PROJECTS = frozenset((
+    'WTF', 'bmalloc', 'PAL', 'WebKitAdditions', 'WebCore', 'JavaScriptCore', 'WebKit',
+    'WebKitLegacy', 'WebGPU', 'WebCoreTestSupport', 'WGSL',
+))
+
+_COPIED_HEADER_DIRECTORY_NAMES = ('Headers', 'PrivateHeaders')
+
+
 def third_party_copied_header_ignore_regexes(build_directory):
     """--ignore-filename-regex arguments for the third-party headers a build copied.
 
     Derived from what is actually in the build directory rather than from a list of project
     names, so a project that starts installing headers is excluded the day it does, which is
     the safe direction: the default is that the report holds no third-party code.
+
+    Two layouts, because the two build systems stage headers differently and this returned
+    nothing at all on a CMake build: there is no usr/local/include there, so ANGLE's 11 and
+    libwebrtc's 13 copied headers were reported as first-party WebKit code.
     """
+    regexes = []
     include_directory = os.path.join(build_directory, 'usr', 'local', 'include')
     try:
         names = sorted(os.listdir(include_directory))
     except OSError:
-        return []
-    return ['/usr/local/include/{}'.format(name) for name in names
-            if name not in FIRST_PARTY_COPIED_HEADER_NAMES and not name.startswith('.')]
+        names = []
+    regexes += ['/usr/local/include/{}'.format(name) for name in names
+                if name not in FIRST_PARTY_COPIED_HEADER_NAMES and not name.startswith('.')]
+
+    try:
+        projects = sorted(os.listdir(build_directory))
+    except OSError:
+        projects = []
+    for project in projects:
+        # A dot means a bundle -- WebCore.framework, MiniBrowser.app, a .xpc service -- whose
+        # copied headers _FRAMEWORK_HEADER_PATTERN already places, and excluding those would
+        # drop first-party code.
+        if project.startswith('.') or '.' in project:
+            continue
+        if project in FIRST_PARTY_COPIED_HEADER_PROJECTS:
+            continue
+        for kind in _COPIED_HEADER_DIRECTORY_NAMES:
+            if os.path.isdir(os.path.join(build_directory, project, kind)):
+                regexes.append('/{}/{}/'.format(project, kind))
+    return regexes
 
 
 class PathCanonicalizer:
@@ -318,7 +363,8 @@ class PathCanonicalizer:
                 return os.path.join(self._checkout_root, resolved)
             self.unresolved_framework_headers.add(path)
             return self._note_if_under_build_directory(path, self.COPIED_FRAMEWORK_HEADER)
-        if '/usr/local/include/WebKitAdditions/' in path:
+        if ('/usr/local/include/WebKitAdditions/' in path
+                or '/WebKitAdditions/Headers/WebKitAdditions/' in path):
             return self._note_if_under_build_directory(path, self.WEBKIT_ADDITIONS)
         return self._note_if_under_build_directory(path, self.OTHER)
 

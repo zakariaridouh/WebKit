@@ -747,9 +747,11 @@ def main(args):
         ignore_regexes += list(THIRD_PARTY_IGNORE_REGEXES)
         copied = third_party_copied_header_ignore_regexes(port._build_path())
         if copied:
+            # The regexes themselves, not a name derived from them: the two build systems
+            # produce different shapes -- /usr/local/include/ANGLE against /ANGLE/Headers/ --
+            # and taking the last path segment of the second one printed an empty string.
             _log.info('Excluding %d third-party copied-header directories the build installed: '
-                      '%s', len(copied),
-                      ', '.join(regex.rsplit('/', 1)[-1] for regex in copied))
+                      '%s', len(copied), ', '.join(copied))
             ignore_regexes += copied
 
     summary_path = os.path.join(options.output_dir, 'summary.txt')
