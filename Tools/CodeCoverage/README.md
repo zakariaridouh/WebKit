@@ -55,6 +55,21 @@ Tools/Scripts/generate-coverage-report --release --coverage-dir=/tmp/cov --outpu
 
 ### macOS CMake
 
+`run-cmake-coverage.sh` in this directory does all four steps in one unattended command, which is
+what you want for a long run. It drives this build and only this one, so it takes no `--cmake`:
+
+```sh
+Tools/CodeCoverage/run-cmake-coverage.sh --open fast/dom          # build, test, report, open it
+Tools/CodeCoverage/run-cmake-coverage.sh --api-tests WTF --no-layout-tests --sources Source/WTF
+Tools/CodeCoverage/run-cmake-coverage.sh                          # the whole suite; hours
+```
+
+It exits non-zero on any failure and prints the path to the HTML report. Note that
+`Tools/Scripts/webkit-coverage` is the Xcode-only equivalent and answers a different question
+-- how well tested are the lines this patch added.
+
+The steps underneath it:
+
 ```sh
 cmake --preset mac-coverage
 cmake --build --preset mac-coverage
