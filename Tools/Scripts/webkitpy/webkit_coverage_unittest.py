@@ -256,7 +256,7 @@ class SourceScopeTest(_Script):
 
 
 class SummaryTest(_Script):
-    """One number and one path, and the number is a line count rather than a percentage."""
+    """One number and the paths, and the number is a line count rather than a percentage."""
 
     def setUp(self):
         self.directory = tempfile.mkdtemp(prefix='webkit-coverage-')
@@ -291,16 +291,36 @@ class SummaryTest(_Script):
         self.assertNotIn('at most',
                          self.script.summarize(self.directory, CoverageScope.full_suite()))
 
-    def test_the_last_line_is_the_report(self):
+    def test_the_patch_page_is_named_before_the_whole_tree_index(self):
+        # They answer different questions, and only one of them is the question that was asked.
+        # Printing the index alone was the defect: the answer sat in a text file named above it.
+        from webkitpy.coverage_patch import PATCH_REPORT_NAME
         self.write_summary('Patch coverage: 100.00% (2 of 2 added lines with coverage data '
                            'covered)\n')
-        summary = self.script.summarize(self.directory, CoverageScope.full_suite())
-        self.assertEqual(summary.splitlines()[-1], os.path.join(self.directory, 'index.html'))
+        open(os.path.join(self.directory, PATCH_REPORT_NAME), 'w').close()
+        lines = self.script.summarize(self.directory,
+                                      CoverageScope.full_suite()).splitlines()
+        self.assertEqual(lines[-2], '{}  <- the patch, line by line'.format(
+            os.path.join(self.directory, PATCH_REPORT_NAME)))
+        self.assertEqual(lines[-1], '{}  <- the whole tree'.format(
+            os.path.join(self.directory, 'index.html')))
+
+    def test_the_patch_page_is_not_named_when_it_was_not_written(self):
+        # --no-html, or a run that failed before the patch report. Naming a page that does not
+        # exist is worse than naming one fewer.
+        self.write_summary('Patch coverage: 100.00% (2 of 2 added lines with coverage data '
+                           'covered)\n')
+        lines = self.script.summarize(self.directory,
+                                      CoverageScope.full_suite()).splitlines()
+        self.assertEqual(lines[-1], '{}  <- the whole tree'.format(
+            os.path.join(self.directory, 'index.html')))
+        self.assertNotIn('the patch, line by line', '\n'.join(lines))
 
     def test_a_missing_summary_says_so_rather_than_printing_a_wrong_number(self):
         summary = self.script.summarize(self.directory, CoverageScope.full_suite())
         self.assertIn('no uncovered-line count', summary)
-        self.assertEqual(summary.splitlines()[-1], os.path.join(self.directory, 'index.html'))
+        self.assertEqual(summary.splitlines()[-1], '{}  <- the whole tree'.format(
+            os.path.join(self.directory, 'index.html')))
 
 
 class SuggestionPrintingTest(_Script):

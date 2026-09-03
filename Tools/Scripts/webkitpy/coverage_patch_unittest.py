@@ -27,6 +27,8 @@ import contextlib
 import io
 import logging
 import os
+import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -34,7 +36,7 @@ import unittest
 from webkitpy.coverage_lcov import FileCoverage
 from webkitpy.coverage_patch import (PatchCoverage, added_lines_from_diff,
                                      added_lines_from_untracked_files, format_patch_summary,
-                                     git_diff_added_lines)
+                                     git_diff_added_lines, write_patch_report)
 from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
 
 # Everything a scratch repository needs so that the developer's own configuration cannot
@@ -385,6 +387,102 @@ class PatchSummaryTest(unittest.TestCase):
         self.assertIn('... and 7 more files', summary)
 
 
+class PatchReportTest(unittest.TestCase):
+    """The HTML page. Until it existed, the answer this whole tool produces was a text file."""
+
+    def setUp(self):
+        self._directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self._directory, ignore_errors=True)
+
+    def write(self, patch, **keywords):
+        path = write_patch_report(patch, self._directory, source_root='/co', **keywords)
+        with open(path) as handle:
+            return path, handle.read()
+
+    def test_it_is_not_called_index_html(self):
+        # generate-coverage-report and coverage_delta both write an index.html, and
+        # webkit-coverage points compare-coverage-reports --output-dir at the report directory,
+        # so a third one there would destroy the coverage index.
+        patch = PatchCoverage({'/co/a.cpp': [2]}, {'/co/a.cpp': coverage([(1, 1), (2, 0)])})
+        path, _ = self.write(patch)
+        self.assertEqual(os.path.basename(path), 'patch-coverage.html')
+        self.assertFalse(os.path.exists(os.path.join(self._directory, 'index.html')))
+
+    def test_the_headline_is_the_patch_number_and_the_uncovered_lines_are_named(self):
+        patch = PatchCoverage(
+            {'/co/Source/a.cpp': [8052, 8053, 8054]},
+            {'/co/Source/a.cpp': coverage([(number, 1) for number in range(1, 8052)]
+                                          + [(8052, 0), (8054, 0)])})
+        _, page = self.write(patch)
+        self.assertIn('<h1>Patch coverage</h1>', page)
+        self.assertIn('>0.00%<', page)
+        self.assertIn('Uncovered added lines', page)
+        self.assertIn('<code>8052, 8054</code>', page)
+        self.assertIn('Source/a.cpp', page)
+        self.assertNotIn('/co/Source/a.cpp', page)
+
+    def test_line_numbers_link_into_the_source_view_when_there_is_one(self):
+        patch = PatchCoverage({'/co/Source/a.cpp': [2, 3, 4]},
+                              {'/co/Source/a.cpp': coverage([(1, 1), (2, 0), (3, 0), (4, 0)])})
+        _, page = self.write(patch, report_root='')
+        # One link per contiguous run, to the run's first line, which is where the cursor wants
+        # to land. Not one anchor per line: a 200-line block is one thing to go and look at.
+        self.assertIn('<a href="Source/a.cpp.html#L2">2-4</a>', page)
+
+    def test_the_numbers_are_plain_text_when_there_is_nothing_to_link_into(self):
+        # A link to a page that was never written is a 404, and 477 dead links in a shipped
+        # report is a bug this branch has already had once.
+        patch = PatchCoverage({'/co/Source/a.cpp': [2]},
+                              {'/co/Source/a.cpp': coverage([(1, 1), (2, 0)])})
+        _, page = self.write(patch)
+        self.assertNotIn('.cpp.html', page)
+        self.assertIn('<code>2</code>', page)
+
+    def test_a_fully_covered_patch_says_so_instead_of_showing_an_empty_card(self):
+        patch = PatchCoverage({'/co/a.cpp': [1, 2]},
+                              {'/co/a.cpp': coverage([(1, 1), (2, 1)])})
+        _, page = self.write(patch)
+        self.assertIn('Every added line with coverage data was executed.', page)
+
+    def test_a_file_with_no_coverage_data_gets_its_own_section(self):
+        patch = PatchCoverage({'/co/a.cpp': [1], '/co/New.cpp': [1]},
+                              {'/co/a.cpp': coverage([(1, 1)])})
+        _, page = self.write(patch)
+        self.assertIn('nothing instrumented compiled it', page)
+        self.assertIn('New.cpp', page)
+
+    def test_the_file_level_page_does_not_claim_to_measure_added_lines(self):
+        patch = PatchCoverage({'/co/a.cpp': []}, {'/co/a.cpp': coverage([(1, 1), (2, 0)])},
+                              line_numbers=False)
+        _, page = self.write(patch)
+        self.assertIn('<h1>Coverage of the files this change touched</h1>', page)
+        self.assertNotIn('Uncovered added lines', page)
+        self.assertIn('--git-diff=REF', page)
+
+    def test_the_truncation_is_stated_rather_than_silent(self):
+        added = {'/co/f{}.cpp'.format(number): [1] for number in range(10)}
+        files = {path: coverage([(1, 0)]) for path in added}
+        _, page = self.write(PatchCoverage(added, files), max_files=3)
+        self.assertIn('first 3 of 10 changed files', page)
+
+    def test_every_link_resolves(self):
+        patch = PatchCoverage({'/co/Source/a.cpp': [2]},
+                              {'/co/Source/a.cpp': coverage([(1, 1), (2, 0)])})
+        path, page = self.write(patch, report_root='')
+        # The source views live beside the page, so make the one it links to exist and then
+        # check nothing else is dangling.
+        target = os.path.join(self._directory, 'Source')
+        os.makedirs(target, exist_ok=True)
+        open(os.path.join(target, 'a.cpp.html'), 'w').close()
+        broken = [link for link in re.findall(r'href="([^"#]+)', page)
+                  if not os.path.exists(os.path.join(self._directory, link))]
+        self.assertEqual(broken, [])
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+
 class FailUnderPatchTest(unittest.TestCase):
     """--fail-under-patch, exercised through the script's main() the way CI calls it."""
 
@@ -549,6 +647,37 @@ class FailUnderPatchTest(unittest.TestCase):
                                    '--output-dir', output), 0)
         with open(os.path.join(output, 'patch-summary.txt')) as handle:
             self.assertIn('Patch coverage:', handle.read())
+
+    def test_the_output_directory_also_gets_the_patch_page(self):
+        # Through the script, not the module: the wiring is the part that was missing, not the
+        # renderer. The answer used to exist only as text.
+        from webkitpy.coverage_patch import PATCH_REPORT_NAME
+        source = self._commit_then_append('Source/a.cpp', 2, 1)
+        current = self._lcov('current.lcov', {source: [(1, 1), (2, 1), (3, 0)]})
+        output = os.path.join(self._directory, 'report')
+        self.assertEqual(self._run('--current', current, '--git-diff', 'HEAD',
+                                   '--output-dir', output), 0)
+        with open(os.path.join(output, PATCH_REPORT_NAME)) as handle:
+            page = handle.read()
+        self.assertIn('<h1>Patch coverage</h1>', page)
+        self.assertIn('Uncovered added lines', page)
+        # No coverage report in that directory, so there is nothing to link into and the line
+        # numbers stay text rather than becoming links to pages that do not exist.
+        self.assertNotIn('a.cpp.html', page)
+
+    def test_the_line_numbers_link_when_a_report_is_in_the_output_directory(self):
+        from webkitpy.coverage_patch import PATCH_REPORT_NAME
+        source = self._commit_then_append('Source/a.cpp', 2, 1)
+        current = self._lcov('current.lcov', {source: [(1, 1), (2, 1), (3, 0)]})
+        output = os.path.join(self._directory, 'report')
+        os.makedirs(output, exist_ok=True)
+        # What generate-coverage-report leaves behind, and what webkit-coverage arranges by
+        # pointing both tools at one directory.
+        open(os.path.join(output, 'index.html'), 'w').close()
+        self.assertEqual(self._run('--current', current, '--git-diff', 'HEAD',
+                                   '--output-dir', output), 0)
+        with open(os.path.join(output, PATCH_REPORT_NAME)) as handle:
+            self.assertIn('Source/a.cpp.html#L3', handle.read())
 
 
 if __name__ == '__main__':

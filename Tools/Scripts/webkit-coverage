@@ -83,6 +83,7 @@ from webkitpy.coverage_requirements import (
     NOTE, WARNING, build_directory_from_environment, conflicting_build_settings,
     coverage_build_command, instrumentation_findings, missing_build_settings, normalize_build_root,
     orphaned_server_findings, product_name, survey_products, toolchain_findings)
+from webkitpy.coverage_patch import PATCH_REPORT_NAME
 from webkitpy.coverage_scope import CoverageScope
 from webkitpy.coverage_test_scope import layout_test_names, suggest_scope
 from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
@@ -688,12 +689,16 @@ def main(args):
 
 
 def summarize(report_dir, scope):
-    """One number and one path. The number is a count of lines, not a percentage.
+    """One number and the paths. The number is a count of lines, not a percentage.
 
     The percentage is in the report and in compare-coverage-reports' own output above. What a
     developer acts on is the list of added lines nothing executed, and its length is the one
     number worth putting last -- it is a count, so it is exact even on a scoped run, where the
     percentage is only a bound.
+
+    The patch page is named first and the whole-tree index second. This used to print only the
+    index, which answers a different question -- how well tested is WebKit -- while the answer to
+    the one that was asked sat in a text file named one line above it.
     """
     uncovered = None
     summary_path = os.path.join(report_dir, 'patch-summary.txt')
@@ -717,7 +722,10 @@ def summarize(report_dir, scope):
             uncovered, ' -- at most, since this was a selective run and an unexecuted line may '
                        'simply not have been asked' if scope.is_selective else ''))
         lines.append('  named individually in {}'.format(summary_path))
-    lines.append('{}'.format(os.path.join(report_dir, 'index.html')))
+    patch_page = os.path.join(report_dir, PATCH_REPORT_NAME)
+    if os.path.isfile(patch_page):
+        lines.append('{}  <- the patch, line by line'.format(patch_page))
+    lines.append('{}  <- the whole tree'.format(os.path.join(report_dir, 'index.html')))
     return '\n'.join(lines)
 
 

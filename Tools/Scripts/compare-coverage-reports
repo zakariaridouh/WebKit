@@ -80,7 +80,8 @@ from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.webkit_finder import WebKitFinder
 from webkitpy.coverage_delta import (absolute_paths, compare, format_summary, load_traces,
                                      write_delta_report)
-from webkitpy.coverage_patch import (PatchCoverage, format_patch_summary, git_diff_added_lines)
+from webkitpy.coverage_patch import (PatchCoverage, format_patch_summary, git_diff_added_lines,
+                                     write_patch_report)
 from webkitpy.coverage_provenance import read_trace_comment
 from webkitpy.coverage_scope import scope_from_provenance
 from webkitpy.coverage_thresholds import COVERAGE_GATE_EXIT_CODE
@@ -333,6 +334,19 @@ def report_patch(options, source_root, added_lines, current_files, line_numbers=
         with open(path, 'w') as handle:
             handle.write(summary)
         _log.info('Wrote %s', path)
+        # A coverage report already in the output directory is what the line numbers link into,
+        # so its presence is the whole test: with it, an uncovered line number is a link to that
+        # line of the annotated source, and without it there is nothing to link to and the
+        # numbers stay text. webkit-coverage points --output-dir at the report directory, which
+        # is the case that matters.
+        report_root = '' if os.path.isfile(os.path.join(options.output_dir, 'index.html')) else None
+        page = write_patch_report(patch, options.output_dir, source_root=source_root,
+                                  report_root=report_root, max_files=options.max_files,
+                                  scope=scope)
+        _log.info('Wrote %s%s', page,
+                  '' if report_root is not None else
+                  ' (uncovered line numbers are not links: no coverage report beside it to '
+                  'link into)')
 
     if options.fail_under_patch is None:
         return 0

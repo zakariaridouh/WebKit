@@ -471,10 +471,10 @@ def absolute_paths(paths, source_root):
     return resolved
 
 
-def format_line_numbers(numbers, limit=12):
-    """[1, 2, 3, 7] -> '1-3, 7'. Nobody reads two hundred comma-separated integers."""
+def line_ranges(numbers):
+    """[1, 2, 3, 7] -> [(1, 3), (7, 7)]. The run-length form both renderings want."""
     if not numbers:
-        return ''
+        return []
     ranges = []
     start = previous = numbers[0]
     for number in numbers[1:]:
@@ -484,7 +484,14 @@ def format_line_numbers(numbers, limit=12):
         ranges.append((start, previous))
         start = previous = number
     ranges.append((start, previous))
+    return ranges
 
+
+def format_line_numbers(numbers, limit=12):
+    """[1, 2, 3, 7] -> '1-3, 7'. Nobody reads two hundred comma-separated integers."""
+    ranges = line_ranges(numbers)
+    if not ranges:
+        return ''
     shown = ['{}'.format(low) if low == high else '{}-{}'.format(low, high)
              for low, high in ranges[:limit]]
     if len(ranges) > limit:
