@@ -75,6 +75,20 @@ class _Report(unittest.TestCase):
         with open(os.path.join(self.output, relative)) as handle:
             return handle.read()
 
+    def markup(self, relative):
+        """The page without its inlined script or JSON payload.
+
+        Both mention every path and every attribute name the markup does, so a substring
+        assertion over the whole file answers a different question than it looks like it does.
+        """
+        return self.page(relative).split('<script>')[0]
+
+    def card(self, relative, heading):
+        """One card's table, from its heading to the end of that table."""
+        markup = self.markup(relative)
+        start = markup.index(heading)
+        return markup[start:markup.index('</table>', start)]
+
 
 class FileLinkTest(_Report):
     def test_a_file_links_to_its_sibling_line_view(self):
@@ -514,6 +528,134 @@ class OutsideTheCheckoutTest(_Report):
         trace, _ = self.build()
         report = write_report(trace, self.output, source_root=self.root, workers=1)
         self.assertEqual(report.totals['lines'], (4, 2))
+
+
+class _RankedReport(_Report):
+    """A trace whose files have deliberately different amounts of uncovered code."""
+
+    def write_ranked_trace(self, *pairs):
+        """pairs are (relative path, uncovered line count). Every file gets one covered line."""
+        records = []
+        for relative, uncovered in pairs:
+            self.write_source(relative, 'int f();\n' * (uncovered + 1))
+            lines = ['DA:1,1']
+            lines += ['DA:{},0'.format(number) for number in range(2, uncovered + 2)]
+            records.append('SF:{}\nFN:1,_Z1fv\nFNDA:1,_Z1fv\n{}\nend_of_record\n'.format(
+                os.path.join(self.root, relative), '\n'.join(lines)))
+        path = os.path.join(self.root, 'coverage.lcov')
+        with open(path, 'w') as handle:
+            handle.write(''.join(records))
+        return path
+
+
+class LeastCoveredCardTest(_RankedReport):
+    def test_the_root_page_ranks_files_from_every_directory_together(self):
+        # The whole point: the drill-down means the worst file in the tree is otherwise several
+        # pages away, and each page only ever sorts its own directory.
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Small.h', 2),
+                                        ('Source/WebCore/dom/Huge.cpp', 40),
+                                        ('Source/JavaScriptCore/runtime/Middle.cpp', 9))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        card = self.card('index.html', 'Least-covered files')
+        order = [card.index('Huge.cpp'), card.index('Middle.cpp'), card.index('Small.h')]
+        self.assertEqual(order, sorted(order))
+
+    def test_it_ranks_by_uncovered_lines_and_not_by_percentage(self):
+        # A 40-line file at 2% has more untested code in it than a 2-line file at 33%, and
+        # "where should a test go" is a question about lines rather than about ratios.
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Tiny.h', 2),
+                                        ('Source/WebCore/dom/Big.cpp', 40))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        card = self.card('index.html', 'Least-covered files')
+        self.assertLess(card.index('Big.cpp'), card.index('Tiny.h'))
+
+    def test_a_fully_covered_file_is_not_listed(self):
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Gap.h', 3),
+                                        ('Source/WTF/wtf/Done.h', 0))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        card = self.card('index.html', 'Least-covered files')
+        self.assertIn('Gap.h', card)
+        self.assertNotIn('Done.h', card)
+
+    def test_the_card_is_not_on_a_directory_page(self):
+        # One project-wide answer, not the same fifty rows on 1,040 pages.
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Gap.h', 3))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        self.assertIn('Least-covered files', self.markup('index.html'))
+        self.assertNotIn('Least-covered files', self.markup('Source/WTF/wtf/index.html'))
+
+    def test_the_cap_is_stated_rather_than_applied_silently(self):
+        from webkitpy.coverage_directory_index import WORST_FILES_LIMIT
+        pairs = [('Source/WTF/wtf/F{}.h'.format(index), index + 1)
+                 for index in range(WORST_FILES_LIMIT + 5)]
+        trace = self.write_ranked_trace(*pairs)
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        markup = self.markup('index.html')
+        self.assertIn('the {:,} with the most uncovered lines'.format(WORST_FILES_LIMIT), markup)
+        self.assertIn('of {:,} with any'.format(len(pairs)), markup)
+
+    def test_a_file_with_no_line_view_is_listed_without_a_link(self):
+        # Same rule as the directory rows: a link to a page that was never written is a 404.
+        # write_trace deliberately does not create the file, so no line view was written.
+        trace = self.write_trace('Source/WTF/wtf/Gone.h')
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        card = self.card('index.html', 'Least-covered files')
+        self.assertIn('Gone.h', card)
+        self.assertIn('nosource', card)
+        self.assertNotIn('Gone.h.html', card)
+
+
+class SearchTest(_RankedReport):
+    def test_the_root_page_carries_every_file_so_the_filter_can_reach_one(self):
+        # Sorting is not navigation. Without the payload, a file whose name you know is still a
+        # guess at which of 1,040 directory pages it is on.
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Vector.h', 4),
+                                        ('Source/WebCore/dom/Document.cpp', 7))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        page = self.page('index.html')
+        self.assertIn('window.COVERAGE_ALL_FILES=', page)
+        self.assertIn('["Source/WebCore/dom/Document.cpp",8,1,1]', page)
+        self.assertIn('["Source/WTF/wtf/Vector.h",5,1,1]', page)
+
+    def test_the_payload_is_on_the_root_page_only(self):
+        # It is the one page that needs it, and 780 KB on 1,040 pages would be 800 MB.
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Vector.h', 4))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        self.assertIn('window.COVERAGE_ALL_FILES=', self.page('index.html'))
+        self.assertNotIn('window.COVERAGE_ALL_FILES=', self.page('Source/WTF/wtf/index.html'))
+
+    def test_a_file_with_no_line_view_is_marked_unlinkable_in_the_payload(self):
+        trace = self.write_trace('Source/WTF/wtf/Gone.h')
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        self.assertIn('["Source/WTF/wtf/Gone.h",2,1,0]', self.page('index.html'))
+
+    def test_every_page_has_the_filter_input(self):
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Vector.h', 4))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        for relative in ('index.html', 'Source/WTF/wtf/index.html'):
+            self.assertIn('id="filter"', self.page(relative))
+            self.assertIn('id="filter-count"', self.page(relative))
+
+    def test_the_search_results_card_is_present_and_empty_until_used(self):
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Vector.h', 4))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        markup = self.markup('index.html')
+        self.assertIn('<div id="search-results" hidden>', markup)
+        self.assertIn('<tbody></tbody>', markup)
+
+    def test_the_cards_the_search_replaces_are_marked(self):
+        # Otherwise the least-covered fifty stay on screen beside the results and read as
+        # matches that are not matches.
+        trace = self.write_ranked_trace(('Source/WTF/wtf/Vector.h', 4))
+        write_report(trace, self.output, source_root=self.root, workers=1)
+        self.assertIn('data-hide-on-search', self.markup('index.html'))
+        self.assertNotIn('data-hide-on-search', self.markup('Source/WTF/wtf/index.html'))
+
+    def test_a_closing_script_tag_in_a_path_cannot_end_the_payload_early(self):
+        from webkitpy.coverage_directory_index import _search_data
+        data = _search_data([(('Source', 'a</script>b.h'), {'lines': (2, 1)})], '', {})
+        self.assertNotIn('</script>', data)
+        self.assertIn('<\\/script>', data)
 
 
 if __name__ == '__main__':

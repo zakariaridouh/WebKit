@@ -65,7 +65,8 @@ import html
 import logging
 import os
 
-from webkitpy.coverage_directory_index import SORT_SCRIPT, REPORT_STYLE, format_percent, meter_html
+from webkitpy.coverage_directory_index import (
+    REPORT_STYLE, SORT_SCRIPT, format_percent, headers_html, meter_html)
 
 logger = logging.getLogger(__name__)
 
@@ -737,12 +738,9 @@ def _directory_row(label, totals, scale):
 def _table(leading_headers, rows, empty_message):
     if not rows:
         return '<div class="card"><p class="empty">{}</p></div>'.format(html.escape(empty_message))
-    headers = leading_headers + _SHARED_HEADERS
-    header_cells = ['<th class="{}" data-col="{}" data-numeric="{}">{}</th>'.format(
-        css, index, '1' if numeric else '0', html.escape(label))
-        for index, (label, css, numeric) in enumerate(headers)]
     return ('<div class="card"><table><thead><tr>{}</tr></thead><tbody>\n{}\n'
-            '</tbody></table></div>'.format(''.join(header_cells), '\n'.join(rows)))
+            '</tbody></table></div>'.format(headers_html(leading_headers + _SHARED_HEADERS),
+                                            '\n'.join(rows)))
 
 
 def _tile(key, value, subtitle, css=''):

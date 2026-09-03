@@ -179,6 +179,20 @@ h2 { font-size: 13px; font-weight: 600; margin: 22px 0 2px; }
 td.reason, td.detail { color: var(--text-secondary); }
 td.detail { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 td.nosource { color: var(--text-secondary); cursor: help; }
+.toolbar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.toolbar input {
+  flex: 1 1 auto; min-width: 0; padding: 6px 10px;
+  font: 12px/1.4 system-ui, -apple-system, sans-serif;
+  color: var(--text-primary); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 6px;
+}
+.toolbar input:focus-visible { outline: 2px solid var(--meter-fill); outline-offset: -1px; }
+.toolbar .count {
+  color: var(--text-secondary); font-size: 11px;
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+td.path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+td.path .dim { color: var(--muted); }
 """
 
 SORT_SCRIPT = """
@@ -202,6 +216,153 @@ document.querySelectorAll('th[data-col]').forEach(function (th) {
   });
 });
 """
+
+# Substring filter over the name column of every table that opts in with data-filterable.
+# Sorting alone is not navigation: the drill-down means a name you can spell is still several
+# pages away, and the least-covered card below is capped, so without this there is no way to
+# ask about a specific file at all. Deliberately not a fuzzy match -- a substring of the path
+# is what somebody has in their head, and anything cleverer is unpredictable at 1,045 rows.
+FILTER_SCRIPT = """
+(function () {
+  var input = document.getElementById('filter');
+  if (!input) { return; }
+  var status = document.getElementById('filter-count');
+  var rows = [];
+  document.querySelectorAll('table[data-filterable="1"]').forEach(function (table) {
+    Array.prototype.forEach.call(table.tBodies[0].rows, function (row) {
+      if (!row.classList.contains('totals')) { rows.push(row); }
+    });
+  });
+  var total = rows.length;
+
+  // On the root page the filter searches the whole report, not just the two rows this page
+  // happens to show. ALL_FILES is every file in the trace; without it a name you can spell is
+  // still a four-click guess at which directory to guess in, which is the state this report
+  // was in. Rendered on demand and capped, because 16,316 rows in one table is the page the
+  // drill-down exists to avoid.
+  var all = window.COVERAGE_ALL_FILES || null;
+  var limit = window.COVERAGE_SEARCH_LIMIT || 200;
+  var results = document.getElementById('search-results');
+  var resultsBody = results ? results.querySelector('tbody') : null;
+  var resultsNote = document.getElementById('search-note');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('[data-hide-on-search]'));
+
+  function renderResults(query) {
+    var matched = [];
+    for (var i = 0; i < all.length && matched.length <= limit; i++) {
+      if (all[i][0].toLowerCase().indexOf(query) !== -1) { matched.push(all[i]); }
+    }
+    var capped = matched.length > limit;
+    if (capped) { matched.length = limit; }
+    // Built with DOM calls rather than a string of markup: the path is data, so this way there
+    // is no escaping to get wrong, and no attribute name sitting in a string literal for a link
+    // checker to mistake for a real link.
+    var fragment = document.createDocumentFragment();
+    matched.forEach(function (entry) {
+      var path = entry[0], lines = entry[1], covered = entry[2], linkable = entry[3];
+      var value = lines ? (100 * covered / lines) : null;
+      var row = document.createElement('tr');
+
+      var name = document.createElement('td');
+      name.className = linkable ? 'path' : 'path nosource';
+      name.dataset.v = path;
+      var slash = path.lastIndexOf('/');
+      var label = document.createDocumentFragment();
+      if (slash !== -1) {
+        var dim = document.createElement('span');
+        dim.className = 'dim';
+        dim.textContent = path.slice(0, slash + 1);
+        label.appendChild(dim);
+        label.appendChild(document.createTextNode(path.slice(slash + 1)));
+      } else {
+        label.appendChild(document.createTextNode(path));
+      }
+      if (linkable) {
+        var anchor = document.createElement('a');
+        anchor.setAttribute('href', path + '.html');
+        anchor.appendChild(label);
+        name.appendChild(anchor);
+      } else {
+        name.appendChild(label);
+      }
+      row.appendChild(name);
+
+      var bar = document.createElement('td');
+      bar.dataset.v = value === null ? '-1' : value.toFixed(4);
+      var track = document.createElement('div');
+      track.className = 'meter';
+      if (value !== null) {
+        var fill = document.createElement('i');
+        fill.style.width = Math.max(value, 0).toFixed(2) + '%';
+        track.appendChild(fill);
+      }
+      bar.appendChild(track);
+      row.appendChild(bar);
+
+      [[value === null ? '-' : value.toFixed(2) + '%', 'n pct',
+        value === null ? '-1' : value.toFixed(4)],
+       [lines.toLocaleString(), 'n', String(lines)],
+       [(lines - covered).toLocaleString(), 'n', String(lines - covered)]].forEach(function (cols) {
+        var cell = document.createElement('td');
+        cell.className = cols[1];
+        cell.textContent = cols[0];
+        cell.dataset.v = cols[2];
+        row.appendChild(cell);
+      });
+      fragment.appendChild(row);
+    });
+    resultsBody.replaceChildren(fragment);
+    resultsNote.textContent = matched.length === 0
+      ? 'No file in this report has that in its path.'
+      : (capped ? 'The first ' + limit.toLocaleString() + ' matches, of more. Narrow the query.'
+                : matched.length.toLocaleString()
+                  + (matched.length === 1 ? ' file matches.' : ' files match.'));
+    return matched.length;
+  }
+
+  function apply() {
+    var query = input.value.trim().toLowerCase();
+    if (all && results) {
+      var searching = query.length > 0;
+      results.hidden = !searching;
+      cards.forEach(function (card) { card.hidden = searching; });
+      if (searching) {
+        var count = renderResults(query);
+        status.textContent = count.toLocaleString() + ' of ' + all.length.toLocaleString()
+          + ' files';
+        return;
+      }
+      status.textContent = all.length.toLocaleString() + ' files in this report';
+      return;
+    }
+    var shown = 0;
+    rows.forEach(function (row) {
+      var cell = row.cells[0];
+      var text = (cell.dataset.v || cell.textContent || '').toLowerCase();
+      var match = !query || text.indexOf(query) !== -1;
+      row.hidden = !match;
+      if (match) { shown++; }
+    });
+    status.textContent = query
+      ? shown.toLocaleString() + ' of ' + total.toLocaleString() + ' shown'
+      : total.toLocaleString() + (total === 1 ? ' row' : ' rows');
+  }
+  input.addEventListener('input', apply);
+  input.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') { input.value = ''; apply(); }
+  });
+  apply();
+})();
+"""
+
+# 200 result rows is more than anybody reads and small enough to render synchronously. The cap
+# is stated in the results note rather than applied silently.
+SEARCH_LIMIT = 200
+
+# The least-covered card is capped, because the point of it is the top of the list and 16,316
+# rows is the page this report exists to avoid. The heading says what the cap left out rather
+# than presenting the cap as the whole answer.
+WORST_FILES_LIMIT = 50
 
 
 class _Node:
@@ -367,15 +528,14 @@ def _headers(suite_names=()):
         ('Branches %', 'n', True),
         ('Not built', 'n', True),
     ]
-    return tuple((label, css, column, numeric)
-                 for column, (label, css, numeric) in enumerate(headers))
+    return tuple(headers)
 
 
 _ABSENT_HEADERS = (
-    ('File', '', 0, False),
-    ('Physical lines', 'n', 1, True),
-    ('Why it is not in this build', '', 2, False),
-    ('Detail', '', 3, False),
+    ('File', '', False),
+    ('Physical lines', 'n', True),
+    ('Why it is not in this build', '', False),
+    ('Detail', '', False),
 )
 
 # The fourth state, and it is bigger than the third. generate-coverage-report excludes
@@ -436,9 +596,15 @@ def _files(count):
     return '{:,} file'.format(count) if count == 1 else '{:,} files'.format(count)
 
 
-def _headers_html(headers):
+def headers_html(headers):
+    """The header row for a sortable table. headers are (label, css class, sorts numerically).
+
+    The column index is assigned here rather than written out per table, because it has to
+    agree with SORT_SCRIPT's data-col and three tables were carrying their own copy of that
+    agreement. Shared with coverage_delta and coverage_patch; keep it public.
+    """
     cells = []
-    for label, css, column, numeric in headers:
+    for column, (label, css, numeric) in enumerate(headers):
         cells.append('<th class="{}" data-col="{}" data-numeric="{}">{}</th>'.format(
             css, column, '1' if numeric else '0', html.escape(label)))
     return ''.join(cells)
@@ -460,17 +626,160 @@ def _absent_card(absent_files, reason_labels):
                 reason=html.escape(reason_labels.get(absent.reason, absent.reason)),
                 detail=html.escape(absent.detail)))
     total = sum(absent.physical_lines for absent in absent_files)
-    return """<h2>Not built in this configuration &mdash; {count}, {total:,} physical lines</h2>
+    return """<div data-hide-on-search>
+<h2>Not built in this configuration &mdash; {count}, {total:,} physical lines</h2>
 <div class="card">
-<table>
+<table data-filterable="1">
 <thead><tr>{headers}</tr></thead>
 <tbody>
 {rows}
 </tbody>
 </table>
 </div>
+</div>
 """.format(count=_files(len(absent_files)), total=total,
-           headers=_headers_html(_ABSENT_HEADERS), rows='\n'.join(rows))
+           headers=headers_html(_ABSENT_HEADERS), rows='\n'.join(rows))
+
+
+def _search_data(all_files, source_prefix, unlinkable):
+    """The whole report's files as JSON, so the root page's filter can search all of them.
+
+    [path, lines, covered, linkable] per file. Measured on the shipped report: 16,316 files is
+    about 780 KB of JSON, against 421 MB of report, and it is on the root page only. That buys
+    the one thing sorting cannot -- reaching a file whose name you know without guessing which
+    of 1,040 directory pages it is on.
+    """
+    import json
+    payload = []
+    for components, totals in all_files:
+        relative = '/'.join(components)
+        count, covered = totals.get('lines', (0, 0))
+        linkable = 0 if os.path.join(source_prefix, *components) in unlinkable else 1
+        payload.append([relative, count, covered, linkable])
+    payload.sort(key=lambda entry: (-(entry[1] - entry[2]), entry[0]))
+    # </script> inside a string literal would end the element early; JSON has no reason to
+    # contain it, but a path with a NUL-free oddity in it is not worth trusting.
+    return json.dumps(payload, separators=(',', ':')).replace('</', '<\\/')
+
+
+def _search_card():
+    """The card the root page's search renders into. Empty and hidden until somebody types."""
+    return """<div id="search-results" hidden>
+<h2>Matching files</h2>
+<div class="card">
+<table>
+<thead><tr>{headers}</tr></thead>
+<tbody></tbody>
+</table>
+</div>
+<p class="hint" id="search-note"></p>
+</div>
+""".format(headers=headers_html(_WORST_HEADERS))
+
+
+_WORST_HEADERS = (
+    ('File', '', False),
+    ('Line coverage', '', True),
+    ('Lines %', 'n', True),
+    ('Lines', 'n', True),
+    ('Uncovered', 'n', True),
+)
+
+
+def _worst_headers(selective):
+    """Same columns, and the last one is not called "Uncovered" on a selective run."""
+    if not selective:
+        return _WORST_HEADERS
+    return _WORST_HEADERS[:-1] + (('Not executed', 'n', True),)
+
+
+def _worst_files_card(all_files, source_prefix, unlinkable, limit=WORST_FILES_LIMIT, scope=None):
+    """The project-wide least-covered files, on the root page.
+
+    The drill-down is what makes this report skimmable, and it is also what makes "where should
+    a test go next" unanswerable: the totals for every file are held in one dict while the pages
+    are written, but each page only ever shows its own directory, and sorting is per page. So
+    the one question the whole report exists to serve needed four clicks and a guess at which
+    directory to guess in.
+
+    Ranked by uncovered lines rather than by percentage, because a 4,000-line file at 60% has
+    more untested code in it than a 12-line file at 0%, and the percentage column is right there
+    for anyone who wants the other reading.
+
+    all_files is [(path components relative to source_prefix, {metric: (count, covered)})], the
+    same list the tree is built from. Files with no line view are rendered as text with the
+    reason, exactly as the directory rows are.
+    """
+    ranked = []
+    for components, totals in all_files:
+        count, covered = totals.get('lines', (0, 0))
+        uncovered = count - covered
+        if uncovered <= 0:
+            continue
+        ranked.append((uncovered, '/'.join(components), components, totals))
+    if not ranked:
+        return ''
+    ranked.sort(key=lambda entry: (-entry[0], entry[1]))
+    shown = ranked[:limit]
+
+    rows = []
+    for uncovered, relative, components, totals in shown:
+        source_path = os.path.join(source_prefix, *components)
+        reason = unlinkable.get(source_path)
+        directory, _, name = relative.rpartition('/')
+        # The directory is dimmed rather than dropped: two Vector.h rows from different trees
+        # are otherwise the same row twice, and the path is what makes the row actionable.
+        label = ('<span class="dim">{}/</span>{}'.format(html.escape(directory), html.escape(name))
+                 if directory else html.escape(name))
+        if reason:
+            first = ('<td class="path nosource" data-v="{v}" title="No line view: {why}">{label}'
+                     '</td>').format(v=html.escape(relative), why=html.escape(reason), label=label)
+        else:
+            first = '<td class="path" data-v="{v}"><a href="{href}">{label}</a></td>'.format(
+                v=html.escape(relative), href=html.escape(relative + '.html'), label=label)
+        count, covered = totals.get('lines', (0, 0))
+        value = _percent(count, covered)
+        rows.append(
+            '<tr>{first}<td data-v="{sort}">{meter}</td>{pct}'
+            '<td class="n" data-v="{count}">{count:,}</td>'
+            '<td class="n" data-v="{uncovered}">{uncovered:,}</td></tr>'.format(
+                first=first, sort=-1 if value is None else '{:.4f}'.format(value),
+                meter=meter_html(value), pct=_percent_cell(count, covered, scope),
+                count=count, uncovered=uncovered))
+
+    total_uncovered = sum(entry[0] for entry in ranked)
+    shown_uncovered = sum(entry[0] for entry in shown)
+    # "Uncovered" would be a false label under selection: a line no test executed may simply
+    # not have been asked. Same rule the page subtitle and the Total row already follow.
+    selective = scope is not None and scope.is_selective
+    lines_phrase = 'lines no test that ran executed' if selective else 'uncovered lines'
+    heading = 'Least-covered files &mdash; the {:,} with the most {}'.format(
+        len(shown), lines_phrase)
+    if len(ranked) > len(shown):
+        heading += ', of {:,} with any'.format(len(ranked))
+    note = ('These {shown:,} hold {shown_lines:,} of the {total_lines:,} {phrase} in the '
+            'report, {share:.1f}%. Ranked by line count, not by percentage: one uncovered line '
+            'in a two-line file is 50% and the column is there for that reading. Search above '
+            'to reach a file that is not on this list.').format(
+                shown=len(shown), shown_lines=shown_uncovered, total_lines=total_uncovered,
+                phrase=lines_phrase, share=100.0 * shown_uncovered / total_uncovered)
+    if selective:
+        note += (' Each count is an upper bound on what is genuinely untested, never a lower '
+                 'one, so every file listed here is still worth looking at.')
+    return """<div data-hide-on-search>
+<h2>{heading}</h2>
+<div class="card">
+<table data-filterable="1">
+<thead><tr>{headers}</tr></thead>
+<tbody>
+{rows}
+</tbody>
+</table>
+</div>
+<p class="hint">{note}</p>
+</div>
+""".format(heading=heading, headers=headers_html(_worst_headers(selective)),
+           rows='\n'.join(rows), note=html.escape(note))
 
 
 def _reason_card(reason_rows, reason_explanations, generated=None):
@@ -504,11 +813,12 @@ def _reason_card(reason_rows, reason_explanations, generated=None):
                 label=html.escape(GENERATED_SOURCES_LABEL), files=generated[0],
                 lines=generated[1], why=html.escape(GENERATED_SOURCES_EXPLANATION)))
         heading += ', plus {} the build generated'.format(_files(generated[0]))
-    headers = _headers_html((('Why a file is not in this report', '', 0, False),
-                             ('Files', 'n', 1, True),
-                             ('Physical lines', 'n', 2, True),
-                             ('What it means', '', 3, False)))
-    return """<h2>{heading}</h2>
+    headers = headers_html((('Why a file is not in this report', '', False),
+                            ('Files', 'n', True),
+                            ('Physical lines', 'n', True),
+                            ('What it means', '', False)))
+    return """<div data-hide-on-search>
+<h2>{heading}</h2>
 <div class="card">
 <table>
 <thead><tr>{headers}</tr></thead>
@@ -517,11 +827,12 @@ def _reason_card(reason_rows, reason_explanations, generated=None):
 </tbody>
 </table>
 </div>
+</div>
 """.format(heading=html.escape(heading), headers=headers, rows='\n'.join(rows))
 
 
 def _page(title, subtitle, crumbs_html, rows_html, totals_row, note,
-          caveat='', extra_cards='', suite_names=()):
+          caveat='', extra_cards='', suite_names=(), filter_label='', search_data=None):
     return """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -535,8 +846,8 @@ def _page(title, subtitle, crumbs_html, rows_html, totals_row, note,
 <h1>{title}</h1>
 <p class="sub">{subtitle}</p>
 <p class="crumbs">{crumbs}</p>
-{caveat}<div class="card">
-<table>
+{caveat}{toolbar}{search_card}<div class="card"{hide}>
+<table data-filterable="1">
 <thead><tr>{headers}</tr></thead>
 <tbody>
 {totals}
@@ -544,21 +855,36 @@ def _page(title, subtitle, crumbs_html, rows_html, totals_row, note,
 </tbody>
 </table>
 </div>
-{extra_cards}<p class="hint">{note}</p>
+{extra_cards}<p class="hint"{hide}>{note}</p>
 </div>
-<script>{script}</script>
+{search_payload}<script>{script}</script>
 </body>
 </html>
 """.format(title=html.escape(title), subtitle=html.escape(subtitle), crumbs=crumbs_html,
-           headers=_headers_html(_headers(suite_names)), rows=rows_html, totals=totals_row,
-           style=REPORT_STYLE, script=SORT_SCRIPT, note=note,
+           headers=headers_html(_headers(suite_names)), rows=rows_html, totals=totals_row,
+           style=REPORT_STYLE, script=SORT_SCRIPT + FILTER_SCRIPT, note=note,
            caveat='<p class="caveat">{}</p>\n'.format(html.escape(caveat)) if caveat else '',
-           extra_cards=extra_cards)
+           toolbar=_toolbar(filter_label), extra_cards=extra_cards,
+           search_card=_search_card() if search_data else '',
+           hide=' data-hide-on-search' if search_data else '',
+           search_payload=('<script>window.COVERAGE_ALL_FILES={};'
+                           'window.COVERAGE_SEARCH_LIMIT={};</script>\n'.format(
+                               search_data, SEARCH_LIMIT) if search_data else ''))
+
+
+def _toolbar(label):
+    """The filter input. label names what a match is measured against on this page."""
+    return ("""<div class="toolbar">
+<input id="filter" type="search" autocomplete="off" spellcheck="false"
+ placeholder="{placeholder}" aria-label="{placeholder}">
+<span class="count" id="filter-count" role="status"></span>
+</div>
+""").format(placeholder=html.escape(label or 'Filter by name'))
 
 
 def _write_node(node, output_root, full_parts, source_prefix, index_link, written,
                 absence=None, unlinkable=None, ancestor_pages=frozenset(), suite_names=(),
-                generated=None, scope=None):
+                generated=None, scope=None, all_files=()):
     """Write one index.html per directory node.
 
     full_parts is the path from the source root, so it is also the on-disk location and the
@@ -571,6 +897,11 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
     unlinkable is {path: why it has no line view}, as write_source_views returns it.
     generated is (files, physical lines) from generated_source_totals(), for the reason card on
     the root page.
+
+    all_files is every file in the report, for the least-covered card on the root page. It is
+    read only at depth 0, and deliberately not threaded through the recursion: the card is a
+    project-wide answer, so a copy of it on every directory page would be the same fifty rows
+    16,316 times.
 
     scope is a coverage_scope.CoverageScope. For a selective run it puts >= on the page's totals,
     marks the title, and states the shortfall in test counts on EVERY page rather than only on
@@ -627,9 +958,10 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
                                           scope=scope)[len('<tr>'):]
     totals = totals.replace('<td class="dir" data-v="Total"><a href="#">Total</a></td>',
                             '<td data-v="">Total</td>')
-    note = ('Directories aggregate their descendants. Click a column heading to sort. '
-            'A file name links to its line-by-line coverage. "Not built" is a file count, '
-            'not a percentage: those files have no coverage mapping to be a percentage of.')
+    note = ('Directories aggregate their descendants. Click a column heading to sort, and type '
+            'above to filter by name. A file name links to its line-by-line coverage. '
+            '"Not built" is a file count, not a percentage: those files have no coverage '
+            'mapping to be a percentage of.')
     if suite_names:
         note += (' The per-suite columns are one profile each and "All suites" is their merge, '
                  'so it is the union of the lines they executed and not the sum: a line two '
@@ -657,6 +989,12 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
 
     caveat = ''
     extra_cards = ''
+    search_data = None
+    # Before the not-built cards, because it is the answer to the question somebody opened the
+    # report with, and those two are the caveat attached to it.
+    if not depth and all_files:
+        search_data = _search_data(all_files, source_prefix, unlinkable)
+        extra_cards += _worst_files_card(all_files, source_prefix, unlinkable, scope=scope)
     if absence is not None:
         if not depth:
             caveat = absence.denominator_sentence()
@@ -678,7 +1016,10 @@ def _write_node(node, output_root, full_parts, source_prefix, index_link, writte
         title = scope.qualify_title(title)
 
     page = _page(title, subtitle, ' / '.join(crumbs), '\n'.join(rows), totals,
-                 note, caveat=caveat, extra_cards=extra_cards, suite_names=suite_names)
+                 note, caveat=caveat, extra_cards=extra_cards, suite_names=suite_names,
+                 filter_label=('Search every file in this report'
+                               if search_data else 'Filter this directory by name'),
+                 search_data=search_data)
     with open(os.path.join(directory, 'index.html'), 'w') as handle:
         handle.write(page)
     written.append(directory)
@@ -800,7 +1141,8 @@ def write_directory_index(lcov_path, output_directory, source_root=None, index_l
             absence = None
     written = []
     _write_node(root, output_directory, (), source_prefix, index_link, written,
-                absence, unlinkable, suite_names=suite_names, generated=generated, scope=scope)
+                absence, unlinkable, suite_names=suite_names, generated=generated, scope=scope,
+                all_files=stripped)
     return len(written)
 
 
