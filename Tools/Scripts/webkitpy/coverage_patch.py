@@ -62,12 +62,16 @@ and nothing here can detect that. That is the same gap the line views have, and 
 provenance in the artifact rather than a check here.
 """
 
+import html
 import logging
 import os
 import subprocess
 
 from webkitpy.common.checkout.diff_parser import DiffParser
-from webkitpy.coverage_delta import SOURCE_EXTENSIONS, display_path, format_line_numbers
+from webkitpy.coverage_delta import (
+    SOURCE_EXTENSIONS, display_path, format_line_numbers, line_ranges)
+from webkitpy.coverage_directory_index import (
+    REPORT_STYLE, SORT_SCRIPT, format_percent, headers_html, meter_html)
 
 logger = logging.getLogger(__name__)
 
@@ -389,3 +393,307 @@ def format_patch_summary(patch, source_root=None, max_files=25, line_limit=12):
     lines.append('')
     lines.append(note)
     return '\n'.join(lines) + '\n'
+
+
+# --- HTML report -----------------------------------------------------------------------
+#
+# Patch coverage is the question webkit-coverage is built around, and until now the only way to
+# read the answer was a text file: compare-coverage-reports wrote patch-summary.txt while
+# printing the whole-tree index as the headline artifact one line above it. The tiles, the
+# palette, the meter and the sort script are imported from the two modules that already define
+# them, so this is a third view of the same report and not a second tool.
+#
+# The page is patch-coverage.html and deliberately not index.html. Both generate-coverage-report
+# and coverage_delta write an index.html, and webkit-coverage already points
+# compare-coverage-reports --output-dir at the report directory, so a third index.html there
+# would silently destroy the coverage index.
+PATCH_REPORT_NAME = 'patch-coverage.html'
+
+_PATCH_STYLE = """
+.tiles { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
+.tile {
+  flex: 1 1 180px; background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 8px; padding: 11px 13px;
+}
+.tile .k {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .04em; margin: 0;
+}
+.tile .v { font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; margin: 3px 0 1px; }
+.tile .s { font-size: 11px; color: var(--text-secondary); margin: 0; }
+.tile.bad .v { color: var(--patch-bad); }
+h2 { font-size: 13px; font-weight: 600; margin: 22px 0 8px; }
+.detail { padding: 9px 12px; border-bottom: 1px solid var(--gridline); }
+.detail:last-child { border-bottom: 0; }
+.detail p { margin: 0; color: var(--text-secondary); font-size: 12px; }
+.detail p.p { font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.detail p.p a { color: var(--text-primary); text-decoration: none; }
+.detail p.p a:hover { color: var(--meter-fill); text-decoration: underline; }
+.detail code { font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.detail code a { color: var(--patch-bad); text-decoration: none; }
+.detail code a:hover { text-decoration: underline; }
+.empty { padding: 14px 12px; color: var(--text-secondary); margin: 0; }
+td.file { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+:root {
+  --patch-bad: #c0392b;
+  --patch-bad: light-dark(#c0392b, #f0776a);
+}
+"""
+
+# (label, css class, sorts numerically), in order.
+_PATCH_HEADERS = (
+    ('File', '', False),
+    ('Patch coverage', '', True),
+    ('Patch %', 'n', True),
+    ('Covered', 'n', True),
+    ('Added', 'n', True),
+    ('No record', 'n', True),
+    ('Whole file %', 'n', True),
+)
+
+_FILE_LEVEL_HEADERS = (
+    ('File', '', False),
+    ('Coverage', '', True),
+    ('Whole file %', 'n', True),
+    ('Lines', 'n', True),
+    ('Uncovered', 'n', True),
+)
+
+
+def _tile(key, value, subtitle, css=''):
+    return ('<div class="{}"><p class="k">{}</p><p class="v">{}</p>'
+            '<p class="s">{}</p></div>'.format(('tile ' + css).strip(), html.escape(key),
+                                               html.escape(value), html.escape(subtitle)))
+
+
+def _patch_tiles(patch):
+    percent = patch.percent()
+    uncovered = patch.uncovered_line_count
+    return '<div class="tiles">' + ''.join((
+        _tile('Patch coverage', _percent(percent),
+              '{:,} of {:,} added lines with coverage data'.format(
+                  patch.covered_line_count, patch.instrumented_line_count),
+              'bad' if percent is not None and uncovered else ''),
+        _tile('Uncovered added lines', '{:,}'.format(uncovered),
+              'instrumented, and no test executed them',
+              'bad' if uncovered else ''),
+        _tile('Added lines', '{:,}'.format(patch.added_line_count),
+              '{:,} {} no coverage record'.format(
+                  patch.excluded_line_count,
+                  'carries' if patch.excluded_line_count == 1 else 'carry')),
+        _tile('Files changed', '{:,}'.format(len(patch.files)),
+              '{:,} with uncovered added lines'.format(
+                  sum(1 for entry in patch.files if entry.uncovered_lines))),
+        _tile('Whole-file coverage', _percent(patch.file_percent()),
+              'the files this change touched, all of their lines'),
+    )) + '</div>'
+
+
+def _file_level_tiles(patch):
+    count, covered = patch.file_totals
+    return '<div class="tiles">' + ''.join((
+        _tile('Whole-file coverage', _percent(patch.file_percent()),
+              '{:,} of {:,} lines'.format(covered, count)),
+        _tile('Files changed', '{:,}'.format(len(patch.files)),
+              'measured over all of their lines'),
+        _tile('Uncovered lines', '{:,}'.format(count - covered),
+              'in the files the change touched', 'bad' if count - covered else ''),
+    )) + '</div>'
+
+
+def _file_cell(entry, source_root, report_root):
+    relative = display_path(entry.path, source_root)
+    if report_root is None:
+        return '<td class="file" data-v="{v}">{v}</td>'.format(v=html.escape(relative))
+    return '<td class="file" data-v="{v}"><a href="{href}">{v}</a></td>'.format(
+        v=html.escape(relative), href=html.escape('{}{}.html'.format(report_root, relative)))
+
+
+def _patch_row(entry, source_root, report_root):
+    percent = entry.percent()
+    return '<tr>{}{}{}{}{}{}{}</tr>'.format(
+        _file_cell(entry, source_root, report_root),
+        '<td data-v="{}">{}</td>'.format(
+            -1 if percent is None else '{:.4f}'.format(percent), meter_html(percent)),
+        '<td class="n pct" data-v="{}">{}</td>'.format(
+            -1 if percent is None else '{:.4f}'.format(percent), format_percent(percent)),
+        '<td class="n" data-v="{}">{:,}/{:,}</td>'.format(
+            len(entry.covered_lines), len(entry.covered_lines), entry.instrumented_line_count),
+        '<td class="n" data-v="{c}">{c:,}</td>'.format(c=entry.added_line_count),
+        '<td class="n" data-v="{c}">{c:,}</td>'.format(c=entry.excluded_line_count),
+        '<td class="n pct" data-v="{}">{}</td>'.format(
+            -1 if entry.file_percent() is None else '{:.4f}'.format(entry.file_percent()),
+            format_percent(entry.file_percent())))
+
+
+def _file_level_row(entry, source_root, report_root):
+    percent = entry.file_percent()
+    count, covered = entry.file_totals
+    return '<tr>{}{}{}{}{}</tr>'.format(
+        _file_cell(entry, source_root, report_root),
+        '<td data-v="{}">{}</td>'.format(
+            -1 if percent is None else '{:.4f}'.format(percent), meter_html(percent)),
+        '<td class="n pct" data-v="{}">{}</td>'.format(
+            -1 if percent is None else '{:.4f}'.format(percent), format_percent(percent)),
+        '<td class="n" data-v="{c}">{c:,}</td>'.format(c=count),
+        '<td class="n" data-v="{c}">{c:,}</td>'.format(c=count - covered))
+
+
+def _table(headers, rows, empty):
+    if not rows:
+        return '<div class="card"><p class="empty">{}</p></div>'.format(html.escape(empty))
+    return ('<div class="card"><table><thead><tr>{}</tr></thead><tbody>{}</tbody>'
+            '</table></div>'.format(headers_html(headers), ''.join(rows)))
+
+
+def _line_links(path, numbers, report_root, limit):
+    """Uncovered line numbers, as links into the annotated source view when there is one.
+
+    One link per contiguous run rather than one per line: a 200-line untested block is one
+    thing to go and look at, and 200 anchors is not a list anybody reads. The link target is
+    the run's first line, which is where you want the cursor.
+    """
+    ranges = line_ranges(numbers)
+    if not ranges:
+        return ''
+    pieces = []
+    for low, high in ranges[:limit]:
+        label = '{}'.format(low) if low == high else '{}-{}'.format(low, high)
+        if report_root is None:
+            pieces.append(html.escape(label))
+            continue
+        target = '{}{}.html#L{}'.format(report_root, path, low)
+        pieces.append('<a href="{}">{}</a>'.format(html.escape(target), html.escape(label)))
+    if len(ranges) > limit:
+        pieces.append(html.escape('and {} more'.format(len(ranges) - limit)))
+    return ', '.join(pieces)
+
+
+def _patch_details(patch, source_root, report_root, line_limit):
+    """The uncovered added lines, per file. This is the product; everything else is context."""
+    blocks = []
+    for entry in patch.files:
+        if not entry.uncovered_lines:
+            continue
+        relative = display_path(entry.path, source_root)
+        heading = html.escape(relative) if report_root is None else (
+            '<a href="{}">{}</a>'.format(
+                html.escape('{}{}.html'.format(report_root, relative)), html.escape(relative)))
+        blocks.append(
+            '<div class="detail"><p class="p">{name}</p>'
+            '<p>{count} uncovered added line{plural} <code>{links}</code></p></div>'.format(
+                name=heading, count='{:,}'.format(len(entry.uncovered_lines)),
+                plural='' if len(entry.uncovered_lines) == 1 else 's',
+                links=_line_links(relative, entry.uncovered_lines, report_root, line_limit)))
+    if not blocks:
+        return ('<div class="card"><p class="empty">Every added line with coverage data was '
+                'executed.</p></div>')
+    return '<div class="card">' + ''.join(blocks) + '</div>'
+
+
+def _missing_card(patch, source_root, max_files):
+    if not patch.missing_paths:
+        return ''
+    one = len(patch.missing_paths) == 1
+    shown = patch.missing_paths[:max_files]
+    items = ''.join('<div class="detail"><p class="p">{}</p></div>'.format(
+        html.escape(display_path(path, source_root))) for path in shown)
+    if len(patch.missing_paths) > max_files:
+        items += '<div class="detail"><p>and {:,} more</p></div>'.format(
+            len(patch.missing_paths) - max_files)
+    heading = ('{} changed source file{} no coverage data in the trace, so nothing '
+               'instrumented compiled {}'.format(len(patch.missing_paths),
+                                                 ' has' if one else 's have',
+                                                 'it' if one else 'them'))
+    return '<h2>{}</h2><div class="card">{}</div>'.format(html.escape(heading), items)
+
+
+_PATCH_PAGE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<style>{style}{patch_style}</style>
+</head>
+<body>
+<div class="wrap">
+<h1>{title}</h1>
+<p class="sub">{subtitle}</p>
+{caveat}{tiles}
+<h2>{table_heading}</h2>
+{table}
+{details_section}{missing}<p class="hint">{note}</p>
+</div>
+<script>{script}</script>
+</body>
+</html>
+"""
+
+
+def write_patch_report(patch, output_directory, source_root=None, report_root=None,
+                       line_limit=24, max_files=200, scope=None):
+    """Write the patch-coverage HTML page. Returns the path to it.
+
+    report_root, when given, is the relative path from this page to the root of a coverage
+    report written by generate-coverage-report, and it is what turns each uncovered line number
+    into a link into the annotated source view. '' means the report is in this same directory,
+    which is what webkit-coverage arranges. Without it the numbers are plain text rather than
+    links to pages that may not exist.
+
+    scope is a coverage_scope.CoverageScope, and puts the lower-bound banner above the number
+    for a selective run -- the uncovered line list is still exactly the thing to act on, because
+    it is a superset of the truly untested lines and never a subset.
+    """
+    os.makedirs(output_directory, exist_ok=True)
+    if patch.line_numbers:
+        title = 'Patch coverage'
+        subtitle = ('{} of the {:,} added lines with coverage data are covered, over {:,} '
+                    'changed file{}'.format(_percent(patch.percent()),
+                                            patch.instrumented_line_count, len(patch.files),
+                                            '' if len(patch.files) == 1 else 's'))
+        tiles = _patch_tiles(patch)
+        table_heading = 'Changed files, worst first'
+        table = _table(_PATCH_HEADERS,
+                       [_patch_row(entry, source_root, report_root)
+                        for entry in patch.files[:max_files]],
+                       'No changed file has coverage data.')
+        details_section = '<h2>Uncovered added lines</h2>' + _patch_details(
+            patch, source_root, report_root, line_limit)
+        note = _PATCH_NOTE
+    else:
+        count, covered = patch.file_totals
+        title = 'Coverage of the files this change touched'
+        subtitle = '{} over {:,} file{}, {:,} of {:,} lines'.format(
+            _percent(patch.file_percent()), len(patch.files),
+            '' if len(patch.files) == 1 else 's', covered, count)
+        tiles = _file_level_tiles(patch)
+        table_heading = 'Changed files, least covered first'
+        table = _table(_FILE_LEVEL_HEADERS,
+                       [_file_level_row(entry, source_root, report_root)
+                        for entry in patch.files[:max_files]],
+                       'No changed file has coverage data.')
+        # No per-line section at all rather than an empty one: a file list cannot say which
+        # lines were added, so there is no such thing as an uncovered added line here.
+        details_section = ''
+        note = _FILE_LEVEL_NOTE
+
+    if len(patch.files) > max_files:
+        note = ('The table lists the first {:,} of {:,} changed files, worst first. '.format(
+            max_files, len(patch.files)) + note)
+
+    caveat = ''
+    if scope is not None and scope.is_selective:
+        caveat = '<p class="caveat">{}</p>\n'.format(html.escape(' '.join(scope.banner_lines())))
+        title = scope.qualify_title(title)
+
+    page = _PATCH_PAGE.format(
+        title=html.escape(title), subtitle=html.escape(subtitle), caveat=caveat, tiles=tiles,
+        table_heading=html.escape(table_heading), table=table,
+        details_section=details_section,
+        missing=_missing_card(patch, source_root, max_files),
+        note=html.escape(note), style=REPORT_STYLE, patch_style=_PATCH_STYLE, script=SORT_SCRIPT)
+    path = os.path.join(output_directory, PATCH_REPORT_NAME)
+    with open(path, 'w') as handle:
+        handle.write(page)
+    return path
