@@ -225,5 +225,42 @@ class ArgumentValidationTest(_Script):
                            '--fail-under-functions=' + value).fail_under_functions, float(value))
 
 
+class SummaryTotalLinesTest(_Script):
+    """What gets echoed to the terminal out of llvm-cov's table.
+
+    The defect: splitlines()[-3:], which is one arbitrary file's row, the rule and TOTAL. Every
+    run printed whichever file llvm-cov sorted last -- measured as bmalloc/pas_stats.h at 0 of
+    0 lines -- directly above the totals, where it reads as part of them.
+    """
+
+    TABLE = (
+        'Filename                        Regions    Missed Regions    Cover\n'
+        '-----------------------------------------------------------------\n'
+        'Source/WTF/wtf/Assertions.cpp        10                 2   80.00%\n'
+        'WebKitBuild/bmalloc/pas_stats.h       0                 0        -\n'
+        '-----------------------------------------------------------------\n'
+        'TOTAL                                10                 2   80.00%\n'
+    )
+
+    def test_only_the_rule_and_the_total_are_echoed(self):
+        self.assertEqual(self.script.summary_total_lines(self.TABLE),
+                         [self.TABLE.splitlines()[-2], self.TABLE.splitlines()[-1]])
+
+    def test_no_file_row_is_echoed(self):
+        echoed = '\n'.join(self.script.summary_total_lines(self.TABLE))
+        self.assertNotIn('pas_stats.h', echoed)
+        self.assertNotIn('Assertions.cpp', echoed)
+
+    def test_a_total_with_no_rule_above_it_is_echoed_alone(self):
+        table = 'Source/WTF/wtf/Assertions.cpp   10   2   80.00%\nTOTAL   10   2   80.00%\n'
+        self.assertEqual(self.script.summary_total_lines(table), ['TOTAL   10   2   80.00%'])
+
+    def test_output_with_no_total_falls_back_to_the_tail(self):
+        # llvm-cov printed something this function does not model. Showing the tail keeps it
+        # visible rather than swallowing it.
+        table = 'one\ntwo\nthree\nfour\n'
+        self.assertEqual(self.script.summary_total_lines(table), ['two', 'three', 'four'])
+
+
 if __name__ == '__main__':
     unittest.main()

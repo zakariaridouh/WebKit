@@ -53,8 +53,8 @@ from webkitpy.common.host import Host
 from webkitpy.coverage_build_inventory import find_absent_files
 from webkitpy.coverage_directory_index import write_directory_index, write_report
 from webkitpy.coverage_lcov import (
-    PathCanonicalizer, parse_lcov, parse_lcov_source_files, project_totals,
-    third_party_copied_header_ignore_regexes)
+    PathCanonicalizer, canonicalize_lcov, parse_lcov, parse_lcov_source_files, project_totals,
+    staged_equivalents_for_scope, third_party_copied_header_ignore_regexes)
 from webkitpy.coverage_provenance import (
     add_trace_measurements, provenance_record, summary_lines, trace_comment, write_provenance)
 from webkitpy.coverage_requirements import (
@@ -652,6 +652,25 @@ def summary_banner_lines(scope, summary_text):
     return lines
 
 
+def summary_total_lines(summary_text):
+    """llvm-cov's TOTAL line, with the rule above it, for echoing to the terminal.
+
+    Located, not sliced off the end. This used to be splitlines()[-3:], which is one arbitrary
+    file's row, the rule and TOTAL -- so every run printed whichever file llvm-cov happened to
+    sort last (measured: bmalloc/pas_stats.h, at 0 of 0 lines) directly above the totals, where
+    it reads as though it were part of them.
+    """
+    lines = summary_text.splitlines()
+    for index in range(len(lines) - 1, -1, -1):
+        if not lines[index].startswith('TOTAL'):
+            continue
+        rule = lines[index - 1].strip() if index else ''
+        return lines[index - 1:index + 1] if rule and set(rule) == {'-'} else [lines[index]]
+    # No TOTAL to find means llvm-cov printed something this function does not model. Show the
+    # tail rather than nothing, so whatever it was is at least visible.
+    return lines[-3:]
+
+
 def main(args):
     options = parse_args(args)
     logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
@@ -678,19 +697,37 @@ def main(args):
     # record, which is the copy that is also written into the artifacts, and saying it twice
     # teaches a reader to skip it.
 
-    # Resolved and checked before any work: a --sources path that matches nothing makes llvm-cov
-    # produce an empty report rather than complain, so a typo would otherwise cost a full run and
-    # then say "contained no coverage records".
+    # Resolved and checked before any work: a --sources path that matches nothing does NOT make
+    # llvm-cov produce an empty report, and it does not complain either -- measured against the
+    # current Apple LLVM, it reports *everything*. So a typo, or a scope llvm-cov cannot see,
+    # costs a full run and then hands back a whole-tree artifact under a banner saying the
+    # report is scoped. See llvm_cov_sources below and verify_report_is_within_scope().
     sources, missing_sources = resolve_source_scopes(options.sources, port.webkit_base())
     if missing_sources:
         for path in missing_sources:
             _log.error('--sources %s does not exist', path)
         _log.error('llvm-cov matches --sources against paths recorded in the coverage mapping, '
-                   'and reports nothing rather than failing when none of them match.')
+                   'and reports the whole tree rather than failing when none of them match.')
         return 1
     if sources:
         _log.info('Reporting only on %s, so every total below is that scope and not the project.',
                   ', '.join(sources))
+
+    # The scope as the *checkout* spells it is not the scope the coverage mapping records. A
+    # framework that compiles against the build directory's staged headers records those paths,
+    # and PathCanonicalizer maps them back only when a trace is read -- long after llvm-cov has
+    # applied --sources. So llvm-cov needs both spellings, or the filter matches nothing and
+    # silently degrades to the whole tree. Measured: WebCore.framework's mapping holds 13,548
+    # files and no Source/WTF path at all.
+    llvm_cov_sources = list(sources)
+    for scope in sources:
+        for staged in staged_equivalents_for_scope(scope, port.webkit_base(),
+                                                   port._build_path()):
+            if staged not in llvm_cov_sources:
+                llvm_cov_sources.append(staged)
+                _log.info('Also passing %s to llvm-cov: it is where the build stages the '
+                          'headers of %s, and that is the path the coverage mapping records.',
+                          staged, scope)
 
     try:
         objects = instrumented_binary_paths(port, options.extra_objects,
@@ -791,25 +828,26 @@ def main(args):
     # with a different profile.
     def make_summary():
         return LLVMCov.report(objects, profile_path, ignore_regexes, options.path_equivalence,
-                              check_binary_ids=True, sources=sources)
+                              check_binary_ids=True, sources=llvm_cov_sources)
 
     def make_lcov():
         return LLVMCov.export_lcov(objects, profile_path, lcov_path, ignore_regexes,
                                    options.path_equivalence, compress=options.compress_lcov,
-                                   header_line=trace_comment(provenance), sources=sources)
+                                   header_line=trace_comment(provenance),
+                                   sources=llvm_cov_sources)
 
     def make_html():
         return LLVMCov.show_html(objects, profile_path, html_dir, ignore_regexes,
                                  options.path_equivalence,
                                  show_instantiations=options.show_instantiations,
-                                 sources=sources)
+                                 sources=llvm_cov_sources)
 
     def make_suite_lcov(suite_profile, output_path):
         return lambda: LLVMCov.export_lcov(objects, suite_profile, output_path, ignore_regexes,
                                            options.path_equivalence,
                                            compress=options.compress_lcov,
                                            header_line=trace_comment(provenance),
-                                           sources=sources)
+                                           sources=llvm_cov_sources)
 
     work = {'summary': make_summary}
     # The directory index and the line views are both built from the lcov trace, so it is
@@ -831,6 +869,33 @@ def main(args):
     for name, result in results.items():
         if result.returncode:
             _log.error('llvm-cov %s failed: %s', name, result.stderr)
+            return 1
+
+    # llvm-cov applied --sources, or it did not and said nothing. Checked rather than trusted,
+    # because the failure is silent and the artifact still looks right: a filter that matches no
+    # recorded path makes llvm-cov report the whole tree, and the scope banner above has already
+    # promised otherwise. Measured on this checkout before llvm_cov_sources existed:
+    # --products=WebCore --sources=Source/WTF gave 13,554 files and 1,453,739 lines, Xcode SDK
+    # headers included, where the same profile scoped correctly gives 322 files and 39,107.
+    #
+    # Cheap enough to always do: one SF: pass over the trace, seconds against the tens that
+    # parsing it fully takes. Fatal rather than a warning -- an artifact whose banner contradicts
+    # its contents is worse than no artifact, and every consumer of the trace believes the banner.
+    if sources:
+        canonicalizer = PathCanonicalizer(port.webkit_base(), build_directory=port._build_path())
+        reported = parse_lcov_source_files(lcov_path, canonicalizer)
+        outside = sorted(path for path in reported if not is_under_any(path, sources))
+        if outside:
+            _log.error('llvm-cov ignored --sources: %d of the %d files in the trace are outside '
+                       'the requested scope.', len(outside), len(reported))
+            for path in outside[:5]:
+                _log.error('    %s', path)
+            if len(outside) > 5:
+                _log.error('    ... and %d more', len(outside) - 5)
+            _log.error('llvm-cov reports everything, silently, when a --sources filter matches '
+                       'no path in the coverage mapping. Check that %s is a path the mapping '
+                       'records for these objects; a framework compiled against staged headers '
+                       'records the build directory path instead.', ', '.join(sources))
             return 1
 
     # A profile collected from different binaries than the ones being reported on still
@@ -878,9 +943,28 @@ def main(args):
         summary_file.write(results['summary'].stdout)
     for line in options.scope.banner_lines():
         print(line)
-    for line in results['summary'].stdout.splitlines()[-3:]:
+    for line in summary_total_lines(results['summary'].stdout):
         print(options.scope.qualify_percentages(line))
     _log.info('Wrote %s', summary_path)
+
+    # The trace, rewritten to name the paths the report shows. Done here, before its size is
+    # logged and before its measurements go into the provenance, so that everything downstream
+    # describes the file that will actually be on disk.
+    #
+    # summary.txt above is deliberately left byte-for-byte what llvm-cov produced; the trace is
+    # deliberately not. The difference is what each is for. summary.txt is llvm-cov's own report
+    # and is read as such. The trace is this tool's artifact: it outlives the report, it is what
+    # compare-coverage-reports consumes and what a CI system would ingest, and it disagreeing
+    # with the report it shipped beside is a defect rather than a curiosity.
+    trace_canonicalizer = PathCanonicalizer(port.webkit_base(),
+                                            build_directory=port._build_path())
+    for path in [lcov_path] + [path for _, path in suite_lcov_paths]:
+        rewrite = canonicalize_lcov(path, trace_canonicalizer)
+        if rewrite.rewritten or rewrite.merged:
+            _log.info('%s: rewrote %d staged path(s) and unioned %d file(s) that llvm-cov '
+                      'reported under two paths, %d records to %d', os.path.basename(path),
+                      rewrite.rewritten, rewrite.merged, rewrite.records_in, rewrite.records_out)
+
     _log.info('Wrote %s (%.1f MB)', lcov_path, os.path.getsize(lcov_path) / 1e6)
     for name, path in suite_lcov_paths:
         _log.info('Wrote %s (%.1f MB), suite %s', path, os.path.getsize(path) / 1e6, name)

@@ -30,8 +30,9 @@ import tempfile
 import unittest
 
 from webkitpy.coverage_lcov import (
-    PathCanonicalizer, _INSTALLED_HEADER_RULES, compiled_copy_candidates, open_lcov, parse_lcov,
-    parse_lcov_source_files, project_totals, third_party_copied_header_ignore_regexes)
+    PathCanonicalizer, _INSTALLED_HEADER_RULES, canonicalize_lcov, compiled_copy_candidates,
+    open_lcov, parse_lcov, parse_lcov_source_files, project_totals,
+    staged_equivalents_for_scope, third_party_copied_header_ignore_regexes)
 
 
 class _Checkout(unittest.TestCase):
@@ -257,6 +258,192 @@ class CMakeStagedHeaderTest(_Checkout):
                          {PathCanonicalizer.WEBKIT_ADDITIONS: {staged}})
 
 
+class StagedEquivalentsForScopeTest(_Checkout):
+    """The other half of staged headers: what --sources has to name for llvm-cov to match.
+
+    Canonicalization runs when a trace is read, so it cannot help llvm-cov, which applies
+    --sources against the paths the coverage mapping actually records -- the staged copies.
+    Measured before this existed: WebCore.framework's mapping holds 13,548 files and no
+    Source/WTF path at all, so --sources Source/WTF matched nothing and llvm-cov reported the
+    whole tree, 1,453,739 lines against the 39,107 the scope contains.
+    """
+
+    def build(self, *relative_directories):
+        build_directory = os.path.join(self.root, 'WebKitBuild/cmake-mac/Coverage')
+        for relative in relative_directories:
+            os.makedirs(os.path.join(build_directory, relative), exist_ok=True)
+        return build_directory
+
+    def test_a_scope_containing_the_staged_tree_gets_the_staged_root(self):
+        build = self.build('WTF/Headers/wtf')
+        self.assertEqual(
+            staged_equivalents_for_scope(self.absolute('Source/WTF'), self.root, build),
+            [os.path.join(build, 'WTF/Headers/wtf')])
+
+    def test_a_scope_inside_the_staged_tree_gets_the_matching_subdirectory(self):
+        build = self.build('WTF/Headers/wtf/text')
+        self.assertEqual(
+            staged_equivalents_for_scope(self.absolute('Source/WTF/wtf/text'), self.root, build),
+            [os.path.join(build, 'WTF/Headers/wtf/text')])
+
+    def test_a_scope_with_no_staged_copy_gets_nothing(self):
+        # WebCore's own sources are compiled from the checkout, so there is nothing to add and
+        # adding a path that matches nothing is the defect, not a harmless extra.
+        build = self.build('WTF/Headers/wtf')
+        self.assertEqual(
+            staged_equivalents_for_scope(self.absolute('Source/WebCore/dom'), self.root, build),
+            [])
+
+    def test_a_staged_directory_that_does_not_exist_is_not_offered(self):
+        build = self.build()
+        self.assertEqual(
+            staged_equivalents_for_scope(self.absolute('Source/WTF'), self.root, build), [])
+
+    def test_the_installed_header_location_needs_no_build_directory(self):
+        # /usr/local/include/wtf is an absolute location the Xcode build installs to, so it is
+        # available even when no build directory was given. Only offered when it is really there.
+        self.assertEqual(
+            staged_equivalents_for_scope(self.absolute('Source/WTF'), self.root, None),
+            ['/usr/local/include/wtf'] if os.path.isdir('/usr/local/include/wtf') else [])
+
+    def test_a_scope_outside_the_checkout_gets_nothing(self):
+        build = self.build('WTF/Headers/wtf')
+        self.assertEqual(staged_equivalents_for_scope('/elsewhere/WTF', self.root, build), [])
+
+    def test_bmalloc_and_pal_are_covered_too(self):
+        build = self.build('bmalloc/Headers/bmalloc', 'PAL/Headers/pal')
+        self.assertEqual(
+            staged_equivalents_for_scope(self.absolute('Source/bmalloc'), self.root, build),
+            [os.path.join(build, 'bmalloc/Headers/bmalloc')])
+        self.assertEqual(
+            staged_equivalents_for_scope(self.absolute('Source/WebCore/PAL'), self.root, build),
+            [os.path.join(build, 'PAL/Headers/pal')])
+
+
+class CanonicalizeLcovTest(_Checkout):
+    """Rewriting a trace so it names the paths the report shows.
+
+    The defect: every derived view canonicalized on the way in, so the report was right, while the
+    exported trace kept llvm-cov's build-directory paths. Measured on a full-suite run, the trace
+    totalled 1,900,423 lines at 66.40% against the report's view of the same file at 1,886,435 --
+    649 records under a build path, 296 canonical files reported under two paths at once.
+    """
+
+    BUILD = '/tmp/WebKitBuild/cmake-mac/Coverage'
+
+    def trace(self, text, name='coverage.lcov', compress=False):
+        path = os.path.join(self.root, name)
+        if compress:
+            with gzip.open(path, 'wt') as handle:
+                handle.write(text)
+        else:
+            with open(path, 'w') as handle:
+                handle.write(text)
+        return path
+
+    def record(self, source, lines, function=None, start=1):
+        out = ['SF:' + source]
+        if function:
+            out += ['FN:{},{}'.format(start, function),
+                    'FNDA:{},{}'.format(lines[0][1], function), 'FNF:1',
+                    'FNH:{}'.format(1 if lines[0][1] else 0)]
+        out += ['BRF:0', 'BRH:0']
+        out += ['DA:{},{}'.format(number, count) for number, count in lines]
+        out += ['LF:{}'.format(len(lines)),
+                'LH:{}'.format(sum(1 for _, count in lines if count)),
+                'end_of_record']
+        return '\n'.join(out) + '\n'
+
+    def canonicalizer(self):
+        return PathCanonicalizer(self.root, build_directory=self.BUILD)
+
+    def test_a_staged_path_is_rewritten_to_the_checkout(self):
+        self.write('Source/WTF/wtf/Vector.h')
+        path = self.trace(self.record(self.BUILD + '/WTF/Headers/wtf/Vector.h', [(10, 1)]))
+        result = canonicalize_lcov(path, self.canonicalizer())
+        self.assertEqual((result.records_in, result.records_out, result.rewritten, result.merged),
+                         (1, 1, 1, 0))
+        self.assertIn('SF:' + self.absolute('Source/WTF/wtf/Vector.h'), open(path).read())
+
+    def test_two_spellings_of_one_file_become_one_record_unioned_by_maximum(self):
+        # The defect this exists for: one file, two rows, its coverage split between them. A line
+        # covered by any translation unit is covered, so the union is the maximum -- summing would
+        # inflate every header shared between two frameworks, since llvm-profdata already merged
+        # those counters by function name.
+        self.write('Source/WTF/wtf/Vector.h')
+        text = (self.record(self.absolute('Source/WTF/wtf/Vector.h'), [(10, 5), (11, 0)])
+                + self.record(self.BUILD + '/WTF/Headers/wtf/Vector.h', [(10, 2), (11, 7)]))
+        path = self.trace(text)
+        result = canonicalize_lcov(path, self.canonicalizer())
+        self.assertEqual((result.records_in, result.records_out, result.merged), (2, 1, 1))
+        parsed = parse_lcov(path)
+        self.assertEqual(len(parsed), 1)
+        coverage = parsed[self.absolute('Source/WTF/wtf/Vector.h')]
+        self.assertEqual(coverage.lines, {10: 5, 11: 7})
+
+    def test_the_result_equals_what_parse_lcov_makes_of_the_original(self):
+        # The property that matters, and the reason this is not just a path substitution: the
+        # rewritten trace must *be* the report's view of the original, not an approximation of it.
+        self.write('Source/WTF/wtf/Vector.h')
+        self.write('Source/WebCore/dom/Node.cpp')
+        text = (self.record(self.absolute('Source/WTF/wtf/Vector.h'), [(10, 5), (11, 0)], 'f1')
+                + self.record(self.BUILD + '/WTF/Headers/wtf/Vector.h', [(10, 2), (11, 7)], 'f2')
+                + self.record(self.absolute('Source/WebCore/dom/Node.cpp'), [(3, 1)], 'f3'))
+        original = self.trace(text, name='original.lcov')
+        rewritten = self.trace(text, name='rewritten.lcov')
+        canonicalize_lcov(rewritten, self.canonicalizer())
+
+        expected = parse_lcov(original, self.canonicalizer())
+        actual = parse_lcov(rewritten, self.canonicalizer())
+        self.assertEqual(sorted(expected), sorted(actual))
+        for key in expected:
+            self.assertEqual(expected[key].lines, actual[key].lines, key)
+            self.assertEqual(expected[key].functions, actual[key].functions, key)
+            self.assertEqual(expected[key].function_lines, actual[key].function_lines, key)
+        self.assertEqual(project_totals(expected), project_totals(actual))
+
+    def test_a_merged_record_keeps_the_function_name_to_line_pairing(self):
+        # Why this does not simply re-emit parse_lcov's output: FileCoverage keeps function counts
+        # by mangled name and separately by start line, so it cannot reconstruct an FN: record.
+        self.write('Source/WTF/wtf/Vector.h')
+        text = (self.record(self.absolute('Source/WTF/wtf/Vector.h'), [(10, 5)], 'mangled', start=9)
+                + self.record(self.BUILD + '/WTF/Headers/wtf/Vector.h', [(10, 8)], 'mangled', start=9))
+        path = self.trace(text)
+        canonicalize_lcov(path, self.canonicalizer())
+        written = open(path).read()
+        self.assertIn('FN:9,mangled', written)
+        self.assertIn('FNDA:8,mangled', written)
+        self.assertIn('FNF:1', written)
+        self.assertIn('FNH:1', written)
+
+    def test_an_uncontested_record_is_copied_through_unchanged(self):
+        # 96% of a real trace needs nothing done to it, and rewriting bytes llvm-cov got right is
+        # how a rewriter introduces a bug of its own.
+        self.write('Source/WebCore/dom/Node.cpp')
+        body = self.record(self.absolute('Source/WebCore/dom/Node.cpp'),
+                           [(3, 1), (4, 0)], 'f')
+        path = self.trace(body)
+        result = canonicalize_lcov(path, self.canonicalizer())
+        self.assertEqual((result.rewritten, result.merged), (0, 0))
+        self.assertEqual(open(path).read(), body)
+
+    def test_a_gzipped_trace_stays_gzipped(self):
+        self.write('Source/WTF/wtf/Vector.h')
+        path = self.trace(self.record(self.BUILD + '/WTF/Headers/wtf/Vector.h', [(10, 1)]),
+                          name='coverage.lcov.gz', compress=True)
+        canonicalize_lcov(path, self.canonicalizer())
+        with open(path, 'rb') as handle:
+            self.assertEqual(handle.read(2), b'\x1f\x8b')
+        self.assertIn('SF:' + self.absolute('Source/WTF/wtf/Vector.h'), open_lcov(path).read())
+
+    def test_nothing_is_left_behind_on_the_way(self):
+        self.write('Source/WTF/wtf/Vector.h')
+        path = self.trace(self.record(self.BUILD + '/WTF/Headers/wtf/Vector.h', [(10, 1)]))
+        canonicalize_lcov(path, self.canonicalizer())
+        leftovers = [name for name in os.listdir(self.root) if name.startswith('.canonicalizing-')]
+        self.assertEqual(leftovers, [])
+
+
 class BuildDirectoryResidueTest(_Checkout):
     BUILD = '/tmp/Build/Release'
 
@@ -289,6 +476,27 @@ class BuildDirectoryResidueTest(_Checkout):
         canonicalizer = PathCanonicalizer(self.root)
         canonicalizer.canonicalize(self.BUILD + '/WebCore.framework/PrivateHeaders/JSDocument.h')
         self.assertEqual(canonicalizer.build_directory_paths, {})
+
+    def test_a_file_the_build_wrote_is_told_apart_from_one_nothing_could_place(self):
+        # These are the five that used to share OTHER's "not a copied header this tool knows how
+        # to place", which reads as a failure. They are not: WGSL's TypeDeclarations.h, the two
+        # Swift-generated headers and WebPushDaemonStubs.cpp are build output, so the build
+        # directory is the only path they have, exactly like WEBKIT_ADDITIONS.
+        canonicalizer = self.canonicalizer()
+        generated = self.BUILD + '/Source/WebGPU/WGSL/TypeDeclarations.h'
+        canonicalizer.canonicalize(generated)
+        self.assertEqual(canonicalizer.build_directory_paths,
+                         {PathCanonicalizer.GENERATED_BY_THE_BUILD: {generated}})
+
+    def test_a_build_path_that_does_exist_in_the_checkout_stays_unexplained(self):
+        # Decided by asking the filesystem, so a staged copy of a file that *is* in the checkout
+        # is a placement this tool failed to make, and must not be excused as build output.
+        self.write('Source/WebCore/dom/Node.h')
+        canonicalizer = self.canonicalizer()
+        staged = self.BUILD + '/Source/WebCore/dom/Node.h'
+        canonicalizer.canonicalize(staged)
+        self.assertEqual(canonicalizer.build_directory_paths,
+                         {PathCanonicalizer.OTHER: {staged}})
 
 
 class ThirdPartyCopiedHeaderTest(_Checkout):
