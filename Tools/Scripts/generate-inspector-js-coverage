@@ -1,0 +1,319 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2026 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+"""Which of WebKit's shipping JavaScript a browser run executed, from the Inspector protocol.
+
+generate-javascript-coverage measures the 102 builtins inside JavaScriptCore by driving JSC's
+control-flow profiler from jsc. That cannot reach the JavaScript that only runs inside a browser --
+199,850 lines of Web Inspector front end, WebCore's injected scripts, and the Inspector builtins
+that make up 1,049 of the JSC tool's own 2,737 lines. This drives the identical profiler through
+the Web Inspector protocol instead, so it measures whatever a real page and a real front end run.
+
+    Tools/Scripts/generate-inspector-js-coverage --target frontend
+    Tools/Scripts/generate-inspector-js-coverage --page file:///path/to/page.html
+    Tools/Scripts/generate-inspector-js-coverage --target frontend --json /tmp/inspector.json
+    Tools/Scripts/generate-inspector-js-coverage --log /tmp/saved-run.log     # re-report only
+
+--target frontend is the interesting one: it opens the real Main.html as the driver page's
+inspector, so that the front end boots with an InspectorFrontendHost, and then opens the protocol
+test stub as the *front end's* inspector. The inspector inspecting the inspector, in one process,
+one VM, and therefore one ControlFlowProfiler.
+
+The headline is the list of functions nothing called, by file, function and line, and the
+least-covered files. Every number is a lower bound and printed with a >=: one page load is a
+subset of what the product does, in exactly the way Tools/CodeCoverage/README.md describes.
+
+HOW, in one paragraph. A generated HTML page is run under WebKitTestRunner. It uses
+Internals::openDummyInspectorFrontend and WebInspectorUI's TestStub.html -- the same machinery
+LayoutTests/inspector/* runs on -- to get a protocol channel, sends Runtime.enableControlFlowProfiler
+and Debugger.enable, reloads the target because enabling the profiler deletes all compiled code,
+waits for Debugger.scriptParsed to go quiet, and then asks Runtime.getBasicBlocks for every
+sourceID the backend named. See webkitpy/coverage_inspector.py for what getBasicBlocks actually
+returns, which is two different kinds of record, and for the one that has to be filtered out
+before any line is attributed.
+
+IT WRITES NO PROFILES INTO THE SHARED DIRECTORY. Every binary in a coverage build has
+/private/tmp/WebKitCoverage/<Product>_%8m%c.profraw baked in, and that path is machine-global.
+Both LLVM_PROFILE_FILE and __XPC_LLVM_PROFILE_FILE are always set, the second because the
+Network, GPU and WebContent processes are XPC services that see only the prefixed copies -- with
+only the first set, one run left 20 files and 409 MB of .profraw in the shared
+directory.
+"""
+
+import json
+import logging
+import optparse
+import os
+import shutil
+import sys
+import tempfile
+
+from webkitpy.common.system.filesystem import FileSystem
+from webkitpy.common.webkit_finder import WebKitFinder
+from webkitpy.coverage_inspector import (
+    COVERAGE_BEGIN, TARGET_FRONTEND, TARGET_PAGE, TARGETS, InspectorCoverageReport, PayloadError,
+    WebKitTestRunnerDriver, default_workload_source, driver_source, extract_payload, file_url,
+    find_inspector_resource, find_test_runner, format_report, scripts_from_payload)
+from webkitpy.coverage_scope import CoverageScope
+
+_log = logging.getLogger('generate-inspector-js-coverage')
+
+# Same list and same order as generate-javascript-coverage, for the same reason: the coverage tree
+# is what Tools/CodeCoverage's recipes produce, and a plain Release build works just as well.
+_BUILD_DIRECTORY_CANDIDATES = (
+    os.path.join('WebKitBuild', 'cmake-mac', 'Coverage'),
+    os.path.join('WebKitBuild-Coverage', 'Release'),
+    os.path.join('WebKitBuild', 'Release'),
+    os.path.join('WebKitBuild', 'cmake-mac', 'Release'),
+    os.path.join('WebKitBuild', 'Debug'),
+)
+
+_EPILOG = """
+WHAT THE NUMBERS MEAN
+
+Functions is a LOWER BOUND on both halves. Runtime.getBasicBlocks reports a text range for every
+function a compiled CodeBlock declared, whether or not it was ever called, so a function nothing
+called is visible and named -- but a function inside a function that was never compiled is not
+there at all, and neither is one whose range does not start on something this tool recognises as a
+function head. What the number says is: of the functions the profiler saw, this many ran.
+
+Lines is per basic block, over the code lines of each source: non-blank, non-comment,
+non-punctuation-only, which is the identical denominator generate-javascript-coverage uses and the
+rule Tools/CodeCoverage/README.md states for the native pipeline. A line is covered when a range
+that overlaps a non-whitespace character of it executed. Ranges that enclose other ranges are
+discarded first: a function's whole-text range reads as executed the moment the function is
+entered once, and crediting it would report every function that ran at all as fully covered.
+
+A source with no basic blocks is not a source with no coverage. Reloading the target is what makes
+the profiler see it, and a script the reload did not reach -- a lazily loaded module, a worker --
+has no record either way and is counted under "sources with basic blocks" rather than at 0%.
+
+WHAT IS NOT MEASURABLE THIS WAY
+
+WebCore's builtins. They are compiled as one SourceProvider per builtin function with no URL, and
+Debugger::attach skips builtin functions on purpose (Debugger.cpp:196,
+`!function->isHostOrBuiltinFunction()`), so no scriptParsed event ever names them and
+Debugger.getScriptSource cannot be asked about a sourceID the debugger has not registered. Their
+blocks are in the profiler; there is no protocol call that enumerates them. See
+Tools/CodeCoverage/JavaScriptCoverage.md for the measurement that shows why scanning sourceIDs by
+hand does not work either.
+
+WebCore's injected media controls. They arrive as one 161 KB script with no URL because
+make-js-file-arrays.py runs jsmin over the concatenation of the 87 authored files: 9,892 source
+lines become 2,042, and there is no source map. The script is measured and reported under its
+sourceURL directive; it cannot be split back into files without building with --no-minify.
+"""
+
+
+class _PreformattedEpilog(optparse.IndentedHelpFormatter):
+    def format_epilog(self, epilog):
+        return epilog or ''
+
+
+def parse_args(args):
+    parser = optparse.OptionParser(usage='%prog [options]', epilog=_EPILOG,
+                                   formatter=_PreformattedEpilog())
+    parser.add_option('--target', type='choice', choices=list(TARGETS), default=TARGET_PAGE,
+                      help='What to measure: "page" for the JavaScript a page runs, "frontend" '
+                           'for the Web Inspector front end itself (default: %default)')
+    parser.add_option('--page', metavar='URL',
+                      help='The page to load and measure with --target page. Defaults to a '
+                           'generated workload that exercises WebCore\'s stream builtins and the '
+                           'injected media controls. Ignored with --target frontend')
+    parser.add_option('--build-directory',
+                      help='Build directory holding WebKitTestRunner and WebInspectorUI. '
+                           'Defaults to the first of {} that has both'.format(
+                               ', '.join(_BUILD_DIRECTORY_CANDIDATES)))
+    parser.add_option('--driver', help='Path to WebKitTestRunner, if not the build directory\'s')
+    parser.add_option('--settle-ms', type='int', default=3000, metavar='MS',
+                      help='How long to let the front end boot before inspecting it, with '
+                           '--target frontend (default: %default)')
+    parser.add_option('--quiet-polls', type='int', default=6, metavar='N',
+                      help='Consecutive 500ms polls with no new Debugger.scriptParsed event that '
+                           'end the measurement (default: %default)')
+    parser.add_option('--fetch-sources', type='choice',
+                      choices=['none', 'unresolved', 'all'], default='unresolved',
+                      help='Which sources to pull back with Debugger.getScriptSource: "none", '
+                           '"unresolved" for the ones whose URL is not a file: URL, or "all" '
+                           '(default: %default). "all" is exact and slow -- it moves megabytes '
+                           'through the log -- and is only needed when the checkout has moved on '
+                           'from the build')
+    parser.add_option('--timeout', type='int', default=600, metavar='SECONDS',
+                      help='Kill WebKitTestRunner after this long (default: %default)')
+    parser.add_option('--log', metavar='PATH',
+                      help='Report on an already-captured WebKitTestRunner log instead of running '
+                           'anything')
+    parser.add_option('--save-log', metavar='PATH',
+                      help='Write the run\'s stderr here, so it can be re-reported with --log')
+    parser.add_option('--save-driver', metavar='DIR',
+                      help='Keep the generated driver and workload pages in DIR instead of a '
+                           'temporary directory, so they can be run by hand')
+    parser.add_option('--profile-destination', metavar='PATH', default=os.devnull,
+                      help='Where an instrumented build should write .profraw files (default: '
+                           '%default). Never the baked-in machine-global path')
+    parser.add_option('--limit', type='int', default=40, metavar='N',
+                      help='How many never-executed functions and how many files to list '
+                           '(default: %default)')
+    parser.add_option('--json', metavar='PATH', help='Also write the report as JSON')
+    parser.add_option('-v', '--verbose', action='store_true', default=False,
+                      help='Verbose logging')
+    options, remaining = parser.parse_args(args)
+    if remaining:
+        parser.error('Unexpected arguments: {}. The page to measure is --page.'.format(
+            ' '.join(remaining)))
+    if options.quiet_polls < 1:
+        parser.error('--quiet-polls must be at least 1')
+    return options
+
+
+def resolve_build_directory(options, checkout_root):
+    """(build directory, WebKitTestRunner, TestStub.html, Main.html).
+
+    All four have to come from one build: the stub and Main.html are loaded by absolute file URL
+    and the driver is the process that loads them, so a mismatch would be a version-mismatch
+    crash rather than a wrong number.
+    """
+    candidates = [options.build_directory] if options.build_directory else [
+        os.path.join(checkout_root, relative) for relative in _BUILD_DIRECTORY_CANDIDATES]
+    for candidate in candidates:
+        driver = options.driver or find_test_runner(candidate)
+        stub = find_inspector_resource(candidate, 'TestStub.html')
+        main = find_inspector_resource(candidate, 'Main.html')
+        if driver and stub:
+            return candidate, driver, stub, main
+    return None, options.driver, None, None
+
+
+def write_driver(directory, options, stub_path, main_path):
+    """(driver page path, page URL) for this run."""
+    if options.target == TARGET_FRONTEND:
+        page_url = 'about:blank'
+    elif options.page:
+        page_url = options.page
+    else:
+        workload_path = os.path.join(directory, 'webkit-inspector-coverage-workload.html')
+        with open(workload_path, 'w') as handle:
+            handle.write(default_workload_source())
+        page_url = file_url(workload_path)
+
+    driver_path = os.path.join(directory, 'webkit-inspector-coverage-driver.html')
+    with open(driver_path, 'w') as handle:
+        handle.write(driver_source(
+            target=options.target, page=page_url,
+            frontend_url=file_url(main_path) if main_path else None,
+            stub_url=file_url(stub_path), settle_ms=options.settle_ms,
+            quiet_polls=options.quiet_polls, fetch_sources=options.fetch_sources))
+    return driver_path, page_url
+
+
+def main(args):
+    options = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(message)s')
+
+    checkout_root = WebKitFinder(FileSystem()).webkit_base()
+
+    if options.log:
+        with open(options.log, 'r', encoding='utf-8', errors='replace') as handle:
+            log_text = handle.read()
+        page_url = None
+        driver_path = None
+    else:
+        build_directory, driver_path, stub_path, main_path = resolve_build_directory(
+            options, checkout_root)
+        if not driver_path or not stub_path:
+            _log.error('Found no WebKitTestRunner and WebInspectorUI/TestStub.html together. '
+                       'Looked in %s. Pass --build-directory, or --log to report on an '
+                       'already-captured run.', ', '.join(_BUILD_DIRECTORY_CANDIDATES))
+            return 1
+        if options.target == TARGET_FRONTEND and not main_path:
+            _log.error('--target frontend needs the build\'s WebInspectorUI Main.html and %s does '
+                       'not have one', build_directory)
+            return 1
+
+        temporary = options.save_driver or tempfile.mkdtemp(prefix='webkit-inspector-coverage-')
+        os.makedirs(temporary, exist_ok=True)
+        try:
+            driver_page, page_url = write_driver(temporary, options, stub_path, main_path)
+            driver = WebKitTestRunnerDriver(
+                driver_path, build_directory,
+                profile_destination=options.profile_destination)
+            _log.info('Running %s over %s, target %s',
+                      os.path.relpath(driver_path, checkout_root),
+                      os.path.basename(driver_page), options.target)
+            _log.debug('%s', ' '.join(driver.command(driver_page)))
+            returncode, stdout, log_text = driver.run(driver_page, timeout=options.timeout)
+        finally:
+            if not options.save_driver:
+                shutil.rmtree(temporary, ignore_errors=True)
+        if returncode is None:
+            _log.error('WebKitTestRunner did not finish within %ds', options.timeout)
+        summary = next((line for line in stdout.splitlines()
+                        if line.startswith(('scripts=', 'error', 'could not', 'the front end'))),
+                       None)
+        if summary:
+            _log.info('  %s', summary)
+        if options.save_log:
+            with open(options.save_log, 'w') as handle:
+                handle.write(log_text)
+            _log.info('Wrote %s', options.save_log)
+
+    try:
+        payload = extract_payload(log_text)
+    except PayloadError as failure:
+        _log.error('%s', failure)
+        _log.error('The log is %d bytes. Re-run with --save-log and read it: the driver reports '
+                   'its own failures on the same stream, before %s.', len(log_text),
+                   COVERAGE_BEGIN)
+        return 1
+
+    coverages = scripts_from_payload(payload, checkout_root)
+    scope = CoverageScope.selective(
+        [payload.get('target') or options.target, payload.get('page') or page_url or '(log)'],
+        tests_run=1, suite_name='inspector-protocol')
+    report = InspectorCoverageReport(
+        coverages, target=payload.get('target') or options.target,
+        page=payload.get('page') or page_url, driver=driver_path, scope=scope)
+
+    for line in format_report(report, limit=options.limit):
+        print(line)
+    for line in scope.banner_lines():
+        print(line)
+
+    if options.json:
+        with open(options.json, 'w') as handle:
+            json.dump(report.to_json(), handle, indent=2, sort_keys=True)
+            handle.write('\n')
+        _log.info('Wrote %s', options.json)
+
+    if not report.files:
+        _log.error('No source produced usable coverage, so every number above is zero for want '
+                   'of data rather than for want of coverage')
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
