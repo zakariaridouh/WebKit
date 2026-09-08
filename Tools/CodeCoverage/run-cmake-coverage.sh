@@ -55,6 +55,10 @@ Tools/Scripts/webkit-coverage, which takes --cmake for this tree too.
 With no layout-test path this runs the whole suite, so give it a path -- fast/dom, or a
 file -- when you want an answer in minutes rather than hours.
 
+A failing test does not stop the run: both suites run, the report is written and its path is
+printed, and only then does this exit 1. A failure that leaves nothing to report on -- cmake,
+or the report itself -- still stops it where it stands.
+
 Read Tools/CodeCoverage/README.md first if this is the first run on this machine. The one
 trap that matters here: some terminals and launchers send SIGTERM to descendants that
 register as ordinary Dock-visible applications, and WebKitTestRunner does, so every layout
@@ -110,6 +114,27 @@ fi
 
 step() { printf '\n=== %s\n' "$1"; }
 
+# A failing test is not a reason to abandon the run. Under set -e an unguarded harness call
+# ends the script where it stands, which for the API step means no layout tests, no report and
+# no --open -- an hour of building and testing spent to produce nothing you can look at. Test
+# failure is the ordinary case for a full-suite run, and the report is how you look into it.
+#
+# So the two harnesses are guarded and their failure is remembered for the exit status; every
+# other command here stays fatal, because a cmake or generate-coverage-report failure means
+# there is nothing to report on.
+tests_failed=0
+run_tests() {
+    local what="$1"; shift
+    # Captured into a variable before anything else runs: an assignment resets $?, so reading it
+    # after setting tests_failed reports the assignment's success rather than the harness's exit.
+    local status=0
+    "$@" || status=$?
+    if [[ "${status}" != 0 ]]; then
+        tests_failed=1
+        printf '\n%s failed (exit %s). Continuing to the report.\n' "${what}" "${status}" >&2
+    fi
+}
+
 step "Configuring ${build_dir}"
 cmake --preset mac-coverage
 
@@ -126,13 +151,15 @@ if [[ "${api_tests}" != "" ]]; then
     [[ "${api_tests}" != "__all__" ]] && api_arguments=("${api_tests}")
     # ${a[@]+"${a[@]}"}: /bin/bash on macOS is 3.2, where "${a[@]}" on an empty array is an
     # unbound-variable error under set -u.
-    Tools/Scripts/run-api-tests --release --cmake --coverage \
+    run_tests "API tests" \
+        Tools/Scripts/run-api-tests --release --cmake --coverage \
         --coverage-dir="${coverage_dir}" ${api_arguments[@]+"${api_arguments[@]}"}
 fi
 
 if [[ "${run_layout}" == 1 ]]; then
     step "Layout tests${layout_tests[*]+: ${layout_tests[*]}}"
-    Tools/Scripts/run-webkit-tests --release --cmake --coverage \
+    run_tests "Layout tests" \
+        Tools/Scripts/run-webkit-tests --release --cmake --coverage \
         --coverage-dir="${coverage_dir}" ${layout_tests[@]+"${layout_tests[@]}"}
 fi
 
@@ -151,4 +178,11 @@ fi
 # server called webkitbuild.
 printf '\nReport: file://%s\n' "${index}"
 [[ "${open_report}" == 1 ]] && open "${index}"
+
+# Non-zero for a test failure, but only after the report exists and its path has been printed:
+# the exit status is for a caller in a pipeline, and the report is for you.
+if [[ "${tests_failed}" != 0 ]]; then
+    echo "Tests failed; the report above covers the run as it happened." >&2
+    exit 1
+fi
 exit 0
