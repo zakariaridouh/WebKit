@@ -176,8 +176,8 @@ def collect_container_profiles(destination_directory, data_paths):
             while os.path.exists(target):
                 suffix += 1
                 base, extension = os.path.splitext(name)
-                target = os.path.join(destination_directory, '{}-{}{}'.format(base, suffix,
-                                                                             extension))
+                target = os.path.join(
+                    destination_directory, '{}-{}{}'.format(base, suffix, extension))
             shutil.move(source, target)
             collected.append(target)
     return collected

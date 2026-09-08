@@ -191,27 +191,31 @@ def parse_args(args):
             help="Directory to collect coverage profiles into (default: coverage/ under the results "
                  "directory). Successive runs accumulate, so a layout-test run and an API-test run "
                  "can share one directory and produce a single report"),
-        optparse.make_option("--per-test-coverage", action="store_true", default=False,
+        optparse.make_option(
+            "--per-test-coverage", action="store_true", default=False,
             help="Keep each test's coverage separate instead of pooling it, so that \"which tests "
                  "execute this line\" can be answered. Requires --coverage and at least one "
                  "--per-test-coverage-sources. It restarts the driver for every test and reduces "
                  "each test's profiles before the next one starts, which costs seconds per test, "
                  "so it is for a named set of tests or one directory and not for the suite. Query "
                  "the result with Tools/Scripts/coverage-attribution"),
-        optparse.make_option("--per-test-coverage-sources", action="append", default=[],
-            metavar="PATH",
+        optparse.make_option(
+            "--per-test-coverage-sources", action="append", default=[], metavar="PATH",
             help="Restrict per-test attribution to source under PATH, relative to the checkout "
                  "root or absolute (repeatable). Required, because it is what bounds the per-test "
                  "cost: an unscoped export is 23 s and 751 MB per test"),
-        optparse.make_option("--per-test-coverage-index", metavar="DIR",
+        optparse.make_option(
+            "--per-test-coverage-index", metavar="DIR",
             help="Where to write the per-test index (default: per-test/ under --coverage-dir). "
                  "Successive runs append shards to it"),
-        optparse.make_option("--per-test-coverage-products", metavar="LIST",
+        optparse.make_option(
+            "--per-test-coverage-products", metavar="LIST",
             help="Comma-separated instrumented frameworks to attribute against, defaulting to all "
                  "of them. This is the per-test cost knob: reducing one test against the five "
                  "frameworks takes 8.3 s and against one binary 0.48 s, almost all of it spent "
                  "loading coverage mappings rather than on the scope"),
-        optparse.make_option("--no-per-test-coverage-profdata", action="store_false",
+        optparse.make_option(
+            "--no-per-test-coverage-profdata", action="store_false",
             dest="per_test_coverage_profdata", default=None,
             help="Do not also merge the run's counters into one indexed profile. Per-test mode "
                  "overrides the baked-in profile path, so nothing lands in --coverage-dir for "

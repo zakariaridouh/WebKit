@@ -732,8 +732,8 @@ def driver_source(target=TARGET_PAGE, page=None, frontend_url=None, stub_url=Non
     frontend_url; the page target needs neither.
     """
     if target not in TARGETS:
-        raise ValueError('Unknown target {!r}; expected one of {}'.format(target,
-                                                                         ', '.join(TARGETS)))
+        raise ValueError('Unknown target {!r}; expected one of {}'.format(
+            target, ', '.join(TARGETS)))
     return _DRIVER_TEMPLATE.format(
         begin=json.dumps(COVERAGE_BEGIN), end=json.dumps(COVERAGE_END),
         chunk_prefix=json.dumps(CHUNK_PREFIX), chunk_size=CHUNK_SIZE,

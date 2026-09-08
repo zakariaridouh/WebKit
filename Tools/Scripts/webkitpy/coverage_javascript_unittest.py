@@ -400,8 +400,8 @@ class AttributionIsADifferenceBetweenTwoDumpsTest(unittest.TestCase):
         return parse_basic_block_dump('\n'.join(lines) + '\n')
 
     def _attribute(self, phases):
-        return attribute_builtins_source(phases, self.index, anchor_code_name='fixtureAlpha',
-                                        nonce=7)
+        return attribute_builtins_source(
+            phases, self.index, anchor_code_name='fixtureAlpha', nonce=7)
 
     def test_a_window_block_that_appears_only_in_the_anchor_dump_carries_the_nonce(self):
         phases = self._phases(
@@ -479,8 +479,8 @@ class RunsAccumulateWithoutBeingSummedTest(unittest.TestCase):
         # The fixture's anchor is fixtureAlpha with nonce 7, so the coverage object has to be
         # told; the default is the real arrayPrototypeForEach.
         phases = parse_basic_block_dump(text)
-        source_id = attribute_builtins_source(phases, self.coverage.index,
-                                             anchor_code_name='fixtureAlpha', nonce=7)
+        source_id = attribute_builtins_source(
+            phases, self.coverage.index, anchor_code_name='fixtureAlpha', nonce=7)
         for block in phases.get(CLEAN_PHASE, {}).get(source_id, ()):
             self.coverage.add_block(block)
         self.coverage.runs_attributed += 1
