@@ -192,7 +192,23 @@ void Debugger::attach(JSGlobalObject* globalObject)
             if (isJSCellKind(kind)) {
                 auto* cell = static_cast<JSCell*>(heapCell);
                 if (auto* function = dynamicDowncast<JSFunction>(cell)) {
-                    if (function->scope()->realm() == globalObject && function->executable()->isFunctionExecutable() && !function->isHostOrBuiltinFunction())
+                    // Builtins are skipped, except when the control flow profiler is on. Then a
+                    // builtin's source is a measurable source like any other and nothing else can
+                    // name it: it carries no URL, and Runtime.getBasicBlocks and
+                    // Debugger.getScriptSource only answer for a sourceID reported from here.
+                    // Without this, coverage of the 181 WebCore builtins and of JavaScriptCore's
+                    // combined builtins source is unreachable over the inspector protocol --
+                    // their basic blocks are in the profiler, only the naming is missing. Probing
+                    // sourceIDs blindly instead does not work and cannot be made to: each protocol
+                    // response is delivered by evaluating a fresh script
+                    // (InspectorFrontendAPIDispatcher::dispatchMessageAsync), so a scan
+                    // manufactures the next source it finds.
+                    //
+                    // isFunctionExecutable() already excludes host functions, which have no source
+                    // to report. See Tools/CodeCoverage/JavaScriptCoverage.md.
+                    bool skipBuiltins = !m_vm.controlFlowProfiler();
+                    if (function->scope()->realm() == globalObject && function->executable()->isFunctionExecutable()
+                        && !(skipBuiltins && function->isHostOrBuiltinFunction()))
                         sourceProviders.add(uncheckedDowncast<FunctionExecutable>(function->executable())->source().provider());
                 }
 #if ENABLE(WEBASSEMBLY)
