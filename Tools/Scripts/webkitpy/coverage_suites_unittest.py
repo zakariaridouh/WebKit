@@ -82,7 +82,7 @@ class SharedCoverageDirectoryTest(unittest.TestCase):
             pass
 
     def test_one_runs_profiles_are_not_a_warning(self):
-        # %4m gives one profile per framework per pool slot and no collisions inside a run.
+        # %8m gives one profile per framework per pool slot and no collisions inside a run.
         for name in ('WebCore_0.profraw', 'WebCore_1.profraw', 'WebKit_0.profraw'):
             self.touch(name)
         self.assertIsNone(shared_coverage_directory_warning(self.directory))

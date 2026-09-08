@@ -112,7 +112,7 @@ endif ()
 # written to whatever the GPU process's working directory happens to be -- where the sandbox
 # denies the write. Measured on a coverage build of WebGPU.framework before this change:
 # 2,514 __profc_ symbols, nine __llvm_* sections, and no
-# /private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw string anywhere in the image. That is the
+# /private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw string anywhere in the image. That is the
 # same silent failure that reported 45,005 instrumented WebGPU lines as 0.00% on the Xcode
 # build, where the cause was a missing per-framework define rather than a shadowed one.
 #

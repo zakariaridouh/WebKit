@@ -196,7 +196,7 @@ class _FakeMachO:
             handle.write(bytes(image))
 
 
-BAKED_PROFILE_FILENAME = '/private/tmp/WebKitCoverage/WebCore_%4m%c.profraw'
+BAKED_PROFILE_FILENAME = '/private/tmp/WebKitCoverage/WebCore_%8m%c.profraw'
 
 
 class FakeMachOTest(unittest.TestCase):

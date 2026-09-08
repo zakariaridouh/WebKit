@@ -104,8 +104,31 @@ WK_COMMON_OTHER_CFLAGS_PGO_YES = -mllvm -system-headers-coverage -mllvm -static-
 // third-party projects append to their own OTHER_CFLAGS, because clang is last-wins here:
 // verified that -fprofile-instr-generate=<path> followed by -fno-profile-instr-generate emits
 // no counters, no coverage mapping and no filename variable.
-WK_COVERAGE_PROFILE_PATH_CFLAGS = $(WK_COVERAGE_PROFILE_PATH_CFLAGS_$(ENABLE_LLVM_COVERAGE));
-WK_COVERAGE_PROFILE_PATH_CFLAGS_YES = -fprofile-instr-generate=/private/tmp/WebKitCoverage/$(PRODUCT_NAME)_%4m%c.profraw;
+// The directory is right for macOS and for every simulator, and does not exist on a device, so
+// the platforms that have one are enumerated rather than defaulted. A CoreSimulator runtime
+// shares /private/tmp with the host: measured on an iPhone 17 Pro simulator (iOS 27.5), an
+// instrumented app installed with `simctl install` wrote a .profraw at that path and the host
+// read it back at the same path, so a simulator build needs neither a separate directory nor a
+// `simctl get_app_container` translation at collection time. Only the iOS simulator was
+// measured; the other three share the CoreSimulator runtime that makes it true.
+//
+// A device is deliberately left with no directory rather than a wrong one. The five
+// hand-written __llvm_profile_filename definitions #error there, which is the diagnostic;
+// baking a path here as well would only put something nothing collects into the other 46
+// instrumented images. maccatalyst is also left out: it would very likely work, since it
+// applies the macOS sandbox profile and runs against the host's own /private/tmp, but that has
+// not been measured and it did not build with coverage before this either. See
+// Tools/CodeCoverage/iOSCoverage.md.
+WK_COVERAGE_PROFILE_DIRECTORY = $(WK_COVERAGE_PROFILE_DIRECTORY_$(WK_PLATFORM_NAME));
+WK_COVERAGE_PROFILE_DIRECTORY_macosx = /private/tmp/WebKitCoverage;
+WK_COVERAGE_PROFILE_DIRECTORY_iphonesimulator = /private/tmp/WebKitCoverage;
+WK_COVERAGE_PROFILE_DIRECTORY_watchsimulator = /private/tmp/WebKitCoverage;
+WK_COVERAGE_PROFILE_DIRECTORY_appletvsimulator = /private/tmp/WebKitCoverage;
+WK_COVERAGE_PROFILE_DIRECTORY_xrsimulator = /private/tmp/WebKitCoverage;
+WK_HAVE_COVERAGE_PROFILE_DIRECTORY = $(WK_NOT_$(WK_EMPTY_$(WK_COVERAGE_PROFILE_DIRECTORY)));
+
+WK_COVERAGE_PROFILE_PATH_CFLAGS = $(WK_COVERAGE_PROFILE_PATH_CFLAGS_$(ENABLE_LLVM_COVERAGE)_$(WK_HAVE_COVERAGE_PROFILE_DIRECTORY));
+WK_COVERAGE_PROFILE_PATH_CFLAGS_YES_YES = -fprofile-instr-generate=$(WK_COVERAGE_PROFILE_DIRECTORY)/$(PRODUCT_NAME)_%8m%c.profraw;
 
 // A project opts every one of its targets out of coverage instrumentation with
 // WK_DEFAULT_COVERAGE_OPT_OUT = YES; in its Base.xcconfig. CLANG_COVERAGE_MAPPING is passed

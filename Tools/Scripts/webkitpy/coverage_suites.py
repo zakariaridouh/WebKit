@@ -131,7 +131,7 @@ def shared_coverage_directory_warning(directory):
     """A warning string when a directory holds profiles from more than one run, else None.
 
     Worth checking because the consequence is a silently mislabelled column rather than an
-    error. Exact rather than heuristic: %4m gives one profile per framework per pool slot with
+    error. Exact rather than heuristic: %8m gives one profile per framework per pool slot with
     no collisions inside a run, so a name that had to be de-collided means a second run
     collected into this directory.
     """

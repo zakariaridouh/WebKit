@@ -215,6 +215,27 @@ class Port(object):
     def is_simulator(self):
         return False
 
+    def coverage_unsupported_reason(self):
+        """Why --coverage cannot work on this target, or None when it can.
+
+        Answered by the port because the answer is a property of where the tests run rather than
+        of what was built: the profile path is baked into the frameworks and points at a
+        machine-global directory on the host, so a target that cannot reach that directory
+        produces a full-length run and an empty report. Every port that can reach it -- macOS,
+        and every simulator, whose /private/tmp is the host's -- returns None.
+        """
+        return None
+
+    def collect_stray_coverage_profiles(self, destination_directory):
+        """Raw profiles this target wrote somewhere collect_coverage_profiles() cannot see.
+
+        Nowhere, for a port whose processes share the host's filesystem. Overridden by the
+        simulator ports, where a profile path baked relative to TMPDIR lands inside the
+        simulator instead; see webkitpy/coverage_simulator.py. Called only when a coverage run
+        collected nothing, so it is a diagnostic and not part of the collection path.
+        """
+        return []
+
     def architecture(self):
         return self.get_option('architecture') or self.DEFAULT_ARCHITECTURE
 
@@ -1520,7 +1541,7 @@ class Port(object):
         Measured with xcodebuild -showBuildSettings on the WebKitTestRunner target, with and
         without CLANG_COVERAGE_MAPPING=YES ENABLE_LLVM_COVERAGE=YES: OTHER_CFLAGS and
         OTHER_CPLUSPLUSFLAGS go from empty to
-        `-fprofile-instr-generate=/private/tmp/WebKitCoverage/WebKitTestRunner_%4m%c.profraw
+        `-fprofile-instr-generate=/private/tmp/WebKitCoverage/WebKitTestRunner_%8m%c.profraw
         -fno-profile-instr-generate -fno-coverage-mapping` and OTHER_LDFLAGS gains
         -Wl,-rename_section. So `run-webkit-tests --coverage --build` recompiles and relinks
         both drivers with a different flag vector, and the next `build-webkit --coverage`

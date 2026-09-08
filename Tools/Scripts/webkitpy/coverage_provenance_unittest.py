@@ -174,12 +174,12 @@ class ObjectStatesTest(_TemporaryDirectory):
         from webkitpy.llvm_profile_utils_unittest import _mach_o
         path = os.path.join(self.directory, 'WebKit')
         with open(path, 'wb') as handle:
-            handle.write(_mach_o('/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw'))
+            handle.write(_mach_o('/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw'))
         state = object_states([path])[0]
         self.assertEqual(state['path'], path)
         self.assertTrue(state['instrumented'])
         self.assertEqual(state['profile_filename'],
-                         '/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw')
+                         '/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw')
         self.assertEqual(state['size_bytes'], os.path.getsize(path))
         # The mtime is the other half of "is the source newer than the binaries", which
         # --check-binary-ids cannot answer.

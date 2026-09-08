@@ -42,16 +42,17 @@
 #endif
 
 #if ENABLE(LLVM_COVERAGE)
-#if PLATFORM(IOS_FAMILY)
-#error "LLVM_COVERAGE is macOS-only: the iOS sandbox profiles have no file-write allowance for a coverage directory, so profiles would be silently discarded."
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+#error "LLVM_COVERAGE has no iOS-device support; see Tools/CodeCoverage/iOSCoverage.md. The simulator is supported."
 #else
 // The profiling runtime is linked into every image and reads that image's own copy of this
 // symbol, so WebGPU.framework needs its own baked path or its counters go to
 // default.profraw in the GPU process's working directory, where the write is denied. This
 // belongs to the framework target and not to the WGSL static library, which links into the
 // framework and would make the definition a duplicate.
-// See the matching comment in Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm.
-extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw";
+// See the matching comment in Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm, including
+// why an iOS-family simulator uses the same /private/tmp directory macOS does.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw";
 #endif
 #endif
 

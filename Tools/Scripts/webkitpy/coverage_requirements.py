@@ -71,7 +71,7 @@ BuildSetting = namedtuple('BuildSetting', ('argument', 'why'))
 MANDATORY_BUILD_SETTINGS = (
     BuildSetting('--coverage',
                  'instruments the build (CLANG_COVERAGE_MAPPING) and bakes '
-                 '/private/tmp/WebKitCoverage/<Framework>_%4m%c.profraw into each framework, '
+                 '/private/tmp/WebKitCoverage/<Framework>_%8m%c.profraw into each framework, '
                  'which is what makes a test run collect anything at all'),
     BuildSetting('ENABLE_USER_SCRIPT_SANDBOXING=NO',
                  'Xcode wraps every script phase in sandbox-exec, which cannot nest, so inside '
@@ -126,7 +126,7 @@ TEST_SUPPORT_PRODUCTS = (
 # being read.
 #
 # These are profile-name groups, not paths: a coverage build bakes
-# /private/tmp/WebKitCoverage/<name>_%4m%c.profraw into each. The list is the CMake build's, taken
+# /private/tmp/WebKitCoverage/<name>_%8m%c.profraw into each. The list is the CMake build's, taken
 # from the <target>_CoverageProfilePath.cpp files WEBKIT_BAKE_COVERAGE_PROFILE_PATH generates, and
 # verified against a full mac-coverage build. The Xcode build names its XPC services after
 # PRODUCT_NAME instead -- com.apple.WebKit.WebContent and siblings -- so this is incomplete there

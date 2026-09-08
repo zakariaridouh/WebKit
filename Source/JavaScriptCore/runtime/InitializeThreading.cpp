@@ -73,11 +73,12 @@ extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/JavaScriptCore_%m_pid%
 extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
 #endif
 #elif ENABLE(LLVM_COVERAGE)
-#if PLATFORM(IOS_FAMILY)
-#error "LLVM_COVERAGE is macOS-only: the iOS sandbox profiles have no file-write allowance for a coverage directory, so profiles would be silently discarded."
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+#error "LLVM_COVERAGE has no iOS-device support; see Tools/CodeCoverage/iOSCoverage.md. The simulator is supported."
 #else
-// See the matching comment in Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm.
-extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/JavaScriptCore_%4m%c.profraw";
+// See the matching comment in Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm, including
+// why an iOS-family simulator uses the same /private/tmp directory macOS does.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/JavaScriptCore_%8m%c.profraw";
 #endif
 #endif
 
