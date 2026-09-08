@@ -548,46 +548,35 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         # alignment again.
         #
         # 4000 is hex, so 16 KB -- the arm64 page size. Mach-O only.
-        set(_coverage_macho_section_flags "")
+        #
+        # add_link_options() with CMake's LINKER: prefix, rather than a literal -Wl, in
+        # CMAKE_<TYPE>_LINKER_FLAGS, because those variables carry one spelling for every
+        # link language and there is no spelling all of them accept. CMake expands LINKER:
+        # per language using CMAKE_<LANG>_LINKER_WRAPPER_FLAG, which is -Xlinker for clang
+        # and for swiftc alike here. A literal -Wl, reaches Swift link lines too -- WebKit
+        # and WebGPU are both Swift_SHARED_LIBRARY_LINKER targets -- and swiftc rejects it
+        # outright: "error: unknown argument: '-Wl,-rename_section,...'".
+        #
+        # add_link_options() also covers the Swift-linked TestWebKitAPI binaries, which
+        # CMAKE_EXE_LINKER_FLAGS cannot reach at all: CMake omits it from Swift executable
+        # link lines. They need the alignment for the same reason the frameworks do, but only
+        # started needing it once WEBKIT_EXECUTABLE began baking a profile path into every
+        # executable, because that is what selects continuous mode: before, a Swift-linked
+        # test binary wrote a non-continuous default.profraw and no alignment was required.
+        # Measured on an API-test run without this: "Counters section not page-aligned
+        # (start = 0x105482988)".
+        #
+        # SHELL: is what makes each group survive. Without it add_link_options() treats every
+        # token as an option and de-duplicates them, so four groups that repeat -sectalign,
+        # 4000 and __llvm_prf_cnts collapse into one mangled group with every repeat dropped,
+        # and ld is handed arguments belonging to a different flag.
         if (APPLE)
-            list(APPEND _coverage_macho_section_flags
-                "-Wl,-rename_section,__DATA,__llvm_prf_cnts,__MMAP_DATA,__llvm_prf_cnts"
-                "-Wl,-sectalign,__MMAP_DATA,__llvm_prf_cnts,4000"
-                "-Wl,-sectalign,__DATA,__llvm_prf_bits,4000"
-                "-Wl,-sectalign,__DATA,__llvm_prf_data,4000")
-            foreach (_flag IN LISTS _coverage_macho_section_flags)
-                string(APPEND COVERAGE_LINK_FLAGS " ${_flag}")
-            endforeach ()
-            # CMake omits CMAKE_EXE_LINKER_FLAGS from Swift executable link lines, so the
-            # TestWebKitAPI binaries need these named for their link language specifically --
-            # the same reason the profile runtime is named that way below. They only started
-            # needing them once WEBKIT_EXECUTABLE began baking a profile path into every
-            # executable, because that is what selects continuous mode: before, a Swift-linked
-            # test binary wrote a non-continuous default.profraw and no alignment was
-            # required. Measured on an API-test run without this: "Counters section not
-            # page-aligned (start = 0x105482988)".
-            #
-            # Spelled -Xlinker for Swift rather than reusing the -Wl, forms above, because
-            # swiftc rejects -Wl, outright with "error: unknown argument" -- which is how this
-            # was found: TestWTF became a Swift-linked executable and its link failed on the
-            # rename.
-            #
-            # SHELL: is what makes it survive. Without it add_link_options() treats each token
-            # as an option and de-duplicates them, so four groups that repeat -Xlinker,
-            # -sectalign, 4000 and __llvm_prf_cnts collapse into
-            # "-Xlinker -rename_section __DATA __llvm_prf_cnts __MMAP_DATA -sectalign 4000
-            # __llvm_prf_bits __llvm_prf_data" -- every repeat dropped, and ld handed arguments
-            # belonging to a different flag. The -Wl, forms above are immune only because each
-            # is a single token with commas inside it, which is also why this went unnoticed
-            # while the wrapper was translating them.
             add_link_options(
-                "$<$<LINK_LANGUAGE:Swift>:SHELL:-Xlinker -rename_section -Xlinker __DATA -Xlinker __llvm_prf_cnts -Xlinker __MMAP_DATA -Xlinker __llvm_prf_cnts>"
-                "$<$<LINK_LANGUAGE:Swift>:SHELL:-Xlinker -sectalign -Xlinker __MMAP_DATA -Xlinker __llvm_prf_cnts -Xlinker 4000>"
-                "$<$<LINK_LANGUAGE:Swift>:SHELL:-Xlinker -sectalign -Xlinker __DATA -Xlinker __llvm_prf_bits -Xlinker 4000>"
-                "$<$<LINK_LANGUAGE:Swift>:SHELL:-Xlinker -sectalign -Xlinker __DATA -Xlinker __llvm_prf_data -Xlinker 4000>")
-            unset(_flag)
+                "LINKER:SHELL:-rename_section __DATA __llvm_prf_cnts __MMAP_DATA __llvm_prf_cnts"
+                "LINKER:SHELL:-sectalign __MMAP_DATA __llvm_prf_cnts 4000"
+                "LINKER:SHELL:-sectalign __DATA __llvm_prf_bits 4000"
+                "LINKER:SHELL:-sectalign __DATA __llvm_prf_data 4000")
         endif ()
-        unset(_coverage_macho_section_flags)
 
         # ENABLE_LLVM_COVERAGE defines __llvm_profile_filename in one translation unit
         # per framework. Ports that link JavaScriptCore and WebCore into a single image
