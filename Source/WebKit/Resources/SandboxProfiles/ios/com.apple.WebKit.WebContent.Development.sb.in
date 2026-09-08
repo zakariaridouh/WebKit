@@ -306,4 +306,11 @@
         (require-any
             (apply subpath issue-extension-secondary-paths))))
 #endif // ENABLE(SYSTEM_CONTENT_PATH_SANDBOX_RULES)
+
+;; See com.apple.WebKit.WebContent.sb.in for why this is here and why it is not what makes
+;; coverage work in the simulator. Tools/CodeCoverage/iOSCoverage.md has the measurements.
+#if ENABLE(LLVM_COVERAGE)
+(allow file-write* (subpath "/private/tmp/WebKitCoverage"))
+#endif
+
 #endif // !ENABLE(DEVELOPMENT_SANDBOX_FALLBACK)

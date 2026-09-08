@@ -25,6 +25,8 @@ import logging
 from webkitcorepy import Version
 
 from webkitpy.common.memoized import memoized
+from webkitpy.coverage_simulator import (report_stray_container_profiles,
+                                         simulator_data_paths)
 from webkitpy.port.embedded_port import EmbeddedPort
 from webkitpy.xcode.simulated_device import SimulatedDeviceManager
 
@@ -71,6 +73,30 @@ class EmbeddedSimulatorPort(EmbeddedPort):
 
     def reset_preferences(self):
         SimulatedDeviceManager.tear_down(self.host)
+
+    def collect_stray_coverage_profiles(self, destination_directory):
+        """Raw profiles that landed inside the simulators this run used, rather than on the host.
+
+        A correctly built simulator coverage tree never produces any: /private/tmp inside a
+        CoreSimulator runtime is the host's /private/tmp, so the baked
+        /private/tmp/WebKitCoverage path resolves to the directory the harness already collects
+        from, and this returns []. It is called only when that collection found nothing, and its
+        job is to name the one other place the profiles can be -- a TMPDIR-relative (%t) path,
+        which puts them inside the simulator where nothing looks. See
+        webkitpy/coverage_simulator.py for the measurements behind that.
+
+        The devices this run used are preferred over every simulator on the machine, so that a
+        stale profile in some unrelated device cannot be folded into this run's report. Falling
+        back to all of them when the run's devices are not known is safe in the other direction:
+        collect_container_profiles() moves the files, so a second call finds nothing.
+        """
+        udids = None
+        try:
+            udids = [device.udid for device in self.devices() if getattr(device, 'udid', None)]
+        except Exception as failure:  # noqa: BLE001 - device enumeration raises several types
+            _log.debug('Could not list this run\'s simulators: %s', failure)
+        data_paths = simulator_data_paths(executive=self._executive, udids=udids or None)
+        return report_stray_container_profiles(destination_directory, data_paths)
 
     @property
     @memoized

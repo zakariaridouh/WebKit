@@ -83,6 +83,25 @@ class EmbeddedDevicePort(EmbeddedPort, metaclass=ABCMeta):
     def supports_layout_tests(self):
         return self.DEVICE_MANAGER is not None
 
+    def coverage_unsupported_reason(self):
+        """Refuse --coverage on a device rather than produce a full-length run and an empty report.
+
+        Two things are missing, and neither is in the harness. The profile path baked into the
+        frameworks is /private/tmp/WebKitCoverage, which the host and every simulator share but a
+        device does not have; and a device build does not compile with coverage at all -- the five
+        hand-written __llvm_profile_filename definitions #error for a non-simulator iOS-family
+        target. So the only way to reach this message is with a tree built for the host and a
+        device asked to run it, where the run would report that the tests executed nothing.
+
+        Tools/CodeCoverage/iOSCoverage.md records what a device additionally needs, including the
+        ordering problem continuous mode has with the container-temp sandbox extension.
+        """
+        return ('--coverage is not supported on {}: the profile path baked into the frameworks is '
+                '/private/tmp/WebKitCoverage, which a device does not have, and nothing retrieves '
+                'a profile from a device. Use --{} instead, whose /private/tmp is the host\'s. See '
+                'Tools/CodeCoverage/iOSCoverage.md.'.format(
+                    self.operating_system(), self.operating_system().replace('-device', '-simulator')))
+
     def abspath_for_test(self, test_name, target_host=None):
         if not apple_additions() or type(target_host) is not Device:
             return super().abspath_for_test(test_name, target_host)

@@ -489,18 +489,25 @@ macro(WEBKIT_OPTION_END)
     # ENABLE_COVERAGE is the switch a coverage build flips; ENABLE_LLVM_COVERAGE is the
     # feature define the coverage-only code paths in WebKit are guarded on, and all it
     # does is bake a default __llvm_profile_filename into one translation unit per
-    # framework. That default (/private/tmp/WebKitCoverage, matched by a file-write
-    # allowance in the macOS sandbox profiles) only makes sense on macOS -- the iOS
-    # sandbox profiles have no such allowance, and the consumers #error on the iOS
-    # family -- so keep the two in lockstep only there. Elsewhere ENABLE_COVERAGE still
-    # instruments, and the profile path comes from LLVM_PROFILE_FILE at run time.
+    # framework. That default is /private/tmp/WebKitCoverage, which the harness collects
+    # from and the WebProcess, GPUProcess and NetworkProcess sandbox profiles carry a
+    # file-write allowance for.
+    #
+    # It makes sense on macOS and on every Apple simulator, and on nothing else. A
+    # CoreSimulator runtime shares /private/tmp with the host -- measured on an iPhone 17
+    # Pro simulator, where an instrumented app wrote a .profraw at that path and the host
+    # read it back at the same path -- so a simulator needs no separate directory and no
+    # path translation. A device has no such shared path and nothing that retrieves a
+    # profile from it, so the five hand-written definitions #error there; see
+    # Tools/CodeCoverage/iOSCoverage.md. Elsewhere ENABLE_COVERAGE still instruments, and
+    # the profile path comes from LLVM_PROFILE_FILE at run time.
     #
     # FORCE, so that a value left in the cache by an earlier configure of this directory
     # cannot leave an instrumented build without its profile path. The matching
     # WEBKIT_OPTION_DEPEND above turns it back off if ENABLE_COVERAGE goes away. Both
     # happen before FEATURE_DEFINES is computed below, so the code generators see the
     # same value the compiler will.
-    if (ENABLE_COVERAGE AND NOT ENABLE_LLVM_COVERAGE AND WEBKIT_SDK_IS_MACOS)
+    if (ENABLE_COVERAGE AND NOT ENABLE_LLVM_COVERAGE AND (WEBKIT_SDK_IS_MACOS OR WEBKIT_SDK_IS_SIMULATOR))
         set(ENABLE_LLVM_COVERAGE ON CACHE BOOL
             "${_WEBKIT_AVAILABLE_OPTIONS_DESCRIPTION_ENABLE_LLVM_COVERAGE}" FORCE)
         message(STATUS "Enabling ENABLE_LLVM_COVERAGE since ENABLE_COVERAGE is enabled.")
@@ -510,6 +517,25 @@ macro(WEBKIT_OPTION_END)
     # that could cause an unnecessary conflict before processing conflicts.
     _WEBKIT_OPTION_ENFORCE_ALL_DEPENDS()
     _WEBKIT_OPTION_ENFORCE_ALL_CONFLICTS()
+
+    # Refuse rather than bake a path that will never be written. Turning ENABLE_LLVM_COVERAGE
+    # on by hand for a device SDK used to be accepted and produced binaries whose profiles
+    # went to a /private/tmp that does not exist on the device -- which reads as a test run
+    # that executed nothing, hours later. The five hand-written definitions #error for the
+    # same case; this catches the generated ones in WEBKIT_BAKE_COVERAGE_PROFILE_PATH, which
+    # cover every CMake target rather than the five frameworks.
+    #
+    # After the ENABLE_*_ALL_DEPENDS pass above, so that it tests the value the build will use:
+    # WEBKIT_OPTION_DEPEND turns ENABLE_LLVM_COVERAGE off when ENABLE_COVERAGE is off, and a
+    # request that is going to be discarded anyway is not worth refusing over.
+    if (ENABLE_LLVM_COVERAGE AND WEBKIT_SDK_IS_IOS_FAMILY AND NOT WEBKIT_SDK_IS_SIMULATOR)
+        message(FATAL_ERROR
+            "ENABLE_LLVM_COVERAGE bakes /private/tmp/WebKitCoverage into every target, and that "
+            "path is not writable on a device and is not collected from one. See "
+            "Tools/CodeCoverage/iOSCoverage.md. Use a simulator SDK, or configure with "
+            "-DENABLE_COVERAGE=ON -DENABLE_LLVM_COVERAGE=OFF and set LLVM_PROFILE_FILE at run "
+            "time.")
+    endif ()
 
     foreach (_name ${_WEBKIT_AVAILABLE_OPTIONS})
         if (${_name})
