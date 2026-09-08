@@ -31,7 +31,13 @@ Do a clean instrumented build, an API run and a full layout run, and then:
   have reclassified.
 - Confirm the 46 newly-pathed images actually deposit profiles, and that profile volume is still
   around 1.7 GB rather than many times that. This is the one measurement nobody has: 46 more images
-  writing `%4m` pools could exceed it, and nobody has checked.
+  writing `%8m` pools could exceed it, and nobody has checked. The pool size is now 8, not 4, which
+  doubles it: measured from the `__llvm_prf_cnts`, `__llvm_prf_data` and `__llvm_prf_names` section
+  sizes of a Coverage build, one pool slot costs 142 MB across the five frameworks (WebCore alone is
+  111 MB of that), so the volume is `142 MB x N` from the frameworks plus the test binaries. The
+  observed 633 MB at 4 slots predicts about 1.27 GB at 8 and 2.3 GB at 16, which is why the bump
+  stopped at 8. Raise it only with a real volume measurement, and change it at every site listed by
+  `rg '%8m'` -- each framework bakes the pattern separately and they must agree.
 
 Until this is done, treat every number as provisional. It is also the cheapest way to find whatever
 the last hundred commits broke. A full `cmake --build --preset mac-coverage` reached exit 0 on
@@ -307,10 +313,40 @@ layout suite and runs under `run-webkit-tests` like any other imported test. But
 `Tools/Scripts/run-web-platform-tests`, which drives WPT's own runner via `webkitpy/w3c/wpt_runner`,
 has no `--coverage`. Only worth doing for someone who uses that path.
 
-**N3. iOS and simulator.** *(large)*
+**N3. iOS device.** *(large; the simulator is done)*
 
-No sandbox carve-out exists in the nine iOS `.sb.in` profiles, and `InitializeThreading.cpp` carries
-a deliberate `#error` for iOS-family coverage builds. Orthogonal to a local Mac workflow.
+The simulator part is finished and documented in `iOSCoverage.md`. The premise recorded here was
+wrong twice. No sandbox carve-out was needed, because no sandbox profile is applied to a simulator
+process at all -- `sandbox_check(getpid(), NULL, 0)` returns 0 in a process launched into a booted
+simulator, and the only iOS-family path that would apply one is behind `ENABLE(SIMULATOR_SANDBOX)`,
+which is defined nowhere in OpenSource or Internal. And no path translation was needed, because
+`/private/tmp` inside a CoreSimulator runtime *is* the host's `/private/tmp`: a binary built for
+`iphonesimulator` with `-fprofile-instr-generate` and a baked
+`__llvm_profile_filename` of `/private/tmp/<dir>/probe_%8m%c.profraw` wrote a 49,152-byte profile
+that the host read at that same path, and host `llvm-cov` reported from it -- 100% for the function
+that ran, 0% for the one that did not. `collect_coverage_profiles()` works unchanged.
+
+The `#error` is now narrowed to a non-simulator iOS-family target at all five sites,
+`ENABLE_LLVM_COVERAGE` auto-enables for a simulator SDK, and six of the nine iOS `.sb.in` profiles
+gained the carve-out -- defensively, since nothing evaluates it today. The end-to-end run is coded
+but unexercised: no instrumented iOS-simulator build has been made.
+
+What is left is the device, and the blocker is not the sandbox either. Auxiliary processes on iOS
+already get container-temp write access dynamically: `WebProcessPool.cpp` issues a read-write
+sandbox extension for `<UIProcess container>/tmp/<serviceName>` and `WebProcessCocoa.mm` consumes it
+before calling `initializeLLVMProfiling()`. Two things a device needs that the simulator did not:
+
+- **The `__llvm_profile_runtime` ordering trick.** `wtf/LLVMProfilingUtils.h` defines
+  `extern "C" int __llvm_profile_runtime = 0;`, which suppresses compiler-rt's automatic
+  registration constructor so the profile file is not opened at dyld load, then calls
+  `__llvm_profile_initialize_file()` by hand after the extension is consumed. Continuous mode maps
+  its file early, so a coverage build without this has the write denied. Coverage does none of it.
+- **Retrieval.** Nothing copies a profile off a device. `webkitpy/port/embedded_device.py` refuses
+  `--coverage` rather than let a run produce an empty report hours later.
+
+No device was testable: `xcrun devicectl list devices` reported both attached physical devices
+`unavailable`. macCatalyst is also still refused, conservatively -- it would very likely work, since
+it applies the macOS sandbox profile and uses the host's `/private/tmp`, but it was not measured.
 
 **N4. GTK/WPE.** *(large, needs a Linux machine)*
 
@@ -319,7 +355,48 @@ of the five path-baking translation units are Cocoa-only, `llvm_profile_utils` i
 `run-gtk-tests`/`run-wpe-tests` have no `--coverage`. CMake is the only route, and it now works on
 macOS, which is the prerequisite.
 
+**N5. Per-CSS-property coverage, and per-overload attribution.** *(large)*
+
+`generate-bindings-coverage` reports 1,566 CSS property IDL attributes as unattributable, because
+`[DelegateToSharedSyntheticAttribute]` points them all at four generated accessors that dispatch on
+the property name at run time. There is no per-property counter to read, and reading the shared one
+would call every CSS property covered the moment any one of them was. Measuring those needs JS-side
+observation, not a C++ profile. Separately, the generator emits a numbered body per operation
+overload and those bodies *are* measurable -- 273 here, 37 never executed -- but are not attributed
+to an IDL line, because that needs the generator's flattening order across an interface, its
+partials and its mixins reproduced.
+
 ---
+
+**N6. The JavaScript side, four separate pieces.** *(three small, one large)*
+
+- **Read `//@ runDefault()` directives in `generate-javascript-coverage`.** A JSTests file asks for
+  its own jsc options in a `//@` comment and the tool ignores them, so a feature behind a flag reads
+  as untested JavaScript. Measured: 4 of the builtins the whole stress suite never executes are
+  `ShadowRealmPrototype.js`, and `--jsc-option=--useShadowRealm=1` covers 2 of them immediately.
+  `run-jsc-stress-tests` already parses the directives.
+- **Dump the control-flow profiler at VM teardown, behind `useControlFlowProfiler`.** 82 of 5,926
+  stress-test runs call `quit()` before the tool's driver can dump, and are lost. Nothing calls
+  `ControlFlowProfiler::dumpData()` except `$vm`; a call from `~VM` under the same option would make
+  the measurement independent of the test's control flow. A JavaScriptCore change, not a tooling one.
+- **Emit lcov from `generate-javascript-coverage`.** One `SF:` per `.js` file and one `DA:` per body
+  line would make `compare-coverage-reports --git-diff` work on a builtins change, with no new code
+  on that side.
+- **An Inspector-protocol coverage driver.** `Runtime.enableControlFlowProfiler` +
+  `Runtime.getBasicBlocks` + `Debugger.scriptParsed` is the same mechanism with the sourceID-to-URL
+  mapping already solved, and it is the only route to the 181 WebCore builtins, the 93 WebCore JS
+  resources and the 199,850 lines of Web Inspector front end.
+
+**C-trace. The index total is 280 lines below `project_totals()`, and nobody knows why.** *(small)*
+
+Measured after the trace canonicalization landed: `parse_lcov` over the shipped trace gives
+1,886,435 lines, and the HTML index displays 1,886,155 — a gap of 280 lines, 0.015%. Ruled out: it
+is not the trace (a canonicalized trace parses identically with and without a canonicalizer, and
+the rewrite is byte-equal in meaning to `parse_lcov`'s view of the original — 16,014 paths,
+1,886,435 lines, 1,257,907 covered, zero differences), it is not duplicate `DA:` records inside one
+record, and it is not paths falling outside the two roots the index tree builds (there are none).
+So something between `parse_lcov` and `write_directory_index` drops 280 lines. Small, but it is the
+last place the report and its own trace disagree, and the gate reads one of them.
 
 ## Deliberately not doing these
 
@@ -329,7 +406,7 @@ measurement**, not on taste.
 | | Why not |
 |---|---|
 | **Coverage-driven test selection** | Measured: **14–23%** saving (two independent methods), because 84% of real commits touch code every page load executes. Mean fraction of the suite that must still run is 86.1%, and p25 through p90 are all 100%. Meanwhile a developer typing `svg/` runs 2.7% of the suite in about three minutes. Granularity is not the binding term — per-suite, per-shard and per-test all give the same 14–23%. |
-| **A per-test coverage map** | Obtainable, and not worth it: an overnight run, **~45 TB of writes**, and a custom counter-scan reducer, because 72% of every raw profile is the static names table and `llvm-cov export --summary-only` is 3.83 s for JavaScriptCore alone. |
+| **A per-test coverage map of the whole suite** | Obtainable, and not worth it: an overnight run, **~45 TB of writes**, and a custom counter-scan reducer, because 72% of every raw profile is the static names table and `llvm-cov export --summary-only` is 3.83 s for JavaScriptCore alone. Re-measured since, per layout test: 141 MB of transient raw profile and 9.5 s of reduction. The **scoped** version -- one directory or a named set of tests, indexed and discarded as the run goes -- is built, and documented in `PerTestAttribution.md`. The whole-suite map is still not worth having. |
 | **CI and trend dashboards** | The goal is a local per-patch loop. Gate CI only after V1 has confirmed the numbers; otherwise today's are baked into a dashboard. |
 | **Tuning `%Nm`** | Volume is already flat at ~1.7 GB regardless of how few tests run, and a 1.28 GB merge takes 7 s. There is no problem. |
 | **Parallelising `llvm-cov show`** | Moot — `show` is no longer run by default, and the measured win from dropping it was 1.2 s. |

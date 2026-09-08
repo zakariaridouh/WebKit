@@ -6,6 +6,21 @@ the tools live in `Tools/Scripts`.
 
 `Followups.md` in this directory lists what is still missing.
 
+`iOSCoverage.md` covers the iOS simulator, which works and needs no special handling — the
+measurements are there because the reason it needs none is not obvious — and what an iOS device
+would additionally need, which is not done.
+
+Three companion documents cover the questions this pipeline structurally cannot answer, because
+LLVM source-based coverage measures compiled native code and nothing else:
+
+- `PerTestAttribution.md` — which *tests* executed a line, rather than whether any test did.
+- `BindingsCoverage.md` — which web-facing IDL attributes and operations the tests never call.
+  That one measures the *generated* bindings, which everything below deliberately excludes.
+- `JavaScriptCoverage.md` — the JavaScript that ships inside WebKit, and WebAssembly. It measures
+  the 102 JSC builtins from JSC's own control-flow profiler; for WASM it separates which of JSC's
+  tiers a run reaches (measurable with this pipeline) from coverage of the guest modules a test
+  compiles (not measurable in a non-debug build, with the evidence).
+
 ---
 
 ## The short version
@@ -64,7 +79,11 @@ Tools/CodeCoverage/run-cmake-coverage.sh --api-tests WTF --no-layout-tests --sou
 Tools/CodeCoverage/run-cmake-coverage.sh                          # the whole suite; hours
 ```
 
-It exits non-zero on any failure and prints the path to the HTML report.
+It exits non-zero on any failure and prints the path to the HTML report. A *test* failure does not
+stop it: both suites run, the report is written and its path printed, and the non-zero exit comes
+after that. Test failure is the ordinary case for a full-suite run and the report is how you look
+into it, so losing the report to it would be losing the run. A failure that leaves nothing to
+report on — the build, or the report itself — still stops it where it stands.
 
 For the other question -- are the lines I just wrote tested -- `webkit-coverage` takes
 `--cmake` and runs the whole thing against this tree, scoping the report to the change:
@@ -115,6 +134,14 @@ for each says which.
 ## Reading the numbers
 
 ### Two files will disagree, and the report is the one to quote
+
+`coverage.lcov.gz` is rewritten before it is written out, so its paths and totals are the report's.
+llvm-cov names the path each translation unit included, which for a staged header is the build
+directory's copy, and it emits one record per framework that includes it. That used to leave the
+trace disagreeing with the report it shipped beside — 1,900,423 lines at 66.40% against 1,886,435,
+with 116 files reported under two paths at once. `summary.txt` is still byte-for-byte llvm-cov's,
+because it *is* llvm-cov's report; the trace is this tool's artifact, it outlives the report, and
+`compare-coverage-reports` and any CI consumer read it.
 
 `generate-coverage-report` writes both its own HTML index and `llvm-cov`'s `summary.txt`. Their
 totals differ, and the difference is fully accounted for: `llvm-cov`'s per-file line count is a
@@ -185,6 +212,26 @@ as a regression.
 `--fail-under-patch` still works on a subset, and is sound but not complete: it can raise a
 false alarm, never grant a false pass. For a gate, that is the right direction.
 
+### Which tests executed this line
+
+A merged profile cannot say: `%8m` pools every test's counters as they are written, so the
+attribution is gone before the run ends. `--per-test-coverage` keeps it for a scoped set of tests,
+at about 9 s and 141 MB of transient disk per layout test — which is why it is scoped and why a
+whole-suite per-test map is still not worth having.
+
+```sh
+Tools/Scripts/run-webkit-tests --release --cmake --coverage --coverage-dir=/tmp/cov \
+    --per-test-coverage --per-test-coverage-sources=Source/WebCore/dom fast/dom/Node
+
+Tools/Scripts/coverage-attribution --index=/tmp/cov/per-test \
+    --covers Source/WebCore/dom/Document.cpp:1000
+```
+
+It also answers `--test NAME`, `--tests-for-diff REF` and `--redundant`, and the run still yields
+one indexed profile (`--profdata=/tmp/cov/per-test-run.profdata`) to report from. See
+`PerTestAttribution.md` for the limits: the index holds executed lines only, and a query outside
+the run's declared scope exits 3 as unanswerable rather than answering "no tests".
+
 ---
 
 ## Troubleshooting
@@ -252,10 +299,19 @@ session, or force an accessory activation policy into the driver via `run-webkit
   report-time filter is still needed, because a third-party header copied into the build
   directory is attributed to the copy and would otherwise slip past a path pattern.
 - **Test and tool binaries** by default; `--include-test-support` opts in.
-- **Generated sources** under `DerivedSources`, counted and named separately.
+- **Generated sources** under `DerivedSources`, counted and named separately. That is 1,820
+  `JS*.cpp` files and 380,290 instrumented lines of JS bindings on a macOS CMake build, which is
+  not nothing — but line coverage of `JSDocument.cpp` is not actionable and moves with the
+  generator's templates. `Tools/Scripts/generate-bindings-coverage` measures the same data at the
+  level that is actionable, per IDL attribute and operation; see `BindingsCoverage.md`.
 - **Per-instantiation template detail.** Functions are counted once per function, not once per
   instantiation — a method instantiated four hundred times counts once. Counting them separately
   measures template fan-out rather than test reach.
+- **JavaScript and WebAssembly**, necessarily: JSC compiles them at runtime, so they have no
+  coverage mapping and appear in no profile — not even as "not built here". That is 102 builtin
+  functions and 2,737 statement lines inside JavaScriptCore alone, plus 181 WebCore builtins and
+  199,850 lines of Web Inspector front end. `JavaScriptCoverage.md` measures the first and maps
+  the rest.
 
 Report size is controlled with `--sources` (scope it to a directory or a file list) and
 `--no-source-views`. A whole-tree report is a few hundred megabytes; a scoped one is a few.
