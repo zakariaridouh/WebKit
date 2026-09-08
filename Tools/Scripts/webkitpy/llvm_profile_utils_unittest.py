@@ -30,6 +30,8 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import threading
+import time
 import unittest
 from unittest import mock
 
@@ -142,9 +144,9 @@ class _MachOFixture(unittest.TestCase):
 
 class MachOInstrumentationTest(_MachOFixture):
     def test_reads_a_baked_in_profile_filename(self):
-        path = self.write('WebKit', _mach_o('/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw'))
+        path = self.write('WebKit', _mach_o('/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw'))
         self.assertEqual(read_instrumentation(path),
-                         (True, '/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw'))
+                         (True, '/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw'))
 
     def test_an_empty_profile_filename_is_read_as_empty_and_not_as_absent(self):
         # The compiler-rt runtime defines the symbol weakly as an empty string, so this is what
@@ -162,32 +164,32 @@ class MachOInstrumentationTest(_MachOFixture):
         # same n_strx and n_value 0. Taking the first matching entry reported "cannot tell" for
         # WebGPU, WebKit and WebKitLegacy -- three of the five instrumented frameworks -- and
         # made the collected-but-unclaimed guard warn about exactly what it exists to check.
-        path = self.write('WebGPU', _mach_o('/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw',
+        path = self.write('WebGPU', _mach_o('/private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw',
                                             preceded_by_stab=True))
         self.assertEqual(read_instrumentation(path),
-                         (True, '/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw'))
+                         (True, '/private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw'))
 
     def test_an_undefined_entry_for_the_same_name_is_not_an_address(self):
         # N_UNDF is not a stab, and its n_value is a size. Only N_SECT entries have addresses.
-        path = self.write('WebKit', _mach_o('/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw',
+        path = self.write('WebKit', _mach_o('/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw',
                                             preceded_by_undefined=True))
         self.assertEqual(read_instrumentation(path),
-                         (True, '/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw'))
+                         (True, '/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw'))
 
     def test_a_second_copy_of_the_name_does_not_hide_the_definition(self):
         # Mach-O string tables are not fully deduplicated -- 280 names in WebGPU alone occupy
         # more than one index -- so matching a single index is not the same as matching a name.
-        path = self.write('WebKit', _mach_o('/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw',
+        path = self.write('WebKit', _mach_o('/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw',
                                             duplicate_name_string=True))
         self.assertEqual(read_instrumentation(path),
-                         (True, '/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw'))
+                         (True, '/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw'))
 
     def test_all_three_confounders_at_once(self):
-        path = self.write('WebGPU', _mach_o('/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw',
+        path = self.write('WebGPU', _mach_o('/private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw',
                                             preceded_by_stab=True, preceded_by_undefined=True,
                                             duplicate_name_string=True))
         self.assertEqual(read_instrumentation(path),
-                         (True, '/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw'))
+                         (True, '/private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw'))
 
     def test_an_uninstrumented_binary_has_no_counters_section(self):
         path = self.write('Plain', _mach_o('/private/tmp/WebKitCoverage/x.profraw',
@@ -196,28 +198,28 @@ class MachOInstrumentationTest(_MachOFixture):
 
     def test_the_counters_section_is_found_whatever_its_segment_is_called(self):
         # Coverage builds rename the segment to __MMAP_DATA for continuous mode.
-        path = self.write('WebKit', _mach_o('/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw',
+        path = self.write('WebKit', _mach_o('/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw',
                                             sections=('__llvm_prf_data', '__llvm_prf_names')))
         self.assertTrue(read_instrumentation(path).instrumented)
 
     def test_a_fat_binary_is_read_through_its_first_architecture(self):
-        path = self.write('Fat', _mach_o('/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw',
+        path = self.write('Fat', _mach_o('/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw',
                                          fat=True))
         self.assertEqual(read_instrumentation(path),
-                         (True, '/private/tmp/WebKitCoverage/WebKit_%4m%c.profraw'))
+                         (True, '/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw'))
 
     def test_something_that_is_not_a_mach_o_reads_as_uninstrumented(self):
         path = self.write('script', b'#!/bin/sh\necho hello\n')
         self.assertEqual(read_instrumentation(path), (False, None))
 
     def test_profile_name_prefix_stops_at_the_first_pattern(self):
-        self.assertEqual(profile_name_prefix('/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw'),
+        self.assertEqual(profile_name_prefix('/private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw'),
                          'WebGPU_')
         self.assertEqual(profile_name_prefix('/tmp/plain.profraw'), 'plain.profraw')
 
 
 class ObjectsWithNoProfileDataTest(_MachOFixture):
-    GOOD = COVERAGE_PROFILE_DIRECTORY + '/WebKit_%4m%c.profraw'
+    GOOD = COVERAGE_PROFILE_DIRECTORY + '/WebKit_%8m%c.profraw'
 
     def test_an_instrumented_binary_with_no_baked_in_path_is_reported(self):
         broken = self.write('WebGPU', _mach_o(''))
@@ -273,7 +275,7 @@ class CollectedProfilesWithNoObjectTest(_MachOFixture):
     """
 
     def webkit(self):
-        return self.write('WebKit', _mach_o(COVERAGE_PROFILE_DIRECTORY + '/WebKit_%4m%c.profraw'))
+        return self.write('WebKit', _mach_o(COVERAGE_PROFILE_DIRECTORY + '/WebKit_%8m%c.profraw'))
 
     def test_a_collected_product_no_object_claims_is_reported(self):
         orphans = collected_profiles_with_no_object(
@@ -365,7 +367,7 @@ class PartitionUnclaimedProfilesTest(unittest.TestCase):
 
 
 class SurveyInstrumentationTest(_MachOFixture):
-    GOOD = COVERAGE_PROFILE_DIRECTORY + '/WebKit_%4m%c.profraw'
+    GOOD = COVERAGE_PROFILE_DIRECTORY + '/WebKit_%8m%c.profraw'
 
     def test_an_uninstrumented_binary_is_reported_rather_than_skipped(self):
         # The single most likely first-run mistake is pointing the report at a tree that was not
@@ -612,6 +614,68 @@ class ToolchainSelectionTest(unittest.TestCase):
     def test_a_binary_older_than_the_toolchain_is_refused(self):
         executable = self.executable_class(['/xcode/OSX/llvm-cov', '/usr/local/bin/llvm-cov'])
         self.assertEqual(executable.preference_ordered_paths(), ['/xcode/OSX/llvm-cov'])
+
+    def test_a_binary_newer_than_the_toolchain_is_refused_too(self):
+        # The test is inequality, not "older". A newer non-toolchain binary is no safer -- the
+        # raw profile format has no compatibility guarantees in either direction -- and while
+        # it would never be preferred, rejecting only lower majors left it in the list as a
+        # fallback that run() reaches for when the toolchain's copy fails. That is the
+        # mismatched read this check exists to prevent, arrived at by a different route.
+        executable = self.executable_class(
+            ['/xcode/OSX/llvm-cov', '/somewhere/newer/llvm-cov'],
+            versions={'/xcode/OSX/llvm-cov': 'Apple LLVM version 99.0.0',
+                      '/somewhere/newer/llvm-cov': 'Apple LLVM version 100.0.0'})
+        self.assertEqual(executable.preference_ordered_paths(), ['/xcode/OSX/llvm-cov'])
+
+    def test_the_refusal_says_the_versions_differ_rather_than_that_one_is_older(self):
+        # /usr/local/bin/llvm-cov reports 'LLVM version 3.2svn' but is a current Apple build
+        # (measured: built 2026-08-28, targeting arm-apple-darwin27.5.0), so calling it older
+        # states something false about it. What is true is that it is not the toolchain that
+        # produced the profiles, and that is all the message needs to claim.
+        executable = self.executable_class(['/xcode/OSX/llvm-cov', '/usr/local/bin/llvm-cov'])
+        with self.assertLogs(llvm_profile_utils.logger, level='WARNING') as captured:
+            executable.usable_binaries()
+        message = '\n'.join(captured.output)
+        self.assertIn('/usr/local/bin/llvm-cov', message)
+        self.assertIn('major version 3', message)
+        self.assertIn('not the 99', message)
+        self.assertNotIn('older', message)
+
+    def test_the_refusal_is_reported_once_when_several_threads_ask_at_once(self):
+        # generate-coverage-report runs its llvm-cov invocations in a ThreadPoolExecutor, and
+        # @cache does not make the computation atomic: every thread that arrived before the
+        # first one finished recomputed and logged the whole discovery again. Measured as the
+        # warning printed once per concurrent invocation.
+        executable = self.executable_class(['/xcode/OSX/llvm-cov', '/usr/local/bin/llvm-cov'])
+        slow_version_of = executable.version_of
+
+        @classmethod
+        def version_of(cls, path):
+            # Widens the window a racing thread would slip through, so this test fails without
+            # the lock rather than only sometimes failing.
+            time.sleep(0.05)
+            return slow_version_of(path)
+
+        executable.version_of = version_of
+
+        threads_count = 4
+        barrier = threading.Barrier(threads_count)
+        results = []
+
+        def ask():
+            barrier.wait()
+            results.append(tuple(executable.usable_binaries()))
+
+        with self.assertLogs(llvm_profile_utils.logger, level='WARNING') as captured:
+            threads = [threading.Thread(target=ask) for _ in range(threads_count)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+        self.assertEqual(len(captured.output), 1, captured.output)
+        self.assertEqual(len(results), threads_count)
+        self.assertEqual(set(results), {('/xcode/OSX/llvm-cov',)})
 
     def test_a_version_is_read_from_a_command_that_exits_non_zero(self):
         # /usr/local/bin/llvm-cov on this machine prints its banner and exits 1. Requiring exit

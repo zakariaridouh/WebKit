@@ -13,6 +13,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 from collections import namedtuple
@@ -60,6 +61,11 @@ def simplify_profile_weights(profile_weights):
 
 class ExecutablesFromEnvAndXcode:
     EXECUTABLE_NAME = None
+
+    # Shared by every subclass, which serializes llvm-cov's discovery against llvm-profdata's
+    # too. They are one-off subprocess calls to --version, so there is nothing to gain from
+    # letting them overlap and one less thing to reason about if they cannot.
+    _usable_binaries_lock = threading.Lock()
 
     @classmethod
     @cache
@@ -113,20 +119,41 @@ class ExecutablesFromEnvAndXcode:
         return (None, None)
 
     @classmethod
-    @cache
     def usable_binaries(cls):
-        """detect_binaries() with anything older than the toolchain's own copy removed.
+        """detect_binaries() with anything that is not the profile's own toolchain removed.
+
+        Serialized and memoized together, because the caller runs several llvm-cov invocations
+        in a thread pool and @cache does not make the computation atomic: every thread that
+        arrives before the first one finishes recomputes, and logs the whole discovery again.
+        Measured as the rejection warning below printed once per concurrent invocation.
+        """
+        with cls._usable_binaries_lock:
+            return cls._usable_binaries()
+
+    @classmethod
+    @cache
+    def _usable_binaries(cls):
+        """The list itself. Call usable_binaries(), which holds the lock.
 
         The toolchain's copy is first, because xcrun is consulted before PATH, so its major
-        version is the reference. A candidate several major versions behind cannot read a
-        profile the current clang wrote and would either fail or misreport; on this machine
-        /usr/local/bin/llvm-cov can be LLVM 3.2svn against the toolchain's own, thirteen major
-        versions apart,
-        and it only ever did no harm because it failed cleanly.
+        version is the reference. A candidate reporting a different major version cannot be
+        relied on to read a profile the current clang wrote and would either fail or misreport;
+        on this machine /usr/local/bin/llvm-cov reports LLVM 3.2svn against the toolchain's 21.
+
+        The test is inequality, not "older". Two reasons. A *newer* non-toolchain binary is no
+        safer than an older one -- the raw profile format has no compatibility guarantees in
+        either direction -- and rejecting only lower majors left such a binary in the list as a
+        fallback that run() would reach for if the toolchain's copy failed, which is exactly
+        the mismatched read this check exists to prevent. And the reported version is not
+        evidence of age: /usr/local/bin/llvm-cov says 'LLVM version 3.2svn Apple Build
+        #3425-36' but is a current Apple build -- measured built 2026-08-28, targeting
+        arm-apple-darwin27.5.0 -- so calling it "older" states something false about it. What
+        is true, and all that is needed, is that it is not the toolchain that produced these
+        profiles.
 
         Never returns an empty list when detection found something: an unreadable version is
-        not evidence of a bad binary, and a machine whose only llvm-cov is old should be told
-        so rather than told there is none.
+        not evidence of a bad binary, and a machine whose only llvm-cov is mismatched should be
+        told so rather than told there is none.
         """
         binaries = cls.detect_binaries()
         if not binaries:
@@ -135,14 +162,16 @@ class ExecutablesFromEnvAndXcode:
         usable, rejected = [binaries[0]], []
         for path in binaries[1:]:
             major, version = cls.version_of(path)
-            if reference_major is not None and major is not None and major < reference_major:
-                rejected.append((path, version))
+            if reference_major is not None and major is not None and major != reference_major:
+                rejected.append((path, major, version))
                 continue
             usable.append(path)
-        for path, version in rejected:
-            logger.warning('Ignoring %s (%s): it is older than the toolchain\'s %s (%s), and '
-                           'the raw profile format has no compatibility guarantees between '
-                           'toolchains.', path, version or 'no readable version', binaries[0],
+        for path, major, version in rejected:
+            logger.warning('Ignoring %s (%s): it reports LLVM major version %s, not the %s of '
+                           'the toolchain that built these binaries, %s (%s). The raw profile '
+                           'format has no compatibility guarantees between toolchains, in '
+                           'either direction.', path, version or 'no readable version', major,
+                           reference_major, binaries[0],
                            reference_version or 'no readable version')
         logger.info('Using %s (%s)%s', usable[0],
                     reference_version or 'no readable version',
@@ -273,7 +302,8 @@ def merge_raw_profiles_in_directory_by_prefixes(prefix_list, input_directory, ou
 # is the right choice -- the test harness hard-kills drivers, so an unreadable profile is a
 # thing that can legitimately happen -- but it also means that 99 unreadable profiles out of
 # 100 merge successfully, exit 0, and produce a confidently low report. Measured against a real
-# collection (/tmp/cov-webgpu, 20 profiles: 5 frameworks x 4 %4m pool slots), 0 were
+# collection (/tmp/cov-webgpu, 20 profiles: 5 frameworks x the 4 pool slots the baked-in
+# pattern used at the time, now 8), 0 were
 # unreadable, which is what continuous mode predicts: the counter section is mmapped and
 # preallocated at dyld load, so a SIGKILLed process leaves a complete file behind rather than a
 # truncated one. So a double-digit percentage is systemic -- a mismatched toolchain, a rebuild
@@ -549,7 +579,7 @@ def read_instrumentation(binary_path):
 def profile_name_prefix(profile_filename):
     """The fixed leading part of a baked-in __llvm_profile_filename's basename.
 
-    '/private/tmp/WebKitCoverage/WebGPU_%4m%c.profraw' -> 'WebGPU_', which is what the raw
+    '/private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw' -> 'WebGPU_', which is what the raw
     profiles a run collects are actually named, so it is how a collected profile is matched
     back to the binary that wrote it.
     """
@@ -563,7 +593,7 @@ def collected_profile_group(profile_basename):
     prefix its profiles will have, and this turns an already-written profile's name back into
     the same string, so an unclaimed profile can be named after whatever wrote it.
 
-    Everything up to the first '_', because the baked-in patterns are '<Product>_%4m%c.profraw'
+    Everything up to the first '_', because the baked-in patterns are '<Product>_%8m%c.profraw'
     and no product name contains an underscore. A name with no underscore is its own group,
     which is what the profile runtime's unbaked fallback, default.profraw, looks like.
     """
@@ -628,7 +658,7 @@ def partition_unclaimed_profiles(orphans, unreported_writer_names):
 
     Matching is on the group, so it is exact: collected_profile_group() already reduced
     'WebProcess_4820_0.profraw' to 'WebProcess_', and a coverage build bakes
-    '<name>_%4m%c.profraw', so 'WebProcess' in the list means that group and no other. A name in
+    '<name>_%8m%c.profraw', so 'WebProcess' in the list means that group and no other. A name in
     the list that nothing writes costs nothing; a writer missing from the list still warns.
     """
     expected_groups = {name + '_' for name in unreported_writer_names}
