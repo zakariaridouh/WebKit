@@ -2112,10 +2112,10 @@ void WebProcessPool::updateHiddenPageThrottlingAutoIncreaseLimit()
     sendToAllProcesses(Messages::WebProcess::SetHiddenPageDOMTimerThrottlingIncreaseLimit(m_hiddenPageDOMTimerThrottlingIncreaseLimit));
 }
 
-void WebProcessPool::reportWebContentCPUTime(Seconds cpuTime, uint64_t activityState)
+void WebProcessPool::reportWebContentCPUTime(Seconds cpuTime, WebCore::ActivityStateForCPUSampling activityState)
 {
 #if PLATFORM(MAC)
-    m_perActivityStateCPUUsageSampler->reportWebContentCPUTime(cpuTime, static_cast<WebCore::ActivityStateForCPUSampling>(activityState));
+    m_perActivityStateCPUUsageSampler->reportWebContentCPUTime(cpuTime, activityState);
 #else
     UNUSED_PARAM(cpuTime);
     UNUSED_PARAM(activityState);

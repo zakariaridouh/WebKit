@@ -2652,6 +2652,13 @@ header: <WebCore/ModalContainerTypes.h>
     MediaIsMainContent,
 };
 
+header: <WebCore/ActivityState.h>
+enum class WebCore::ActivityStateForCPUSampling : uint8_t {
+    NonVisible,
+    VisibleNonActive,
+    VisibleAndActive
+};
+
 header: <WebCore/FocusDirection.h>
 enum class WebCore::FocusDirection : uint8_t {
     None,
