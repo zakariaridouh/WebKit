@@ -234,12 +234,7 @@ private:
 #endif
 
 #if ENABLE(YARR_JIT)
-    Yarr::YarrCodeBlock& ensureRegExpJITCode()
-    {
-        if (!m_regExpJITCode)
-            m_regExpJITCode = makeUnique<Yarr::YarrCodeBlock>(this);
-        return *m_regExpJITCode.get();
-    }
+    Yarr::YarrCodeBlock& ensureRegExpJITCode();
 #endif
 
     struct RareData {

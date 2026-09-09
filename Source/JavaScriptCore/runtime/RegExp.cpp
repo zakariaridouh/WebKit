@@ -467,6 +467,18 @@ void RegExp::deleteCode()
     m_regExpBytecode = nullptr;
 }
 
+#if ENABLE(YARR_JIT)
+Yarr::YarrCodeBlock& RegExp::ensureRegExpJITCode()
+{
+    if (!m_regExpJITCode) {
+        auto result = makeUnique<Yarr::YarrCodeBlock>(this);
+        WTF::storeStoreFence();
+        m_regExpJITCode = WTF::move(result);
+    }
+    return *m_regExpJITCode.get();
+}
+#endif
+
 #if ENABLE(YARR_JIT_DEBUG)
 void RegExp::matchCompareWithInterpreter(StringView s, int startOffset, int* offsetVector, int jitResult)
 {
