@@ -1396,6 +1396,47 @@ class TestCompileWebKit(BuildStepMixinAdditions, unittest.TestCase):
         self.expect_outcome(result=FAILURE, state_string='Failed to compile WebKit')
         return self.run_step()
 
+    @defer.inlineCallbacks
+    def test_failure_adds_errors_log(self):
+        self.setup_step(CompileWebKit())
+        self.setProperty('platform', 'mac')
+        self.setProperty('fullPlatform', 'mac-sequoia')
+        self.setProperty('configuration', 'debug')
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        timeout=3600,
+                        log_environ=False,
+                        command=['/bin/bash', '--posix', '-o', 'pipefail', '-c', 'perl Tools/Scripts/build-webkit --debug -hideShellScriptEnvironment WK_VALIDATE_DEPENDENCIES=YES WK_ENABLE_SLOW_BUILD_VERIFICATION=YES 2>&1 | perl Tools/Scripts/filter-build-webkit -logfile build-log.txt'],
+                        )
+            .log('stdio', stdout='Compiling A.cpp\nA.cpp:1:1: error: no member named foo\nB.cpp:2:2: error: bar\n2 errors generated.\n')
+            .exit(2),
+        )
+        self.expect_outcome(result=FAILURE, state_string='Failed to compile WebKit')
+        yield self.run_step()
+        self.assertEqual(
+            self.get_nth_step(0).logs['errors'].stdout,
+            'Compiling A.cpp\nA.cpp:1:1: error: no member named foo\nB.cpp:2:2: error: bar\n',
+        )
+
+    @defer.inlineCallbacks
+    def test_success_has_no_errors_log(self):
+        self.setup_step(CompileWebKit())
+        self.setProperty('platform', 'gtk')
+        self.setProperty('fullPlatform', 'gtk')
+        self.setProperty('configuration', 'release')
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        timeout=3600,
+                        log_environ=False,
+                        command=['perl', 'Tools/Scripts/build-webkit', '--release', '--gtk'],
+                        )
+            .log('stdio', stdout='Compiling A.cpp\nCompiling B.cpp\n')
+            .exit(0),
+        )
+        self.expect_outcome(result=SUCCESS, state_string='Compiled WebKit')
+        yield self.run_step()
+        self.assertNotIn('errors', self.get_nth_step(0).logs)
+
 
 class TestCompileWebKitWithoutChange(BuildStepMixinAdditions, unittest.TestCase):
     def setUp(self):

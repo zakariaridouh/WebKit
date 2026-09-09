@@ -40,6 +40,7 @@ from .twisted_additions import TwistedAdditions
 from .utils import load_password, get_custom_suffix
 
 import abc
+import collections
 import json
 import os
 import re
@@ -3229,10 +3230,12 @@ class CompileWebKit(shell.Compile, AddToLogMixin, ShellMixin):
     filter_command = ['perl', 'Tools/Scripts/filter-build-webkit', '-logfile', 'build-log.txt']
     VALID_ADDITIONAL_ARGUMENTS_LIST = []  # If additionalArguments is added to config.json for CompileWebKit step, it should be added here as well.
     APPLE_PLATFORMS = ('mac', 'ios', 'visionos', 'tvos', 'watchos')
+    MAX_ERROR_LINES = 1000
 
     def __init__(self, skipUpload=False, **kwargs):
         self.skipUpload = skipUpload
         self.cancelled_due_to_huge_logs = False
+        self.error_lines = collections.deque(maxlen=self.MAX_ERROR_LINES)
         super().__init__(timeout=60 * 60, logEnviron=False, **kwargs)
 
     @defer.inlineCallbacks
@@ -3287,11 +3290,12 @@ class CompileWebKit(shell.Compile, AddToLogMixin, ShellMixin):
             self.command = build_command
 
         rc = yield super().run()
+        if self.error_lines:
+            yield self._addToLog('errors', '\n'.join(self.error_lines) + '\n')
         defer.returnValue(rc)
 
     def errorReceived(self, error):
-        # FIXME: Re-enable error filtering from logs.
-        pass
+        self.error_lines.append(error)
 
     def handleExcessiveLogging(self):
         build_url = f'{self.master.config.buildbotURL}#/builders/{self.build._builderid}/builds/{self.build.number}'
