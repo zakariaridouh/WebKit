@@ -36,7 +36,7 @@ from unittest.mock import call, create_autospec, patch
 
 from buildbot.process import properties
 from buildbot.process import remotetransfer
-from buildbot.process.results import SUCCESS, FAILURE, WARNINGS, SKIPPED, RETRY
+from buildbot.process.results import SUCCESS, FAILURE, WARNINGS, SKIPPED, RETRY, CANCELLED
 from buildbot.test.fake.fakebuild import FakeBuild
 from buildbot.test.reactor import TestReactorMixin
 from buildbot.test.steps import Expect, ExpectShell
@@ -3916,6 +3916,15 @@ class TestFilterLayoutTestFailuresUsingResultsDB(BuildStepMixinAdditions, unitte
         self.expect_outcome(result=SUCCESS)
         yield self.run_step()
         self.assertEqual(self.build.results, SUCCESS)
+
+    @defer.inlineCallbacks
+    def test_set_build_summary_keeps_a_cancelled_build_cancelled(self):
+        self.setup_step(SetBuildSummary())
+        self.setProperty('build_summary', 'Passed layout tests')
+        self.build.results = CANCELLED
+        self.expect_outcome(result=SUCCESS)
+        yield self.run_step()
+        self.assertEqual(self.build.results, CANCELLED)
 
     def test_ignoring_every_failure_sets_the_property_set_build_summary_reads(self):
         # The other half of the wiring: nothing else tells SetBuildSummary to keep this build green.
