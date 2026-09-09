@@ -10862,6 +10862,13 @@ void HTMLMediaElement::canProduceAudioChanged()
     m_cachedCanProduceAudio.store(computeCanProduceAudio(), std::memory_order_relaxed);
     protect(mediaSession())->canProduceAudioChanged();
     updateSleepDisabling();
+
+#if ENABLE(WIRELESS_PLAYBACK_MEDIA_PLAYER)
+    if (canProduceAudio()) {
+        if (RefPtr manager = sessionManager())
+            manager->ensureMediaDeviceRouteControllerMonitoring();
+    }
+#endif
 }
 
 #if ENABLE(WIRELESS_PLAYBACK_MEDIA_PLAYER)
