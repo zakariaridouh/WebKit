@@ -5810,6 +5810,7 @@ class RunAPITests(shell.Test, ResultsDBReportMixin, AddToLogMixin, ShellMixin):
     test_failures_log_name = 'test-failures'
     suffix = 'api_first_run'
     prefix = 'api_'
+    MAX_FAILURES_TO_CHECK_RESULTS_DB = 60
     command = ['python3', 'Tools/Scripts/run-api-tests', '--timestamps', '--no-build',
                WithProperties('--%(configuration)s'), '--verbose', '--json-output={0}'.format(jsonFileName)]
     failedTestsFormatString = '%d api test%s failed or timed out'
@@ -5818,6 +5819,7 @@ class RunAPITests(shell.Test, ResultsDBReportMixin, AddToLogMixin, ShellMixin):
     line_count = 0
     THRESHOLD_FOR_EXCESSIVE_LOGS_API_TESTS = 100000
     MSG_FOR_EXCESSIVE_LOGS_API_TEST = f'Stopped due to excessive logging, limit: {THRESHOLD_FOR_EXCESSIVE_LOGS_API_TESTS}'
+    EXIT_AFTER_FAILURES = '60'
 
     def __init__(self, **kwargs):
         super().__init__(logEnviron=False, timeout=20 * 60, **kwargs)
@@ -5841,6 +5843,8 @@ class RunAPITests(shell.Test, ResultsDBReportMixin, AddToLogMixin, ShellMixin):
                            '--json-output={0}'.format(self.jsonFileName)]
         else:
             self.command = self.command + customBuildFlag(platform, self.getProperty('fullPlatform'))
+            if self.EXIT_AFTER_FAILURES is not None:
+                self.command += ['--exit-after-n-failures', f'{self.EXIT_AFTER_FAILURES}']
 
         additionalArguments = self.getProperty('additionalArguments')
         if additionalArguments:
@@ -5859,6 +5863,10 @@ class RunAPITests(shell.Test, ResultsDBReportMixin, AddToLogMixin, ShellMixin):
 
         if self.failedTestCount:
             rc = FAILURE
+
+        if (self.EXIT_AFTER_FAILURES is not None
+                and self.failedTestCount >= int(self.EXIT_AFTER_FAILURES)):
+            self.setProperty(f'{self.suffix}_exceeded_failure_limit', True)
 
         failures = yield self.parse_and_set_failures()
         yield self.analyze_failures_using_results_db(failures)
@@ -6092,6 +6100,7 @@ class ReRunAPITests(RunAPITests):
 class RunAPITestsWithoutChange(RunAPITests):
     name = 'run-api-tests-without-change'
     suffix = 'api_clean_tree_run'
+    EXIT_AFTER_FAILURES = None
 
     def doOnFailure(self):
         pass
@@ -6133,12 +6142,28 @@ class AnalyzeAPITestsResults(ResultsDBReportMixin, buildstep.BuildStep, AddToLog
         clean_tree_failures_to_display = list(clean_tree_failures)[:self.NUM_FAILURES_TO_DISPLAY]
         clean_tree_failures_string = ', '.join(clean_tree_failures_to_display)
 
-        failures_with_patch = first_run_failures.intersection(second_run_failures)
-        flaky_failures = first_run_failures.union(second_run_failures) - first_run_failures.intersection(second_run_failures)
-        flaky_failures = list(flaky_failures)[:self.NUM_FAILURES_TO_DISPLAY]
-        flaky_failures_string = ', '.join(flaky_failures)
-        new_failures = failures_with_patch - clean_tree_failures
+        first_run_exceeded = self.getProperty('api_first_run_exceeded_failure_limit', False)
+        second_run_exceeded = self.getProperty('api_second_run_exceeded_failure_limit', False)
+
         ignored_flaky_failures = set()
+        if first_run_exceeded or second_run_exceeded:
+            # When either run hit --exit-after-n-failures, first_run_failures and
+            # second_run_failures are nondeterministic truncated subsets; the intersection
+            # can drop real regressions and misclassify them as flaky. Fall back to the
+            # union of the two runs, relying on the clean-tree run (which re-ran their
+            # union) to separate pre-existing from new failures.
+            new_failures = (first_run_failures | second_run_failures) - clean_tree_failures
+            flaky_failures = []
+            flaky_failures_string = ''
+            exceed_note = ' (failure limit exceeded)'
+        else:
+            failures_with_patch = first_run_failures.intersection(second_run_failures)
+            flaky_failures = first_run_failures.union(second_run_failures) - failures_with_patch
+            flaky_failures = list(flaky_failures)[:self.NUM_FAILURES_TO_DISPLAY]
+            flaky_failures_string = ', '.join(flaky_failures)
+            new_failures = failures_with_patch - clean_tree_failures
+            exceed_note = ''
+
         if new_failures:
             ignored_flaky_failures = yield self.pre_existing_flakes_using_results_db(new_failures)
             results = self.merged_results(new_failures, {
@@ -6160,7 +6185,7 @@ class AnalyzeAPITestsResults(ResultsDBReportMixin, buildstep.BuildStep, AddToLog
             self.setProperty('new_api_failures_introduced_by_patch', sorted(new_failures))
             self.build.results = FAILURE
             pluralSuffix = 's' if len(new_failures) > 1 else ''
-            message = 'Found {} new API test failure{}: {}'.format(len(new_failures), pluralSuffix, new_failures_string)
+            message = 'Found {} new API test failure{}{}: {}'.format(len(new_failures), pluralSuffix, exceed_note, new_failures_string)
             if len(new_failures) > self.NUM_FAILURES_TO_DISPLAY:
                 message += ' ...'
             self.descriptionDone = message
