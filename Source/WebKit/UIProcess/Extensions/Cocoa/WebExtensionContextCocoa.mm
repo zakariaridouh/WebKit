@@ -130,7 +130,7 @@ static NSString * const storageAccessLevelsKey = @"StorageAccessLevels";
 static constexpr NSInteger currentBackgroundContentListenerStateVersion = 4;
 
 // Update this value when any changes are made to the rule translation logic in _WKWebExtensionDeclarativeNetRequestRule.
-static constexpr NSInteger currentDeclarativeNetRequestRuleTranslatorVersion = 6;
+static constexpr NSInteger currentDeclarativeNetRequestRuleTranslatorVersion = 7;
 
 @interface _WKWebExtensionContextDelegate : NSObject <WKNavigationDelegate, WKUIDelegate> {
     WeakPtr<WebKit::WebExtensionContext> _webExtensionContext;
