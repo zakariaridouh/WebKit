@@ -666,6 +666,7 @@ public:
         HardFailure,
     };
     FirstPartyAccessResult allowsFirstPartyAccess(const WebCore::RegistrableDomain&) const;
+    FirstPartyAccessResult participatesInPageWithFirstPartySite(const WebCore::Site&) const;
 
 private:
     Type type() const final { return Type::WebContent; }

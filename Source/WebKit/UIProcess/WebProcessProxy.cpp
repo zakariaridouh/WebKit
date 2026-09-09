@@ -1207,6 +1207,44 @@ bool WebProcessProxy::hasCommittedClientOrigin(const WebCore::ClientOrigin& clie
     return m_remoteWorkerSites.contains(Site { clientOrigin.topOrigin });
 }
 
+// Terminates only on positive evidence that no page this process participates in can speak for the
+// site: an inconclusive answer from any of them, or no page to ask, has to be tolerated.
+WebProcessProxy::FirstPartyAccessResult WebProcessProxy::participatesInPageWithFirstPartySite(const WebCore::Site& site) const
+{
+    bool askedAnyPage = false;
+    bool anyAnswerInconclusive = false;
+    auto mainFrameProcessAllowsSite = [&](WebPageProxy& page) {
+        RefPtr mainFrame = page.mainFrame();
+        if (!mainFrame)
+            return false;
+        askedAnyPage = true;
+        switch (protect(mainFrame->process())->allowsFirstPartyAccess(site.domain())) {
+        case FirstPartyAccessResult::Pass:
+            return true;
+        case FirstPartyAccessResult::SilentFailure:
+            anyAnswerInconclusive = true;
+            return false;
+        case FirstPartyAccessResult::HardFailure:
+            return false;
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+    };
+
+    for (Ref page : pages()) {
+        if (mainFrameProcessAllowsSite(page))
+            return FirstPartyAccessResult::Pass;
+    }
+
+    for (Ref remotePage : m_remotePages) {
+        if (RefPtr page = remotePage->page(); page && mainFrameProcessAllowsSite(*page))
+            return FirstPartyAccessResult::Pass;
+    }
+
+    if (anyAnswerInconclusive || !askedAnyPage)
+        return FirstPartyAccessResult::SilentFailure;
+    return FirstPartyAccessResult::HardFailure;
+}
+
 void WebProcessProxy::didCommitLoadClientOrigin(WebCore::ClientOrigin&& clientOrigin)
 {
     m_committedClientOrigins.add(WTF::move(clientOrigin));
