@@ -109,7 +109,7 @@ extension WebPage {
         #if WTF_PLATFORM_MAC
         backingWebView.insertText(text)
         #else
-        backingWebView.textInputContentView.insertText(text)
+        backingWebView.textInputContentView?.insertText(text)
         #endif
         await waitForNextPresentationUpdate()
     }
