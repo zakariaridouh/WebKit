@@ -41,14 +41,15 @@ class ImageBufferSkiaSurfaceBackend : public ImageBufferSkiaBackend {
 public:
     virtual ~ImageBufferSkiaSurfaceBackend();
 
-    static IntSize calculateSafeBackendSize(const Parameters&);
+    static IntSize calculateSafeBackendSize(const ImageBufferParameters&);
     static unsigned calculateBytesPerRow(const IntSize&);
-    static size_t calculateMemoryCost(const Parameters&);
+
+    size_t memoryCost() const override { return ImageBufferBackend::calculateMemoryCost(size(), calculateBytesPerRow(size())); }
 
     SkSurface* surface() const LIFETIME_BOUND final { return m_surface.get(); }
 
 protected:
-    ImageBufferSkiaSurfaceBackend(const Parameters&, sk_sp<SkSurface>&&, RenderingMode);
+    ImageBufferSkiaSurfaceBackend(const ImageBufferParameters&, sk_sp<SkSurface>&&, RenderingMode);
 
     GraphicsContext& context() LIFETIME_BOUND override { return m_context; }
     unsigned bytesPerRow() const final;

@@ -36,7 +36,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageBufferSkiaUnacceleratedBackend);
 
-std::unique_ptr<ImageBufferSkiaUnacceleratedBackend> ImageBufferSkiaUnacceleratedBackend::create(const Parameters& parameters, const ImageBufferCreationContext&)
+std::unique_ptr<ImageBufferSkiaUnacceleratedBackend> ImageBufferSkiaUnacceleratedBackend::create(const ImageBufferParameters& parameters, const ImageBufferCreationContext&)
 {
     IntSize backendSize = calculateSafeBackendSize(parameters);
     if (backendSize.isEmpty())
@@ -51,7 +51,7 @@ std::unique_ptr<ImageBufferSkiaUnacceleratedBackend> ImageBufferSkiaUnaccelerate
     return std::unique_ptr<ImageBufferSkiaUnacceleratedBackend>(new ImageBufferSkiaUnacceleratedBackend(parameters, WTF::move(surface)));
 }
 
-ImageBufferSkiaUnacceleratedBackend::ImageBufferSkiaUnacceleratedBackend(const Parameters& parameters, sk_sp<SkSurface>&& surface)
+ImageBufferSkiaUnacceleratedBackend::ImageBufferSkiaUnacceleratedBackend(const ImageBufferParameters& parameters, sk_sp<SkSurface>&& surface)
     : ImageBufferSkiaSurfaceBackend(parameters, WTF::move(surface), RenderingMode::Unaccelerated)
 {
 }

@@ -98,7 +98,7 @@ static inline bool shouldEnableDynamicMSAA()
     return enableDynamicMSAA;
 }
 
-std::unique_ptr<ImageBufferSkiaAcceleratedBackend> ImageBufferSkiaAcceleratedBackend::create(const Parameters& parameters, const ImageBufferCreationContext& creationContext)
+std::unique_ptr<ImageBufferSkiaAcceleratedBackend> ImageBufferSkiaAcceleratedBackend::create(const ImageBufferParameters& parameters, const ImageBufferCreationContext& creationContext)
 {
     IntSize backendSize = calculateSafeBackendSize(parameters);
     if (backendSize.isEmpty())
@@ -135,14 +135,14 @@ std::unique_ptr<ImageBufferSkiaAcceleratedBackend> ImageBufferSkiaAcceleratedBac
     return create(parameters, creationContext, WTF::move(surface));
 }
 
-std::unique_ptr<ImageBufferSkiaAcceleratedBackend> ImageBufferSkiaAcceleratedBackend::create(const Parameters& parameters, const ImageBufferCreationContext&, sk_sp<SkSurface>&& surface)
+std::unique_ptr<ImageBufferSkiaAcceleratedBackend> ImageBufferSkiaAcceleratedBackend::create(const ImageBufferParameters& parameters, const ImageBufferCreationContext&, sk_sp<SkSurface>&& surface)
 {
     ASSERT(surface);
     ASSERT(surface->getCanvas());
     return std::unique_ptr<ImageBufferSkiaAcceleratedBackend>(new ImageBufferSkiaAcceleratedBackend(parameters, WTF::move(surface)));
 }
 
-ImageBufferSkiaAcceleratedBackend::ImageBufferSkiaAcceleratedBackend(const Parameters& parameters, sk_sp<SkSurface>&& surface)
+ImageBufferSkiaAcceleratedBackend::ImageBufferSkiaAcceleratedBackend(const ImageBufferParameters& parameters, sk_sp<SkSurface>&& surface)
     : ImageBufferSkiaSurfaceBackend(parameters, WTF::move(surface), RenderingMode::Accelerated)
 {
 #if USE(COORDINATED_GRAPHICS)
@@ -161,7 +161,7 @@ ImageBufferSkiaAcceleratedBackend::~ImageBufferSkiaAcceleratedBackend()
 
 GraphicsContext& ImageBufferSkiaAcceleratedBackend::context()
 {
-    if (parameters().purpose != RenderingPurpose::Canvas)
+    if (purpose() != RenderingPurpose::Canvas)
         return ImageBufferSkiaSurfaceBackend::context();
 
     ensureCanvasRecordingContext();

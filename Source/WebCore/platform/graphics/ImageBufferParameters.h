@@ -26,6 +26,7 @@
 #pragma once
 
 #include <WebCore/ColorSpace.h>
+#include <WebCore/FloatSize.h>
 #include <WebCore/ImageBufferFormat.h>
 #include <WebCore/IntSize.h>
 #include <WebCore/PixelFormat.h>
@@ -33,12 +34,19 @@
 
 namespace WebCore {
 
-struct ImageBufferBackendParameters {
-    IntSize backendSize;
-    float resolutionScale; // Resolution scale is of the ImageBuffer logical size.
+// The size of the backing store that a logical size and a resolution scale ask for.
+// Empty if that cannot be expressed as an IntSize, which the callers treat as a
+// failure to allocate.
+WEBCORE_EXPORT IntSize calculateImageBufferBackendSize(FloatSize logicalSize, float resolutionScale);
+
+struct ImageBufferParameters {
+    FloatSize logicalSize;
+    float resolutionScale;
     ColorSpace colorSpace;
     ImageBufferFormat bufferFormat;
     RenderingPurpose purpose;
+
+    IntSize backendSize() const { return calculateImageBufferBackendSize(logicalSize, resolutionScale); }
 };
 
-} // namespace WTF
+} // namespace WebCore

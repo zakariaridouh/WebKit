@@ -8791,11 +8791,8 @@ std::optional<RenderingMode> Internals::getEffectiveRenderingModeOfNewlyCreatedA
     if (!document || !document->page())
         return std::nullopt;
 
-    if (RefPtr imageBuffer = ImageBuffer::create({ 100, 100 }, RenderingMode::Accelerated, RenderingPurpose::DOM, 1, ColorSpace::SRGB(), PixelFormat::BGRA8,  &document->page()->chrome())) {
-        imageBuffer->ensureBackendCreated();
-        if (imageBuffer->hasBackend())
-            return imageBuffer->renderingMode();
-    }
+    if (RefPtr imageBuffer = ImageBuffer::create({ 100, 100 }, RenderingMode::Accelerated, RenderingPurpose::DOM, 1, ColorSpace::SRGB(), PixelFormat::BGRA8,  &document->page()->chrome()))
+        return imageBuffer->getEffectiveRenderingModeForTesting();
     return std::nullopt;
 }
 

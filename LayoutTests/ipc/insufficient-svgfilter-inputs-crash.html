@@ -32,7 +32,6 @@
             identifier: imageBufferIdentifier,
             contextIdentifier: contextIdentifier,
         });
-        const didCreateBackendReply = streamConnection.connection.waitForMessage(imageBufferIdentifier, IPC.messages.RemoteImageBufferProxy_DidCreateBackend.name, 1);
     
         const remoteImageBuffer = streamConnection.newInterface("RemoteImageBuffer", imageBufferIdentifier);
     

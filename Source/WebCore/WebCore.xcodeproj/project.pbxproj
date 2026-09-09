@@ -3633,7 +3633,7 @@
 		8696CE39297EF0130081C800 /* TextManipulationControllerManipulationFailure.h in Headers */ = {isa = PBXBuildFile; fileRef = 8696CE38297EF0130081C800 /* TextManipulationControllerManipulationFailure.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		86AA52712937ADB50065399E /* TextManipulationItem.h in Headers */ = {isa = PBXBuildFile; fileRef = 86AA52702937ADB40065399E /* TextManipulationItem.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		86AA527C2937BD620065399E /* TextManipulationToken.h in Headers */ = {isa = PBXBuildFile; fileRef = 86AA527B2937BD610065399E /* TextManipulationToken.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		86BBA9F02987EBF300A78986 /* ImageBufferBackendParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = 86BBA9EF2987EBF100A78986 /* ImageBufferBackendParameters.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		86BBA9F02987EBF300A78986 /* ImageBufferParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = 86BBA9EF2987EBF100A78986 /* ImageBufferParameters.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		86BE340115058CB200CE0FD8 /* PerformanceEntry.h in Headers */ = {isa = PBXBuildFile; fileRef = 86BE33FB15058CB200CE0FD8 /* PerformanceEntry.h */; };
 		86D1969629A674390083B077 /* ServiceWorkerImportedScript.h in Headers */ = {isa = PBXBuildFile; fileRef = 86D1969529A674390083B077 /* ServiceWorkerImportedScript.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		86D196DD29ACE0930083B077 /* TextManipulationItemIdentifier.h in Headers */ = {isa = PBXBuildFile; fileRef = 86D196DC29ACE0920083B077 /* TextManipulationItemIdentifier.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -16065,7 +16065,7 @@
 		86AA52702937ADB40065399E /* TextManipulationItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TextManipulationItem.h; sourceTree = "<group>"; };
 		86AA527B2937BD610065399E /* TextManipulationToken.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TextManipulationToken.h; sourceTree = "<group>"; };
 		86BA766D166427A8005BE5D1 /* FrameLoadRequest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FrameLoadRequest.cpp; sourceTree = "<group>"; };
-		86BBA9EF2987EBF100A78986 /* ImageBufferBackendParameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageBufferBackendParameters.h; sourceTree = "<group>"; };
+		86BBA9EF2987EBF100A78986 /* ImageBufferParameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageBufferParameters.h; sourceTree = "<group>"; };
 		86BE33FB15058CB200CE0FD8 /* PerformanceEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PerformanceEntry.h; sourceTree = "<group>"; };
 		86BE33FC15058CB200CE0FD8 /* PerformanceEntry.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PerformanceEntry.idl; sourceTree = "<group>"; };
 		86D1969529A674390083B077 /* ServiceWorkerImportedScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ServiceWorkerImportedScript.h; sourceTree = "<group>"; };
@@ -37086,12 +37086,12 @@
 				724DCF1C284853650026ACF4 /* ImageBufferAllocator.h */,
 				72BAC3A423E17327008D741C /* ImageBufferBackend.cpp */,
 				72BAC3A523E17328008D741C /* ImageBufferBackend.h */,
-				86BBA9EF2987EBF100A78986 /* ImageBufferBackendParameters.h */,
 				72FE4047292F3D3B001D3855 /* ImageBufferContextSwitcher.cpp */,
 				72FE4046292F3D3A001D3855 /* ImageBufferContextSwitcher.h */,
 				72F9A6CA2D30BE6E0019DE4B /* ImageBufferDisplayListBackend.cpp */,
 				72F9A6C92D30BE6E0019DE4B /* ImageBufferDisplayListBackend.h */,
 				0FB266832E3304850071C4A5 /* ImageBufferFormat.h */,
+				86BBA9EF2987EBF100A78986 /* ImageBufferParameters.h */,
 				72BAC3A623E17328008D741C /* ImageBufferPlatformBackend.h */,
 				322B61142C50C22D00FB5440 /* ImageBufferResourceLimits.h */,
 				CD19FEA71F573972000C42FB /* ImageDecoder.cpp */,
@@ -46352,13 +46352,13 @@
 				B2A10B920B3818BD00099AA4 /* ImageBuffer.h in Headers */,
 				724DCF2328486C9B0026ACF4 /* ImageBufferAllocator.h in Headers */,
 				72BAC3AE23E1F0B0008D741C /* ImageBufferBackend.h in Headers */,
-				86BBA9F02987EBF300A78986 /* ImageBufferBackendParameters.h in Headers */,
 				550640B02407587E00AAE045 /* ImageBufferCGBackend.h in Headers */,
 				2D7705C925528D34001D0C94 /* ImageBufferCGBitmapBackend.h in Headers */,
 				7220742F2D07C7F6009FA90F /* ImageBufferCGPDFDocumentBackend.h in Headers */,
 				72F9A6CD2D30DE880019DE4B /* ImageBufferDisplayListBackend.h in Headers */,
 				0FB266842E3304850071C4A5 /* ImageBufferFormat.h in Headers */,
 				727A7F3A24078B84004D2931 /* ImageBufferIOSurfaceBackend.h in Headers */,
+				86BBA9F02987EBF300A78986 /* ImageBufferParameters.h in Headers */,
 				2D7705C7255276CD001D0C94 /* ImageBufferPlatformBackend.h in Headers */,
 				322B61152C50C26300FB5440 /* ImageBufferResourceLimits.h in Headers */,
 				073930C32AC4E85300C1D1B1 /* ImageCapture.h in Headers */,

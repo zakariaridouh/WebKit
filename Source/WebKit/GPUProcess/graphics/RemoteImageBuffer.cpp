@@ -61,12 +61,23 @@ RemoteImageBuffer::RemoteImageBuffer(Ref<WebCore::ImageBuffer>&& imageBuffer, We
     , m_context(RemoteImageBufferGraphicsContext::create(m_imageBuffer, contextIdentifier, m_renderingBackend))
 {
     m_renderingBackend->sharedResourceCache().didCreateImageBuffer(m_imageBuffer->renderingPurpose(), m_imageBuffer->renderingMode());
+}
 
-    // If the ImageBuffer was an error buffer, this will fail and nullopt will be sent, signaling
-    // allocation failure.
+void RemoteImageBuffer::getEffectiveRenderingModeForTesting(CompletionHandler<void(std::optional<WebCore::RenderingMode>)>&& completionHandler)
+{
+    assertIsCurrent(workQueue());
+    completionHandler(m_imageBuffer->getEffectiveRenderingModeForTesting());
+}
+
+void RemoteImageBuffer::getBackendHandle(CompletionHandler<void(std::optional<ImageBufferBackendHandle>&&)>&& completionHandler)
+{
+    assertIsCurrent(workQueue());
     auto* sharing = m_imageBuffer->toBackendSharing();
-    auto handle = sharing ? downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle() : std::nullopt;
-    m_renderingBackend->streamConnection().send(Messages::RemoteImageBufferProxy::DidCreateBackend(WTF::move(handle)), m_identifier);
+    if (!sharing) {
+        completionHandler(std::nullopt);
+        return;
+    }
+    completionHandler(downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle());
 }
 
 RemoteImageBuffer::~RemoteImageBuffer()

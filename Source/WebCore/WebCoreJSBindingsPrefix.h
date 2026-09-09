@@ -240,7 +240,7 @@
 #include "ImageBuffer.h"
 #include "ImageBufferAllocator.h"
 #include "ImageBufferBackend.h"
-#include "ImageBufferBackendParameters.h"
+#include "ImageBufferParameters.h"
 #include "ImageData.h"
 #include "ImageDataArray.h"
 #include "ImageDataPixelFormat.h"

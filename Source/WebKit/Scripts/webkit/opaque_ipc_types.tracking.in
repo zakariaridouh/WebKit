@@ -510,8 +510,12 @@
     [Legacy] StructureParam WebKit::CoreIPCCFType.object()
 }
 
+[UnsafeWrapper] WebKit::ImageBufferBackendHandle {
+    [Legacy] MessageParam RemoteRenderingBackend.CreateMappableImageBuffer backingStore
+}
+
 [UnsafeWrapper] std::optional<WebKit::ImageBufferBackendHandle> {
-    [Legacy] MessageParam RemoteImageBufferProxy.DidCreateBackend handle
+    [Legacy] MessageParamReply RemoteImageBuffer.GetBackendHandle handle
     [Legacy] MessageParamReply WebPage.TakeSnapshot image
     [Legacy] StructureParam WebKit::RemoteLayerBackingStoreProperties.m_bufferHandle
     [Legacy] StructureParam WebKit::BufferSetBackendHandle.bufferHandle

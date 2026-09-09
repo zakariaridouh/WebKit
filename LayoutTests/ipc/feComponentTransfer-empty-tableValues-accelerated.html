@@ -46,9 +46,6 @@ setTimeout(async () => {
                 bufferFormat: { pixelFormat: 3, useLosslessCompression: 0 },
                 identifier: id, contextIdentifier: ctx,
             });
-            // Drain the unsolicited DidCreateBackend in-turn; otherwise it reaches the stream
-            // connection's dummy receiver, which ASSERT_NOT_REACHED()s in debug builds.
-            sc.connection.waitForMessage(id, IPC.messages.RemoteImageBufferProxy_DidCreateBackend.name);
         }
 
         // Source buffer, filled opaque white.

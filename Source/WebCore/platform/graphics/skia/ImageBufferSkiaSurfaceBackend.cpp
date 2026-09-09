@@ -33,9 +33,9 @@
 
 namespace WebCore {
 
-IntSize ImageBufferSkiaSurfaceBackend::calculateSafeBackendSize(const Parameters& parameters)
+IntSize ImageBufferSkiaSurfaceBackend::calculateSafeBackendSize(const ImageBufferParameters& parameters)
 {
-    IntSize backendSize = parameters.backendSize;
+    IntSize backendSize = parameters.backendSize();
     if (backendSize.isEmpty())
         return backendSize;
 
@@ -56,12 +56,7 @@ unsigned ImageBufferSkiaSurfaceBackend::calculateBytesPerRow(const IntSize& back
     return CheckedUint32(backendSize.width()) * 4;
 }
 
-size_t ImageBufferSkiaSurfaceBackend::calculateMemoryCost(const Parameters& parameters)
-{
-    return ImageBufferBackend::calculateMemoryCost(parameters.backendSize, calculateBytesPerRow(parameters.backendSize));
-}
-
-ImageBufferSkiaSurfaceBackend::ImageBufferSkiaSurfaceBackend(const Parameters& parameters, sk_sp<SkSurface>&& surface, RenderingMode renderingMode)
+ImageBufferSkiaSurfaceBackend::ImageBufferSkiaSurfaceBackend(const ImageBufferParameters& parameters, sk_sp<SkSurface>&& surface, RenderingMode renderingMode)
     : ImageBufferSkiaBackend(parameters)
     , m_surface(WTF::move(surface))
     , m_context(*m_surface->getCanvas(), renderingMode, parameters.purpose)

@@ -3275,7 +3275,7 @@ class WebCore::SpeechRecognitionUpdate {
     Vector<WebCore::GradientColorStop, 2> stops();
 };
 
-header: <WebCore/ImageBuffer.h>
+header: <WebCore/ImageBufferParameters.h>
 [CustomHeader] struct WebCore::ImageBufferParameters {
     WebCore::FloatSize logicalSize;
     float resolutionScale;

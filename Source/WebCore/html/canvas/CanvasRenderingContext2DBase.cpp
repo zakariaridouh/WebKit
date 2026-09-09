@@ -3241,9 +3241,8 @@ std::optional<RenderingMode> CanvasRenderingContext2DBase::renderingModeForTesti
 std::optional<CanvasRenderingContext2DBase::RenderingMode> CanvasRenderingContext2DBase::getEffectiveRenderingModeForTesting()
 {
     if (RefPtr buffer = this->buffer()) {
-        buffer->ensureBackendCreated();
-        if (buffer->hasBackend())
-            return buffer->renderingMode();
+        if (auto renderingMode = buffer->getEffectiveRenderingModeForTesting())
+            return *renderingMode;
     }
     return std::nullopt;
 }
