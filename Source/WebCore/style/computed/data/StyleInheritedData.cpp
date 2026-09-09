@@ -36,8 +36,8 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(InheritedData);
 InheritedData::InheritedData()
     : borderHorizontalSpacing(ComputedStyle::initialBorderHorizontalSpacing())
     , borderVerticalSpacing(ComputedStyle::initialBorderVerticalSpacing())
-    , specifiedLineHeight(ComputedStyle::initialSpecifiedLineHeight())
-    , textAutosizingAdjustedLineHeight(ComputedStyle::initialSpecifiedLineHeight())
+    , lineHeight(ComputedStyle::initialLineHeight())
+    , textAutosizingAdjustedLineHeight(ComputedStyle::initialLineHeight())
     , fontData(FontData::create())
     , color(WebCore::Color::black)
     , visitedLinkColor(WebCore::Color::black)
@@ -48,7 +48,7 @@ inline InheritedData::InheritedData(const InheritedData& o)
     : RefCounted<InheritedData>()
     , borderHorizontalSpacing(o.borderHorizontalSpacing)
     , borderVerticalSpacing(o.borderVerticalSpacing)
-    , specifiedLineHeight(o.specifiedLineHeight)
+    , lineHeight(o.lineHeight)
     , textAutosizingAdjustedLineHeight(o.textAutosizingAdjustedLineHeight)
     , fontData(o.fontData)
     , color(o.color)
@@ -79,7 +79,7 @@ bool InheritedData::fastPathInheritedEqual(const InheritedData& other) const
 
 bool InheritedData::nonFastPathInheritedEqual(const InheritedData& other) const
 {
-    return specifiedLineHeight == other.specifiedLineHeight
+    return lineHeight == other.lineHeight
         && textAutosizingAdjustedLineHeight == other.textAutosizingAdjustedLineHeight
         && fontData == other.fontData
         && borderHorizontalSpacing == other.borderHorizontalSpacing
@@ -99,7 +99,7 @@ void InheritedData::dumpDifferences(TextStream& ts, const InheritedData& other) 
 
     LOG_IF_DIFFERENT(borderHorizontalSpacing);
     LOG_IF_DIFFERENT(borderVerticalSpacing);
-    LOG_IF_DIFFERENT(specifiedLineHeight);
+    LOG_IF_DIFFERENT(lineHeight);
     LOG_IF_DIFFERENT(textAutosizingAdjustedLineHeight);
     LOG_IF_DIFFERENT(color);
     LOG_IF_DIFFERENT(visitedLinkColor);

@@ -2393,8 +2393,8 @@ Style::ComputedStyle HTMLInputElement::createInnerTextStyle(const Style::Compute
         return isText() && !style.logicalHeight().isAuto() && !hasAutofillStrongPasswordButton();
     };
     if (shouldUseInitialLineHeight()) {
-        textBlockStyle.setSpecifiedLineHeight(Style::ComputedStyle::initialSpecifiedLineHeight());
-        textBlockStyle.setTextAutosizingAdjustedLineHeight(Style::ComputedStyle::initialSpecifiedLineHeight());
+        textBlockStyle.setLineHeight(Style::ComputedStyle::initialLineHeight());
+        textBlockStyle.setTextAutosizingAdjustedLineHeight(Style::ComputedStyle::initialLineHeight());
     }
 
     return textBlockStyle;

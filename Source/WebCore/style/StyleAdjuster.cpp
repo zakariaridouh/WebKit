@@ -1378,7 +1378,7 @@ auto Adjuster::adjustmentForTextAutosizing(const Style::ComputedStyle& style, co
 
     float initialScale = document->page() ? document->page()->initialScaleIgnoringContentSize() : 1;
     auto adjustLineHeightIfNeeded = [&](auto usedFontSize) {
-        auto lineHeight = style.specifiedLineHeight();
+        auto lineHeight = style.lineHeight();
         constexpr static unsigned eligibleFontSize = 12;
         if (usedFontSize * initialScale >= eligibleFontSize)
             return;

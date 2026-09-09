@@ -120,7 +120,7 @@ unsigned TextAutoSizingHashTranslator::hash(const Style::ComputedStyle& style)
     hash ^= std::to_underlying(style.nbspMode());
     hash ^= std::to_underlying(style.lineBreak());
     hash ^= std::to_underlying(style.textSecurity());
-    hash ^= style.specifiedLineHeight().valueForHash();
+    hash ^= style.lineHeight().valueForHash();
     hash ^= computeFontHash(style.fontCascade());
     hash ^= WTF::FloatHash<float>::hash(style.borderHorizontalSpacing().unresolvedValue());
     hash ^= WTF::FloatHash<float>::hash(style.borderVerticalSpacing().unresolvedValue());
@@ -150,7 +150,7 @@ bool TextAutoSizingHashTranslator::equal(const Style::ComputedStyle& styleA, con
         && styleA.nbspMode() == styleB.nbspMode()
         && styleA.lineBreak() == styleB.lineBreak()
         && styleA.textSecurity() == styleB.textSecurity()
-        && styleA.specifiedLineHeight() == styleB.specifiedLineHeight()
+        && styleA.lineHeight() == styleB.lineHeight()
         && styleA.fontCascade().equalForTextAutoSizing(styleB.fontCascade())
         && styleA.borderHorizontalSpacing() == styleB.borderHorizontalSpacing()
         && styleA.borderVerticalSpacing() == styleB.borderVerticalSpacing()
@@ -252,9 +252,9 @@ auto TextAutoSizingValue::adjustTextNodeSizes() -> StillHasNodes
 
         // Resize the line height of the parent.
         auto& parentStyle = parentRenderer->style();
-        auto& lineHeightLength = parentStyle.specifiedLineHeight();
+        auto& parentLineHeight = parentStyle.lineHeight();
 
-        int specifiedLineHeight = WTF::switchOn(lineHeightLength,
+        int parentEvaluatedLineHeight = WTF::switchOn(parentLineHeight,
             [&](const CSS::Keyword::Normal&) {
                 return 0;
             },
@@ -265,15 +265,18 @@ auto TextAutoSizingValue::adjustTextNodeSizes() -> StillHasNodes
                 return LayoutUnit { number.value * LayoutUnit { fontDescription.computedSize() } }.toInt();
             }
         );
+        parentEvaluatedLineHeight *= scaleChange;
 
         // This calculation matches the line-height computed size calculation in StyleBuilderCustom::applyValueLineHeight().
-        int lineHeight = specifiedLineHeight * scaleChange;
-        if (auto fixedLineHeight = lineHeightLength.tryLength(); fixedLineHeight && fixedLineHeight->resolveZoom(Style::ZoomFactor::none()) == lineHeight)
+        if (auto fixedLineHeight = parentLineHeight.tryLength(); fixedLineHeight && fixedLineHeight->resolveZoom(Style::ZoomFactor::none()) == parentEvaluatedLineHeight)
             continue;
 
         auto newParentStyle = cloneRenderStyleWithState(parentStyle);
-        newParentStyle.setTextAutosizingAdjustedLineHeight(lineHeightLength.isNormal() ? Style::LineHeight { lineHeightLength } : Style::LineHeight { Style::LineHeight::Length { static_cast<float>(lineHeight) } });
-        newParentStyle.setSpecifiedLineHeight(Style::LineHeight { lineHeightLength });
+        newParentStyle.setTextAutosizingAdjustedLineHeight(parentLineHeight.isNormal()
+            ? Style::LineHeight { parentLineHeight }
+            : Style::LineHeight { Style::LineHeight::Length { static_cast<float>(parentEvaluatedLineHeight) } }
+        );
+        newParentStyle.setLineHeight(Style::LineHeight { parentLineHeight });
         newParentStyle.setFontDescription(WTF::move(fontDescription));
         parentRenderer->setStyle(WTF::move(newParentStyle));
 
@@ -336,7 +339,7 @@ void TextAutoSizingValue::reset()
             parentRenderer = parentRenderer->parent();
 
         auto& parentStyle = parentRenderer->style();
-        auto& originalLineHeight = parentStyle.specifiedLineHeight();
+        auto& originalLineHeight = parentStyle.lineHeight();
         if (originalLineHeight == parentStyle.textAutosizingAdjustedLineHeight())
             continue;
 

@@ -58,7 +58,7 @@ public:
     WebkitBorderSpacing borderHorizontalSpacing;
     WebkitBorderSpacing borderVerticalSpacing;
 
-    LineHeight specifiedLineHeight;
+    LineHeight lineHeight;
     LineHeight textAutosizingAdjustedLineHeight;
 
     DataRef<FontData> fontData;

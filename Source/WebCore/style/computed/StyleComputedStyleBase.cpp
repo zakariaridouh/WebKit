@@ -281,12 +281,12 @@ void ComputedStyleBase::setTextAutosizingAdjustedLineHeight(LineHeight&& lineHei
 
 void ComputedStyleBase::setLineHeightFromAnimation(LineHeight&& lineHeight)
 {
-    bool specifiedLineHeightChanged = m_inheritedData->specifiedLineHeight != lineHeight;
+    bool lineHeightChanged = m_inheritedData->lineHeight != lineHeight;
     bool textAutosizingAdjustedLineHeightChanged = m_inheritedData->textAutosizingAdjustedLineHeight != lineHeight;
-    if (specifiedLineHeightChanged || textAutosizingAdjustedLineHeightChanged) {
+    if (lineHeightChanged || textAutosizingAdjustedLineHeightChanged) {
         auto& access = m_inheritedData.access();
-        if (specifiedLineHeightChanged)
-            access.specifiedLineHeight = lineHeight;
+        if (lineHeightChanged)
+            access.lineHeight = lineHeight;
         if (textAutosizingAdjustedLineHeightChanged)
             access.textAutosizingAdjustedLineHeight = WTF::move(lineHeight);
     }

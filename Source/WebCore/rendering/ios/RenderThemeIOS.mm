@@ -471,8 +471,8 @@ static void adjustSelectListButtonStyle(Style::ComputedStyle& style)
     // Enforce "padding: 0 0.5em".
     applyCommonButtonPaddingToStyle(style);
 
-    style.setSpecifiedLineHeight(Style::ComputedStyle::initialSpecifiedLineHeight());
-    style.setTextAutosizingAdjustedLineHeight(Style::ComputedStyle::initialSpecifiedLineHeight());
+    style.setLineHeight(Style::ComputedStyle::initialLineHeight());
+    style.setTextAutosizingAdjustedLineHeight(Style::ComputedStyle::initialLineHeight());
 }
 
 class RenderThemeMeasureTextClient : public MeasureTextClient {
