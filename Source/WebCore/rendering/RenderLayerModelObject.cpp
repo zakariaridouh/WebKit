@@ -428,7 +428,7 @@ void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject
     if (ancestorContainer == this)
         return;
 
-    ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled());
+    ASSERT(ancestorContainer || !view().frameView().layoutContext().isPaintOffsetCacheEnabled());
 
     bool ancestorSkipped;
     auto* container = this->container(ancestorContainer, ancestorSkipped);
