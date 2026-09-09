@@ -5,7 +5,9 @@ noInline(test);
 
 const array = new Array(1024);
 for (let i = 0, l = array.length; i < l; ++i) {
-    array[i] = { i };
+    if (i % 3 !== 0) {
+        array[i] = i + 0.5;
+    }
 }
 
 for (let i = 0; i < testLoopCount; ++i) {

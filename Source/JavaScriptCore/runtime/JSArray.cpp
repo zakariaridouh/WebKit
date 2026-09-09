@@ -898,11 +898,11 @@ bool JSArray::fastCopyWithin(JSGlobalObject* globalObject, uint64_t from64, uint
     switch (type) {
     case ArrayWithInt32:
     case ArrayWithContiguous: {
-        auto data = this->butterfly()->contiguous().data();
+        Butterfly* butterfly = this->butterfly();
 
-        if (containsHole(data, length))
-            return false;
+        RELEASE_ASSERT(butterfly->vectorLength() >= length);
 
+        auto data = butterfly->contiguousInt32().data();
         std::span<WriteBarrier<Unknown>> destination { data + to, count };
         std::span<const WriteBarrier<Unknown>> source { data + from, count };
 
@@ -916,11 +916,11 @@ bool JSArray::fastCopyWithin(JSGlobalObject* globalObject, uint64_t from64, uint
         return true;
     }
     case ArrayWithDouble: {
-        auto data = this->butterfly()->contiguousDouble().data();
+        Butterfly* butterfly = this->butterfly();
 
-        if (containsHole(data, length))
-            return false;
+        RELEASE_ASSERT(butterfly->vectorLength() >= length);
 
+        auto data = butterfly->contiguousDouble().data();
         std::span<double> destination { data + to, count };
         std::span<double> source { data + from, count };
 
