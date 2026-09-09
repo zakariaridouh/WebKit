@@ -6843,7 +6843,7 @@ TEST(SiteIsolation, DISABLED_PlayAudioInMultipleFrames)
 
     RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
     HTTPResponse videoResponse { videoData.get() };
-    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+    videoResponse.setHeaderField("Content-Type"_s, "video/mp4"_s);
 
     HTTPServer server({
         { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
@@ -6877,7 +6877,7 @@ TEST(SiteIsolation, PlayAudioInRemoteFrameThenRemove)
 
     RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
     HTTPResponse videoResponse { videoData.get() };
-    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+    videoResponse.setHeaderField("Content-Type"_s, "video/mp4"_s);
 
     HTTPServer server({
         { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
@@ -6915,7 +6915,7 @@ TEST(SiteIsolation, MutesAndSetsAudioInMultipleFrames)
 
     RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
     HTTPResponse videoResponse { videoData.get() };
-    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+    videoResponse.setHeaderField("Content-Type"_s, "video/mp4"_s);
 
     HTTPServer server({
         { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
