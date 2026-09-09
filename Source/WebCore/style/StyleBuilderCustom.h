@@ -59,6 +59,7 @@
 #include "StylePrimitiveNumericTypes+CSSValueConversion.h"
 #include "StyleResolveForFont.h"
 #include "StyleResolver.h"
+#include "StyleSizeOrKeyword+CSSValueConversion.h"
 #include "StyleTextEdge+CSSValueConversion.h"
 #include "StyleValueTypes+CSSValueConversion.h"
 #include "TextSpacing.h"

@@ -24,13 +24,11 @@
 
 #pragma once
 
-#include "CSSCalcSizeValue.h"
-#include "CSSCalcTree+Copy.h"
-#include "CSSCalcValue.h"
 #include "CSSKeywordValue.h"
 #include "StyleBuilderChecking.h"
 #include "StylePrimitiveNumericOrKeyword.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
+#include "StyleSizeOrKeyword.h"
 
 namespace WebCore {
 namespace Style {
@@ -87,35 +85,6 @@ template<PrimitiveNumericOrKeywordDerived StyleType, typename... Rest>
 auto convertPrimitiveNumericOrKeywordFromCSSValue(const CSSKeywordValue& value, Rest&&...) -> std::optional<StyleType>
 {
     return convertKeywordIDForCSSValueConversion<StyleType>(value.valueID());
-}
-
-// MARK: <calc-size()> conversion
-
-// FIXME: Stub until calc-size() resolves at used value time. The size types will move to their own
-// base type, and this will construct a calc-size() alternative rather than degrade.
-template<LengthPercentageOrKeywordDerived StyleType, typename ConversionState, typename... Rest>
-auto convertCalcSizeForCSSValueConversion(ConversionState& conversionState, const CSS::CalcSizeParameters& parameters, Rest&&... rest) -> std::optional<StyleType>
-{
-    using CSSRaw = typename StyleType::Specified::CSS::Raw;
-
-    auto convertCalculation = [&](const CSS::CalcSizeCalculation& calculation) -> std::optional<StyleType> {
-        return StyleType { toStyle(CSS::UnevaluatedCalc<CSSRaw> { CSSCalc::Value::create(CSS::Category::LengthPercentage, CSS::All, CSSCalc::copy(calculation)) }, conversionState, std::forward<Rest>(rest)...) };
-    };
-
-    return WTF::switchOn(parameters.basis,
-        [&](const CSS::Keyword::Any&) -> std::optional<StyleType> {
-            return convertCalculation(parameters.calculation);
-        },
-        [&]<CSSValueID Id>(const Constant<Id>&) -> std::optional<StyleType> {
-            return convertKeywordIDForCSSValueConversion<StyleType>(Id);
-        },
-        [&](const CSS::CalcSizeCalculation& basis) -> std::optional<StyleType> {
-            return convertCalculation(basis);
-        },
-        [&](const UniqueRef<CSS::CalcSizeFunction>& nested) -> std::optional<StyleType> {
-            return convertCalcSizeForCSSValueConversion<StyleType>(conversionState, nested->value.parameters, std::forward<Rest>(rest)...);
-        }
-    );
 }
 
 template<PrimitiveNumericOrKeywordDerived StyleType, typename... Rest>
@@ -205,9 +174,6 @@ auto convertPrimitiveNumericOrKeywordFromCSSValue(const CSSToLengthConversionDat
         if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value))
             return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(conversionData, *primitiveValue, std::forward<Rest>(rest)...);
 
-        if (RefPtr calcSizeValue = dynamicDowncast<CSSCalcSizeValue>(value))
-            return convertCalcSizeForCSSValueConversion<StyleType>(conversionData, calcSizeValue->calcSize()->parameters, std::forward<Rest>(rest)...);
-
         RefPtr keywordValue = dynamicDowncast<CSSKeywordValue>(value);
         if (!keywordValue)
             return std::nullopt;
@@ -229,13 +195,6 @@ auto convertPrimitiveNumericOrKeywordFromCSSValue(BuilderState& state, const CSS
         if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value))
             return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(state, *primitiveValue, std::forward<Rest>(rest)...);
 
-        if (RefPtr calcSizeValue = dynamicDowncast<CSSCalcSizeValue>(value)) {
-            if (auto result = convertCalcSizeForCSSValueConversion<StyleType>(state, calcSizeValue->calcSize()->parameters, std::forward<Rest>(rest)...))
-                return *result;
-            state.setCurrentPropertyInvalidAtComputedValueTime();
-            return 0_css_px;
-        }
-
         RefPtr keywordValue = requiredDowncast<CSSKeywordValue>(state, value);
         if (!keywordValue)
             return 0_css_px;
@@ -243,24 +202,21 @@ auto convertPrimitiveNumericOrKeywordFromCSSValue(BuilderState& state, const CSS
     }
 }
 
-template<LengthPercentageOrKeywordDerived StyleType> struct CSSValueConversion<StyleType> {
+// Split out so that specializations can reuse the overloads they do not change.
+template<LengthPercentageOrKeywordDerived StyleType> struct NumericOrKeywordCSSValueConversion {
+    static StyleType invalidValue() { return StyleType { CSS::px(0) }; }
+
     template<typename... Rest> auto operator()(const CSSToLengthConversionData& conversionData, const CSSPrimitiveValue& value, Rest&&... rest) -> StyleType
     {
-        using namespace CSS::Literals;
-
-        return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(conversionData, value, std::forward<Rest>(rest)...).value_or(StyleType { 0_css_px });
+        return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(conversionData, value, std::forward<Rest>(rest)...).value_or(invalidValue());
     }
     template<typename... Rest> auto operator()(const CSSToLengthConversionData& conversionData, const CSSKeywordValue& value, Rest&&... rest) -> StyleType
     {
-        using namespace CSS::Literals;
-
-        return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(conversionData, value, std::forward<Rest>(rest)...).value_or(StyleType { 0_css_px });
+        return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(conversionData, value, std::forward<Rest>(rest)...).value_or(invalidValue());
     }
     template<typename... Rest> auto operator()(const CSSToLengthConversionData& conversionData, const CSSValue& value, Rest&&... rest) -> StyleType
     {
-        using namespace CSS::Literals;
-
-        return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(conversionData, value, std::forward<Rest>(rest)...).value_or(StyleType { 0_css_px });
+        return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(conversionData, value, std::forward<Rest>(rest)...).value_or(invalidValue());
     }
 
     template<typename... Rest> auto operator()(BuilderState& state, const CSSPrimitiveValue& value, Rest&&... rest) -> StyleType
@@ -276,6 +232,10 @@ template<LengthPercentageOrKeywordDerived StyleType> struct CSSValueConversion<S
         return convertPrimitiveNumericOrKeywordFromCSSValue<StyleType>(state, value, std::forward<Rest>(rest)...);
     }
 };
+
+// The sizing properties have their own specialization.
+template<LengthPercentageOrKeywordDerived StyleType> requires (!SizeOrKeywordDerived<StyleType>)
+struct CSSValueConversion<StyleType> : NumericOrKeywordCSSValueConversion<StyleType> { };
 
 } // namespace Style
 } // namespace WebCore
