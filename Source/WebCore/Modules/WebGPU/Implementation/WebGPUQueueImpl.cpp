@@ -261,30 +261,12 @@ void QueueImpl::copyExternalImageToTexture(
         backingSource.colorSpace = sourceImageBuffer->colorSpace() == ColorSpace::DisplayP3() ? WGPUColorSpace::DisplayP3 : WGPUColorSpace::SRGB;
     }
 
-    auto convertToColorSpace = [] (PredefinedColorSpace colorSpace) {
-        switch (colorSpace) {
-        case PredefinedColorSpace::SRGB:
-            return WGPUColorSpace::SRGB;
-        case PredefinedColorSpace::SRGBLinear:
-            return WGPUColorSpace::SRGBLinear;
-#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
-        case PredefinedColorSpace::DisplayP3:
-            return WGPUColorSpace::DisplayP3;
-        case PredefinedColorSpace::DisplayP3Linear:
-            return WGPUColorSpace::DisplayP3Linear;
-#endif
-        }
-
-        ASSERT_NOT_REACHED();
-        return WGPUColorSpace::SRGB;
-    };
-
     WGPUImageCopyTextureTagged backingDestination {
         .texture = convertToBackingContext->convertToBacking(protect(destination.texture)),
         .mipLevel = destination.mipLevel,
         .origin = destination.origin ? convertToBackingContext->convertToBacking(*destination.origin) : WGPUOrigin3D { 0, 0, 0 },
         .aspect = convertToBackingContext->convertToBacking(destination.aspect),
-        .colorSpace = convertToColorSpace(destination.colorSpace),
+        .colorSpace = convertToBackingContext->convertToBacking(destination.colorSpace),
         .premultipliedAlpha = destination.premultipliedAlpha,
     };
 
