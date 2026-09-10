@@ -254,6 +254,7 @@
 #include "StreamTransferUtilities.h"
 #include "StringCallback.h"
 #include "StyleDocumentScope.h"
+#include "StyleExtractor.h"
 #include "StyleGridPosition.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 #include "StyleResolver.h"
@@ -1657,6 +1658,11 @@ float Internals::usedOutlineOffset(Element& element)
     if (!style)
         return 0;
     return Style::evaluate<float>(style->usedOutlineOffset(), style->usedZoomForLength(), style->deviceScaleFactor());
+}
+
+String Internals::computedAppleColorFilter(Element& element)
+{
+    return Style::Extractor::appleColorFilterSerializationForTesting(element);
 }
 
 Node& Internals::ensureUserAgentShadowRoot(Element& host)

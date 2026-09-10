@@ -43,12 +43,15 @@
 #include "RenderObjectInlines.h"
 #include "SVGElement.h"
 #include "ShorthandSerializer.h"
+#include "StyleAppleColorFilter.h"
+#include "StyleComputedStyle+GettersInlines.h"
 #include "StyleCustomProperty.h"
 #include "StyleCustomPropertyRegistry.h"
 #include "StyleDocumentScope.h"
 #include "StyleExtractorGenerated.h"
 #include "StyleInterpolation.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
+#include "StylePrimitiveNumericTypes+Serialization.h"
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
 #include "StyleZoomPrimitivesInlines.h"
@@ -610,6 +613,15 @@ Ref<MutableStyleProperties> Extractor::copyProperties() const
             return std::nullopt;
         return { { property, value.releaseNonNull() } };
     }).span());
+}
+
+WTF::String Extractor::appleColorFilterSerializationForTesting(Element& element)
+{
+    updateStyleIfNeededForProperty(element, CSSPropertyAppleColorFilter);
+
+    if (CheckedPtr style = element.computedStyle())
+        return serializationForCSS(CSS::defaultSerializationContext(), *style, style->appleColorFilter());
+    return { };
 }
 
 } // namespace Style
