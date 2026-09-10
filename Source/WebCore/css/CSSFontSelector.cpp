@@ -342,7 +342,7 @@ void CSSFontSelector::fontCacheInvalidated()
 
 std::optional<AtomString> CSSFontSelector::resolveGenericFamily(const FontDescription& fontDescription, const AtomString& familyName)
 {
-    auto platformResult = FontDescription::platformResolveGenericFamily(fontDescription.script(), fontDescription.computedLocale(), familyName);
+    auto platformResult = FontDescription::platformResolveGenericFamily(fontDescription.script(), fontDescription.usedLocale(), familyName);
     if (!platformResult.isNull())
         return platformResult;
 

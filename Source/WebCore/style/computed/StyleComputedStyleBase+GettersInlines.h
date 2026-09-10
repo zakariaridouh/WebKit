@@ -356,9 +356,9 @@ inline const FontCascade& ComputedStyleBase::fontCascade() const
     return m_inheritedData->fontData->fontCascade;
 }
 
-inline WebkitLocale ComputedStyleBase::computedLocale() const
+inline WebkitLocale ComputedStyleBase::usedLocale() const
 {
-    return fontDescription().computedLocale();
+    return fontDescription().usedLocale();
 }
 
 inline float ComputedStyleBase::usedLetterSpacing() const

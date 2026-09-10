@@ -521,7 +521,7 @@ static void updateApplePayButtonPartForRenderer(ApplePayButtonPart& applePayButt
     CheckedRef style = renderer.style();
 
     auto platformLocale = [&] -> String {
-        auto locale = style->computedLocale();
+        auto locale = style->usedLocale();
         if (locale.isAuto())
             return defaultLanguage(ShouldMinimizeLanguages::No);
         return Style::toPlatform(locale);
