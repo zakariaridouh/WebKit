@@ -2234,7 +2234,7 @@ void WebLocalFrameLoaderClient::removeStorageAccess()
 {
     if (m_frameSpecificStorageAccessIdentifier) {
         protect(WebProcess::singleton().ensureNetworkProcessConnection().connection())->send(Messages::NetworkConnectionToWebProcess::RemoveStorageAccessForFrame(
-            m_frameSpecificStorageAccessIdentifier->frameID, m_frameSpecificStorageAccessIdentifier->pageID), 0);
+            m_frameSpecificStorageAccessIdentifier->frameID, m_frameSpecificStorageAccessIdentifier->webPageProxyID), 0);
         m_frameSpecificStorageAccessIdentifier = std::nullopt;
     }
 }

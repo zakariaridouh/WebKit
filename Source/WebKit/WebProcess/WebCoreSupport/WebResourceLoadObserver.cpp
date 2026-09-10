@@ -85,7 +85,7 @@ void WebResourceLoadObserver::requestStorageAccessUnderOpener(const RegistrableD
     if (domainInNeedOfStorageAccess != openerDomain
         && !openerDocument.hasRequestedPageSpecificStorageAccessWithUserInteraction(domainInNeedOfStorageAccess)
         && !openerUrl.isAboutBlank()) {
-        Ref { WebProcess::singleton().ensureNetworkProcessConnection().connection() }->send(Messages::NetworkConnectionToWebProcess::RequestStorageAccessUnderOpener(domainInNeedOfStorageAccess, openerPage.identifier(), openerDomain), 0);
+        Ref { WebProcess::singleton().ensureNetworkProcessConnection().connection() }->send(Messages::NetworkConnectionToWebProcess::RequestStorageAccessUnderOpener(domainInNeedOfStorageAccess, openerPage.webPageProxyIdentifier(), openerDomain), 0);
         
         openerPage.addDomainWithPageLevelStorageAccess(openerDomain, domainInNeedOfStorageAccess);
 
@@ -410,7 +410,7 @@ void WebResourceLoadObserver::logUserInteractionWithReducedTimeResolution(const 
                             openerWebPage->addDomainWithPageLevelStorageAccess(openerDomain, topFrameDomain);
                             // FIXME: this message and the message in requestStorageAccessUnderOpener should instead be sent from the UI process. See rdar://183732418.
                             Ref connection = WebProcess::singleton().ensureNetworkProcessConnection().connection();
-                            connection->send(Messages::NetworkConnectionToWebProcess::RequestStorageAccessUnderOpener(topFrameDomain, openerWebPage->identifier(), openerDomain), 0);
+                            connection->send(Messages::NetworkConnectionToWebProcess::RequestStorageAccessUnderOpener(topFrameDomain, openerWebPage->webPageProxyIdentifier(), openerDomain), 0);
                             mainFrameDocument->setHasRequestedPageSpecificStorageAccessWithUserInteraction(topFrameDomain);
                         }
                     }

@@ -1460,7 +1460,7 @@ void NetworkProcess::resetCacheMaxAgeCapForPrevalentResources(PAL::SessionID ses
     completionHandler();
 }
 
-void NetworkProcess::didCommitCrossSiteLoadWithDataTransfer(PAL::SessionID sessionID, RegistrableDomain&& fromDomain, RegistrableDomain&& toDomain, OptionSet<WebCore::CrossSiteNavigationDataTransfer::Flag> navigationDataTransfer, WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier webPageID, DidFilterKnownLinkDecoration didFilterKnownLinkDecoration)
+void NetworkProcess::didCommitCrossSiteLoadWithDataTransfer(PAL::SessionID sessionID, RegistrableDomain&& fromDomain, RegistrableDomain&& toDomain, OptionSet<WebCore::CrossSiteNavigationDataTransfer::Flag> navigationDataTransfer, WebPageProxyIdentifier webPageProxyID, DidFilterKnownLinkDecoration didFilterKnownLinkDecoration)
 {
     ASSERT(!navigationDataTransfer.isEmpty());
 
@@ -1469,7 +1469,7 @@ void NetworkProcess::didCommitCrossSiteLoadWithDataTransfer(PAL::SessionID sessi
             return;
 
         if (navigationDataTransfer.contains(CrossSiteNavigationDataTransfer::Flag::DestinationLinkDecoration))
-            networkStorageSession->didCommitCrossSiteLoadWithDataTransferFromPrevalentResource(toDomain, webPageID);
+            networkStorageSession->didCommitCrossSiteLoadWithDataTransferFromPrevalentResource(toDomain, webPageProxyID);
 
         if (navigationDataTransfer.contains(CrossSiteNavigationDataTransfer::Flag::ReferrerLinkDecoration))
             protect(parentProcessConnection())->send(Messages::NetworkProcessProxy::DidCommitCrossSiteLoadWithDataTransferFromPrevalentResource(webPageProxyID), 0);
@@ -1483,6 +1483,12 @@ void NetworkProcess::didCommitCrossSiteLoadWithDataTransfer(PAL::SessionID sessi
         } else
             ASSERT_NOT_REACHED();
     }
+}
+
+void NetworkProcess::didCommitMainFrameNavigation(PAL::SessionID sessionID, WebPageProxyIdentifier webPageProxyID, RegistrableDomain&& committedDomain, RegistrableDomain&& previouslyCommittedDomain, WebCore::RestoredFromBackForwardCache restoredFromBackForwardCache)
+{
+    if (CheckedPtr networkStorageSession = storageSession(sessionID))
+        networkStorageSession->didCommitMainFrameNavigation(webPageProxyID, committedDomain, previouslyCommittedDomain, restoredFromBackForwardCache);
 }
 
 void NetworkProcess::setCrossSiteLoadWithLinkDecorationForTesting(PAL::SessionID sessionID, RegistrableDomain&& fromDomain, RegistrableDomain&& toDomain, DidFilterKnownLinkDecoration didFilterKnownLinkDecoration, CompletionHandler<void()>&& completionHandler)
@@ -3463,6 +3469,9 @@ void NetworkProcess::addWebPageNetworkParameters(PAL::SessionID sessionID, WebPa
 
 void NetworkProcess::removeWebPageNetworkParameters(PAL::SessionID sessionID, WebPageProxyIdentifier pageID)
 {
+    if (CheckedPtr storageSession = this->storageSession(sessionID))
+        storageSession->clearPageSpecificDataForResourceLoadStatistics(pageID);
+
     CheckedPtr session = networkSession(sessionID);
     if (!session)
         return;

@@ -1678,7 +1678,7 @@ bool ResourceLoadStatisticsStore::hasStorageAccess(const TopFrameDomain& topFram
     return relationshipExists(scopedStatement, domainID(subFrameDomain), topFrameDomain);
 }
 
-void ResourceLoadStatisticsStore::hasStorageAccess(SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, std::optional<FrameIdentifier> frameID, PageIdentifier pageID, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(bool)>&& completionHandler)
+void ResourceLoadStatisticsStore::hasStorageAccess(SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, std::optional<FrameIdentifier> frameID, WebPageProxyIdentifier webPageProxyID, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(bool)>&& completionHandler)
 {
     ASSERT(!RunLoop::isMain());
 
@@ -1706,8 +1706,8 @@ void ResourceLoadStatisticsStore::hasStorageAccess(SubFrameDomain&& subFrameDoma
         break;
     };
 
-    RunLoop::mainSingleton().dispatch([store = Ref { store() }, subFrameDomain = WTF::move(subFrameDomain).isolatedCopy(), topFrameDomain = WTF::move(topFrameDomain).isolatedCopy(), frameID, pageID, completionHandler = WTF::move(completionHandler)]() mutable {
-        store->callHasStorageAccessForFrameHandler(subFrameDomain, topFrameDomain, frameID.value(), pageID, [store, completionHandler = WTF::move(completionHandler)](bool result) mutable {
+    RunLoop::mainSingleton().dispatch([store = Ref { store() }, subFrameDomain = WTF::move(subFrameDomain).isolatedCopy(), topFrameDomain = WTF::move(topFrameDomain).isolatedCopy(), frameID, webPageProxyID, completionHandler = WTF::move(completionHandler)]() mutable {
+        store->callHasStorageAccessForFrameHandler(subFrameDomain, topFrameDomain, frameID.value(), webPageProxyID, [store, completionHandler = WTF::move(completionHandler)](bool result) mutable {
             store->statisticsQueue().dispatch([completionHandler = WTF::move(completionHandler), result] () mutable {
                 completionHandler(result);
             });
@@ -1715,7 +1715,7 @@ void ResourceLoadStatisticsStore::hasStorageAccess(SubFrameDomain&& subFrameDoma
     });
 }
 
-void ResourceLoadStatisticsStore::requestStorageAccess(SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, FrameIdentifier frameID, PageIdentifier pageID, StorageAccessScope scope, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessStatus)>&& completionHandler)
+void ResourceLoadStatisticsStore::requestStorageAccess(SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, FrameIdentifier frameID, WebPageProxyIdentifier webPageProxyID, StorageAccessScope scope, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessStatus)>&& completionHandler)
 {
     ASSERT(!RunLoop::isMain());
 
@@ -1770,7 +1770,7 @@ void ResourceLoadStatisticsStore::requestStorageAccess(SubFrameDomain&& subFrame
         return completionHandler(StorageAccessStatus::CannotRequestAccess);
     }
 
-    grantStorageAccessInternal(WTF::move(subFrameDomain), WTF::move(topFrameDomain), frameID, pageID, userWasPromptedEarlier, scope, canRequestStorageAccessWithoutUserInteraction, [completionHandler = WTF::move(completionHandler)] (StorageAccessWasGranted wasGranted) mutable {
+    grantStorageAccessInternal(WTF::move(subFrameDomain), WTF::move(topFrameDomain), frameID, webPageProxyID, userWasPromptedEarlier, scope, canRequestStorageAccessWithoutUserInteraction, [completionHandler = WTF::move(completionHandler)] (StorageAccessWasGranted wasGranted) mutable {
         completionHandler(wasGranted == StorageAccessWasGranted::Yes ? StorageAccessStatus::HasAccess : StorageAccessStatus::CannotRequestAccess);
     });
 }
@@ -1789,7 +1789,7 @@ void ResourceLoadStatisticsStore::queryStorageAccessPermission(const SubFrameDom
     completionHandler(PermissionState::Granted);
 }
 
-void ResourceLoadStatisticsStore::requestStorageAccessUnderOpener(DomainInNeedOfStorageAccess&& domainInNeedOfStorageAccess, PageIdentifier openerPageID, OpenerDomain&& openerDomain, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction)
+void ResourceLoadStatisticsStore::requestStorageAccessUnderOpener(DomainInNeedOfStorageAccess&& domainInNeedOfStorageAccess, WebPageProxyIdentifier openerWebPageProxyID, OpenerDomain&& openerDomain, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction)
 {
     ASSERT(domainInNeedOfStorageAccess != openerDomain);
     ASSERT(!RunLoop::isMain());
@@ -1802,7 +1802,7 @@ void ResourceLoadStatisticsStore::requestStorageAccessUnderOpener(DomainInNeedOf
         debugBroadcastConsoleMessage(MessageSource::ITPDebug, MessageLevel::Info, makeString("[ITP] Storage access was granted for '"_s, domainInNeedOfStorageAccess.string(), "' under opener page from '"_s, openerDomain.string(), "', with user interaction in the opened window."_s));
     }
 
-    grantStorageAccessInternal(WTF::move(domainInNeedOfStorageAccess), WTF::move(openerDomain), std::nullopt, openerPageID, StorageAccessPromptWasShown::No, StorageAccessScope::PerPage, canRequestStorageAccessWithoutUserInteraction, [](StorageAccessWasGranted) { });
+    grantStorageAccessInternal(WTF::move(domainInNeedOfStorageAccess), WTF::move(openerDomain), std::nullopt, openerWebPageProxyID, StorageAccessPromptWasShown::No, StorageAccessScope::PerPage, canRequestStorageAccessWithoutUserInteraction, [](StorageAccessWasGranted) { });
 }
 
 auto ResourceLoadStatisticsStore::grantStorageAccessPermission(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain) -> std::pair<AddedRecord, std::optional<unsigned>>
@@ -1833,13 +1833,13 @@ void ResourceLoadStatisticsStore::revokeStorageAccessPermission(const Registrabl
     }
 }
 
-void ResourceLoadStatisticsStore::grantStorageAccess(SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, FrameIdentifier frameID, PageIdentifier pageID, StorageAccessPromptWasShown promptWasShown, StorageAccessScope scope, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler)
+void ResourceLoadStatisticsStore::grantStorageAccess(SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, FrameIdentifier frameID, WebPageProxyIdentifier webPageProxyID, StorageAccessPromptWasShown promptWasShown, StorageAccessScope scope, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler)
 {
     ASSERT(!RunLoop::isMain());
 
     auto transactionScope = beginTransactionIfNecessary();
 
-    auto addGrant = [weakThis = WeakPtr { *this }, frameID, pageID, promptWasShown, scope] (SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler) mutable {
+    auto addGrant = [weakThis = WeakPtr { *this }, frameID, webPageProxyID, promptWasShown, scope] (SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler) mutable {
         RefPtr protectedThis = weakThis;
 
         if (!protectedThis)
@@ -1857,7 +1857,7 @@ void ResourceLoadStatisticsStore::grantStorageAccess(SubFrameDomain&& subFrameDo
 #endif
         }
 
-        protectedThis->grantStorageAccessInternal(WTF::move(subFrameDomain), WTF::move(topFrameDomain), frameID, pageID, promptWasShown, scope, canRequestStorageAccessWithoutUserInteraction, WTF::move(completionHandler));
+        protectedThis->grantStorageAccessInternal(WTF::move(subFrameDomain), WTF::move(topFrameDomain), frameID, webPageProxyID, promptWasShown, scope, canRequestStorageAccessWithoutUserInteraction, WTF::move(completionHandler));
     };
 
     RunLoop::mainSingleton().dispatch([weakThis = WeakPtr { *this }, subFrameDomain = WTF::move(subFrameDomain).isolatedCopy(), topFrameDomain = WTF::move(topFrameDomain).isolatedCopy(), workQueue = m_workQueue, store = Ref { store() }, addGrant = WTF::move(addGrant), completionHandler = WTF::move(completionHandler)]() mutable {
@@ -1890,7 +1890,7 @@ void ResourceLoadStatisticsStore::grantStorageAccess(SubFrameDomain&& subFrameDo
     });
 }
 
-void ResourceLoadStatisticsStore::grantStorageAccessInternal(SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, std::optional<FrameIdentifier> frameID, PageIdentifier pageID, StorageAccessPromptWasShown promptWasShownNowOrEarlier, StorageAccessScope scope, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler)
+void ResourceLoadStatisticsStore::grantStorageAccessInternal(SubFrameDomain&& subFrameDomain, TopFrameDomain&& topFrameDomain, std::optional<FrameIdentifier> frameID, WebPageProxyIdentifier webPageProxyID, StorageAccessPromptWasShown promptWasShownNowOrEarlier, StorageAccessScope scope, CanRequestStorageAccessWithoutUserInteraction canRequestStorageAccessWithoutUserInteraction, CompletionHandler<void(StorageAccessWasGranted)>&& completionHandler)
 {
     ASSERT(!RunLoop::isMain());
 
@@ -1916,8 +1916,8 @@ void ResourceLoadStatisticsStore::grantStorageAccessInternal(SubFrameDomain&& su
         setUserInteraction(subFrameDomain, true, nowTime(m_timeAdvanceForTesting));
     }
 
-    RunLoop::mainSingleton().dispatch([subFrameDomain = WTF::move(subFrameDomain).isolatedCopy(), topFrameDomain = WTF::move(topFrameDomain).isolatedCopy(), frameID, pageID, store = Ref { store() }, scope, completionHandler = WTF::move(completionHandler)]() mutable {
-        store->callGrantStorageAccessHandler(subFrameDomain, topFrameDomain, frameID, pageID, scope, [completionHandler = WTF::move(completionHandler), store](StorageAccessWasGranted wasGranted) mutable {
+    RunLoop::mainSingleton().dispatch([subFrameDomain = WTF::move(subFrameDomain).isolatedCopy(), topFrameDomain = WTF::move(topFrameDomain).isolatedCopy(), frameID, webPageProxyID, store = Ref { store() }, scope, completionHandler = WTF::move(completionHandler)]() mutable {
+        store->callGrantStorageAccessHandler(subFrameDomain, topFrameDomain, frameID, webPageProxyID, scope, [completionHandler = WTF::move(completionHandler), store](StorageAccessWasGranted wasGranted) mutable {
             store->statisticsQueue().dispatch([wasGranted, completionHandler = WTF::move(completionHandler)] () mutable {
                 completionHandler(wasGranted);
             });

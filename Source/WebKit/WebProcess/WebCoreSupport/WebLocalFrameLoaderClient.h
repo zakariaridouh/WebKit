@@ -61,7 +61,7 @@ public:
     
     struct FrameSpecificStorageAccessIdentifier {
         WebCore::FrameIdentifier frameID;
-        WebCore::PageIdentifier pageID;
+        WebPageProxyIdentifier webPageProxyID;
     };
     void NODELETE setHasFrameSpecificStorageAccess(FrameSpecificStorageAccessIdentifier&&);
     void didLoadFromRegistrableDomain(WebCore::RegistrableDomain&&) final;

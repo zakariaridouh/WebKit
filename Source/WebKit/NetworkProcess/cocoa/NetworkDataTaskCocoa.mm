@@ -538,8 +538,8 @@ void NetworkDataTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&
     else {
         WebCore::RegistrableDomain firstPartyDomain { request.firstPartyForCookies() };
         if (CheckedPtr storageSession = session->networkStorageSession()) {
-            bool didPreviousRequestHaveStorageAccess = storageSession->hasStorageAccess(WebCore::RegistrableDomain { redirectResponse.url() }, firstPartyDomain, m_frameID, m_pageID);
-            bool doesRequestHaveStorageAccess = storageSession->hasStorageAccess(WebCore::RegistrableDomain { request.url() }, firstPartyDomain, m_frameID, m_pageID);
+            bool didPreviousRequestHaveStorageAccess = storageSession->hasStorageAccess(WebCore::RegistrableDomain { redirectResponse.url() }, firstPartyDomain, m_frameID, m_webPageProxyID);
+            bool doesRequestHaveStorageAccess = storageSession->hasStorageAccess(WebCore::RegistrableDomain { request.url() }, firstPartyDomain, m_frameID, m_webPageProxyID);
             if (didPreviousRequestHaveStorageAccess && doesRequestHaveStorageAccess)
                 request.setFirstPartyForCookies(request.url());
         }

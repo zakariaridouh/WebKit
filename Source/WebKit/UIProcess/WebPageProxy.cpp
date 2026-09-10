@@ -8852,12 +8852,15 @@ void WebPageProxy::didCommitLoadForFrame(IPC::Connection& connection, FrameIdent
             URL requesterURL { requesterOrigin.toString() };
             if (!currentDomain.matches(requesterURL)) {
                 Ref websiteDataStore = m_websiteDataStore;
-                protect(websiteDataStore->networkProcess())->didCommitCrossSiteLoadWithDataTransfer(websiteDataStore->sessionID(), RegistrableDomain { requesterURL }, currentDomain, navigationDataTransfer, identifier(), m_webPageID, request.didFilterLinkDecoration() ? DidFilterKnownLinkDecoration::Yes : DidFilterKnownLinkDecoration::No);
+                protect(websiteDataStore->networkProcess())->didCommitCrossSiteLoadWithDataTransfer(websiteDataStore->sessionID(), RegistrableDomain { requesterURL }, currentDomain, navigationDataTransfer, identifier(), request.didFilterLinkDecoration() ? DidFilterKnownLinkDecoration::Yes : DidFilterKnownLinkDecoration::No);
             }
         }
         if (RefPtr websitePolicies = navigation->websitePolicies(); websitePolicies && !m_provisionalPage)
             m_mainFrameWebsitePolicies = websitePolicies->copy();
     }
+
+    if (frame->isMainFrame())
+        protect(protect(m_websiteDataStore)->networkProcess())->didCommitMainFrameNavigation(m_websiteDataStore->sessionID(), identifier(), RegistrableDomain { request.url() }, RegistrableDomain { frame->url() }, restoredFromBackForwardCache);
 
     if (redirectReplaceFrameState) {
         MESSAGE_CHECK_BASE(!frame->isMainFrame(), connection);
