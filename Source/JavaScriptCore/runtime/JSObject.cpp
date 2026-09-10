@@ -3800,6 +3800,7 @@ bool JSObject::increaseVectorLength(VM& vm, unsigned newLength)
         // The cell was already big enough for the desired length!
         for (unsigned i = vectorLength; i < availableVectorLength; ++i)
             storage->m_vector[i].clear();
+        WTF::storeStoreFence();
         storage->setVectorLength(availableVectorLength);
         return true;
     }
