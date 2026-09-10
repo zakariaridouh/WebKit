@@ -834,6 +834,9 @@ Document::~Document()
         ASSERT(m_intersectionObserverData->registrations.isEmpty());
     }
 
+    ASSERT(m_localIntersectionObservers.isEmpty());
+    ASSERT(m_remoteIntersectionObservers.isEmpty());
+
     removeFromDocumentsMap();
 
     // We need to remove from the contexts map very early in the destructor so that calling postTask() on this Document from another thread is safe.
@@ -1016,6 +1019,12 @@ void Document::commonTeardown()
     for (auto& weakLocalIntersectionObserver : localIntersectionObservers) {
         if (RefPtr localIntersectionObserver = weakLocalIntersectionObserver.get())
             localIntersectionObserver->disconnect();
+    }
+
+    auto remoteIntersectionObservers = m_remoteIntersectionObservers;
+    for (auto& weakRemoteIntersectionObserver : remoteIntersectionObservers) {
+        if (RefPtr remoteIntersectionObserver = weakRemoteIntersectionObserver.get())
+            remoteIntersectionObserver->disconnect();
     }
 
     auto resizeObservers = m_resizeObservers;
