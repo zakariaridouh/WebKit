@@ -156,6 +156,8 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
             return { Box::NodeType::DocumentElement, isAnonymous };
         if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer))
             return { renderLineBreak->isWBR() ? Box::NodeType::WordBreakOpportunity : Box::NodeType::LineBreak, isAnonymous };
+        if (is<RenderInline>(renderer))
+            return { Box::NodeType::InlineBox, isAnonymous };
         if (auto* element = renderer.element()) {
             if (element->hasTagName(HTMLNames::bodyTag))
                 return { Box::NodeType::Body, isAnonymous };

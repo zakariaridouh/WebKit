@@ -41,12 +41,12 @@
 #include "RenderFlexibleBox.h"
 #include "RenderGrid.h"
 #include "RenderImage.h"
+#include "RenderInline.h"
 #include "RenderLineBreak.h"
 #include "RenderListItem.h"
 #include "RenderListOutsideMarker.h"
 #include "RenderMenuList.h"
 #include "RenderObjectInlines.h"
-#include "RenderSVGInline.h"
 #include "RenderSlider.h"
 #include "RenderTable.h"
 #include "RenderTextControl.h"
@@ -89,6 +89,8 @@ static Layout::Box::ElementAttributes elementAttributes(const RenderElement& ren
             return renderLineBreak->isWBR() ? Layout::Box::NodeType::WordBreakOpportunity : Layout::Box::NodeType::LineBreak;
         if (is<RenderTable>(renderer))
             return Layout::Box::NodeType::TableBox;
+        if (is<RenderInline>(renderer))
+            return Layout::Box::NodeType::InlineBox;
         return Layout::Box::NodeType::GenericElement;
     }();
 
@@ -194,20 +196,6 @@ void BoxTreeUpdater::adjustStyleIfNeeded(const RenderElement& renderer, Style::C
                 styleToAdjust.setOverflowX(anonBlockParentStyle->overflowX());
                 styleToAdjust.setOverflowY(anonBlockParentStyle->overflowY());
             }
-            return;
-        }
-
-        if (auto* renderInline = dynamicDowncast<RenderInline>(renderer)) {
-            auto isSupportedInlineDisplay = [&] {
-                auto display = styleToAdjust.display();
-                if (display == Style::DisplayType::RubyBase || display == Style::DisplayType::RubyText)
-                    return renderInline->parent()->style().display() == Style::DisplayType::InlineRuby;
-                if (is<RenderSVGInline>(*renderInline))
-                    return display == Style::DisplayType::InlineFlow;
-                return display.isInlineType();
-            };
-            if (!isSupportedInlineDisplay())
-                styleToAdjust.setDisplay(Style::DisplayType::InlineFlow);
             return;
         }
     };

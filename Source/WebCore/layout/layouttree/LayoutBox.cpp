@@ -235,6 +235,9 @@ bool Box::isInlineTableBox() const
 
 bool Box::isBlockLevelBox() const
 {
+    if (isInlineBox())
+        return false;
+
     // Block level elements generate block level boxes.
     auto display = m_style.display();
     return display == Style::DisplayType::BlockFlow
@@ -255,6 +258,9 @@ bool Box::isBlockBox() const
 
 bool Box::isInlineLevelBox() const
 {
+    if (isInlineBox())
+        return true;
+
     // Inline level elements generate inline level boxes.
     auto display = m_style.display();
     return is<ElementBox>(*this) &&
@@ -273,12 +279,7 @@ bool Box::isInlineLevelBox() const
 bool Box::isInlineBox() const
 {
     // An inline box is one that is both inline-level and whose contents participate in its containing inline formatting context.
-    // A non-replaced element with a 'display' value of 'inline' generates an inline box.
-    auto display = m_style.display();
-    return is<ElementBox>(*this) &&
-          (display == Style::DisplayType::InlineFlow
-        || display == Style::DisplayType::InlineRuby
-        || display == Style::DisplayType::RubyBase) && !isReplacedBox();
+    return m_nodeType == NodeType::InlineBox || isLineBreakBox();
 }
 
 bool Box::isAtomicInlineBox() const
@@ -301,6 +302,9 @@ bool Box::isGridItem() const
 
 bool Box::isBlockContainer() const
 {
+    if (isInlineBox())
+        return false;
+
     auto display = m_style.display();
     return display == Style::DisplayType::BlockFlow
         || display == Style::DisplayType::BlockFlowRoot
@@ -329,7 +333,7 @@ bool Box::isLayoutContainmentBox() const
 
 bool Box::isRubyAnnotationBox() const
 {
-    return m_style.display() == Style::DisplayType::RubyText;
+    return m_style.display() == Style::DisplayType::RubyText && m_parent && m_parent->isRuby();
 }
 
 bool Box::isInterlinearRubyAnnotationBox() const
@@ -339,8 +343,7 @@ bool Box::isInterlinearRubyAnnotationBox() const
 
 bool Box::isInternalRubyBox() const
 {
-    return m_style.display() == Style::DisplayType::RubyBase
-        || m_style.display() == Style::DisplayType::RubyText;
+    return isRubyBase() || isRubyAnnotationBox();
 }
 
 bool Box::isSizeContainmentBox() const
@@ -375,7 +378,7 @@ bool Box::isInternalTableBox() const
 
 bool Box::isRubyBase() const
 {
-    return style().display() == Style::DisplayType::RubyBase;
+    return style().display() == Style::DisplayType::RubyBase && m_parent && m_parent->isRuby();
 }
 
 const Box* Box::nextInFlowSibling() const
