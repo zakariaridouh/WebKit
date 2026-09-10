@@ -2289,7 +2289,7 @@ JSC_DEFINE_HOST_FUNCTION(functionOpenFile, (JSGlobalObject* globalObject, CallFr
 
 JSC_DEFINE_HOST_FUNCTION(functionReadline, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    Vector<char, 256> line;
+    Vector<Latin1Character, 256> line;
     int c;
     FILE* descriptor = stdin;
 
@@ -2302,7 +2302,7 @@ JSC_DEFINE_HOST_FUNCTION(functionReadline, (JSGlobalObject* globalObject, CallFr
             break;
         line.append(c);
     }
-    return JSValue::encode(jsString(globalObject->vm(), String(line.span())));
+    return JSValue::encode(jsString(globalObject->vm(), String { line.span() }));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionPreciseTime, (JSGlobalObject*, CallFrame*))

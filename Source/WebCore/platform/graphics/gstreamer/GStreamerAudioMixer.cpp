@@ -137,7 +137,7 @@ GRefPtr<GstPad> GStreamerAudioMixer::registerProducer(GstElement* interaudioSink
     DataMutexLocker locker { m_streamingMembers };
     auto& mp = ensureMixerPipeline(locker, resolvedDeviceId, device);
 
-    GstElement* src = makeGStreamerElement("interaudiosrc"_s, unsafeSpan(GST_ELEMENT_NAME(interaudioSink)));
+    GstElement* src = makeGStreamerElement("interaudiosrc"_s, String::fromLatin1(unsafeSpan(GST_ELEMENT_NAME(interaudioSink))));
 
     g_object_set(src, "channel", GST_ELEMENT_NAME(interaudioSink), nullptr);
     g_object_set(interaudioSink, "channel", GST_ELEMENT_NAME(interaudioSink), nullptr);

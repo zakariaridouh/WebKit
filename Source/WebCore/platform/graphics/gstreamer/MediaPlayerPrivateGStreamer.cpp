@@ -2784,7 +2784,7 @@ void MediaPlayerPrivateGStreamer::configureElement(GstElement* element)
     configureElementPlatformQuirks(element);
 
     auto name = GMallocString::unsafeAdoptFromUTF8(gst_element_get_name(element));
-    String elementClass(unsafeSpan(gst_element_get_metadata(element, GST_ELEMENT_METADATA_KLASS)));
+    String elementClass = String::fromLatin1(unsafeSpan(gst_element_get_metadata(element, GST_ELEMENT_METADATA_KLASS)));
     auto classifiers = elementClass.split('/');
 
     // In GStreamer 1.20 and older urisourcebin mishandles source elements with dynamic pads. This

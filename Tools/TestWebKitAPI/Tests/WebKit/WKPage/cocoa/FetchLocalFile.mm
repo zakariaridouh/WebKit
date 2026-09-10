@@ -89,7 +89,7 @@ TEST(WebKit, FetchLocalFile)
 
     TestWebKitAPI::Util::run(&done);
 
-    FileSystem::deleteFile(tempFilePath.span());
+    FileSystem::deleteFile(String::fromUTF8(tempFilePath.span()));
     FileSystem::deleteFile(fetchFilePath);
 }
 
@@ -110,7 +110,7 @@ TEST(WebKit, FetchLocalFileInParentDirectory)
     tempFileHandle.write(fileDataSpan);
     tempFileHandle = { };
 
-    RetainPtr tempFileName = FileSystem::pathFileName(tempFilePath.span()).createNSString();
+    RetainPtr tempFileName = FileSystem::pathFileName(String::fromUTF8(tempFilePath.span())).createNSString();
 
     RetainPtr tempDirectory = [networkProcessTempDirectory stringByAppendingPathComponent:@"FetchLocalFileInParentDirectory"];
     FileSystem::makeAllDirectories(tempDirectory.get());
@@ -141,8 +141,8 @@ TEST(WebKit, FetchLocalFileInParentDirectory)
 
     TestWebKitAPI::Util::run(&done);
 
-    FileSystem::deleteFile(tempFilePath.span());
-    FileSystem::deleteFile(fetchFilePath.span());
+    FileSystem::deleteFile(String::fromUTF8(tempFilePath.span()));
+    FileSystem::deleteFile(String::fromUTF8(fetchFilePath.span()));
     FileSystem::deleteEmptyDirectory(tempDirectory.get());
 }
 #endif // ENABLE(BLOCKING_OF_LOCAL_FILE_LOADS_WITHOUT_SANDBOX_EXTENSION) && !PLATFORM(IOS_SIMULATOR)

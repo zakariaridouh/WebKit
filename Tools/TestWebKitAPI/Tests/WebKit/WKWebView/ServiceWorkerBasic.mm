@@ -3814,7 +3814,7 @@ TEST(ServiceWorker, ExtensionServiceWorkerDisableCORS)
     String filenameRequestedOverHTTP;
     HTTPServer server([&] (Connection connection) {
         connection.receiveHTTPRequest([&, connection](Vector<char>&& bytes) mutable {
-            String requestString(bytes.span());
+            String requestString = String::fromLatin1(bytes.span());
             if (requestString.startsWithIgnoringASCIICase("OPTIONS"_s)) {
                 madeHTTPOptionsRequest = true;
                 connection.send(

@@ -488,7 +488,7 @@ String HTTPServer::parsePath(const Vector<char>& request)
         pathPrefixLength = postPathPrefix.length();
     ASSERT_WITH_MESSAGE(pathPrefixLength, "HTTPServer assumes request is GET or POST");
     size_t pathLength = pathEnd - pathPrefixLength;
-    return request.subspan(pathPrefixLength, pathLength);
+    return String::fromUTF8(request.subspan(pathPrefixLength, pathLength));
 }
 
 static String parseHeaderValue(const Vector<char>& characters, ASCIILiteral headerPrefix)
@@ -496,7 +496,7 @@ static String parseHeaderValue(const Vector<char>& characters, ASCIILiteral head
     if (!characters.size())
         return { };
 
-    String request { characters.span() };
+    String request = String::fromLatin1(characters.span());
     size_t valueStart = request.find(headerPrefix);
     if (valueStart == notFound)
         return { };
@@ -523,7 +523,7 @@ String HTTPServer::parseBody(const Vector<char>& request)
 {
     auto headerEndBytes = "\r\n\r\n"_s;
     size_t headerEnd = find(request.span(), headerEndBytes.span()) + strlen(headerEndBytes);
-    return request.subspan(headerEnd);
+    return String::fromUTF8(request.subspan(headerEnd));
 }
 
 static bool isConditionalRequest(std::span<const char> request)

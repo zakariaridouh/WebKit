@@ -191,11 +191,11 @@ String bootSessionUUIDString()
 #if OS(DARWIN)
     static NeverDestroyed<String> bootSessionUUID = []() -> String {
         constexpr size_t maxUUIDLength = 37;
-        std::array<char, maxUUIDLength> uuid;
+        std::array<Latin1Character, maxUUIDLength> uuid;
         size_t uuidLength = maxUUIDLength;
         if (sysctlbyname("kern.bootsessionuuid", uuid.data(), &uuidLength, nullptr, 0))
             return { };
-        return std::span<const char> { uuid }.first(uuidLength - 1);
+        return String(std::span { uuid }.first(uuidLength - 1));
     }();
     return bootSessionUUID;
 #else

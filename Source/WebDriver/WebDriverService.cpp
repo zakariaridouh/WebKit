@@ -130,20 +130,20 @@ int WebDriverService::run(int argc, char** argv)
 
         static constexpr auto portArgument = "--port="_span;
         if (spanHasPrefix(arg, portArgument) && portString.isNull()) {
-            portString = arg.subspan(portArgument.size());
+            portString = String::fromLatin1(arg.subspan(portArgument.size()));
             continue;
         }
 
         static constexpr auto hostArgument = "--host="_span;
         if (spanHasPrefix(arg, hostArgument) && !host) {
-            host = arg.subspan(hostArgument.size());
+            host = String::fromLatin1(arg.subspan(hostArgument.size()));
             continue;
         }
 
 #if ENABLE(WEBDRIVER_BIDI)
         static constexpr auto bidiPortArgument = "--bidi-port="_span;
         if (spanHasPrefix(arg, bidiPortArgument) && bidiPortString.isNull()) {
-            bidiPortString = arg.subspan(bidiPortArgument.size());
+            bidiPortString = String::fromLatin1(arg.subspan(bidiPortArgument.size()));
             continue;
         }
 #endif
@@ -159,7 +159,7 @@ int WebDriverService::run(int argc, char** argv)
 
         static constexpr auto targetArgument = "--target="_span;
         if (spanHasPrefix(arg, targetArgument) && targetString.isNull()) {
-            targetString = arg.subspan(targetArgument.size());
+            targetString = String::fromLatin1(arg.subspan(targetArgument.size()));
             continue;
         }
 

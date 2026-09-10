@@ -407,7 +407,7 @@ String languageTagForLocaleID(const char* localeID, bool isImmortal)
         // This must be immortal to make concurrent ref/deref safe.
         if (isImmortal)
             return StringImpl::createStaticStringImpl(buffer.span());
-        return buffer.span();
+        return String::fromLatin1(buffer.span());
     };
 
     return createResult(canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTF::move(buffer)));
@@ -1197,7 +1197,7 @@ String defaultCalendarForLocale(const String& dataLocale)
     const char* name = uenum_next(calendars.get(), &length, &status);
     ASSERT(U_SUCCESS(status));
     ASSERT(name);
-    String calendar(unsafeMakeSpan(name, static_cast<size_t>(length)));
+    String calendar = String::fromLatin1(unsafeMakeSpan(name, static_cast<size_t>(length)));
     if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
         return mapped.value();
     return calendar;
@@ -1842,7 +1842,7 @@ static JSArray* availableCollations(JSGlobalObject* globalObject)
             throwTypeError(globalObject, scope, "failed to enumerate available collations"_s);
             return { };
         }
-        String collation(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
+        String collation = String::fromLatin1(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
         if (collation == "standard"_s || collation == "search"_s)
             continue;
         if (auto mapped = mapICUCollationKeywordToBCP47(collation))
@@ -1896,7 +1896,7 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
             throwTypeError(globalObject, scope, "failed to enumerate available currencies"_s);
             return { };
         }
-        String currency(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
+        String currency = String::fromLatin1(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
         if (currency == "EQE"_s)
             continue;
         if (currency == "LSM"_s)
@@ -1948,7 +1948,7 @@ static JSArray* availableNumberingSystems(JSGlobalObject* globalObject)
         }
         if (unumsys_isAlgorithmic(numberingSystem.get()))
             continue;
-        elements.constructAndAppend(std::span { name, static_cast<size_t>(length) });
+        elements.append(String::fromLatin1(unsafeMakeSpan(name, static_cast<size_t>(length))));
     }
 
     // The AvailableNumberingSystems abstract operation returns a List, ordered as if an Array of the same

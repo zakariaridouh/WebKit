@@ -89,7 +89,7 @@ GRefPtr<GSubprocess> flatpakSpawn(GSubprocessLauncher* launcher, const WebKit::P
         }
 
         for (const auto& pathAndPermission : launchOptions.extraSandboxPaths) {
-            if (canPossiblyExposePath(String { pathAndPermission.key.span() })) {
+            if (canPossiblyExposePath(String::fromUTF8WithLatin1Fallback(pathAndPermission.key.span()))) {
                 const char* formatString = pathAndPermission.value == SandboxPermission::ReadOnly ? "--sandbox-expose-path-ro=%s": "--sandbox-expose-path=%s";
                 GUniquePtr<gchar> pathArg(g_strdup_printf(formatString, pathAndPermission.key.data()));
                 flatpakArgs.append(pathArg.get());

@@ -206,7 +206,7 @@ void AppendPipeline::configureOptionalDemuxerFromAnyThread()
     m_demuxerDataEnteringPadProbeInformation.probeId = gst_pad_add_probe(demuxerSinkPad.get(), GST_PAD_PROBE_TYPE_BUFFER, reinterpret_cast<GstPadProbeCallback>(appendPipelinePadProbeDebugInformation), &m_demuxerDataEnteringPadProbeInformation, nullptr);
 #endif
 
-    String elementClass = unsafeSpan(gst_element_get_metadata(m_demux.get(), GST_ELEMENT_METADATA_KLASS));
+    String elementClass = String::fromLatin1(unsafeSpan(gst_element_get_metadata(m_demux.get(), GST_ELEMENT_METADATA_KLASS)));
     // We try to detect special cases of demuxers that have a single static src pad, such as id3demux.
     GRefPtr<GstPad> demuxerSrcPad = adoptGRef(gst_element_get_static_pad(m_demux.get(), "src"));
     if (!demuxerSrcPad && elementClass.split('/').contains("Demuxer"_s)) {

@@ -328,11 +328,11 @@ void NetworkTransportSession::initialize(CompletionHandler<void(std::optional<We
                         }
                     });
                     nw_http_fields_enumerate(response.get(), ^bool(const char *name, size_t nameLength, const char *value, size_t valueLength) {
-                        auto headerName = String(unsafeMakeSpan(name, nameLength)).convertToASCIILowercase();
+                        auto headerName = String::fromLatin1(unsafeMakeSpan(name, nameLength)).convertToASCIILowercase();
                         // Forbidden response header names must never reach WebContent.
                         // https://fetch.spec.whatwg.org/#forbidden-response-header-name
                         if (headerName != "wt-protocol"_s && !WebCore::isForbiddenResponseHeaderName(headerName)) {
-                            KeyValuePair<String, String> pair(WTF::move(headerName), String(unsafeMakeSpan(value, valueLength)));
+                            KeyValuePair<String, String> pair(WTF::move(headerName), String::fromLatin1(unsafeMakeSpan(value, valueLength)));
                             responseHeaders.append(WTF::move(pair));
                         }
                         return true;

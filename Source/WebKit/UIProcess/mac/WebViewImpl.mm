@@ -3132,7 +3132,7 @@ static String commandNameForSelector(SEL selector)
     auto selectorName = unsafeSpan(sel_getName(selector));
     if (selectorName.size() < 2 || selectorName[selectorName.size() - 1] != ':')
         return String();
-    return String(selectorName.first(selectorName.size() - 1));
+    return String::fromLatin1(selectorName.first(selectorName.size() - 1));
 }
 
 bool WebViewImpl::executeSavedCommandBySelector(SEL selector)
