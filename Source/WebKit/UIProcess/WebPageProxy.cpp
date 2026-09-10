@@ -11319,9 +11319,21 @@ void WebPageProxy::closePage()
     m_uiClient->close(this);
 }
 
+static bool isInDisplayedFrameTree(WebFrameProxy& frame, WebFrameProxy* currentMainFrame)
+{
+    RefPtr<WebFrameProxy> topFrame = &frame;
+    while (RefPtr parent = topFrame->parentFrame())
+        topFrame = WTF::move(parent);
+
+    return topFrame.get() == currentMainFrame;
+}
+
 void WebPageProxy::runModalJavaScriptDialog(RefPtr<WebFrameProxy>&& frame, FrameInfoData&& frameInfo, String&& message, CompletionHandler<void(WebPageProxy&, WebFrameProxy* frame, FrameInfoData&& frameInfo, String&& message2, CompletionHandler<void()>&&, DialogDisposition)>&& runDialogCallback)
 {
-    m_queuedModalDialogs.append([weakThis = WeakPtr { *this }, frame = WTF::move(frame), frameInfo = WTF::move(frameInfo), message = WTF::move(message), runDialogCallback = WTF::move(runDialogCallback)](DialogDisposition disposition) mutable {
+    if (frame && !isInDisplayedFrameTree(*frame, m_mainFrame.get()))
+        return runDialogCallback(*this, frame.get(), WTF::move(frameInfo), WTF::move(message), [] { }, DialogDisposition::Cancel);
+
+    m_queuedModalDialogs.append({ frame, [weakThis = WeakPtr { *this }, frame = WTF::move(frame), frameInfo = WTF::move(frameInfo), message = WTF::move(message), runDialogCallback = WTF::move(runDialogCallback)](DialogDisposition disposition) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -11341,7 +11353,7 @@ void WebPageProxy::runModalJavaScriptDialog(RefPtr<WebFrameProxy>&& frame, Frame
                 protectedThis->runNextModalJavaScriptDialogIfNeeded();
             }, DialogDisposition::Show);
         });
-    });
+    } });
     runNextModalJavaScriptDialogIfNeeded();
 }
 
@@ -11351,17 +11363,27 @@ void WebPageProxy::runNextModalJavaScriptDialogIfNeeded()
     if (m_isSafeBrowsingCheckInProgress)
         return;
 #endif
-    if (m_isRunningModalJavaScriptDialog || m_queuedModalDialogs.isEmpty())
+    if (m_isRunningModalJavaScriptDialog)
         return;
 
-    m_isRunningModalJavaScriptDialog = true;
-    m_queuedModalDialogs.takeFirst()(DialogDisposition::Show);
+    while (!m_queuedModalDialogs.isEmpty()) {
+        auto dialog = m_queuedModalDialogs.takeFirst();
+        // The frame tree can change while a request waits in the queue.
+        RefPtr frame = dialog.frame.get();
+        if (!frame || !isInDisplayedFrameTree(*frame, m_mainFrame.get())) {
+            dialog.show(DialogDisposition::Cancel);
+            continue;
+        }
+        m_isRunningModalJavaScriptDialog = true;
+        dialog.show(DialogDisposition::Show);
+        return;
+    }
 }
 
 void WebPageProxy::purgeQueuedModalDialogs()
 {
     for (auto& dialog : std::exchange(m_queuedModalDialogs, { }))
-        dialog(DialogDisposition::Cancel);
+        dialog.show(DialogDisposition::Cancel);
 }
 
 void WebPageProxy::runJavaScriptAlert(IPC::Connection& connection, FrameIdentifier frameID, FrameInfoData&& frameInfo, String&& message, CompletionHandler<void()>&& reply)
