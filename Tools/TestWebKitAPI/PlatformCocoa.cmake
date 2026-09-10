@@ -38,29 +38,24 @@ add_custom_target(TestWebKitAPIStageTesting DEPENDS ${_testing_staged})
 
 # WTF feature defines
 set(_test_swift_resp "${CMAKE_BINARY_DIR}/DerivedSources/TestWebKitAPI/platform-swift-args.resp")
-_webkit_generate_platform_swift_args(TestWebKitAPI "${_test_swift_resp}" "") # FIXME: Is it correct to have an empty last argument here?
+_webkit_generate_platform_swift_args(TestWebKitAPI "${_test_swift_resp}")
 add_custom_target(TestWebKitAPISwiftArgs DEPENDS "${_test_swift_resp}")
 
-# Swift flags for all Test* targets
+# Swift flags for all Test* targets.
 _WEBKIT_COMPUTE_SWIFT_SHARED_CLANG_FLAGS(_test_swift_cc_flags)
 set(_testwebkitapi_swiftmodule_dir "${CMAKE_BINARY_DIR}/TestWebKitAPI/SwiftModules")
-set(TESTWEBKITAPI_SWIFT_FLAGS
-    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++2b>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-swift-version 6>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-module-cache-path ${CMAKE_BINARY_DIR}/SwiftModuleCache>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:@${_test_swift_resp}>"
-    "$<$<COMPILE_LANGUAGE:Swift>:-F${CMAKE_LIBRARY_OUTPUT_DIRECTORY}>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_BINARY_DIR}>"
+set(_testwebkitapi_swift_options
+    ${WEBKIT_SWIFT_CXX_INTEROP_FLAGS}
+    -no-verify-emitted-module-interface
+    "@${_test_swift_resp}"
+    -F${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    "-Xcc -I${CMAKE_BINARY_DIR}"
 )
-
 if (CMAKE_Swift_COMPILER_TARGET)
-    list(APPEND TESTWEBKITAPI_SWIFT_FLAGS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-clang-target ${CMAKE_Swift_COMPILER_TARGET}>")
+    list(APPEND _testwebkitapi_swift_options "-clang-target ${CMAKE_Swift_COMPILER_TARGET}")
 endif ()
-
 foreach (_f IN LISTS _test_swift_cc_flags)
-    list(APPEND TESTWEBKITAPI_SWIFT_FLAGS "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc ${_f}>")
+    list(APPEND _testwebkitapi_swift_options "-Xcc ${_f}")
 endforeach ()
 
 macro(WEBKIT_TEST_ENABLE_SWIFT _target)
@@ -73,8 +68,9 @@ macro(WEBKIT_TEST_ENABLE_SWIFT _target)
         ${TESTWEBKITAPI_DIR}/Runner/TestWebKitAPISupport.mm
     )
     set_target_properties(${_target} PROPERTIES Swift_MODULE_NAME ${_target})
-    target_compile_options(${_target} PRIVATE ${TESTWEBKITAPI_SWIFT_FLAGS}
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-import-objc-header ${TESTWEBKITAPI_DIR}/Runner/TestWebKitAPI-Bridging-Header.h>"
+    webkit_target_add_swift_options(${_target}
+        ${_testwebkitapi_swift_options}
+        "-import-objc-header ${TESTWEBKITAPI_DIR}/Runner/TestWebKitAPI-Bridging-Header.h"
     )
     add_dependencies(${_target} TestWebKitAPIStageTesting TestWebKitAPISwiftArgs)
     target_link_libraries(${_target} PRIVATE "-F${CMAKE_LIBRARY_OUTPUT_DIRECTORY}" "-framework Testing")
@@ -82,13 +78,7 @@ macro(WEBKIT_TEST_ENABLE_SWIFT _target)
     # -fsanitize=address never reaches the link line. C++ object files get
     # instrumented but the ASan runtime isn't linked so it doesn't work.
     foreach (_sanitizer IN LISTS ENABLE_SANITIZERS)
-        target_compile_options(${_target} PRIVATE "$<$<COMPILE_LANGUAGE:Swift>:-sanitize=${_sanitizer}>")
         target_link_options(${_target} PRIVATE "-sanitize=${_sanitizer}")
-        if (_sanitizer STREQUAL "address")
-            target_compile_options(${_target} PRIVATE "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -D__SANITIZE_ADDRESS__>")
-        elseif (_sanitizer STREQUAL "thread")
-            target_compile_options(${_target} PRIVATE "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -D__SANITIZE_THREAD__>")
-        endif ()
     endforeach ()
 endmacro()
 
@@ -572,7 +562,7 @@ if (NOT USE_FRAMEWORK_BUNDLES)
 endif ()
 
 foreach (_dir IN LISTS _testapi_framework_headers)
-    list(APPEND TESTWEBKITAPI_SWIFT_FLAGS "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${_dir}>")
+    list(APPEND _testwebkitapi_swift_options "-Xcc -I${_dir}")
 endforeach ()
 
 # TestWebKitAPIBase needs framework headers for config.h includes.
