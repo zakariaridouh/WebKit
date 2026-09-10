@@ -225,7 +225,10 @@ bool Box::isFloatAvoider() const
 
 bool Box::isInlineBlockBox() const
 {
-    return m_style.display() == Style::DisplayType::InlineFlowRoot;
+    auto display = m_style.display();
+    if (display == Style::DisplayType::InlineFlowRoot)
+        return true;
+    return display == Style::DisplayType::InlineFlow && is<ElementBox>(*this) && !isInlineBox() && !isReplacedBox() && !isIFrame();
 }
 
 bool Box::isInlineTableBox() const

@@ -185,9 +185,6 @@ void BoxTreeUpdater::adjustStyleIfNeeded(const RenderElement& renderer, Style::C
         }
 
         if (is<RenderBlock>(renderer)) {
-            if (styleToAdjust.display() == Style::DisplayType::InlineFlow)
-                styleToAdjust.setDisplay(Style::DisplayType::InlineFlowRoot);
-
             if (renderer.isAnonymousBlock()) {
                 CheckedRef anonBlockParentStyle = renderer.parent()->style();
                 // overflow and text-overflow property values don't get forwarded to anonymous block boxes.
