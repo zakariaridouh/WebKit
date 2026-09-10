@@ -286,11 +286,11 @@ static void testBreakpointSingleStepping()
         // Simulate lldb behavior:
         // 1. If at Regular breakpoint: remove it, step, then re-insert it
         // 2. If at one-time breakpoint: just step directly
-        Breakpoint* breakpoint = executionHandler->breakpointManager()->findBreakpoint(beforeStepAddress);
-        Breakpoint breakpointCopy;
+        RefPtr<Breakpoint> breakpoint = executionHandler->breakpointManager()->findBreakpoint(beforeStepAddress);
+        RefPtr<Breakpoint> breakpointCopy;
 
         if (breakpoint) {
-            breakpointCopy = *breakpoint;
+            breakpointCopy = Breakpoint::create(*breakpoint);
             CHECK(breakpoint->type == Breakpoint::Type::Regular, "One-time breakpoints are cleared before stop. So, this must be a regular breakpoint");
             executionHandler->breakpointManager()->removeBreakpoint(beforeStepAddress);
         }
@@ -303,7 +303,7 @@ static void testBreakpointSingleStepping()
         });
 
         if (breakpoint)
-            executionHandler->breakpointManager()->setBreakpoint(beforeStepAddress, WTF::move(breakpointCopy));
+            executionHandler->breakpointManager()->setBreakpoint(beforeStepAddress, breakpointCopy.releaseNonNull());
 
         state = executionHandler->debuggeeStateForTest();
         CHECK(state->isStoppedAtBytecode(), "Should be at breakpoint after step");
