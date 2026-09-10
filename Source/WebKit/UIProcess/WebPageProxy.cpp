@@ -6484,7 +6484,7 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
 
     RefPtr websitePolicies = navigation.websitePolicies();
     bool isServerSideRedirect = shouldTreatAsContinuingLoad == ShouldTreatAsContinuingLoad::YesAfterNavigationPolicyDecision && navigation.currentRequestIsRedirect();
-    bool shouldInheritOriginFromInitiator = currentRequestURL.isAboutBlank() && navigation.originatingFrameInfo();
+    bool shouldInheritOriginFromInitiator = (currentRequestURL.isAboutBlank() || currentRequestURL.isAboutSrcDoc()) && navigation.originatingFrameInfo();
     Site navigationSite { shouldInheritOriginFromInitiator ? Site { navigation.originatingFrameInfo()->securityOrigin } : Site { currentRequestURL } };
 
     if (siteIsolationEnabled && (!frame.isMainFrame() || newProcess->coreProcessIdentifier() == frame.process().coreProcessIdentifier())) {

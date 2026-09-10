@@ -2378,10 +2378,10 @@ std::tuple<Ref<WebProcessProxy>, RefPtr<SuspendedPageProxy>, ASCIILiteral> WebPr
         return { WTF::move(sourceProcess), nullptr, "Process has not yet committed any provisional loads"_s };
     }
 
-    if (siteIsolationEnabled && targetURL.isAboutBlank()) {
+    if (siteIsolationEnabled && (targetURL.isAboutBlank() || targetURL.isAboutSrcDoc())) {
         RefPtr navigationOriginatorFrame = navigation.originatingFrameInfo() ? WebFrameProxy::webFrame(navigation.originatingFrameInfo()->frameID) : nullptr;
         if (navigationOriginatorFrame)
-            return { navigationOriginatorFrame->process(), nullptr, "Frame is navigating to about:blank from a cross site origin. Switching to process that originated navigation."_s };
+            return { navigationOriginatorFrame->process(), nullptr, "Frame is navigating to about:blank or about:srcdoc from a cross site origin. Switching to process that originated navigation."_s };
     }
 
     // FIXME: We should support process swap when a window has been opened via window.open() without 'noopener'.
