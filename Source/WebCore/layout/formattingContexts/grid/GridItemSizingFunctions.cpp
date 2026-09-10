@@ -47,10 +47,11 @@ static std::optional<LayoutUnit> gridAreaMaximumSize(size_t startLine, size_t en
     LayoutUnit maximumSize;
     for (auto trackIndex : std::views::iota(startLine, endLine)) {
         auto& trackSizingFunction = trackSizingFunctions[trackIndex];
-        if (!trackSizingFunction.max.isLength())
+        auto maximumBreadthFunction = trackSizingFunction.max.tryBreadth();
+        if (!maximumBreadthFunction || !maximumBreadthFunction->isLength())
             return { };
 
-        auto& maximumBreadth = trackSizingFunction.max.length();
+        auto& maximumBreadth = maximumBreadthFunction->length();
         if (auto fixedMaximumBreadth = maximumBreadth.tryFixed()) {
             maximumSize += Style::evaluate<LayoutUnit>(*fixedMaximumBreadth, trackSizingFunction.zoom);
             continue;
