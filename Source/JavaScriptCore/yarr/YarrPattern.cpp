@@ -33,8 +33,10 @@
 #include "YarrCanonicalize.h"
 #include "YarrParser.h"
 #include <limits>
+#include <mutex>
 #include <wtf/BitSet.h>
 #include <wtf/DataLog.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StackCheck.h>
 #include <wtf/TriState.h>
 #include <wtf/Vector.h>
@@ -1185,7 +1187,29 @@ static std::unique_ptr<CharacterClass> invertedCharacterClass(const CharacterCla
     return constructor.charClass();
 }
 
-CharacterClass* YarrPattern::unicodeCharacterClassFor(BuiltInCharacterClassID unicodeClassID, bool ignoreCase, bool invert)
+template<std::unique_ptr<CharacterClass> (*create)()>
+const CharacterClass* YarrPattern::sharedCharacterClass()
+{
+    static LazyNeverDestroyed<std::unique_ptr<CharacterClass>> characterClass;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        characterClass.construct(create());
+    });
+    return characterClass->get();
+}
+
+const CharacterClass* YarrPattern::anyCharacterClass() { return sharedCharacterClass<anycharCreate>(); }
+const CharacterClass* YarrPattern::newlineCharacterClass() { return sharedCharacterClass<newlineCreate>(); }
+const CharacterClass* YarrPattern::digitsCharacterClass() { return sharedCharacterClass<digitsCreate>(); }
+const CharacterClass* YarrPattern::spacesCharacterClass() { return sharedCharacterClass<spacesCreate>(); }
+const CharacterClass* YarrPattern::wordcharCharacterClass() { return sharedCharacterClass<wordcharCreate>(); }
+const CharacterClass* YarrPattern::wordUnicodeIgnoreCaseCharCharacterClass() { return sharedCharacterClass<wordUnicodeIgnoreCaseCharCreate>(); }
+const CharacterClass* YarrPattern::nondigitsCharacterClass() { return sharedCharacterClass<nondigitsCreate>(); }
+const CharacterClass* YarrPattern::nonspacesCharacterClass() { return sharedCharacterClass<nonspacesCreate>(); }
+const CharacterClass* YarrPattern::nonwordcharCharacterClass() { return sharedCharacterClass<nonwordcharCreate>(); }
+const CharacterClass* YarrPattern::nonwordUnicodeIgnoreCaseCharCharacterClass() { return sharedCharacterClass<nonwordUnicodeIgnoreCaseCharCreate>(); }
+
+const CharacterClass* YarrPattern::unicodeCharacterClassFor(BuiltInCharacterClassID unicodeClassID, bool ignoreCase, bool invert)
 {
     ASSERT(unicodeClassID >= BuiltInCharacterClassID::BaseUnicodePropertyID);
 
@@ -1414,7 +1438,7 @@ public:
                 m_alternative->m_terms.append(PatternTerm(m_pattern.newlineCharacterClass(), true, m_flags, parenthesisMatchDirection()));
             break;
         default: {
-            CharacterClass* characterClass = m_pattern.unicodeCharacterClassFor(classID, ignoreCase(), invert);
+            const CharacterClass* characterClass = m_pattern.unicodeCharacterClassFor(classID, ignoreCase(), invert);
             if (characterClass->hasStrings()) {
                 atomParenthesesSubpatternBegin(false);
                 unsigned alternativeCount = 0;
@@ -1486,7 +1510,7 @@ public:
             break;
         
         default: {
-            CharacterClass* characterClass = m_pattern.unicodeCharacterClassFor(classID, ignoreCase(), invert);
+            const CharacterClass* characterClass = m_pattern.unicodeCharacterClassFor(classID, ignoreCase(), invert);
             if (!invert)
                 m_currentCharacterClassConstructor->append(characterClass);
             else
@@ -2606,7 +2630,7 @@ public:
         if (m_pattern.sticky())
             return;
 
-        CharacterClass* dotCharacterClass = dotAll() ? m_pattern.anyCharacterClass() : m_pattern.newlineCharacterClass();
+        const CharacterClass* dotCharacterClass = dotAll() ? m_pattern.anyCharacterClass() : m_pattern.newlineCharacterClass();
         PatternAlternative* alternative = alternatives[0].get();
         Vector<PatternTerm>& terms = alternative->m_terms;
         if (terms.size() >= 3) {
@@ -3240,7 +3264,7 @@ void dumpChar32(PrintStream& out, char32_t c)
         out.printf("0x%04x", c);
 }
 
-void dumpCharacterClass(PrintStream& out, YarrPattern* pattern, CharacterClass* characterClass)
+void dumpCharacterClass(PrintStream& out, YarrPattern* pattern, const CharacterClass* characterClass)
 {
     if (pattern) {
         if (characterClass == pattern->anyCharacterClass()) {

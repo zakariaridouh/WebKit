@@ -446,7 +446,7 @@ public:
         bool decodeSurrogatePairs;
     };
 
-    bool testCharacterClass(CharacterClass* characterClass, char32_t ch)
+    bool testCharacterClass(const CharacterClass* characterClass, char32_t ch)
     {
         auto linearSearchMatches = [ch](const Vector<char32_t>& matches) {
             for (unsigned i = 0; i < matches.size(); ++i) {
@@ -593,7 +593,7 @@ public:
     bool checkCharacterClassDontAdvanceInputForNonBMP(ByteTerm& term, unsigned negativeInputOffset)
     {
         ASSERT(term.isCharacterClass());
-        CharacterClass* characterClass = term.atom.characterClass;
+        const CharacterClass* characterClass = term.atom.characterClass;
 
         auto readCharacter = characterClass->hasOnlyNonBMPCharacters() ? input.readSurrogatePairChecked(direction, negativeInputOffset) : input.readChecked(direction, negativeInputOffset);
 
@@ -2233,7 +2233,7 @@ public:
         m_bodyDisjunction->terms.append(ByteTerm(ch, matchDirection, inputPosition, frameLocation, quantityMaxCount, quantityType, flags));
     }
 
-    void atomCharacterClass(CharacterClass* characterClass, bool invert, MatchDirection matchDirection, unsigned inputPosition, unsigned frameLocation, Checked<unsigned> quantityMaxCount, QuantifierType quantityType, OptionSet<Flags> flags)
+    void atomCharacterClass(const CharacterClass* characterClass, bool invert, MatchDirection matchDirection, unsigned inputPosition, unsigned frameLocation, Checked<unsigned> quantityMaxCount, QuantifierType quantityType, OptionSet<Flags> flags)
     {
         m_bodyDisjunction->terms.append(ByteTerm(characterClass, invert, matchDirection, inputPosition, flags));
 

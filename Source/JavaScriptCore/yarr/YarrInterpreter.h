@@ -49,7 +49,7 @@ struct ByteTerm {
                     char32_t lo;
                     char32_t hi;
                 } casedCharacter;
-                CharacterClass* characterClass;
+                const CharacterClass* characterClass;
                 struct {
                     unsigned subpatternId;
                     unsigned duplicateNamedGroupId;
@@ -204,7 +204,7 @@ struct ByteTerm {
         atom.quantityMaxCount = quantityCount;
     }
 
-    ByteTerm(CharacterClass* characterClass, bool invert, MatchDirection matchDirection, unsigned inputPos, OptionSet<Flags> flags)
+    ByteTerm(const CharacterClass* characterClass, bool invert, MatchDirection matchDirection, unsigned inputPos, OptionSet<Flags> flags)
         : type(directed(Type::CharacterClass, Type::CharacterClassBackward, matchDirection))
         , m_flags(flags)
         , m_capture(false)
@@ -590,9 +590,9 @@ public:
     unsigned m_offsetsSize;
     Vector<unsigned> m_duplicateNamedGroupForSubpatternId;
 
-    CharacterClass* newlineCharacterClass;
-    CharacterClass* wordcharCharacterClass;
-    CharacterClass* ignoreCaseWordcharCharacterClass;
+    const CharacterClass* newlineCharacterClass;
+    const CharacterClass* wordcharCharacterClass;
+    const CharacterClass* ignoreCaseWordcharCharacterClass;
 
 private:
     Vector<std::unique_ptr<ByteDisjunction>> m_allParenthesesInfo;

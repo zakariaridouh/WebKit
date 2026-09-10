@@ -1275,7 +1275,7 @@ class YarrGenerator final : public YarrJITInfo {
     {
         ASSERT(term->type == PatternTerm::Type::CharacterClass);
 
-        auto processCharacterClass = [&] (CharacterClass* characterClassToProcess) {
+        auto processCharacterClass = [&] (const CharacterClass* characterClassToProcess) {
             if (m_decodeSurrogatePairs && (term->invert() || characterClassToProcess->m_anyCharacter))
                 failures.append(m_jit.branch32(MacroAssembler::Equal, character, MacroAssembler::TrustedImm32(errorCodePoint)));
             if (term->invert())
@@ -2441,7 +2441,7 @@ class YarrGenerator final : public YarrJITInfo {
 
         readCharacter(offsetOfCharacterAfter(op), character);
 
-        CharacterClass* wordcharCharacterClass;
+        const CharacterClass* wordcharCharacterClass;
 
         if (m_pattern.eitherUnicode() && term->ignoreCase())
             wordcharCharacterClass = m_pattern.wordUnicodeIgnoreCaseCharCharacterClass();
@@ -2465,7 +2465,7 @@ class YarrGenerator final : public YarrJITInfo {
             atBegin = branchIfAtStartOfInput(op);
         readCharacter(offsetOfCharacterBefore(op), character);
 
-        CharacterClass* wordcharCharacterClass;
+        const CharacterClass* wordcharCharacterClass;
 
         if (m_pattern.eitherUnicode() && term->ignoreCase())
             wordcharCharacterClass = m_pattern.wordUnicodeIgnoreCaseCharCharacterClass();
