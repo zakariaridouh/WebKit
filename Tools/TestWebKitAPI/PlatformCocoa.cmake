@@ -253,6 +253,7 @@ list(APPEND TestWebKit_SOURCES
     Helpers/cocoa/PDFTestHelpers.swift
     Helpers/cocoa/MiniTURNServer.mm
     Helpers/cocoa/TestCocoaImageAndCocoaColor.mm
+    Helpers/cocoa/TestCocoaImageUtilities.swift
     Helpers/cocoa/TestElementFullscreenDelegate.mm
     Helpers/cocoa/TestNSBundleExtras.m
     Helpers/cocoa/UtilitiesCocoa.mm
