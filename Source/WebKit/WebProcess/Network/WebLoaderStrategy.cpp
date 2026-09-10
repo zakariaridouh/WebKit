@@ -774,10 +774,6 @@ void WebLoaderStrategy::networkProcessCrashed()
 
     m_webResourceLoaders.clear();
 
-    auto pingLoadCompletionHandlers = WTF::move(m_pingLoadCompletionHandlers);
-    for (auto& pingLoadCompletionHandler : pingLoadCompletionHandlers.values())
-        pingLoadCompletionHandler(internalError(URL()), { });
-
     auto preconnectCompletionHandlers = WTF::move(m_preconnectCompletionHandlers);
     for (auto& preconnectCompletionHandler : preconnectCompletionHandlers.values())
         preconnectCompletionHandler(internalError(URL()));
@@ -948,71 +944,6 @@ void WebLoaderStrategy::browsingContextRemoved(LocalFrame& frame)
         return;
 
     networkProcessConnection->connection().send(Messages::NetworkConnectionToWebProcess::BrowsingContextRemoved(page->webPageProxyIdentifier(), page->identifier(), frame.frameID()), 0);
-}
-
-void WebLoaderStrategy::startPingLoad(LocalFrame& frame, ResourceRequest& request, const HTTPHeaderMap& originalRequestHeaders, const FetchOptions& options, ContentSecurityPolicyImposition policyCheck, PingLoadCompletionHandler&& completionHandler)
-{
-    RefPtr webFrame = WebFrame::fromCoreFrame(frame);
-    RefPtr document = frame.document();
-    if (!document || !webFrame) {
-        if (completionHandler)
-            completionHandler(internalError(request.url()), { });
-        return;
-    }
-
-    RefPtr webPage = webFrame->page();
-    if (!webPage) {
-        if (completionHandler)
-            completionHandler(internalError(request.url()), { });
-        return;
-    }
-
-    NetworkResourceLoadParameters loadParameters {
-        webPage->webPageProxyIdentifier(),
-        webPage->identifier(),
-        webFrame->frameID(),
-        request
-    };
-    loadParameters.createSandboxExtensionHandlesIfNecessary();
-
-    loadParameters.identifier = WebCore::ResourceLoaderIdentifier::generate();
-    loadParameters.sourceOrigin = document->securityOrigin();
-    loadParameters.topOrigin = document->topOrigin();
-    loadParameters.parentPID = legacyPresentingApplicationPID();
-    loadParameters.storedCredentialsPolicy = options.credentials == FetchOptions::Credentials::Omit ? StoredCredentialsPolicy::DoNotUse : StoredCredentialsPolicy::Use;
-    loadParameters.options = options;
-    loadParameters.originalRequestHeaders = originalRequestHeaders;
-    loadParameters.shouldClearReferrerOnHTTPSToHTTPRedirect = shouldClearReferrerOnHTTPSToHTTPRedirect(&frame);
-
-    if (policyCheck == ContentSecurityPolicyImposition::DoPolicyCheck && !document->shouldBypassMainWorldContentSecurityPolicy()) {
-        if (CheckedPtr contentSecurityPolicy = document->contentSecurityPolicy())
-            loadParameters.cspResponseHeaders = contentSecurityPolicy->responseHeaders();
-    }
-    addParametersShared(&frame, loadParameters);
-#if ENABLE(APP_BOUND_DOMAINS)
-    loadParameters.isNavigatingToAppBoundDomain = webFrame->isTopFrameNavigatingToAppBoundDomain();
-#endif
-
-    loadParameters.frameURL = document->url();
-#if ENABLE(CONTENT_EXTENSIONS) || (ENABLE(CONTENT_FILTERING) && HAVE(WEBCONTENTRESTRICTIONS))
-    if (RefPtr page = document->page())
-        loadParameters.mainDocumentURL = page->mainFrameURL();
-#endif
-#if ENABLE(CONTENT_EXTENSIONS)
-    // FIXME: Instead of passing userContentControllerIdentifier, we should just pass webPageId to NetworkProcess.
-    loadParameters.userContentControllerIdentifier = webPage->userContentControllerIdentifier();
-#endif
-
-    if (completionHandler)
-        m_pingLoadCompletionHandlers.add(*loadParameters.identifier, WTF::move(completionHandler));
-
-    protect(WebProcess::singleton().ensureNetworkProcessConnection().connection())->send(Messages::NetworkConnectionToWebProcess::LoadPing { WTF::move(loadParameters) }, 0);
-}
-
-void WebLoaderStrategy::didFinishPingLoad(WebCore::ResourceLoaderIdentifier pingLoadIdentifier, ResourceError&& error, ResourceResponse&& response)
-{
-    if (auto completionHandler = m_pingLoadCompletionHandlers.take(pingLoadIdentifier))
-        completionHandler(WTF::move(error), WTF::move(response));
 }
 
 void WebLoaderStrategy::preconnectTo(FrameLoader& frameLoader, ResourceRequest&& request, StoredCredentialsPolicy storedCredentialsPolicy, ShouldPreconnectAsFirstParty shouldPreconnectAsFirstParty, PreconnectCompletionHandler&& completionHandler)

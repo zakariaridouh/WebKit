@@ -227,11 +227,6 @@ void NetworkProcessConnection::writeBlobsToTemporaryFilesForIndexedDB(const Vect
     m_connection->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::WriteBlobsToTemporaryFilesForIndexedDB(blobURLs), WTF::move(completionHandler));
 }
 
-void NetworkProcessConnection::didFinishPingLoad(WebCore::ResourceLoaderIdentifier pingLoadIdentifier, ResourceError&& error, ResourceResponse&& response)
-{
-    protect(WebProcess::singleton().webLoaderStrategy())->didFinishPingLoad(pingLoadIdentifier, WTF::move(error), WTF::move(response));
-}
-
 void NetworkProcessConnection::didFinishPreconnection(WebCore::ResourceLoaderIdentifier preconnectionIdentifier, ResourceError&& error)
 {
     protect(WebProcess::singleton().webLoaderStrategy())->didFinishPreconnection(preconnectionIdentifier, WTF::move(error));
