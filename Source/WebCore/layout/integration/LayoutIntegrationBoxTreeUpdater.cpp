@@ -210,20 +210,6 @@ void BoxTreeUpdater::adjustStyleIfNeeded(const RenderElement& renderer, Style::C
                 styleToAdjust.setDisplay(Style::DisplayType::InlineFlow);
             return;
         }
-
-        if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer)) {
-            if (!styleToAdjust.hasOutOfFlowPosition()) {
-                // Force in-flow display value to inline (see webkit.org/b/223151).
-                styleToAdjust.setDisplay(Style::DisplayType::InlineFlow);
-            }
-            styleToAdjust.setFloating(Float::None);
-            // Clear property should only apply on block elements, however,
-            // it appears that browsers seem to ignore it on <br> inline elements.
-            // https://drafts.csswg.org/css2/#propdef-clear
-            if (renderLineBreak->isWBR())
-                styleToAdjust.setClear(Clear::None);
-            return;
-        }
     };
     adjustStyle(style);
     if (firstLineStyle)

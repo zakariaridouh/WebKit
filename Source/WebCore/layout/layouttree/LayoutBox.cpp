@@ -203,11 +203,15 @@ bool Box::isFloatingPositioned() const
     // FIXME: Rendering code caches values like this. (style="position: absolute; float: left")
     if (isOutOfFlowPositioned())
         return false;
+    if (isLineBreakBox())
+        return false;
     return m_style.floating() != Float::None;
 }
 
 bool Box::hasFloatClear() const
 {
+    if (isWordBreakOpportunity())
+        return false;
     return m_style.clear() != Clear::None && (isBlockLevelBox() || isLineBreakBox());
 }
 
@@ -556,11 +560,11 @@ void Box::setShape(RefPtr<const LayoutShape> shape)
 
 const ElementBox* Box::associatedRubyAnnotationBox() const
 {
-    if (style().display() != Style::DisplayType::RubyBase)
+    if (isLineBreakBox() || style().display() != Style::DisplayType::RubyBase)
         return nullptr;
 
     auto* next = nextSibling();
-    if (!next || next->style().display() != Style::DisplayType::RubyText)
+    if (!next || next->isLineBreakBox() || next->style().display() != Style::DisplayType::RubyText)
         return nullptr;
 
     return dynamicDowncast<ElementBox>(next);
