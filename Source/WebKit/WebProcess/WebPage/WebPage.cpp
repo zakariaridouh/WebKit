@@ -3601,9 +3601,9 @@ void WebPage::takeRemoteSnapshot(IntRect snapshotRect, IntSize bitmapSize, Snaps
 
     Ref remoteRenderingBackend = ensureRemoteRenderingBackendProxy();
     m_remoteSnapshotState = {
-        snapshotIdentifier,
-        remoteRenderingBackend->createSnapshotRecorder(snapshotIdentifier),
-        MainRunLoopSuccessCallbackAggregator::create([completionHandler = WTF::move(completionHandler), bitmapSize] (bool success) mutable {
+        .identifier = snapshotIdentifier,
+        .recorder = remoteRenderingBackend->createSnapshotRecorder(snapshotRect, snapshotIdentifier),
+        .callback = MainRunLoopSuccessCallbackAggregator::create([completionHandler = WTF::move(completionHandler), bitmapSize] (bool success) mutable {
             completionHandler(success ? std::optional<IntSize>(bitmapSize) : std::nullopt);
         })
     };
@@ -7250,9 +7250,9 @@ void WebPage::drawToSnapshot(const std::optional<FloatRect>& rect, bool allowTra
 
     Ref remoteRenderingBackend = ensureRemoteRenderingBackendProxy();
     m_remoteSnapshotState = {
-        snapshotIdentifier,
-        remoteRenderingBackend->createSnapshotRecorder(snapshotIdentifier),
-        MainRunLoopSuccessCallbackAggregator::create([completionHandler = WTF::move(completionHandler), snapshotSize] (bool success) mutable {
+        .identifier = snapshotIdentifier,
+        .recorder = remoteRenderingBackend->createSnapshotRecorder(snapshotRect, snapshotIdentifier),
+        .callback = MainRunLoopSuccessCallbackAggregator::create([completionHandler = WTF::move(completionHandler), snapshotSize] (bool success) mutable {
             completionHandler(success ? std::optional<IntSize>(snapshotSize) : std::nullopt);
         })
     };
@@ -7297,7 +7297,11 @@ void WebPage::drawFrameToSnapshot(FrameIdentifier frameID, const IntRect& rect, 
     }
 
     Ref remoteRenderingBackend = ensureRemoteRenderingBackendProxy();
-    m_remoteSnapshotState = { snapshotIdentifier, remoteRenderingBackend->createSnapshotRecorder(snapshotIdentifier), MainRunLoopSuccessCallbackAggregator::create(WTF::move(completionHandler)) };
+    m_remoteSnapshotState = {
+        .identifier = snapshotIdentifier,
+        .recorder = remoteRenderingBackend->createSnapshotRecorder(rect, snapshotIdentifier),
+        .callback = MainRunLoopSuccessCallbackAggregator::create(WTF::move(completionHandler))
+    };
 
     LocalFrameView::SelectionInSnapshot shouldPaintSelection = LocalFrameView::IncludeSelection;
     LocalFrameView::CoordinateSpaceForSnapshot coordinateSpace = LocalFrameView::DocumentCoordinates;

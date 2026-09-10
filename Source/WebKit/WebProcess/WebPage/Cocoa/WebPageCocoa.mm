@@ -2033,9 +2033,9 @@ void WebPage::drawPrintingRectToSnapshot(RemoteSnapshotIdentifier snapshotIdenti
 
     Ref remoteRenderingBackend = ensureRemoteRenderingBackendProxy();
     m_remoteSnapshotState = {
-        snapshotIdentifier,
-        remoteRenderingBackend->createSnapshotRecorder(snapshotIdentifier),
-        MainRunLoopSuccessCallbackAggregator::create([completionHandler = WTF::move(completionHandler)] (bool success) mutable {
+        .identifier = snapshotIdentifier,
+        .recorder = remoteRenderingBackend->createSnapshotRecorder(rect, snapshotIdentifier),
+        .callback = MainRunLoopSuccessCallbackAggregator::create([completionHandler = WTF::move(completionHandler)] (bool success) mutable {
             completionHandler(success);
         })
     };
@@ -2082,9 +2082,9 @@ void WebPage::drawPrintingPagesToSnapshot(RemoteSnapshotIdentifier snapshotIdent
 
     Ref remoteRenderingBackend = ensureRemoteRenderingBackendProxy();
     m_remoteSnapshotState = {
-        snapshotIdentifier,
-        remoteRenderingBackend->createSnapshotRecorder(snapshotIdentifier),
-        MainRunLoopSuccessCallbackAggregator::create([completionHandler = WTF::move(completionHandler), snapshotSize = mediaBox.size()] (bool success) mutable {
+        .identifier = snapshotIdentifier,
+        .recorder = remoteRenderingBackend->createSnapshotRecorder(mediaBox, snapshotIdentifier),
+        .callback = MainRunLoopSuccessCallbackAggregator::create([completionHandler = WTF::move(completionHandler), snapshotSize = mediaBox.size()] (bool success) mutable {
             completionHandler(success ? std::optional<FloatSize>(snapshotSize) : std::nullopt);
         })
     };
