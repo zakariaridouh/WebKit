@@ -50,7 +50,7 @@ IsoSubspace::IsoSubspace(CString name, JSC::Heap& heap, const HeapCellType& heap
     Locker locker { m_space.directoryLock() };
     m_directory.setSubspace(this);
     m_space.addBlockDirectory(locker, &m_directory);
-    m_alignedMemoryAllocator->registerDirectory(&m_directory);
+    m_alignedMemoryAllocator->registerDirectory(heap, &m_directory);
     m_firstDirectory = &m_directory;
 }
 

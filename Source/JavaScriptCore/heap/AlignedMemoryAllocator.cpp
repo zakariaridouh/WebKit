@@ -27,6 +27,8 @@
 #include "AlignedMemoryAllocator.h"
 
 #include "BlockDirectory.h"
+#include "HeapInlines.h"
+#include "Subspace.h"
 
 namespace JSC { 
 
@@ -34,26 +36,23 @@ AlignedMemoryAllocator::AlignedMemoryAllocator() = default;
 
 AlignedMemoryAllocator::~AlignedMemoryAllocator() = default;
 
-void AlignedMemoryAllocator::registerDirectory(BlockDirectory* directory)
+void AlignedMemoryAllocator::registerDirectory(JSC::Heap& heap, BlockDirectory* directory)
 {
     RELEASE_ASSERT(!directory->nextDirectoryInAlignedMemoryAllocator());
-
-    m_directories.append(std::mem_fn(&BlockDirectory::setNextDirectoryInAlignedMemoryAllocator), directory);
-    m_directoryForEmptyAllocation = m_directories.first();
-}
-
-void AlignedMemoryAllocator::prepareForAllocation()
-{
-    m_directoryForEmptyAllocation = m_directories.first();
-}
-
-MarkedBlock::Handle* AlignedMemoryAllocator::findEmptyBlockToSteal()
-{
-    for (; m_directoryForEmptyAllocation; m_directoryForEmptyAllocation = m_directoryForEmptyAllocation->nextDirectoryInAlignedMemoryAllocator()) {
-        if (MarkedBlock::Handle* block = m_directoryForEmptyAllocation->findEmptyBlockToSteal())
-            return block;
+    
+    if (m_directories.isEmpty()) {
+        ASSERT_UNUSED(heap, !Thread::mayBeGCThread() || heap.worldIsStopped());
+        for (Subspace* subspace = m_subspaces.first(); subspace; subspace = subspace->nextSubspaceInAlignedMemoryAllocator())
+            subspace->didCreateFirstDirectory(directory);
     }
-    return nullptr;
+    
+    m_directories.append(std::mem_fn(&BlockDirectory::setNextDirectoryInAlignedMemoryAllocator), directory);
+}
+
+void AlignedMemoryAllocator::registerSubspace(Subspace* subspace)
+{
+    RELEASE_ASSERT(!subspace->nextSubspaceInAlignedMemoryAllocator());
+    m_subspaces.append(std::mem_fn(&Subspace::setNextSubspaceInAlignedMemoryAllocator), subspace);
 }
 
 } // namespace JSC

@@ -64,6 +64,11 @@ public:
 
     void prepareForAllocation();
     
+    void didCreateFirstDirectory(BlockDirectory* directory) { m_directoryForEmptyAllocation = directory; }
+    
+    // Finds an empty block from any Subspace that agrees to trade blocks with us.
+    MarkedBlock::Handle* findEmptyBlockToSteal();
+    
     template<typename Func>
     void forEachDirectory(const Func&);
     
@@ -91,6 +96,9 @@ public:
     
     void sweepBlocks();
     
+    Subspace* nextSubspaceInAlignedMemoryAllocator() const { return m_nextSubspaceInAlignedMemoryAllocator; }
+    void setNextSubspaceInAlignedMemoryAllocator(Subspace* subspace) { m_nextSubspaceInAlignedMemoryAllocator = subspace; }
+    
     virtual void didResizeBits(unsigned newSize);
     virtual void didRemoveBlock(unsigned blockIndex);
     virtual void didBeginSweepingToFreeList(MarkedBlock::Handle*);
@@ -110,10 +118,13 @@ protected:
     AlignedMemoryAllocator* m_alignedMemoryAllocator { nullptr };
     
     BlockDirectory* m_firstDirectory { nullptr };
+    BlockDirectory* m_directoryForEmptyAllocation { nullptr }; // Uses the MarkedSpace linked list of blocks.
     SentinelLinkedList<PreciseAllocation, BasicRawSentinelNode<PreciseAllocation>> m_preciseAllocations;
 
     SubspaceKind m_kind;
     uint8_t m_remainingLowerTierPreciseCount { 0 }; // Lower tier is a precise allocation but we use the term lower to avoid confusion with precise-only.
+
+    Subspace* m_nextSubspaceInAlignedMemoryAllocator { nullptr };
 
     CString m_name;
 };

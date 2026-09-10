@@ -26,7 +26,6 @@
 #include "config.h"
 #include "LocalAllocator.h"
 
-#include "AlignedMemoryAllocator.h"
 #include "AllocatingScope.h"
 #include "FreeListInlines.h"
 #include "GCDeferralContext.h"
@@ -212,12 +211,11 @@ void* LocalAllocator::tryAllocateWithoutCollecting(size_t cellSize)
     }
     
     if (Options::stealEmptyBlocksFromOtherAllocators()) {
-        AlignedMemoryAllocator* allocator = m_directory->m_subspace->alignedMemoryAllocator();
-        if (MarkedBlock::Handle* block = allocator->findEmptyBlockToSteal()) {
-            RELEASE_ASSERT(block->alignedMemoryAllocator() == allocator);
-
+        if (MarkedBlock::Handle* block = m_directory->m_subspace->findEmptyBlockToSteal()) {
+            RELEASE_ASSERT(block->alignedMemoryAllocator() == m_directory->m_subspace->alignedMemoryAllocator());
+            
             block->sweep(nullptr);
-
+            
             block->removeFromDirectory();
             m_directory->addBlock(block);
             return allocateIn(block, cellSize);
