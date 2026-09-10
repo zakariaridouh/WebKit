@@ -92,7 +92,7 @@ UNUSED_FUNCTION bool doneTesting = false;
         }                                                       \
     } while (false)
 
-static void waitForConditionAndCheck(const char* errorMessage, std::function<bool()> predicate)
+static void waitForConditionAndCheck(ASCIILiteral errorMessage, std::function<bool()> predicate)
 {
     bool result = waitForCondition(predicate);
     CHECK(result, errorMessage);
@@ -233,7 +233,7 @@ static void testBreakpointContinueCycles()
         unsigned expectedReplyCount = getReplyCount() + 1;
         executionHandler->resume();
 
-        waitForConditionAndCheck("VMs did not stop at breakpoint in continue cycle", [&]() {
+        waitForConditionAndCheck("VMs did not stop at breakpoint in continue cycle"_s, [&]() {
             return getReplyCount() == expectedReplyCount;
         });
 
@@ -264,7 +264,7 @@ static void testBreakpointSingleStepping()
     unsigned expectedReplyCount = getReplyCount() + 1;
     executionHandler->resume();
 
-    waitForConditionAndCheck("Did not hit breakpoint after resume", [&]() {
+    waitForConditionAndCheck("Did not hit breakpoint after resume"_s, [&]() {
         bool stopped = getReplyCount() == expectedReplyCount;
         if (!stopped)
             return false;
@@ -298,7 +298,7 @@ static void testBreakpointSingleStepping()
         unsigned expectedReplyCount = getReplyCount() + 1;
         executionHandler->step();
 
-        waitForConditionAndCheck("VMs did not stop after step", [&]() {
+        waitForConditionAndCheck("VMs did not stop after step"_s, [&]() {
             return getReplyCount() == expectedReplyCount;
         });
 
