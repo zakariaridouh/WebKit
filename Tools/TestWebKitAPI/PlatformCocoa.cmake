@@ -249,6 +249,7 @@ list(APPEND TestWebKit_SOURCES
     Helpers/TestNotificationProvider.cpp
     Helpers/WebCoreTestUtilities.cpp
 
+    Helpers/cocoa/CocoaTypes.swift
     Helpers/cocoa/HTTPServer.mm
     Helpers/cocoa/PDFTestHelpers.swift
     Helpers/cocoa/MiniTURNServer.mm
