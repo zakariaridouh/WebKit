@@ -1423,7 +1423,7 @@ http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureSampleC
 http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureSampleGrad.html [ Timeout ]
 http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureSampleLevel.html [ Timeout ]
 http/tests/webgpu/webgpu/shader/execution/robust_access.html [ Pass Timeout ]
-http/tests/webgpu/webgpu/shader/execution/zero_init.html [ Timeout ]
+http/tests/webgpu/webgpu/shader/execution/zero_init.html [ Crash Timeout ]
 http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/mix.html [ Pass Timeout ]
 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/memory_layout.html [ Pass Failure Timeout ]
 http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/subgroupMinMax.html [ Timeout ]
@@ -2477,3 +2477,7 @@ webkit.org/b/322847 [ Debug ] imported/w3c/web-platform-tests/css/css-grid/grid-
 webkit.org/b/322847 [ Debug ] imported/w3c/web-platform-tests/css/css-grid/grid-lanes/subgrid/grid-subgridded-to-grid-lanes/baseline/row-grid-lanes-item-baseline-subgrid-005.html [ Crash ]
 
 webkit.org/b/323246 [ Debug x86_64 ] accessibility/isolated-tree/canvas-fallback-content-2.html [ Timeout Pass ]
+
+webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/web_platform/copyToTexture/ImageBitmap.html [ Pass Crash ]
+webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/expression/binary/f32_matrix_matrix_multiplication.html [ Pass Crash ]
+webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureDimensions.html [ Pass Crash ]
