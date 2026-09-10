@@ -88,7 +88,7 @@ AffineTransform NODELETE computeBaseVerticalTextMatrix(const AffineTransform& pr
     return rotateLeftTransform() * previousTextMatrix;
 }
 
-AffineTransform computeTextMatrix(const Font& font)
+AffineTransform computeTextMatrix(const FontBase& font)
 {
     auto& platformData = font.platformData();
     bool isVertical = platformData.orientation() == FontOrientation::Vertical;
@@ -269,7 +269,7 @@ namespace {
 class RepeatedDrawGlyphs {
     WTF_MAKE_NONCOPYABLE(RepeatedDrawGlyphs);
 public:
-    RepeatedDrawGlyphs(const Font& font, std::span<const CGGlyph> glyphs, std::span<const CGSize> advances, const AffineTransform& textMatrix)
+    RepeatedDrawGlyphs(const FontBase& font, std::span<const CGGlyph> glyphs, std::span<const CGSize> advances, const AffineTransform& textMatrix)
         : m_ctFont(font.platformData().ctFont())
         , m_glyphs(glyphs)
         , m_advances(advances)
@@ -322,7 +322,7 @@ static void setCGFontRenderingMode(GraphicsContext& context)
     CGContextSetShouldSubpixelQuantizeFonts(cgContext.get(), doSubpixelQuantization);
 }
 
-void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& anchorPoint, FontSmoothingMode smoothingMode)
+void FontCascade::drawGlyphs(GraphicsContext& context, const FontBase& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& anchorPoint, FontSmoothingMode smoothingMode)
 {
     const auto& platformData = font.platformData();
     if (!platformData.size())

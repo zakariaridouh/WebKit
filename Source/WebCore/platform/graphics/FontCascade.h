@@ -72,7 +72,7 @@ AffineTransform computeBaseOverallTextMatrix(const std::optional<AffineTransform
 AffineTransform computeBaseVerticalTextMatrix(const AffineTransform& previousTextMatrix);
 // The text matrix to use when drawing a run of `font`, including the Y-flip, synthetic oblique and, for vertical
 // fonts, the upright rotation.
-AffineTransform computeTextMatrix(const Font&);
+AffineTransform computeTextMatrix(const FontBase&);
 #endif
 
 class TextLayoutDeleter {
@@ -118,7 +118,7 @@ public:
 
     using CustomFontNotReadyAction = FontCascadeCustomFontNotReadyAction;
     WEBCORE_EXPORT FloatSize drawText(GraphicsContext&, const TextRun&, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt, CustomFontNotReadyAction = CustomFontNotReadyAction::DoNotPaintIfFontNotReady) const;
-    static void drawGlyphs(GraphicsContext&, const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode);
+    static void drawGlyphs(GraphicsContext&, const FontBase&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode);
     void drawEmphasisMarks(GraphicsContext&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) const;
 
     Vector<FloatSegment> lineSegmentsForIntersectionsWithRect(const TextRun&, const FloatPoint& textOrigin, const FloatRect& lineExtents) const;

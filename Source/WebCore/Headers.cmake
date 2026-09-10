@@ -2538,6 +2538,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/FloatSize.h
     platform/graphics/FloatSizeHash.h
     platform/graphics/Font.h
+    platform/graphics/FontBase.h
     platform/graphics/FontBaseline.h
     platform/graphics/FontCache.h
     platform/graphics/FontCascade.h
