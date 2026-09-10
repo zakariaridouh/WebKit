@@ -1634,6 +1634,11 @@ static FunctionType constructFragmentsInternal(const CSSSelector& rootSelector, 
         case CSSSelector::Match::List:
             if (selector->value().find(isASCIIWhitespace<char16_t>) != notFound)
                 return FunctionType::CannotMatchAnything;
+            if (selector->isEquivalentToClassSelector()) {
+                fragment->classNames.append(selector->value().impl());
+                fragment->onlyMatchesLinksInQuirksMode = false;
+                break;
+            }
             [[fallthrough]];
         case CSSSelector::Match::Begin:
         case CSSSelector::Match::End:
