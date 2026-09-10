@@ -608,6 +608,7 @@
 			membershipExceptions = (
 				"cocoa/AppKit+Extras.swift",
 				"cocoa/Bundle+Extras.swift",
+				cocoa/CocoaTypes.swift,
 				"cocoa/Foundation+Extras.swift",
 				cocoa/HTTPServer.mm,
 				cocoa/HTTPServer.swift,
@@ -619,6 +620,7 @@
 				cocoa/StdLibExtras.swift,
 				"cocoa/SwiftUI+Extras.swift",
 				cocoa/TestCocoaImageAndCocoaColor.mm,
+				cocoa/TestCocoaImageUtilities.swift,
 				cocoa/TestContextMenuDriver.mm,
 				cocoa/TestElementFullscreenDelegate.mm,
 				cocoa/TestNSBundleExtras.m,

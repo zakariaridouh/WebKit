@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,76 +25,39 @@
 
 #pragma once
 
+#ifdef __OBJC__
+
+#import <CoreGraphics/CoreGraphics.h>
 #import <wtf/Platform.h>
 
-#if HAVE(PDFKIT)
-
-#import <Foundation/Foundation.h>
-#import <PDFKit/PDFKit.h>
-
 #if PLATFORM(IOS_FAMILY)
-@class UIColor;
+#import <UIKit/UIKit.h>
 #else
-@class NSColor;
+#import <AppKit/AppKit.h>
 #endif
 
-NS_ASSUME_NONNULL_BEGIN
+NS_HEADER_AUDIT_BEGIN(nullability, sendability)
 
 NS_SWIFT_UI_ACTOR
-@interface TestPDFAnnotation : NSObject
+@interface TestCocoaImageUtilities : NSObject
 
-@property (nonatomic, readonly) BOOL isLink;
-
-@property (nonatomic, readonly) CGRect bounds;
-
-@property (nonatomic, readonly, nullable) NSURL *linkURL;
-
++ (instancetype)new NS_UNAVAILABLE;
 - (instancetype)init NS_UNAVAILABLE;
 
-- (instancetype)initWithPDFAnnotation:(PDFAnnotation *)annotation;
-
-@end
-
-NS_SWIFT_UI_ACTOR
-@interface TestPDFPage : NSObject
-
-@property (nonatomic, readonly) CGRect bounds;
-
-@property (nonatomic, readonly) NSArray<TestPDFAnnotation *> *annotations;
-
-@property (nonatomic, readonly) NSString *text;
-
-@property (nonatomic, readonly) NSInteger characterCount;
-
-- (instancetype)init NS_UNAVAILABLE;
-
-- (instancetype)initWithPDFPage:(PDFPage *)page;
-
-- (CGRect)rectForCharacterAtIndex:(NSInteger)index;
-
-- (NSInteger)characterIndexAtPoint:(CGPoint)point;
++ (void)performWithDarkAppearance:(BOOL)darkAppearance block:(void (NS_NOESCAPE ^)(void))block NS_SWIFT_NAME(perform(darkAppearance:block:));
 
 #if PLATFORM(IOS_FAMILY)
-- (UIColor *)colorAtPoint:(CGPoint)point;
++ (NSData *)pngDataWithSize:(CGSize)size color:(UIColor *)color NS_SWIFT_NAME(pngData(size:color:));
++ (nullable UIColor *)pixelColorOfImage:(UIImage *)image atPoint:(CGPoint)point NS_SWIFT_NAME(pixelColor(of:at:));
++ (BOOL)compareColor:(nullable UIColor *)color toColor:(nullable UIColor *)otherColor tolerance:(CGFloat)tolerance NS_SWIFT_NAME(compareColors(_:_:tolerance:));
 #else
-- (NSColor *)colorAtPoint:(CGPoint)point;
++ (NSData *)pngDataWithSize:(CGSize)size color:(NSColor *)color NS_SWIFT_NAME(pngData(size:color:));
++ (nullable NSColor *)pixelColorOfImage:(NSImage *)image atPoint:(CGPoint)point NS_SWIFT_NAME(pixelColor(of:at:));
++ (BOOL)compareColor:(nullable NSColor *)color toColor:(nullable NSColor *)otherColor tolerance:(CGFloat)tolerance NS_SWIFT_NAME(compareColors(_:_:tolerance:));
 #endif
 
 @end
 
-NS_SWIFT_UI_ACTOR
-@interface TestPDFDocument : NSObject
+NS_HEADER_AUDIT_END(nullability, sendability)
 
-@property (nonatomic, readonly) NSInteger pageCount;
-
-- (nullable TestPDFPage *)pageAtIndex:(NSInteger)index;
-
-- (instancetype)init NS_UNAVAILABLE;
-
-- (instancetype)initFromData:(NSData *)data;
-
-@end
-
-NS_ASSUME_NONNULL_END
-
-#endif // HAVE(PDFKIT)
+#endif // __OBJC__
