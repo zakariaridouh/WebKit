@@ -157,7 +157,7 @@ void GarbageCollectionController::dumpHeapForVM(VM& vm)
     CString utf8String = jsonData.utf8();
 
     fileHandle.write(byteCast<uint8_t>(utf8String.span()));
-    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().data(), isMainThread() ? "" : " for Worker");
+    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().legacyCStringPointer(), isMainThread() ? "" : " for Worker");
 }
 
 void GarbageCollectionController::dumpHeap()

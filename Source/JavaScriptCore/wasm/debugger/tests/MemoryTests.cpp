@@ -175,11 +175,11 @@ void testAllMemoryOps()
 
 #undef TEST_MEMORY_STORE_OP
 
-    TEST_ASSERT(loadOpsTested == TOTAL_MEMORY_LOAD_OPS, makeString("Tested all "_s, String::number(TOTAL_MEMORY_LOAD_OPS), " memory load ops"_s).utf8().data());
-    TEST_ASSERT(loadOpsSucceeded == TOTAL_MEMORY_LOAD_OPS, makeString("All "_s, String::number(TOTAL_MEMORY_LOAD_OPS), " memory load ops passed strict validation"_s).utf8().data());
+    TEST_ASSERT(loadOpsTested == TOTAL_MEMORY_LOAD_OPS, makeString("Tested all "_s, String::number(TOTAL_MEMORY_LOAD_OPS), " memory load ops"_s).utf8().legacyCStringPointer());
+    TEST_ASSERT(loadOpsSucceeded == TOTAL_MEMORY_LOAD_OPS, makeString("All "_s, String::number(TOTAL_MEMORY_LOAD_OPS), " memory load ops passed strict validation"_s).utf8().legacyCStringPointer());
 
-    TEST_ASSERT(storeOpsTested == TOTAL_MEMORY_STORE_OPS, makeString("Tested all "_s, String::number(TOTAL_MEMORY_STORE_OPS), " memory store ops"_s).utf8().data());
-    TEST_ASSERT(storeOpsSucceeded == TOTAL_MEMORY_STORE_OPS, makeString("All "_s, String::number(TOTAL_MEMORY_STORE_OPS), " memory store ops passed strict validation"_s).utf8().data());
+    TEST_ASSERT(storeOpsTested == TOTAL_MEMORY_STORE_OPS, makeString("Tested all "_s, String::number(TOTAL_MEMORY_STORE_OPS), " memory store ops"_s).utf8().legacyCStringPointer());
+    TEST_ASSERT(storeOpsSucceeded == TOTAL_MEMORY_STORE_OPS, makeString("All "_s, String::number(TOTAL_MEMORY_STORE_OPS), " memory store ops passed strict validation"_s).utf8().legacyCStringPointer());
 
     dataLogLn("  Successfully tested with strict mapping validation: ", loadOpsSucceeded, " / ", loadOpsTested, " memory load ops");
     dataLogLn("  Successfully tested with strict mapping validation: ", storeOpsSucceeded, " / ", storeOpsTested, " memory store ops");

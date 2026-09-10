@@ -429,7 +429,7 @@ static void updateIgnoreStrictTransportSecuritySetting(RetainPtr<NSURLRequest>& 
 
         networkDataTask->willPerformHTTPRedirection(WTF::move(resourceResponse), request, [completionHandler = makeBlockPtr(completionHandler), taskIdentifier, shouldIgnoreHSTS](auto&& request) {
 #if !LOG_DISABLED
-            LOG(NetworkSession, "%zu willPerformHTTPRedirection completionHandler (%s)", taskIdentifier, request.url().string().utf8().data());
+            LOG(NetworkSession, "%zu willPerformHTTPRedirection completionHandler (%s)", taskIdentifier, request.url().string().utf8().legacyCStringPointer());
 #else
             UNUSED_PARAM(taskIdentifier);
 #endif
@@ -441,7 +441,7 @@ static void updateIgnoreStrictTransportSecuritySetting(RetainPtr<NSURLRequest>& 
         WebCore::ResourceResponse resourceResponse(response);
         webSocketTask->willPerformHTTPRedirection(WTF::move(resourceResponse), request, [completionHandler = makeBlockPtr(completionHandler), taskIdentifier](auto&& request) {
 #if !LOG_DISABLED
-            LOG(NetworkSession, "%zu willPerformHTTPRedirection completionHandler (%s)", taskIdentifier, request.url().string().utf8().data());
+            LOG(NetworkSession, "%zu willPerformHTTPRedirection completionHandler (%s)", taskIdentifier, request.url().string().utf8().legacyCStringPointer());
 #else
             UNUSED_PARAM(taskIdentifier);
 #endif
@@ -482,7 +482,7 @@ static void updateIgnoreStrictTransportSecuritySetting(RetainPtr<NSURLRequest>& 
         synthesizedResponse.setHTTPHeaderField(WebCore::HTTPHeaderName::AccessControlAllowOrigin, origin.get());
         networkDataTask->willPerformHTTPRedirection(WTF::move(synthesizedResponse), request, [completionHandler = makeBlockPtr(completionHandler), taskIdentifier, shouldIgnoreHSTS](auto&& request) {
 #if !LOG_DISABLED
-            LOG(NetworkSession, "%zu _schemeUpgraded completionHandler (%s)", taskIdentifier, request.url().string().utf8().data());
+            LOG(NetworkSession, "%zu _schemeUpgraded completionHandler (%s)", taskIdentifier, request.url().string().utf8().legacyCStringPointer());
 #else
             UNUSED_PARAM(taskIdentifier);
 #endif
@@ -2197,7 +2197,7 @@ void NetworkSessionCocoa::removeNetworkWebsiteData(std::optional<WallTime> modif
     auto contextArray = adoptNS([[NSMutableArray alloc] init]);
     if (domains) {
         contextArray = createNSArray(*domains, [&] (auto domain) {
-            return [NSString stringWithUTF8String:domain.string().utf8().data()];
+            return [NSString stringWithUTF8String:domain.string().utf8().legacyCStringPointer()];
         });
     }
 

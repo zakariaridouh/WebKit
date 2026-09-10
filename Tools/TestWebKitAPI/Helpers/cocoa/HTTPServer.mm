@@ -157,7 +157,7 @@ static RetainPtr<nw_parameters_t> quicListenerParameters(HTTPServer::Certificate
         nw_quic_stream_set_is_unidirectional(options, true);
     }, makeBlockPtr(WTF::move(configureQuicConnection)).get()));
     if (port)
-        nw_parameters_set_local_endpoint(parameters.get(), nw_endpoint_create_host("::", makeString(*port).utf8().data()));
+        nw_parameters_set_local_endpoint(parameters.get(), nw_endpoint_create_host("::", makeString(*port).utf8().legacyCStringPointer()));
     attachHTTPMessagingListener(parameters.get());
     return parameters;
 }
@@ -197,7 +197,7 @@ RetainPtr<nw_parameters_t> HTTPServer::listenerParameters(Protocol protocol, Cer
     auto configureTLSBlock = shouldDisableTLS(protocol) ? makeBlockPtr(NW_PARAMETERS_DISABLE_PROTOCOL) : makeBlockPtr(WTF::move(configureTLS));
     RetainPtr parameters = adoptNS(nw_parameters_create_secure_tcp(configureTLSBlock.get(), NW_PARAMETERS_DEFAULT_CONFIGURATION));
     if (port)
-        nw_parameters_set_local_endpoint(parameters.get(), nw_endpoint_create_host("::", makeString(*port).utf8().data()));
+        nw_parameters_set_local_endpoint(parameters.get(), nw_endpoint_create_host("::", makeString(*port).utf8().legacyCStringPointer()));
 
     if (protocol == Protocol::HttpsProxy || protocol == Protocol::HttpsProxyWithAuthentication || protocol == Protocol::Http2Proxy) {
         RetainPtr stack = adoptNS(nw_parameters_copy_default_protocol_stack(parameters.get()));
@@ -556,7 +556,7 @@ void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> reque
             requestData->sawAuthorizationHeader = true;
 
         auto path = parsePath(request);
-        ASSERT_WITH_MESSAGE(requestData->requestMap.contains(path), "This HTTPServer does not know how to respond to a request for %s", path.utf8().data());
+        ASSERT_WITH_MESSAGE(requestData->requestMap.contains(path), "This HTTPServer does not know how to respond to a request for %s", path.utf8().legacyCStringPointer());
 
         auto response = requestData->requestMap.get(path);
         if (response.shouldRespondWith304ToConditionalRequests) {
@@ -598,7 +598,7 @@ void HTTPServer::respondToHTTPMessagingRequests(Connection connection, Ref<Reque
         if (!request.headerFields.get("authorization"_s).isEmpty())
             requestData->sawAuthorizationHeader = true;
 
-        ASSERT_WITH_MESSAGE(requestData->requestMap.contains(request.path), "This HTTPServer does not know how to respond to a request for %s", request.path.utf8().data());
+        ASSERT_WITH_MESSAGE(requestData->requestMap.contains(request.path), "This HTTPServer does not know how to respond to a request for %s", request.path.utf8().legacyCStringPointer());
 
         auto response = requestData->requestMap.get(request.path);
         if (response.shouldRespondWith304ToConditionalRequests) {

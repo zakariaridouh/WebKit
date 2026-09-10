@@ -137,7 +137,7 @@ void NetworkDataTaskSoup::createRequest(ResourceRequest&& request, WasBlockingCo
 {
     m_currentRequest = WTF::move(request);
     if (m_currentRequest.url().protocolIsFile()) {
-        m_file = adoptGRef(g_file_new_for_path(m_currentRequest.url().fileSystemPath().utf8().data()));
+        m_file = adoptGRef(g_file_new_for_path(m_currentRequest.url().fileSystemPath().utf8().legacyCStringPointer()));
         return;
     }
 
@@ -600,7 +600,7 @@ void NetworkDataTaskSoup::completeAuthentication(const AuthenticationChallenge& 
     case ProtectionSpace::AuthenticationScheme::NTLM:
     case ProtectionSpace::AuthenticationScheme::Negotiate:
     case ProtectionSpace::AuthenticationScheme::OAuth:
-        soup_auth_authenticate(challenge.soupAuth(), credential.user().utf8().data(), credential.password().utf8().data());
+        soup_auth_authenticate(challenge.soupAuth(), credential.user().utf8().legacyCStringPointer(), credential.password().utf8().legacyCStringPointer());
         break;
     case ProtectionSpace::AuthenticationScheme::ClientCertificatePINRequested: {
         CString password = credential.password().utf8();

@@ -1218,7 +1218,7 @@ void WebProcessPool::processDidFinishLaunching(WebProcessProxy& process)
 #if ENABLE(EXTENSION_CAPABILITIES)
     for (auto& page : process.pages()) {
         if (RefPtr mediaCapability = page->mediaCapability()) {
-            WEBPROCESSPOOL_RELEASE_LOG(ProcessCapabilities, "processDidFinishLaunching[envID=%" PUBLIC_LOG_STRING "]: updating media capability", mediaCapability->environmentIdentifier().utf8().data());
+            WEBPROCESSPOOL_RELEASE_LOG(ProcessCapabilities, "processDidFinishLaunching[envID=%" PUBLIC_LOG_STRING "]: updating media capability", mediaCapability->environmentIdentifier().utf8().legacyCStringPointer());
             page->updateMediaCapability();
         }
     }
@@ -2169,7 +2169,7 @@ void WebProcessPool::addProcessToOriginCacheSet(WebProcessProxy& process, const 
     if (!result.isNewEntry)
         result.iterator->value = process;
 
-    LOG(ProcessSwapping, "(ProcessSwapping) Registrable domain %s just saved a cached process with pid %i", registrableDomain.string().utf8().data(), process.processID());
+    LOG(ProcessSwapping, "(ProcessSwapping) Registrable domain %s just saved a cached process with pid %i", registrableDomain.string().utf8().legacyCStringPointer(), process.processID());
     if (!result.isNewEntry)
         LOG(ProcessSwapping, "(ProcessSwapping) Note: It already had one saved");
 }
@@ -2283,7 +2283,7 @@ void WebProcessPool::processForNavigation(WebPageProxy& page, WebFrameProxy& fra
 
         addProcessToOriginCacheSet(sourceProcess, sourceURL);
 
-        LOG(ProcessSwapping, "(ProcessSwapping) Navigating from %s to %s, keeping around old process. Now holding on to old processes for %u origins.", sourceURL.string().utf8().data(), navigation.currentRequest().url().string().utf8().data(), m_swappedProcessesPerRegistrableDomain.size());
+        LOG(ProcessSwapping, "(ProcessSwapping) Navigating from %s to %s, keeping around old process. Now holding on to old processes for %u origins.", sourceURL.string().utf8().legacyCStringPointer(), navigation.currentRequest().url().string().utf8().legacyCStringPointer(), m_swappedProcessesPerRegistrableDomain.size());
     }
 
     if (!isMainFrameNavigation && siteIsolationEnabled)
@@ -2508,11 +2508,11 @@ std::tuple<Ref<WebProcessProxy>, RefPtr<SuspendedPageProxy>, ASCIILiteral> WebPr
     auto reason = "Navigation is cross-site"_s;
     
     if (m_configuration->alwaysKeepAndReuseSwappedProcesses()) {
-        LOG(ProcessSwapping, "(ProcessSwapping) Considering re-use of a previously cached process for domain %s", targetSite.domain().string().utf8().data());
+        LOG(ProcessSwapping, "(ProcessSwapping) Considering re-use of a previously cached process for domain %s", targetSite.domain().string().utf8().legacyCStringPointer());
 
         if (RefPtr process = m_swappedProcessesPerRegistrableDomain.get(targetSite.domain())) {
             if (process->websiteDataStore() == dataStore.ptr() && process->state() != AuxiliaryProcessProxy::State::Terminated) {
-                LOG(ProcessSwapping, "(ProcessSwapping) Reusing a previously cached process with pid %i to continue navigation to URL %s", process->processID(), targetURL.string().utf8().data());
+                LOG(ProcessSwapping, "(ProcessSwapping) Reusing a previously cached process with pid %i to continue navigation to URL %s", process->processID(), targetURL.string().utf8().legacyCStringPointer());
 
                 return { process.releaseNonNull(), nullptr, reason };
             }

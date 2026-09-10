@@ -242,7 +242,7 @@ void WebLoaderStrategy::scheduleLoad(ResourceLoader& resourceLoader, CachedResou
     // If the DocumentLoader schedules this as an archive resource load,
     // then we should remember the ResourceLoader in our records but not schedule it in the NetworkProcess.
     if (protect(resourceLoader.documentLoader())->scheduleArchiveLoad(resourceLoader, resourceLoader.request())) {
-        LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be handled as an archive resource.", resourceLoader.url().string().utf8().data());
+        LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be handled as an archive resource.", resourceLoader.url().string().utf8().legacyCStringPointer());
         WEBLOADERSTRATEGY_RELEASE_LOG("scheduleLoad: URL will be handled as an archive resource");
         m_webResourceLoaders.set(identifier, WebResourceLoader::create(resourceLoader, trackingParameters));
         return;
@@ -250,7 +250,7 @@ void WebLoaderStrategy::scheduleLoad(ResourceLoader& resourceLoader, CachedResou
 #endif
 
     if (resourceLoader.request().url().protocolIsData()) {
-        LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be loaded as data.", resourceLoader.url().string().utf8().data());
+        LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be loaded as data.", resourceLoader.url().string().utf8().legacyCStringPointer());
         WEBLOADERSTRATEGY_RELEASE_LOG_FORWARDABLE(WebLoaderStrategyScheduleLoadUrlLoadedAsData);
         startLocalLoad(resourceLoader);
         return;
@@ -258,7 +258,7 @@ void WebLoaderStrategy::scheduleLoad(ResourceLoader& resourceLoader, CachedResou
 
 #if USE(QUICK_LOOK)
     if (isQuickLookPreviewURL(resourceLoader.request().url())) {
-        LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be handled as a QuickLook resource.", resourceLoader.url().string().utf8().data());
+        LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be handled as a QuickLook resource.", resourceLoader.url().string().utf8().legacyCStringPointer());
         WEBLOADERSTRATEGY_RELEASE_LOG("scheduleLoad: URL will be handled as a QuickLook resource");
         startLocalLoad(resourceLoader);
         return;
@@ -269,7 +269,7 @@ void WebLoaderStrategy::scheduleLoad(ResourceLoader& resourceLoader, CachedResou
     // For apps that call g_resource_load in a web extension.
     // https://blogs.gnome.org/alexl/2012/01/26/resources-in-glib/
     if (resourceLoader.request().url().protocolIs("resource"_s)) {
-        LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be handled as a GResource.", resourceLoader.url().string().utf8().data());
+        LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be handled as a GResource.", resourceLoader.url().string().utf8().legacyCStringPointer());
         WEBLOADERSTRATEGY_RELEASE_LOG("scheduleLoad: URL will be handled as a GResource");
         startLocalLoad(resourceLoader);
         return;
@@ -340,7 +340,7 @@ bool WebLoaderStrategy::tryLoadingUsingURLSchemeHandler(ResourceLoader& resource
     if (!handler)
         return false;
 
-    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, URL '%s' will be handled by a UIProcess URL scheme handler.", resourceLoader.url().string().utf8().data());
+    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, URL '%s' will be handled by a UIProcess URL scheme handler.", resourceLoader.url().string().utf8().legacyCStringPointer());
     WEBLOADERSTRATEGY_RELEASE_LOG("tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler");
 
     handler->startNewTask(resourceLoader, *webFrame);
@@ -353,7 +353,7 @@ bool WebLoaderStrategy::tryLoadingUsingPDFJSHandler(ResourceLoader& resourceLoad
     if (!resourceLoader.request().url().protocolIs("webkit-pdfjs-viewer"_s))
         return false;
 
-    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be handled as a PDFJS resource.", resourceLoader.url().string().utf8().data());
+    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be handled as a PDFJS resource.", resourceLoader.url().string().utf8().legacyCStringPointer());
     WEBLOADERSTRATEGY_RELEASE_LOG("tryLoadingUsingPDFJSHandler: URL will be scheduled with the PDFJS url scheme handler");
 
     startLocalLoad(resourceLoader);
@@ -464,7 +464,7 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
     auto contentEncodingSniffingPolicy = resourceLoader.contentEncodingSniffingPolicy();
     StoredCredentialsPolicy storedCredentialsPolicy = resourceLoader.shouldUseCredentialStorage() ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
 
-    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be scheduled with the NetworkProcess with priority %d, storedCredentialsPolicy %i", resourceLoader.url().string().utf8().data(), static_cast<int>(resourceLoader.request().priority()), (int)storedCredentialsPolicy);
+    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, url '%s' will be scheduled with the NetworkProcess with priority %d, storedCredentialsPolicy %i", resourceLoader.url().string().utf8().legacyCStringPointer(), static_cast<int>(resourceLoader.request().priority()), (int)storedCredentialsPolicy);
 
     NetworkResourceLoadParameters loadParameters {
         trackingParameters.webPageProxyID,
@@ -705,7 +705,7 @@ void WebLoaderStrategy::removeURLSchemeTaskProxy(WebURLSchemeTaskProxy& task)
 void WebLoaderStrategy::remove(ResourceLoader* resourceLoader)
 {
     ASSERT(resourceLoader);
-    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::remove, url '%s'", resourceLoader->url().string().utf8().data());
+    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::remove, url '%s'", resourceLoader->url().string().utf8().legacyCStringPointer());
 
     auto identifier = resourceLoader->identifier();
     if (!identifier) {
@@ -820,7 +820,7 @@ std::optional<WebLoaderStrategy::SyncLoadResult> WebLoaderStrategy::tryLoadingSy
     if (!handler)
         return std::nullopt;
 
-    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, sync load to URL '%s' will be handled by a UIProcess URL scheme handler.", request.url().string().utf8().data());
+    LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, sync load to URL '%s' will be handled by a UIProcess URL scheme handler.", request.url().string().utf8().legacyCStringPointer());
 
     SyncLoadResult result;
     handler->loadSynchronously(identifier, *webFrame, request, result.response, result.error, result.data);

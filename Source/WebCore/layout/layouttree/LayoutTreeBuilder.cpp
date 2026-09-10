@@ -502,9 +502,9 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const BoxG
         const size_t maxPrintedLength = 80;
         if (textContent.length() > maxPrintedLength) {
             auto substring = StringView(textContent).left(maxPrintedLength);
-            stream << " \"" << substring.utf8().data() << "\"...";
+            stream << " \"" << substring.utf8().legacyCStringPointer() << "\"...";
         } else
-            stream << " \"" << textContent.utf8().data() << "\"";
+            stream << " \"" << textContent.utf8().legacyCStringPointer() << "\"";
     }
     stream.nextLine();
 }
@@ -541,7 +541,7 @@ String layoutTreeAsText(const InitialContainingBlock& initialContainingBlock, co
 void showLayoutTree(const InitialContainingBlock& initialContainingBlock, const LayoutState* layoutState)
 {
     auto treeAsText = layoutTreeAsText(initialContainingBlock, layoutState);
-    WTFLogAlways("%s", treeAsText.utf8().data());
+    WTFLogAlways("%s", treeAsText.utf8().legacyCStringPointer());
 }
 
 void showLayoutTree(const InitialContainingBlock& initialContainingBlock)

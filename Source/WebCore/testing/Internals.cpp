@@ -959,7 +959,7 @@ String Internals::description(JSC::JSValue value)
 
 void Internals::log(const String& value)
 {
-    WTFLogAlways("%s", value.utf8().data());
+    WTFLogAlways("%s", value.utf8().legacyCStringPointer());
 }
 
 bool Internals::isPreloaded(const String& url)
@@ -8010,7 +8010,7 @@ bool Internals::hasSandboxMachLookupAccessToGlobalName(const String& process, co
     else
         RELEASE_ASSERT_NOT_REACHED();
 
-    return !sandbox_check(pid, "mach-lookup", static_cast<enum sandbox_filter_type>(SANDBOX_FILTER_GLOBAL_NAME | SANDBOX_CHECK_NO_REPORT), service.utf8().data());
+    return !sandbox_check(pid, "mach-lookup", static_cast<enum sandbox_filter_type>(SANDBOX_FILTER_GLOBAL_NAME | SANDBOX_CHECK_NO_REPORT), service.utf8().legacyCStringPointer());
 #else
     UNUSED_PARAM(process);
     UNUSED_PARAM(service);
@@ -8027,7 +8027,7 @@ bool Internals::hasSandboxMachLookupAccessToXPCServiceName(const String& process
     else
         RELEASE_ASSERT_NOT_REACHED();
 
-    return !sandbox_check(pid, "mach-lookup", static_cast<enum sandbox_filter_type>(SANDBOX_FILTER_XPC_SERVICE_NAME | SANDBOX_CHECK_NO_REPORT), service.utf8().data());
+    return !sandbox_check(pid, "mach-lookup", static_cast<enum sandbox_filter_type>(SANDBOX_FILTER_XPC_SERVICE_NAME | SANDBOX_CHECK_NO_REPORT), service.utf8().legacyCStringPointer());
 #else
     UNUSED_PARAM(process);
     UNUSED_PARAM(service);

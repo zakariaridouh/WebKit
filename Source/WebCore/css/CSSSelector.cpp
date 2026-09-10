@@ -356,7 +356,7 @@ std::optional<CSSSelector::PseudoElement> CSSSelector::parsePseudoElementName(St
 
     auto type = findPseudoElementName(name);
     if (!type) {
-        ASSERT_WITH_MESSAGE(!isUASheetBehavior(context.mode), "Unknown pseudo-element %s in user-agent stylesheet", name.toString().utf8().data());
+        ASSERT_WITH_MESSAGE(!isUASheetBehavior(context.mode), "Unknown pseudo-element %s in user-agent stylesheet", name.toString().utf8().legacyCStringPointer());
         if (name.startsWithIgnoringASCIICase("-webkit-"_s))
             return PseudoElement::WebKitUnknown;
         return type;

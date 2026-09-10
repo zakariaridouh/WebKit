@@ -317,7 +317,7 @@ static auto convertToBacking(const ComputePipelineDescriptor& descriptor, Conver
     }
 
     auto constantNames = descriptor.compute.constants.map([](const auto& constant) {
-        bool lengthsMatch = constant.key.length() == String::fromUTF8(constant.key.utf8().data()).length();
+        bool lengthsMatch = constant.key.length() == String::fromUTF8(constant.key.utf8().legacyCStringPointer()).length();
         return lengthsMatch ? constant.key.utf8() : "";
     });
 
@@ -363,7 +363,7 @@ static auto convertToBacking(const RenderPipelineDescriptor& descriptor, Convert
     }
 
     auto vertexConstantNames = descriptor.vertex.constants.map([](const auto& constant) {
-        bool lengthsMatch = constant.key.length() == String::fromUTF8(constant.key.utf8().data()).length();
+        bool lengthsMatch = constant.key.length() == String::fromUTF8(constant.key.utf8().legacyCStringPointer()).length();
         return lengthsMatch ? constant.key.utf8() : "";
     });
 
@@ -431,7 +431,7 @@ static auto convertToBacking(const RenderPipelineDescriptor& descriptor, Convert
         }
 
         fragmentConstantNames = descriptor.fragment->constants.map([](const auto& constant) {
-            bool lengthsMatch = constant.key.length() == String::fromUTF8(constant.key.utf8().data()).length();
+            bool lengthsMatch = constant.key.length() == String::fromUTF8(constant.key.utf8().legacyCStringPointer()).length();
             return lengthsMatch ? constant.key.utf8() : "";
         });
     }
@@ -747,7 +747,7 @@ void DeviceImpl::pauseAllErrorReporting(bool pause)
 
 void DeviceImpl::setLabelInternal(const String& label)
 {
-    wgpuDeviceSetLabel(m_backing.get(), label.utf8().data());
+    wgpuDeviceSetLabel(m_backing.get(), label.utf8().legacyCStringPointer());
 }
 
 Ref<CommandEncoder> DeviceImpl::invalidCommandEncoder()

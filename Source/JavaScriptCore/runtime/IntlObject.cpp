@@ -1171,7 +1171,7 @@ Vector<String> numberingSystemsForLocale(const String& locale)
     });
 
     UErrorCode status = U_ZERO_ERROR;
-    auto defaultSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_open(locale.utf8().data(), &status));
+    auto defaultSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_open(locale.utf8().legacyCStringPointer(), &status));
     ASSERT(U_SUCCESS(status));
     auto defaultSystemName = String::fromLatin1(unumsys_getName(defaultSystem.get()));
 
@@ -1183,7 +1183,7 @@ Vector<String> numberingSystemsForLocale(const String& locale)
 String defaultNumberingSystemForLocale(const String& dataLocale)
 {
     UErrorCode status = U_ZERO_ERROR;
-    auto defaultSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_open(dataLocale.utf8().data(), &status));
+    auto defaultSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_open(dataLocale.utf8().legacyCStringPointer(), &status));
     ASSERT(U_SUCCESS(status));
     return String::fromLatin1(unumsys_getName(defaultSystem.get()));
 }
@@ -1191,7 +1191,7 @@ String defaultNumberingSystemForLocale(const String& dataLocale)
 String defaultCalendarForLocale(const String& dataLocale)
 {
     UErrorCode status = U_ZERO_ERROR;
-    auto calendars = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_getKeywordValuesForLocale("calendar", dataLocale.utf8().data(), false, &status));
+    auto calendars = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_getKeywordValuesForLocale("calendar", dataLocale.utf8().legacyCStringPointer(), false, &status));
     ASSERT(U_SUCCESS(status));
     int32_t length;
     const char* name = uenum_next(calendars.get(), &length, &status);

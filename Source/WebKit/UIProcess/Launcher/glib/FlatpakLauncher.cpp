@@ -73,7 +73,7 @@ GRefPtr<GSubprocess> flatpakSpawn(GSubprocessLauncher* launcher, const WebKit::P
         if (const char* debugFilePath = g_getenv("GST_DEBUG_FILE")) {
             auto parentDir = FileSystem::parentPath(FileSystem::stringFromFileSystemRepresentation(debugFilePath));
             if (canPossiblyExposePath(parentDir)) {
-                GUniquePtr<gchar> pathArg(g_strdup_printf("--sandbox-expose-path=%s", parentDir.utf8().data()));
+                GUniquePtr<gchar> pathArg(g_strdup_printf("--sandbox-expose-path=%s", parentDir.utf8().legacyCStringPointer()));
                 flatpakArgs.append(pathArg.get());
             }
         }
@@ -83,7 +83,7 @@ GRefPtr<GSubprocess> flatpakSpawn(GSubprocessLauncher* launcher, const WebKit::P
         if (const char* dotDir = g_getenv("GST_DEBUG_DUMP_DOT_DIR")) {
             auto parentDir = FileSystem::parentPath(FileSystem::stringFromFileSystemRepresentation(dotDir));
             if (canPossiblyExposePath(parentDir)) {
-                GUniquePtr<gchar> pathArg(g_strdup_printf("--sandbox-expose-path=%s", parentDir.utf8().data()));
+                GUniquePtr<gchar> pathArg(g_strdup_printf("--sandbox-expose-path=%s", parentDir.utf8().legacyCStringPointer()));
                 flatpakArgs.append(pathArg.get());
             }
         }
@@ -100,7 +100,7 @@ GRefPtr<GSubprocess> flatpakSpawn(GSubprocessLauncher* launcher, const WebKit::P
         RELEASE_ASSERT(isInsideFlatpak());
         if (checkFlatpakPortalVersion(7)) {
             auto busName = launchOptions.extraInitializationData.get<HashTranslatorASCIILiteral>("accessibilityBusName"_s);
-            GUniquePtr<gchar> a11yOwnNameArg(g_strdup_printf("--sandbox-a11y-own-name=%s", busName.utf8().data()));
+            GUniquePtr<gchar> a11yOwnNameArg(g_strdup_printf("--sandbox-a11y-own-name=%s", busName.utf8().legacyCStringPointer()));
             flatpakArgs.append(a11yOwnNameArg.get());
         }
 #endif

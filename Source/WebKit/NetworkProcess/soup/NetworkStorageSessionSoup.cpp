@@ -92,7 +92,7 @@ void NetworkStorageSession::notifyCookie(SoupCookie* cookie, bool added)
         return;
 
     for (const auto& host : m_cookieChangeObservers.keys()) {
-        if (!soup_cookie_domain_matches(cookie, host.utf8().data()))
+        if (!soup_cookie_domain_matches(cookie, host.utf8().legacyCStringPointer()))
             continue;
 
         auto observers = m_cookieChangeObservers.getOptional(host);
@@ -256,8 +256,8 @@ void NetworkStorageSession::getCredentialFromPersistentStorage(const ProtectionS
     }
 
     GRefPtr<GHashTable> attributes = adoptGRef(secret_attributes_build(SECRET_SCHEMA_COMPAT_NETWORK,
-        "domain", realm.utf8().data(),
-        "server", protectionSpace.host().utf8().data(),
+        "domain", realm.utf8().legacyCStringPointer(),
+        "server", protectionSpace.host().utf8().legacyCStringPointer(),
         "port", protectionSpace.port(),
         "protocol", schemeFromProtectionSpaceServerType(protectionSpace.serverType()).characters(),
         "authtype", authTypeFromProtectionSpaceAuthenticationScheme(protectionSpace.authenticationScheme()).characters(),
@@ -316,8 +316,8 @@ void NetworkStorageSession::saveCredentialToPersistentStorage(const ProtectionSp
         return;
 
     GRefPtr<GHashTable> attributes = adoptGRef(secret_attributes_build(SECRET_SCHEMA_COMPAT_NETWORK,
-        "domain", realm.utf8().data(),
-        "server", protectionSpace.host().utf8().data(),
+        "domain", realm.utf8().legacyCStringPointer(),
+        "server", protectionSpace.host().utf8().legacyCStringPointer(),
         "port", protectionSpace.port(),
         "protocol", schemeFromProtectionSpaceServerType(protectionSpace.serverType()).characters(),
         "authtype", authTypeFromProtectionSpaceAuthenticationScheme(protectionSpace.authenticationScheme()).characters(),
@@ -325,7 +325,7 @@ void NetworkStorageSession::saveCredentialToPersistentStorage(const ProtectionSp
     if (!attributes)
         return;
 
-    g_hash_table_insert(attributes.get(), g_strdup("user"), g_strdup(credential.user().utf8().data()));
+    g_hash_table_insert(attributes.get(), g_strdup("user"), g_strdup(credential.user().utf8().legacyCStringPointer()));
     CString utf8Password = credential.password().utf8();
     GRefPtr<SecretValue> newSecretValue = adoptGRef(secret_value_new(utf8Password.data(), utf8Password.length(), "text/plain"));
     secret_service_store(nullptr, SECRET_SCHEMA_COMPAT_NETWORK, attributes.get(), SECRET_COLLECTION_DEFAULT, _("WebKitGTK password"),

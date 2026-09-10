@@ -83,7 +83,7 @@ Vector<String> IntlCollator::sortLocaleData(const String& locale, RelevantExtens
         keyLocaleData.append({ });
 
         UErrorCode status = U_ZERO_ERROR;
-        auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucol_getKeywordValuesForLocale("collation", locale.utf8().data(), false, &status));
+        auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucol_getKeywordValuesForLocale("collation", locale.utf8().legacyCStringPointer(), false, &status));
         if (U_SUCCESS(status)) {
             const char* pointer;
             int32_t length = 0;

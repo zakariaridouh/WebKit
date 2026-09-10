@@ -634,7 +634,7 @@ static void printTree(_WKFrameTreeNode *n, size_t indent = 0)
 static void printTree(const ExpectedFrameTree& n, size_t indent = 0)
 {
     if (auto* s = std::get_if<String>(&n.remoteOrOrigin))
-        WTFLogAlways("%s%s", indentation(indent).span().data(), s->utf8().data());
+        WTFLogAlways("%s%s", indentation(indent).span().data(), s->utf8().legacyCStringPointer());
     else
         WTFLogAlways("%s(remote)", indentation(indent).span().data());
     for (const auto& c : n.children)

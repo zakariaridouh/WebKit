@@ -173,9 +173,9 @@ void testAllExtGCOps()
 #undef TEST_EXTGC_OP
 
     TEST_ASSERT(opsTested == TOTAL_EXTGC_OPS,
-        makeString("Tested all "_s, String::number(TOTAL_EXTGC_OPS), " ExtGC ops"_s).utf8().data());
+        makeString("Tested all "_s, String::number(TOTAL_EXTGC_OPS), " ExtGC ops"_s).utf8().legacyCStringPointer());
     TEST_ASSERT(opsSucceeded == TOTAL_EXTGC_OPS,
-        makeString("All "_s, String::number(TOTAL_EXTGC_OPS), " ExtGC ops completed"_s).utf8().data());
+        makeString("All "_s, String::number(TOTAL_EXTGC_OPS), " ExtGC ops completed"_s).utf8().legacyCStringPointer());
 
     dataLogLn("  Successfully tested: ", opsSucceeded, " / ", opsTested, " ExtGC ops");
     dataLogLn("All ExtGC ops coverage testing completed");

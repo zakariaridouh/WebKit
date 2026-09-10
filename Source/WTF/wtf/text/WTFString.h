@@ -123,8 +123,9 @@ public:
     WTF_EXPORT_PRIVATE ASCIICString ascii() const;
     WTF_EXPORT_PRIVATE Latin1CString latin1() const;
 
-    // FIXME: Should return a UTF8CString, like tryGetUTF8() below already does. Blocked on the
-    // ~2900 call sites, most of which pass utf8().data() to a %s and would need characters().
+    // FIXME: Should return a UTF8CString, like tryGetUTF8() below already does. The call sites that
+    // hand the result to a %s or a C API now use legacyCStringPointer(), which keeps returning
+    // const char* once this is retyped, so the remaining work is the retype itself.
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
 
     template<typename Func>

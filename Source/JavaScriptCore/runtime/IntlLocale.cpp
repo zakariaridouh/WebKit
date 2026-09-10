@@ -960,7 +960,7 @@ JSValue IntlLocale::timeZones(JSGlobalObject* globalObject)
         return jsUndefined();
 
     UErrorCode status = U_ZERO_ERROR;
-    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, region.utf8().data(), nullptr, &status));
+    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, region.utf8().legacyCStringPointer(), nullptr, &status));
     if (!U_SUCCESS(status)) {
         throwTypeError(globalObject, scope, "invalid locale"_s);
         return { };

@@ -194,7 +194,7 @@ Vector<String> IntlDateTimeFormat::localeData(const String& locale, RelevantExte
     switch (key) {
     case RelevantExtensionKey::Ca: {
         UErrorCode status = U_ZERO_ERROR;
-        auto calendars = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_getKeywordValuesForLocale("calendar", locale.utf8().data(), false, &status));
+        auto calendars = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_getKeywordValuesForLocale("calendar", locale.utf8().legacyCStringPointer(), false, &status));
         ASSERT(U_SUCCESS(status));
 
         int32_t nameLength;

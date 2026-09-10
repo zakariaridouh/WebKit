@@ -65,7 +65,7 @@ TEST(WebKit, FetchLocalFile)
     tempFileHandle = { };
 
     URL fileURL = URL::fileURLWithFileSystemPath(tempFilePath.span());
-    RetainPtr payload = adoptNS([[NSString alloc] initWithFormat:HTML_FORMAT_STRING, fileURL.string().utf8().data()]);
+    RetainPtr payload = adoptNS([[NSString alloc] initWithFormat:HTML_FORMAT_STRING, fileURL.string().utf8().legacyCStringPointer()]);
 
     auto [fetchFilePath, fetchFileHandle] = FileSystem::openTemporaryFile("fetch"_s, ".html"_s);
     fetchFileHandle.write(String(payload.get()).span8());
@@ -163,7 +163,7 @@ TEST(WebKit, FetchLocalFileFromTempDirectory)
     tempFileHandle = { };
 
     URL fileURL = URL::fileURLWithFileSystemPath(tempFilePath);
-    RetainPtr payload = adoptNS([[NSString alloc] initWithFormat:HTML_FORMAT_STRING, fileURL.string().utf8().data()]);
+    RetainPtr payload = adoptNS([[NSString alloc] initWithFormat:HTML_FORMAT_STRING, fileURL.string().utf8().legacyCStringPointer()]);
 
     auto [fetchFilePath, fetchFileHandle] = FileSystem::openTemporaryFile("fetch"_s, ".html"_s);
     fetchFileHandle.write(String(payload.get()).span8());
@@ -226,7 +226,7 @@ TEST(WebKit, FetchCookieFile)
     String cookieFilePath = makeString(libraryRootDirectory(), "/Cookies/Cookies.binarycookies"_s);
 
     URL fileURL = URL::fileURLWithFileSystemPath(cookieFilePath);
-    RetainPtr payload = adoptNS([[NSString alloc] initWithFormat:HTML_FORMAT_STRING, fileURL.string().utf8().data()]);
+    RetainPtr payload = adoptNS([[NSString alloc] initWithFormat:HTML_FORMAT_STRING, fileURL.string().utf8().legacyCStringPointer()]);
 
     auto [fetchFilePath, fetchFileHandle] = FileSystem::openTemporaryFile("fetch"_s, ".html"_s);
     fetchFileHandle.write(String(payload.get()).span8());

@@ -141,9 +141,9 @@ void testAllUnaryOps()
 #undef TEST_UNARY_OP
 
     TEST_ASSERT(opsTested == TOTAL_UNARY_OPS,
-        makeString("Tested all "_s, String::number(TOTAL_UNARY_OPS), " unary ops"_s).utf8().data());
+        makeString("Tested all "_s, String::number(TOTAL_UNARY_OPS), " unary ops"_s).utf8().legacyCStringPointer());
     TEST_ASSERT(opsSucceeded == TOTAL_UNARY_OPS,
-        makeString("All "_s, String::number(TOTAL_UNARY_OPS), " unary ops passed strict validation"_s).utf8().data());
+        makeString("All "_s, String::number(TOTAL_UNARY_OPS), " unary ops passed strict validation"_s).utf8().legacyCStringPointer());
 
     dataLogLn("  Successfully tested with strict mapping validation: ", opsSucceeded, " / ", opsTested, " unary ops");
     dataLogLn("All unary ops coverage testing completed");

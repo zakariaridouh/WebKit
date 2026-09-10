@@ -467,9 +467,9 @@ void testAllSpecialOps()
 #undef TEST_SPECIAL_OP
 
     TEST_ASSERT(opsTested == TOTAL_SPECIAL_OPS,
-        makeString("Tested all "_s, String::number(TOTAL_SPECIAL_OPS), " special ops"_s).utf8().data());
+        makeString("Tested all "_s, String::number(TOTAL_SPECIAL_OPS), " special ops"_s).utf8().legacyCStringPointer());
     TEST_ASSERT(opsSucceeded == TOTAL_SPECIAL_OPS,
-        makeString("All "_s, String::number(TOTAL_SPECIAL_OPS), " special ops completed"_s).utf8().data());
+        makeString("All "_s, String::number(TOTAL_SPECIAL_OPS), " special ops completed"_s).utf8().legacyCStringPointer());
 
     dataLogLn("  Successfully tested: ", opsSucceeded, " / ", opsTested, " special ops");
     dataLogLn("All special ops coverage testing completed");

@@ -116,11 +116,11 @@ static void testWASMVirtualAddressEncoding()
         uint32_t decodedOffset = encoded.offset();
 
         TEST_ASSERT(decodedType == test.type,
-            makeString("Address encoding/decoding type mismatch for "_s, String::fromLatin1(test.description)).utf8().data());
+            makeString("Address encoding/decoding type mismatch for "_s, String::fromLatin1(test.description)).utf8().legacyCStringPointer());
         TEST_ASSERT(decodedId == test.moduleId,
-            makeString("Address encoding/decoding ID mismatch for "_s, String::fromLatin1(test.description)).utf8().data());
+            makeString("Address encoding/decoding ID mismatch for "_s, String::fromLatin1(test.description)).utf8().legacyCStringPointer());
         TEST_ASSERT(decodedOffset == test.offset,
-            makeString("Address encoding/decoding offset mismatch for "_s, String::fromLatin1(test.description)).utf8().data());
+            makeString("Address encoding/decoding offset mismatch for "_s, String::fromLatin1(test.description)).utf8().legacyCStringPointer());
     }
 
     dataLogLn("VirtualAddress encoding/decoding tests completed");
@@ -177,10 +177,10 @@ static void testWASMVirtualAddressLLDBEnumeration()
 
         if (test.shouldBeValid) {
             TEST_ASSERT(isValidType,
-                makeString("Address "_s, String::fromLatin1(test.description), " (0x"_s, hex(test.address, Lowercase), ") should decode to valid type"_s).utf8().data());
+                makeString("Address "_s, String::fromLatin1(test.description), " (0x"_s, hex(test.address, Lowercase), ") should decode to valid type"_s).utf8().legacyCStringPointer());
         } else {
             TEST_ASSERT(!isValidType,
-                makeString("Address "_s, String::fromLatin1(test.description), " (0x"_s, hex(test.address, Lowercase), ") should not decode to valid type"_s).utf8().data());
+                makeString("Address "_s, String::fromLatin1(test.description), " (0x"_s, hex(test.address, Lowercase), ") should not decode to valid type"_s).utf8().legacyCStringPointer());
         }
     }
 

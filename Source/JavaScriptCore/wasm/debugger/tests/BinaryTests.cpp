@@ -148,8 +148,8 @@ void testAllBinaryOps()
 
 #undef TEST_BINARY_OP
 
-    TEST_ASSERT(opsTested == TOTAL_BINARY_OPS, makeString("Tested all "_s, String::number(TOTAL_BINARY_OPS), " binary ops"_s).utf8().data());
-    TEST_ASSERT(opsSucceeded == TOTAL_BINARY_OPS, makeString("All "_s, String::number(TOTAL_BINARY_OPS), " binary ops passed strict validation"_s).utf8().data());
+    TEST_ASSERT(opsTested == TOTAL_BINARY_OPS, makeString("Tested all "_s, String::number(TOTAL_BINARY_OPS), " binary ops"_s).utf8().legacyCStringPointer());
+    TEST_ASSERT(opsSucceeded == TOTAL_BINARY_OPS, makeString("All "_s, String::number(TOTAL_BINARY_OPS), " binary ops passed strict validation"_s).utf8().legacyCStringPointer());
 
     dataLogLn("  Successfully tested with strict mapping validation: ", opsSucceeded, " / ", opsTested, " binary ops");
     dataLogLn("All binary ops coverage testing completed");
