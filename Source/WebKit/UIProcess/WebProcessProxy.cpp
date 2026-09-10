@@ -1607,16 +1607,17 @@ bool WebProcessProxy::handleRemoteObjectRegistryMessage(IPC::Connection& connect
         return false;
 
     WebPageProxyIdentifier pageID(decoder.destinationID());
-    if (!isAssociatedWithPage(pageID))
-        return false;
 
     RefPtr page = WebPageProxy::fromIdentifier(pageID);
     if (!page)
+        return true;
+
+    if (!isAssociatedWithPage(pageID))
         return false;
 
     RefPtr registry = page->uiRemoteObjectRegistry();
     if (!registry)
-        return false;
+        return true;
 
     registry->didReceiveMessage(connection, decoder);
     return true;

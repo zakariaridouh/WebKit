@@ -659,7 +659,7 @@ _WKRemoteObjectRegistry *WebPageProxy::remoteObjectRegistry()
 RemoteObjectRegistry* WebPageProxy::uiRemoteObjectRegistry()
 {
     if (RetainPtr registry = remoteObjectRegistry())
-        return &[registry remoteObjectRegistry];
+        return [registry remoteObjectRegistry];
     return nullptr;
 }
 
