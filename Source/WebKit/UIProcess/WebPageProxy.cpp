@@ -9157,7 +9157,7 @@ void WebPageProxy::broadcastDocumentSyncData(IPC::Connection& connection, const 
     forEachWebContentProcess([&](auto& webProcess, auto pageID) {
         if (webProcess == process)
             return;
-        webProcess.send(Messages::WebPage::TopDocumentSyncDataChangedInAnotherProcess(data), pageID);
+        webProcess.send(Messages::WebPage::TopDocumentSyncDataChangedInAnotherProcess(WebCore::DocumentSyncSerializationData { data }), pageID);
     });
 }
 
@@ -9224,7 +9224,7 @@ void WebPageProxy::broadcastFrameTreeSyncData(IPC::Connection& connection, Frame
     forEachWebContentProcess([&](auto& webProcess, auto pageID) {
         if (webProcess == process)
             return;
-        webProcess.send(Messages::WebPage::FrameTreeSyncDataChangedInAnotherProcess(frameID, data), pageID);
+        webProcess.send(Messages::WebPage::FrameTreeSyncDataChangedInAnotherProcess(frameID, WebCore::FrameTreeSyncSerializationData { data }), pageID);
     });
 }
 

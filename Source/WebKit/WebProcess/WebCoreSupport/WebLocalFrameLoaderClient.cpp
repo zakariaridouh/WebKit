@@ -1125,9 +1125,9 @@ void WebLocalFrameLoaderClient::broadcastAllFrameTreeSyncDataToOtherProcesses(Fr
     WebFrameLoaderClient::broadcastAllFrameTreeSyncDataToOtherProcesses(data);
 }
 
-void WebLocalFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(const FrameTreeSyncSerializationData& data)
+void WebLocalFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(FrameTreeSyncSerializationData&& data)
 {
-    WebFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(data);
+    WebFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(WTF::move(data));
 }
 
 void WebLocalFrameLoaderClient::didNotifyUserActivation(MonotonicTime activationTime)

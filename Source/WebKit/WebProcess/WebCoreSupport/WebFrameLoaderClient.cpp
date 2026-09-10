@@ -287,10 +287,10 @@ void WebFrameLoaderClient::broadcastAllFrameTreeSyncDataToOtherProcesses(FrameTr
         webPage->send(Messages::WebPageProxy::BroadcastAllFrameTreeSyncData(m_frame->frameID(), data));
 }
 
-void WebFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(const FrameTreeSyncSerializationData& data)
+void WebFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(FrameTreeSyncSerializationData&& data)
 {
     if (RefPtr webPage = m_frame->page())
-        webPage->send(Messages::WebPageProxy::BroadcastFrameTreeSyncData(m_frame->frameID(), data));
+        webPage->send(Messages::WebPageProxy::BroadcastFrameTreeSyncData(m_frame->frameID(), WTF::move(data)));
 }
 
 void WebFrameLoaderClient::didNotifyUserActivation(MonotonicTime activationTime)
