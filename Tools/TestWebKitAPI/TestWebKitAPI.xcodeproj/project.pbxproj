@@ -617,6 +617,7 @@
 				cocoa/JavaScriptTypes.swift,
 				cocoa/PDFTestHelpers.swift,
 				cocoa/SafeBrowsingTestUtilities.swift,
+				cocoa/MiniTURNServer.mm,
 				cocoa/StdLibExtras.swift,
 				"cocoa/SwiftUI+Extras.swift",
 				cocoa/TestCocoaImageAndCocoaColor.mm,
