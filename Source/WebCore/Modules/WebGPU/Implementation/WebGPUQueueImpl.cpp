@@ -130,25 +130,6 @@ void QueueImpl::writeTexture(
     wgpuQueueWriteTexture(m_backing.get(), &backingDestination, source, &backingDataLayout, &backingSize);
 }
 
-static WGPUColorSpace NODELETE convertToColorSpace(PredefinedColorSpace colorSpace)
-{
-    switch (colorSpace) {
-    case PredefinedColorSpace::SRGB:
-        return WGPUColorSpace::SRGB;
-    case PredefinedColorSpace::SRGBLinear:
-        return WGPUColorSpace::SRGBLinear;
-#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
-    case PredefinedColorSpace::DisplayP3:
-        return WGPUColorSpace::DisplayP3;
-    case PredefinedColorSpace::DisplayP3Linear:
-        return WGPUColorSpace::DisplayP3Linear;
-#endif
-    }
-
-    ASSERT_NOT_REACHED();
-    return WGPUColorSpace::SRGB;
-}
-
 #if ENABLE(VIDEO) && PLATFORM(COCOA)
 static WGPUVideoFrameRotation NODELETE convertToVideoFrameRotation(VideoFrameRotation rotation)
 {
@@ -279,6 +260,24 @@ void QueueImpl::copyExternalImageToTexture(
         backingSource.hasAlpha = sourceFormat->hasAlpha;
         backingSource.colorSpace = sourceImageBuffer->colorSpace() == ColorSpace::DisplayP3() ? WGPUColorSpace::DisplayP3 : WGPUColorSpace::SRGB;
     }
+
+    auto convertToColorSpace = [] (PredefinedColorSpace colorSpace) {
+        switch (colorSpace) {
+        case PredefinedColorSpace::SRGB:
+            return WGPUColorSpace::SRGB;
+        case PredefinedColorSpace::SRGBLinear:
+            return WGPUColorSpace::SRGBLinear;
+#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3)
+        case PredefinedColorSpace::DisplayP3:
+            return WGPUColorSpace::DisplayP3;
+        case PredefinedColorSpace::DisplayP3Linear:
+            return WGPUColorSpace::DisplayP3Linear;
+#endif
+        }
+
+        ASSERT_NOT_REACHED();
+        return WGPUColorSpace::SRGB;
+    };
 
     WGPUImageCopyTextureTagged backingDestination {
         .texture = convertToBackingContext->convertToBacking(protect(destination.texture)),
