@@ -174,13 +174,14 @@ inline ThreadLikeAssertion ThreadLike::createThreadLikeAssertion(uint32_t uid)
 // WTF_GUARDED_BY_LOCK() as usual, and call assertIsOwnerThread() on the unlocked read path:
 //
 // struct MyClass {
-//     Element* element() const { assertIsOwnerThread(m_lock, mainThreadLike); return m_element.get(); }
+//     Element* element() const { assertIsOwnerThread(); return m_element.get(); }
 //     void setElement(Element* element) { Locker locker { m_lock }; m_element = element; }
 //     // Runs on another thread, so it must lock even though it only reads.
 //     void visit(Visitor& visitor) const { Locker locker { m_lock }; visitor.append(m_element); }
 // private:
 //     mutable Lock m_lock;
 //     RefPtr<Element> m_element WTF_GUARDED_BY_LOCK(m_lock);
+//     WTF_DECLARE_OWNER_THREAD_ASSERTIONS(m_lock, mainThreadLike);
 // };
 //
 // The owner may be given as mainThreadLike, or as a ThreadLikeAssertion member for state owned by

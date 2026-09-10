@@ -92,7 +92,7 @@ public:
     String type() const override { return "text/xml"_s; }
     bool disabled() const override { return m_isDisabled; }
     void setDisabled(bool b) override { m_isDisabled = b; }
-    Node* ownerNode() const override { assertIsOwnerThread(m_opaqueRootLockForGC, mainThreadLike); return m_ownerNode.get(); }
+    Node* ownerNode() const override { assertIsOwnerThread(); return m_ownerNode.get(); }
     String href() const override { return m_originalURL; }
     String title() const override { return { }; }
 
@@ -114,6 +114,7 @@ private:
     // Only mutated on the main thread while holding m_opaqueRootLockForGC, so main-thread reads
     // use assertIsOwnerThread() instead of locking; the GC thread must lock even to read.
     CheckedPtr<Node> m_ownerNode WTF_GUARDED_BY_LOCK(m_opaqueRootLockForGC);
+    WTF_DECLARE_OWNER_THREAD_ASSERTIONS(m_opaqueRootLockForGC, mainThreadLike);
     String m_originalURL;
     URL m_finalURL;
     bool m_isDisabled { false };

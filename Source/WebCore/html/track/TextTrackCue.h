@@ -40,6 +40,7 @@
 #include <wtf/JSONValues.h>
 #include <wtf/Lock.h>
 #include <wtf/MediaTime.h>
+#include <wtf/ThreadAssertions.h>
 
 namespace JSC {
 
@@ -178,6 +179,7 @@ private:
     // Only mutated on the main thread while holding m_trackLockForGC, so main-thread reads use
     // assertIsOwnerThread() instead of locking; the GC thread must lock even to read.
     CheckedPtr<TextTrack> m_track WTF_GUARDED_BY_LOCK(m_trackLockForGC);
+    WTF_DECLARE_OWNER_THREAD_ASSERTIONS(m_trackLockForGC, mainThreadLike);
 
     const RefPtr<DocumentFragment> m_cueNode;
     const RefPtr<TextTrackCueBox> m_displayTree;

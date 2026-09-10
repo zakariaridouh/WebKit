@@ -45,8 +45,8 @@ public:
         return adoptRef(*new TreeWalker(rootNode, whatToShow, WTF::move(filter)));
     }                            
 
-    Node& currentNode() { assertIsOwnerThread(m_currentLock, mainThreadLike); return m_current.get(); }
-    const Node& currentNode() const { assertIsOwnerThread(m_currentLock, mainThreadLike); return m_current.get(); }
+    Node& currentNode() { assertIsOwnerThread(); return m_current.get(); }
+    const Node& currentNode() const { assertIsOwnerThread(); return m_current.get(); }
 
     WebCoreOpaqueRoot opaqueRootForCurrentNodeInGCThread() const;
 
@@ -72,6 +72,7 @@ private:
     // Only mutated on the main thread while holding m_currentLock, so main-thread reads use
     // assertIsOwnerThread() instead of locking; the GC thread must lock even to read.
     Ref<Node> m_current WTF_GUARDED_BY_LOCK(m_currentLock);
+    WTF_DECLARE_OWNER_THREAD_ASSERTIONS(m_currentLock, mainThreadLike);
 };
 
 } // namespace WebCore

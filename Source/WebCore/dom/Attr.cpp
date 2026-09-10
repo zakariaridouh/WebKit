@@ -88,7 +88,7 @@ Attr::~Attr()
 
 ExceptionOr<void> Attr::setValue(const AtomString& value)
 {
-    assertIsOwnerThread(m_elementLockForGC, mainThreadLike);
+    assertIsOwnerThread();
     if (RefPtr element = m_element.get()) {
         auto verifiedValue = value;
         if (protect(document())->contextDocument().requiresTrustedTypes()) {
@@ -136,7 +136,7 @@ CSSStyleProperties* Attr::style()
 {
     // This is not part of the DOM API, and therefore not available to webpages. However, WebKit SPI
     // lets clients use this via the Objective-C and JavaScript bindings.
-    assertIsOwnerThread(m_elementLockForGC, mainThreadLike);
+    assertIsOwnerThread();
     RefPtr styledElement = dynamicDowncast<StyledElement>(m_element.get());
     if (!styledElement)
         return nullptr;
@@ -148,7 +148,7 @@ CSSStyleProperties* Attr::style()
 
 AtomString Attr::value() const
 {
-    assertIsOwnerThread(m_elementLockForGC, mainThreadLike);
+    assertIsOwnerThread();
     if (RefPtr element = m_element.get())
         return element->getAttributeForBindings(qualifiedName());
     return m_standaloneValue;

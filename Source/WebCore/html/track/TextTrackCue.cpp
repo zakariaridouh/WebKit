@@ -275,7 +275,7 @@ void TextTrackCue::didChange(bool affectOrder)
 
 TextTrack* TextTrackCue::track() const
 {
-    assertIsOwnerThread(m_trackLockForGC, mainThreadLike);
+    assertIsOwnerThread();
     return m_track.get();
 }
 

@@ -183,7 +183,7 @@ CSSStyleSheet::~CSSStyleSheet()
 
 Node* CSSStyleSheet::ownerNode() const
 {
-    assertIsOwnerThread(m_opaqueRootLockForGC, mainThreadLike);
+    assertIsOwnerThread();
     return m_ownerNode.get();
 }
 
@@ -592,7 +592,7 @@ ExceptionOr<void> CSSStyleSheet::replaceSync(String&& text)
 
 bool CSSStyleSheet::isDetached() const
 {
-    assertIsOwnerThread(m_opaqueRootLockForGC, mainThreadLike);
+    assertIsOwnerThread();
     return !m_ownerNode
         && !m_ownerRule
         && m_adoptingTreeScopes.isEmptyIgnoringNullReferences();

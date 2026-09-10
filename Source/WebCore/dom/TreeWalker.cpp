@@ -62,7 +62,7 @@ inline Node* TreeWalker::setCurrent(Ref<Node>&& node)
 
 ExceptionOr<Node*> TreeWalker::parentNode()
 {
-    assertIsOwnerThread(m_currentLock, mainThreadLike);
+    assertIsOwnerThread();
     RefPtr node = m_current.ptr();
     while (node != &root()) {
         node = node->parentNode();
@@ -81,7 +81,7 @@ ExceptionOr<Node*> TreeWalker::parentNode()
 
 ExceptionOr<Node*> TreeWalker::firstChild()
 {
-    assertIsOwnerThread(m_currentLock, mainThreadLike);
+    assertIsOwnerThread();
     for (RefPtr node = m_current->firstChild(); node; ) {
         auto filterResult = acceptNode(*node);
         if (filterResult.hasException())
@@ -115,7 +115,7 @@ ExceptionOr<Node*> TreeWalker::firstChild()
 
 ExceptionOr<Node*> TreeWalker::lastChild()
 {
-    assertIsOwnerThread(m_currentLock, mainThreadLike);
+    assertIsOwnerThread();
     for (RefPtr node = m_current->lastChild(); node; ) {
         auto filterResult = acceptNode(*node);
         if (filterResult.hasException())
@@ -149,7 +149,7 @@ ExceptionOr<Node*> TreeWalker::lastChild()
 
 template<TreeWalker::SiblingTraversalType type> ExceptionOr<Node*> TreeWalker::traverseSiblings()
 {
-    assertIsOwnerThread(m_currentLock, mainThreadLike);
+    assertIsOwnerThread();
     RefPtr node = m_current.ptr();
     if (node == &root())
         return nullptr;
@@ -193,7 +193,7 @@ ExceptionOr<Node*> TreeWalker::nextSibling()
 
 ExceptionOr<Node*> TreeWalker::previousNode()
 {
-    assertIsOwnerThread(m_currentLock, mainThreadLike);
+    assertIsOwnerThread();
     if (!filter()) {
         if (m_current.ptr() == &root())
             return nullptr;
@@ -250,7 +250,7 @@ ExceptionOr<Node*> TreeWalker::previousNode()
 
 ExceptionOr<Node*> TreeWalker::nextNode()
 {
-    assertIsOwnerThread(m_currentLock, mainThreadLike);
+    assertIsOwnerThread();
     if (!filter()) {
         for (RefPtr node = NodeTraversal::next(m_current, &root()); node; node = NodeTraversal::next(*node, &root())) {
             if (matchesWhatToShow(*node))

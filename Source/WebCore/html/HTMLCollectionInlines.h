@@ -111,7 +111,7 @@ inline void HTMLCollection::invalidateCache()
 
 inline bool HTMLCollection::hasNamedElementCache() const
 {
-    assertIsOwnerThread(m_namedElementCacheAssignmentLock, mainThreadLike);
+    assertIsOwnerThread();
     return !!m_namedElementCache;
 }
 
@@ -129,7 +129,7 @@ inline void HTMLCollection::setNamedItemCache(std::unique_ptr<CollectionNamedEle
 
 inline const CollectionNamedElementCache& HTMLCollection::namedItemCaches() const LIFETIME_BOUND
 {
-    assertIsOwnerThread(m_namedElementCacheAssignmentLock, mainThreadLike);
+    assertIsOwnerThread();
     ASSERT(!!m_namedElementCache);
     return *m_namedElementCache;
 }
