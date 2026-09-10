@@ -39,13 +39,13 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(IsoSubspace);
 IsoSubspace::IsoSubspace(CString name, JSC::Heap& heap, const HeapCellType& heapCellType, size_t size, uint8_t numberOfLowerTierPreciseCells, std::unique_ptr<AlignedMemoryAllocator>&& allocator)
     : Subspace(SubspaceKind::IsoSubspace, name, heap)
     , m_directory(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size))
-    , m_allocator(WTF::move(allocator))
+    , m_allocator(allocator ? WTF::move(allocator) : makeUnique<FastMallocAlignedMemoryAllocator>())
 {
     m_remainingLowerTierPreciseCount = numberOfLowerTierPreciseCells;
     ASSERT(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size) == cellSize());
     ASSERT(m_remainingLowerTierPreciseCount <= MarkedBlock::maxNumberOfLowerTierPreciseCells);
 
-    initialize(heapCellType, m_allocator ? m_allocator.get() : heap.fastMallocAllocator.get());
+    initialize(heapCellType, m_allocator.get());
 
     Locker locker { m_space.directoryLock() };
     m_directory.setSubspace(this);
