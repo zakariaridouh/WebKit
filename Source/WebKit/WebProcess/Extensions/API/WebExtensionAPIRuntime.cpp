@@ -30,6 +30,7 @@
 
 #if ENABLE(WK_WEB_EXTENSIONS)
 
+#include "MessageSenderInlines.h"
 #include "WebExtensionAPIKeys.h"
 #include "WebExtensionAPINamespace.h"
 #include "WebExtensionAPIPort.h"
