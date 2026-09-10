@@ -561,7 +561,6 @@ static WeakListHashSet<WebPageProxy>& NODELETE leastRecentlyHiddenPages()
 static bool shouldUseEnhancedSecurityHeuristics(const Ref<WebPreferences>& preferences)
 {
     return preferences->enhancedSecurityHeuristicsEnabled()
-        && !preferences->siteIsolationEnabled()
         && !preferences->enhancedSecurityForceDisabled();
 }
 
@@ -10764,6 +10763,31 @@ void WebPageProxy::triggerBrowsingContextGroupSwitchForNavigation(WebCore::Navig
     performProcessSwapForNavigationResponse(*navigation, m_browsingContextGroup.copyRef(), WTF::move(processForNavigation), WebCore::ProcessSwapDisposition::COOP, existingNetworkResourceLoadIdentifierToResume, originalNavigationStartTime, WTF::move(completionHandler));
 }
 
+// A Site maps to at most one FrameProcess in a BrowsingContextGroup. Moving a site into an enhanced
+// security process is therefore only possible when the process it uses now is used solely by the frame
+// this navigation replaces, so that process is gone by the time the navigation commits. Anything else
+// still using it - a frame in another page of this browsing context group, or the other sites in the
+// shared process - would be stranded in a process the site no longer maps to.
+static bool canMoveSiteToEnhancedSecurityProcess(BrowsingContextGroup& browsingContextGroup, const Site& site, WebFrameProxy* mainFrame, ProvisionalPageProxy* provisionalPage)
+{
+    RefPtr existingFrameProcess = browsingContextGroup.processForSite(site);
+    if (!existingFrameProcess)
+        return true;
+
+    if (existingFrameProcess->isSharedProcess())
+        return false;
+
+    if (!existingFrameProcess->frameCount())
+        return true;
+    if (existingFrameProcess->frameCount() > 1)
+        return false;
+
+    auto usesExistingFrameProcess = [&](WebFrameProxy* frame) {
+        return frame && &frame->frameProcess() == existingFrameProcess.get();
+    };
+    return usesExistingFrameProcess(mainFrame) || usesExistingFrameProcess(provisionalPage ? provisionalPage->mainFrame() : nullptr);
+}
+
 void WebPageProxy::triggerProcessSwapForEnhancedSecurity(WebCore::NavigationIdentifier navigationID, const Site& responseSite, NetworkResourceLoadIdentifier existingNetworkResourceLoadIdentifierToResume, MonotonicTime originalNavigationStartTime, CompletionHandler<void(bool success)>&& completionHandler)
 {
     RefPtr navigation = m_navigationState->navigation(navigationID);
@@ -10776,13 +10800,19 @@ void WebPageProxy::triggerProcessSwapForEnhancedSecurity(WebCore::NavigationIden
         || !internals().enhancedSecurityTracker.shouldEnableForInsecureResponse(*navigation, hasOpenedPage()))
         return completionHandler(false);
 
-    internals().enhancedSecurityTracker.enableFor(EnhancedSecurityReason::InsecureProvisional, *navigation);
-
     Ref browsingContextGroupForSwap = (m_provisionalPage && m_provisionalPage->navigationID() == navigationID)
         ? Ref { m_provisionalPage->browsingContextGroup() }
         : m_browsingContextGroup.copyRef();
 
     RefPtr provisionalPage = m_provisionalPage;
+
+    if (!canMoveSiteToEnhancedSecurityProcess(browsingContextGroupForSwap, responseSite, m_mainFrame.get(), provisionalPage.get())) {
+        WEBPAGEPROXY_RELEASE_LOG(ProcessSwapping, "triggerProcessSwapForEnhancedSecurity: declining swap because the site's process is used by frames that outlive this navigation");
+        return completionHandler(false);
+    }
+
+    internals().enhancedSecurityTracker.enableFor(EnhancedSecurityReason::InsecureProvisional, *navigation);
+
     auto lockdownMode = provisionalPage ? provisionalPage->process().lockdownMode() : m_legacyMainFrameProcess->lockdownMode();
 
     Ref processForNavigation = protect(m_configuration->processPool())->processForSite(protect(websiteDataStore()), WebProcessProxy::IsolatedProcessType::MainFrame, responseSite, responseSite, lockdownMode, EnhancedSecurity::EnabledInsecure, m_configuration, WebCore::ProcessSwapDisposition::None);
