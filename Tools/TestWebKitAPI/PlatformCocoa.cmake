@@ -88,6 +88,8 @@ set(TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 list(APPEND TestWTF_SOURCES
     Helpers/cocoa/UtilitiesCocoa.mm
 
+    Tests/WTF/bmalloc/MAR.cpp
+
     Tests/WTF/cf/RetainPtr.cpp
     Tests/WTF/cf/RetainPtrHashing.cpp
     Tests/WTF/cf/RetainRef.cpp
@@ -156,18 +158,21 @@ list(APPEND TestWebCore_SOURCES
     Tests/WebCore/HysteresisActivityTests.cpp
     Tests/WebCore/ISOBox.cpp
     Tests/WebCore/Logging.cpp
+    Tests/WebCore/MarkedText.cpp
     Tests/WebCore/PlatformCAAnimationKeyPath.cpp
     Tests/WebCore/StringUtilities.mm
     Tests/WebCore/TextBoundaries.cpp
     Tests/WebCore/UserAgentStringParser.cpp
     Tests/WebCore/YouTubePluginReplacement.cpp
 
+    Tests/WebCore/cocoa/AVFoundationSoftLinkTest.mm
     Tests/WebCore/cocoa/AttributedStringFontCache.mm
     Tests/WebCore/cocoa/AudioStreamDescriptionCocoa.mm
     Tests/WebCore/cocoa/AudioVideoRendererAVFObjCTests.mm
     Tests/WebCore/cocoa/BifurcatedGraphicsContextTestsCG.cpp
     Tests/WebCore/cocoa/CaptionPreferencesTests.mm
     Tests/WebCore/cocoa/CoreMediaUtilities.mm
+    Tests/WebCore/cocoa/DatabaseTrackerTest.mm
     Tests/WebCore/cocoa/GraphicsContextCGTests.mm
     Tests/WebCore/cocoa/H264UtilitiesCocoaTests.mm
     Tests/WebCore/cocoa/IOSurfacePoolTests.cpp
@@ -198,6 +203,7 @@ list(APPEND TestWebCore_LIBRARIES
 list(APPEND TestWebKitLegacy_SOURCES
     Helpers/cocoa/TestNSBundleExtras.m
 
+    Tests/WebKitLegacy/cocoa/SubstituteDataLocalResourceAccess.mm
     Tests/WebKitLegacy/cocoa/WebPreferencesTest.mm
 
     Tests/WebKitLegacy/mac/AccessingPastedImage.mm
@@ -329,6 +335,7 @@ list(APPEND TestWebKit_SOURCES
     Tests/WebKit/WKPage/cocoa/GetBackingScaleFactor.mm
     Tests/WebKit/WKPage/cocoa/GetPIDAfterAbortedProcessLaunch.cpp
     Tests/WebKit/WKPage/cocoa/InjectedBundleAppleEvent.cpp
+    Tests/WebKit/WKPage/cocoa/LocalizedDeviceModel.mm
     Tests/WebKit/WKPage/cocoa/LogForwarding.mm
     Tests/WebKit/WKPage/cocoa/MediaSessionCoordinatorTest.mm
     Tests/WebKit/WKPage/cocoa/MobileAssetSandboxCheck.mm
@@ -344,6 +351,7 @@ list(APPEND TestWebKit_SOURCES
     Tests/WebKit/WKPage/cocoa/SyscallUnixSandboxCheck.mm
     Tests/WebKit/WKPage/cocoa/SystemBeep.mm
     Tests/WebKit/WKPage/cocoa/WeakObjCPtr.mm
+    Tests/WebKit/WKPage/cocoa/WebFilter.mm
     Tests/WebKit/WKPage/cocoa/XPCEndpoint.mm
 
     Tests/WebKit/WKPage/mac/CustomProtocolsSyncXHRTest.mm
@@ -581,6 +589,7 @@ target_sources(TestWebKitAPIInjectedBundle PRIVATE
     # CustomBundleObject.mm is also in TestWebKit; both targets compile it.
     ${TESTWEBKITAPI_DIR}/Tests/WebKit/WKPage/cocoa/CustomBundleObject.mm
     ${TESTWEBKITAPI_DIR}/Tests/WebKit/WKPage/cocoa/CustomBundleParameter_Bundle.mm
+    ${TESTWEBKITAPI_DIR}/Tests/WebKit/WKPage/cocoa/EnableAccessibilityInWebProcess_Bundle.mm
     ${TESTWEBKITAPI_DIR}/Tests/WebKit/WKPage/cocoa/ForceLightAppearanceInBundle_Bundle.mm
     ${TESTWEBKITAPI_DIR}/Tests/WebKit/WKPage/cocoa/GetBackingScaleFactor_Bundle.mm
     ${TESTWEBKITAPI_DIR}/Tests/InjectInternals_Bundle.cpp
