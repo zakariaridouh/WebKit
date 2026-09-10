@@ -458,8 +458,6 @@ void RegExp::deleteCode()
         return;
     m_state = NotCompiled;
     m_minimumSize = 0;
-    m_atom = String();
-    m_specificPattern = Yarr::SpecificPattern::None;
 #if ENABLE(YARR_JIT)
     if (m_regExpJITCode)
         m_regExpJITCode->clear(locker);
