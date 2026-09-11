@@ -68,7 +68,7 @@ void BreakpointManager::releasePatchIfUnused(uint8_t* pc)
 {
     auto it = m_breakpoints.find(pc);
     RELEASE_ASSERT(it != m_breakpoints.end());
-    if (it->value->hasSite || m_oneTimeBreakpoints.contains(pc))
+    if (it->value->siteCount || m_oneTimeBreakpoints.contains(pc))
         return;
 
     dataLogLnIf(Options::verboseWasmDebugger(), "[BreakpointManager] Restoring ", it->value);
@@ -83,42 +83,78 @@ void BreakpointManager::setStepBreakpoint(const ModuleInformation& owner, uint8_
     m_oneTimeBreakpoints.add(pc);
 }
 
+RefPtr<Breakpoint> BreakpointManager::breakpointAt(const uint8_t* pc)
+{
+    Locker locker { m_lock };
+    return m_breakpoints.get(const_cast<uint8_t*>(pc));
+}
+
 void BreakpointManager::setBreakpointAt(VirtualAddress address, const ModuleInformation& owner, uint8_t* pc)
 {
     Locker locker { m_lock };
-    // Re-arming an existing site is a no-op.
+    // Re-arming an existing site is a no-op. An address names one instance's view of one byte and
+    // IDs are never reused, so it always resolves to this pc.
     auto result = m_addressToPC.add(address, pc);
     if (!result.isNewEntry) {
         RELEASE_ASSERT(result.iterator->value == pc);
         return;
     }
-    ensurePatched(owner, pc).hasSite = true;
+    ensurePatched(owner, pc).siteCount++;
 }
 
-bool BreakpointManager::removeBreakpointAt(VirtualAddress address)
+bool BreakpointManager::removeSiteImpl(VirtualAddress address)
 {
-    Locker locker { m_lock };
+    // Resolved from the address LLDB installed the site through rather than from a live instance:
+    // the bytecode outlives the instance that named it.
     uint8_t* pc = m_addressToPC.take(address);
     if (!pc)
         return false;
 
     auto it = m_breakpoints.find(pc);
     RELEASE_ASSERT(it != m_breakpoints.end());
-    it->value->hasSite = false;
+    // Sibling instances hold their own sites on the same byte, so the patch outlives every
+    // removal but the last.
+    RELEASE_ASSERT(it->value->siteCount);
+    it->value->siteCount--;
     releasePatchIfUnused(pc);
     return true;
 }
 
-std::optional<BreakpointManager::TrapAction> BreakpointManager::trapActionFor(uint8_t* pc)
+bool BreakpointManager::removeBreakpointAt(VirtualAddress address)
 {
     Locker locker { m_lock };
-    auto it = m_breakpoints.find(pc);
+    return removeSiteImpl(address);
+}
+
+void BreakpointManager::removeSitesForInstance(uint32_t instanceId)
+{
+    Locker locker { m_lock };
+    Vector<VirtualAddress> staleSites;
+    for (const auto& pair : m_addressToPC) {
+        if (pair.key.instanceId() == instanceId)
+            staleSites.append(pair.key);
+    }
+    for (VirtualAddress address : staleSites) {
+        dataLogLnIf(Options::verboseWasmDebugger(), "[BreakpointManager] Dropping site ", address, " of collected instance ", instanceId);
+        removeSiteImpl(address);
+    }
+}
+
+std::optional<BreakpointManager::TrapAction> BreakpointManager::trapActionFor(const uint8_t* pc, VirtualAddress hitAddress)
+{
+    Locker locker { m_lock };
+    auto it = m_breakpoints.find(const_cast<uint8_t*>(pc));
     if (it == m_breakpoints.end())
         return std::nullopt;
 
-    // A breakpoint site takes precedence over a step.
-    Breakpoint::Type stopType = it->value->hasSite ? Breakpoint::Type::Regular : Breakpoint::Type::Step;
-    return TrapAction { static_cast<OpType>(it->value->originalBytecode), stopType };
+    TrapAction action { static_cast<OpType>(it->value->originalBytecode), std::nullopt };
+    // A site names one instance; a sibling sharing the patched byte has no breakpoint here. A
+    // site wins over a step at the same byte, so a step never masks a user breakpoint's reason.
+    if (m_addressToPC.get(hitAddress) == pc)
+        action.stopType = Breakpoint::Type::Regular;
+    else if (m_oneTimeBreakpoints.contains(const_cast<uint8_t*>(pc)))
+        action.stopType = Breakpoint::Type::Step;
+    return action;
 }
 
 void BreakpointManager::clearAllOneTimeBreakpoints()

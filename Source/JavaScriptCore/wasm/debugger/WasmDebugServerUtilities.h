@@ -100,9 +100,11 @@ private:
 class Breakpoint final : public ThreadSafeRefCounted<Breakpoint> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(Breakpoint, JS_EXPORT_PRIVATE);
 public:
+    // Why a stop happened, which is a property of the hit rather than of the patched byte: one
+    // byte can carry both an LLDB site and a step at once.
     enum class Type : uint8_t {
-        Regular = 0,
-        Step = 1,
+        Regular = 0, // A site LLDB installed (Z0), reported as reason:breakpoint.
+        Step = 1, // A one-time breakpoint serving a step, reported as reason:trace.
     };
 
     static Ref<Breakpoint> create(const ModuleInformation& owner, uint8_t* pc)
@@ -118,14 +120,15 @@ public:
         out.print("Breakpoint(pc:", RawPointer(pc));
         out.print(", *pc:", (int)*pc);
         out.print(", originalBytecode:", originalBytecode);
-        out.print(", hasSite:", hasSite, ")");
+        out.print(", siteCount:", siteCount, ")");
     }
 
     // Keeps the bytecode buffer alive.
     RefPtr<const ModuleInformation> owner;
     uint8_t* pc { nullptr };
     uint8_t originalBytecode { 0 };
-    bool hasSite { false };
+    // LLDB sites referring to this byte, one per instance. The patch outlives all of them.
+    unsigned siteCount { 0 };
 
 private:
     Breakpoint(const ModuleInformation& owner, uint8_t* pc)

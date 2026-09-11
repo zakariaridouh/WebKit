@@ -84,7 +84,7 @@ public:
     JS_EXPORT_PRIVATE void resume();
     JS_EXPORT_PRIVATE void step();
     JS_EXPORT_PRIVATE void interrupt();
-    void notifyDebuggerOfNewModule(VM&);
+    void notifyDebuggerOfNewInstance(VM&);
     void handleThreadStopInfo(StringView packet);
     String callStackStringFor(uint64_t threadId);
     JS_EXPORT_PRIVATE void reset();
