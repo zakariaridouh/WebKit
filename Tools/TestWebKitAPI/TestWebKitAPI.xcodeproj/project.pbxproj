@@ -590,6 +590,7 @@
 				WebKit/WebPage/WebViewTests.swift,
 				WebKit/WKWebView/CodingTests.swift,
 				WebKit/WKWebView/TextFragments.swift,
+				WebKit/WKWebView/WKWebExtensionAPIAction.swift,
 				WebKit/WKWebView/WKWebViewSwiftOverlayTests.swift,
 			);
 			target = 8DD76F960486AA7600D96B5E /* TestWebKitAPI */;

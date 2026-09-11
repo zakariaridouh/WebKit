@@ -662,6 +662,7 @@ webkit_target_add_swift_options(TestWebKitAPILibrary
 list(APPEND TestWebKit_SOURCES
     Tests/WebKit/WKWebView/CodingTests.swift
     Tests/WebKit/WKWebView/TextFragments.swift
+    Tests/WebKit/WKWebView/WKWebExtensionAPIAction.swift
     Tests/WebKit/WKWebView/WKWebViewSwiftOverlayTests.swift
 
     Tests/WebKit/WebPage/ControlledByExternalAgent.swift
