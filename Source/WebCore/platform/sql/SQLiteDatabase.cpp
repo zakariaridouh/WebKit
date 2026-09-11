@@ -802,9 +802,9 @@ static std::expected<sqlite3_stmt*, int> constructAndPrepareStatement(SQLiteData
 std::unique_ptr<SQLiteStatement> SQLiteDatabase::prepareStatementSlow(StringView queryString)
 {
     auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>).utf8();
-    auto sqlStatement = constructAndPrepareStatement(*this, query.spanIncludingNullTerminator());
+    auto sqlStatement = constructAndPrepareStatement(*this, byteCast<char>(query.spanIncludingNullTerminator()));
     if (!sqlStatement) {
-        RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.data());
+        RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.legacyCStringPointer());
         return nullptr;
     }
     return std::unique_ptr<SQLiteStatement>(new SQLiteStatement(*this, sqlStatement.value()));

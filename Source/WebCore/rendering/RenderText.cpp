@@ -252,13 +252,13 @@ static size_t capitalizeWordWithLocale(StringView textContent, unsigned startOff
 
     Vector<char16_t, 32> titlecased(wordLength + 4);
     UErrorCode status = U_ZERO_ERROR;
-    auto realLength = u_strToTitle(titlecased.mutableSpan().data(), titlecased.size(), wordData, wordLength, nullptr, localeUTF8.data(), &status);
+    auto realLength = u_strToTitle(titlecased.mutableSpan().data(), titlecased.size(), wordData, wordLength, nullptr, localeUTF8.legacyCStringPointer(), &status);
     if (U_FAILURE(status)) {
         if (status != U_BUFFER_OVERFLOW_ERROR)
             return 0;
         titlecased.grow(realLength);
         status = U_ZERO_ERROR;
-        u_strToTitle(titlecased.mutableSpan().data(), titlecased.size(), wordData, wordLength, nullptr, localeUTF8.data(), &status);
+        u_strToTitle(titlecased.mutableSpan().data(), titlecased.size(), wordData, wordLength, nullptr, localeUTF8.legacyCStringPointer(), &status);
         if (U_FAILURE(status))
             return 0;
     }

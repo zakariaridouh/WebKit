@@ -1669,7 +1669,7 @@ bool XMLDocumentParser::appendFragmentSource(const String& chunk)
     ASSERT(!m_context);
     ASSERT(m_parsingFragment);
 
-    CString chunkAsUTF8 = chunk.utf8();
+    auto chunkAsUTF8 = chunk.utf8();
     
     // libxml2 takes an int for a length, and therefore can't handle XML chunks larger than 2 GiB.
     if (chunkAsUTF8.length() > INT_MAX)

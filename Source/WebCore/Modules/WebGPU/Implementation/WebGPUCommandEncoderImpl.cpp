@@ -113,7 +113,7 @@ RefPtr<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDe
 
     WGPURenderPassDescriptor backingDescriptor {
         .maxDrawCount = descriptor.maxDrawCount.value_or(UINT64_MAX),
-        .label = label.data(),
+        .label = label.legacyCStringPointer(),
         .colorAttachmentCount = colorAttachments.size(),
         .colorAttachments = colorAttachments.size() ? colorAttachments.span().data() : nullptr,
         .depthStencilAttachment = depthStencilAttachment ? &depthStencilAttachment.value() : nullptr,

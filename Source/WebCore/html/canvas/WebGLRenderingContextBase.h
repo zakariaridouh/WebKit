@@ -467,7 +467,7 @@ public:
 
     // GraphicsContextGL::Client
     void forceContextLost() final;
-    void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const CString&) final;
+    void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const UTF8CString&) final;
     void didChangeMemoryCost() final;
 
     void recycleContext();

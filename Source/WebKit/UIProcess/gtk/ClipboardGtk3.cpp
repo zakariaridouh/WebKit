@@ -223,7 +223,7 @@ void Clipboard::write(WebCore::SelectionData&& selectionData, CompletionHandler<
             auto& data = *static_cast<WriteAsyncData*>(userData);
             switch (info) {
             case ClipboardTargetType::Markup: {
-                CString markup = data.selectionData.markup().utf8();
+                auto markup = data.selectionData.markup().utf8();
                 gtk_selection_data_set(selection, gdk_atom_intern_static_string("text/html"), 8, reinterpret_cast<const guchar*>(markup.data()), markup.length());
                 break;
             }
@@ -238,7 +238,7 @@ void Clipboard::write(WebCore::SelectionData&& selectionData, CompletionHandler<
                 break;
             }
             case ClipboardTargetType::URIList: {
-                CString uriList = data.selectionData.uriList().utf8();
+                auto uriList = data.selectionData.uriList().utf8();
                 gtk_selection_data_set(selection, gdk_atom_intern_static_string("text/uri-list"), 8, reinterpret_cast<const guchar*>(uriList.data()), uriList.length());
                 break;
             }

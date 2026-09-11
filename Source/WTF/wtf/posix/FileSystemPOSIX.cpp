@@ -179,20 +179,15 @@ std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView su
     // This is OK for now since the code using it is built on macOS only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
 
-    const auto temporaryDirectoryUtf8 = temporaryDirectory.utf8();
-    IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage-in-libc-call")
-    const char* directory = !temporaryDirectory.isEmpty() ? temporaryDirectoryUtf8.data() : temporaryFileDirectory();
-    CString prefixUTF8 = prefix.utf8();
-    size_t length = strlen(directory) + 1 + prefixUTF8.length() + 1 + 6 + 1;
-    auto buffer = MallocSpan<char>::malloc(length);
-    snprintf(buffer.mutableSpan().data(), length, "%s/%s-XXXXXX", directory, prefixUTF8.data());
-    IGNORE_CLANG_WARNINGS_END
+    auto directory = !temporaryDirectory.isEmpty() ? temporaryDirectory : String::fromUTF8(temporaryFileDirectory());
+    // mkostemp overwrites the XXXXXX in place, so this needs to be a mutable buffer.
+    auto path = makeString(directory, '/', prefix, "-XXXXXX"_s).utf8();
 
-    auto handle = FileHandle::adopt(mkostemp(buffer.mutableSpan().data(), O_CLOEXEC));
+    auto handle = FileHandle::adopt(mkostemp(byteCast<char>(path.mutableSpan()).data(), O_CLOEXEC));
     if (!handle)
         return { String(), FileHandle() };
 
-    return { String::fromUTF8(buffer.span().data()), WTF::move(handle) };
+    return { String { path }, WTF::move(handle) };
 }
 #endif // !PLATFORM(COCOA)
 

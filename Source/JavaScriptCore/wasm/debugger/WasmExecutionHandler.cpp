@@ -888,13 +888,13 @@ void ExecutionHandler::sendReplyImpl(AbstractLocker&, StringView reply) WTF_REQU
     }
 #endif
 
-    CString packetData = packet.utf8();
-    int sent = static_cast<int>(send(m_debugServer.m_clientSocket, packetData.data(), packetData.length(), 0));
+    auto packetData = packet.utf8();
+    int sent = static_cast<int>(send(m_debugServer.m_clientSocket, packetData.legacyCStringPointer(), packetData.length(), 0));
     if (sent < 0)
-        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] Failed to send packet: ", packetData.data(), " sent: ", sent);
+        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] Failed to send packet: ", packetData.legacyCStringPointer(), " sent: ", sent);
     else {
         m_debuggerState = DebuggerState::Replied;
-        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] Sent reply: ", packetData.data());
+        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] Sent reply: ", packetData.legacyCStringPointer());
     }
 }
 

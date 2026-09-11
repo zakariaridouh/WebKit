@@ -218,6 +218,20 @@ public:
             ASSERT(charactersAreAllASCII(byteCast<Latin1Character>(characters)));
     }
 
+    // std::string does not know its encoding, so this asserts that its bytes are in CharacterType's.
+    explicit CStringWithEncoding(const std::string& string)
+        : CStringWithEncoding(byteCast<CharacterType>(std::span { string }))
+    {
+    }
+
+    // Null-terminated, like CString(const char*), and likewise asserts the encoding of its bytes.
+    explicit CStringWithEncoding(const CharacterType* string)
+        : CString(byteCast<char>(string))
+    {
+        if constexpr (std::same_as<CharacterType, char>)
+            ASSERT(charactersAreAllASCII(byteCast<Latin1Character>(CString::span())));
+    }
+
     static CStringWithEncoding newUninitialized(size_t length, std::span<CharacterType>& characterBuffer)
     {
         std::span<char> bytes;

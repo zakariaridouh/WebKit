@@ -122,7 +122,7 @@ RefPtr<RenderBundle> RenderBundleEncoderImpl::finish(const RenderBundleDescripto
     auto label = descriptor.label.utf8();
 
     WGPURenderBundleDescriptor backingDescriptor {
-        .label = label.data(),
+        .label = label.legacyCStringPointer(),
     };
 
     return RenderBundleImpl::create(adoptWebGPU(wgpuRenderBundleEncoderFinish(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);

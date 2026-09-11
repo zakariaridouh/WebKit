@@ -59,9 +59,9 @@ WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(StopData);
 String stringToHex(StringView str)
 {
     StringBuilder result;
-    CString utf8 = str.utf8();
-    for (size_t i = 0; i < utf8.length(); ++i)
-        result.append(hex(static_cast<uint8_t>(utf8.data()[i]), 2, Lowercase));
+    auto utf8 = str.utf8();
+    for (auto c : utf8.span())
+        result.append(hex(byteCast<uint8_t>(c), 2, Lowercase));
     return result.toString();
 }
 

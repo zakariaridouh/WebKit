@@ -347,8 +347,7 @@ public:
     template<typename Func>
     std::expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8ConversionError> tryGetUTF8(NOESCAPE const Func&, ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE std::expected<UTF8CString, UTF8ConversionError> tryGetUTF8(ConversionMode = LenientConversion) const;
-    // FIXME: Should return a UTF8CString, like tryGetUTF8() above already does.
-    WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
+    WTF_EXPORT_PRIVATE UTF8CString utf8(ConversionMode = LenientConversion) const;
 
 private:
     // The high bits of 'hash' are always empty, but we prefer to store our flags

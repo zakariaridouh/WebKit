@@ -231,10 +231,10 @@ void InjectedBundle::extendClassesForParameterCoder(API::Array& classes)
             break;
         }
 
-        CString className = classNameString->string().utf8();
-        RetainPtr objectClass = objc_lookUpClass(className.data());
+        auto className = classNameString->string().utf8();
+        RetainPtr objectClass = objc_lookUpClass(className.legacyCStringPointer());
         if (!objectClass) {
-            RELEASE_LOG_ERROR(Process, "InjectedBundle::extendClassesForParameterCoder - Class %{public}s is not a valid Objective C class", className.data());
+            RELEASE_LOG_ERROR(Process, "InjectedBundle::extendClassesForParameterCoder - Class %{public}s is not a valid Objective C class", className.legacyCStringPointer());
             break;
         }
 

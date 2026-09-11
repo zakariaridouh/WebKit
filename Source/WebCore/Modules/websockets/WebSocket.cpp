@@ -449,7 +449,7 @@ ExceptionOr<void> WebSocket::close(std::optional<unsigned short> optionalCode, c
         LOG(Network, "WebSocket %p close() code=%d reason='%s'", this, code, reason.utf8().legacyCStringPointer());
         if (!(code == ThreadableWebSocketChannel::CloseEventCodeNormalClosure || (ThreadableWebSocketChannel::CloseEventCodeMinimumUserDefined <= code && code <= ThreadableWebSocketChannel::CloseEventCodeMaximumUserDefined)))
             return Exception { ExceptionCode::InvalidAccessError };
-        CString utf8 = reason.utf8(StrictConversionReplacingUnpairedSurrogatesWithFFFD);
+        auto utf8 = reason.utf8(StrictConversionReplacingUnpairedSurrogatesWithFFFD);
         if (utf8.length() > maxReasonSizeInBytes) {
             protect(scriptExecutionContext())->addConsoleMessage(MessageSource::JS, MessageLevel::Error, "WebSocket close message is too long."_s);
             return Exception { ExceptionCode::SyntaxError };

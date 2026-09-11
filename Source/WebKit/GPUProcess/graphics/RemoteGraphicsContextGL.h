@@ -114,7 +114,7 @@ protected:
 
     // GraphicsContextGL::Client overrides.
     void forceContextLost() final;
-    void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const CString&) final;
+    void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const UTF8CString&) final;
     void didChangeMemoryCost() final;
 
     // Messages to be received.

@@ -74,6 +74,11 @@ public:
     // Construct a string with UTF-8 data, null string if it contains invalid UTF-8 sequences.
     WTF_EXPORT_PRIVATE String(std::span<const char8_t>);
 
+    // Construct a string from a CString that knows its encoding, decoding it as that encoding.
+    // Unlike CString, which would have to be decoded by the caller, and unlike fromUTF8(), which
+    // will happily reinterpret Latin-1 bytes as UTF-8, the character type picks the decoding.
+    template<OneByteCharacterType CharacterType> String(const CStringWithEncoding<CharacterType>&);
+
     // Construct a string referencing an existing StringImpl.
     String(StringImpl&);
     String(StringImpl*);
@@ -123,10 +128,7 @@ public:
     WTF_EXPORT_PRIVATE ASCIICString ascii() const;
     WTF_EXPORT_PRIVATE Latin1CString latin1() const;
 
-    // FIXME: Should return a UTF8CString, like tryGetUTF8() below already does. The call sites that
-    // hand the result to a %s or a C API now use legacyCStringPointer(), which keeps returning
-    // const char* once this is retyped, so the remaining work is the retype itself.
-    WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
+    WTF_EXPORT_PRIVATE UTF8CString utf8(ConversionMode = LenientConversion) const;
 
     template<typename Func>
     std::expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8ConversionError> tryGetUTF8(NOESCAPE const Func&, ConversionMode = LenientConversion) const;
@@ -447,6 +449,11 @@ inline String::String(StaticStringImpl& string)
 
 inline String::String(StaticStringImpl* string)
     : m_impl(reinterpret_cast<StringImpl*>(string))
+{
+}
+
+template<OneByteCharacterType CharacterType> inline String::String(const CStringWithEncoding<CharacterType>& string)
+    : String(string.span())
 {
 }
 

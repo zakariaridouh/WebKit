@@ -137,7 +137,7 @@ void GarbageCollectionController::dumpHeapForVM(VM& vm)
         jsonData = snapshotBuilder.json();
     }
 
-    CString utf8String = jsonData.utf8();
+    auto utf8String = jsonData.utf8();
 
     fileHandle.write(byteCast<uint8_t>(utf8String.span()));
     WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().legacyCStringPointer(), isMainThread() ? "" : " for Worker");

@@ -603,7 +603,7 @@ void NetworkDataTaskSoup::completeAuthentication(const AuthenticationChallenge& 
         soup_auth_authenticate(challenge.soupAuth(), credential.user().utf8().legacyCStringPointer(), credential.password().utf8().legacyCStringPointer());
         break;
     case ProtectionSpace::AuthenticationScheme::ClientCertificatePINRequested: {
-        CString password = credential.password().utf8();
+        auto password = credential.password().utf8();
         g_tls_password_set_value(challenge.tlsPassword(), reinterpret_cast<const unsigned char*>(password.data()), password.length());
         soup_message_tls_client_certificate_password_request_complete(m_soupMessage.get());
         break;
@@ -1225,8 +1225,8 @@ void NetworkDataTaskSoup::download()
         return;
     }
 
-    CString downloadDestinationPath = m_pendingDownloadLocation.utf8();
-    m_downloadDestinationFile = adoptGRef(g_file_new_for_path(downloadDestinationPath.data()));
+    auto downloadDestinationPath = m_pendingDownloadLocation.utf8();
+    m_downloadDestinationFile = adoptGRef(g_file_new_for_path(downloadDestinationPath.legacyCStringPointer()));
     GRefPtr<GFileOutputStream> outputStream;
     GUniqueOutPtr<GError> error;
     if (m_allowOverwriteDownload)
@@ -1238,7 +1238,7 @@ void NetworkDataTaskSoup::download()
         return;
     }
 
-    GUniquePtr<char> intermediatePath(g_strdup_printf("%s.wkdownload", downloadDestinationPath.data()));
+    GUniquePtr<char> intermediatePath(g_strdup_printf("%s.wkdownload", downloadDestinationPath.legacyCStringPointer()));
     m_downloadIntermediateFile = adoptGRef(g_file_new_for_path(intermediatePath.get()));
     outputStream = adoptGRef(g_file_replace(m_downloadIntermediateFile.get(), nullptr, TRUE, G_FILE_CREATE_NONE, nullptr, &error.outPtr()));
     if (!outputStream) {
@@ -1306,9 +1306,9 @@ void NetworkDataTaskSoup::didFinishDownload()
     }
 
     GRefPtr<GFileInfo> info = adoptGRef(g_file_info_new());
-    CString uri = m_response.url().string().utf8();
-    g_file_info_set_attribute_string(info.get(), "metadata::download-uri", uri.data());
-    g_file_info_set_attribute_string(info.get(), "xattr::xdg.origin.url", uri.data());
+    auto uri = m_response.url().string().utf8();
+    g_file_info_set_attribute_string(info.get(), "metadata::download-uri", uri.legacyCStringPointer());
+    g_file_info_set_attribute_string(info.get(), "xattr::xdg.origin.url", uri.legacyCStringPointer());
     g_file_set_attributes_async(m_downloadDestinationFile.get(), info.get(), G_FILE_QUERY_INFO_NONE, RunLoopSourcePriority::AsyncIONetwork, nullptr, nullptr, nullptr);
 
     clearRequest();

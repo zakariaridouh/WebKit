@@ -259,8 +259,8 @@ void markupToCFHTML(const String& markup, const String& srcURL, Vector<char>& re
     const char* startMarkup = "<HTML>\n<BODY>\n<!--StartFragment-->\n";
     const char* endMarkup = "\n<!--EndFragment-->\n</BODY>\n</HTML>";
 
-    CString sourceURLUTF8 = srcURL == aboutBlankURL() ? "" : srcURL.utf8();
-    CString markupUTF8 = markup.utf8();
+    auto sourceURLUTF8 = srcURL == aboutBlankURL() ? ""_s : srcURL.utf8();
+    auto markupUTF8 = markup.utf8();
 
     // calculate offsets
     unsigned startHTMLOffset = strlen(header) - strlen(NUMBER_FORMAT) * 4 + MAX_DIGITS * 4;
@@ -757,13 +757,13 @@ void setUTF8Data(IDataObject* data, FORMATETC* format, const Vector<String>& dat
     STGMEDIUM medium { };
     medium.tymed = TYMED_HGLOBAL;
 
-    CString charString = dataStrings.first().utf8();
+    auto charString = dataStrings.first().utf8();
     size_t stringLength = charString.length();
     medium.hGlobal = ::GlobalAlloc(GPTR, stringLength + 1);
     if (!medium.hGlobal)
         return;
-    char* buffer = static_cast<char*>(GlobalLock(medium.hGlobal));
-    memcpy(buffer, charString.data(), stringLength);
+    auto buffer = unsafeMakeSpan(static_cast<char*>(GlobalLock(medium.hGlobal)), stringLength + 1);
+    memcpySpan(buffer, charString.span());
     buffer[stringLength] = 0;
     GlobalUnlock(medium.hGlobal);
     data->SetData(format, &medium, FALSE);

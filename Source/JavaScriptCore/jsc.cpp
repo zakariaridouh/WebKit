@@ -1461,7 +1461,7 @@ static bool fetchModuleFromLocalFileSystem(const URL& fileURL, Vector& buffer)
     if ((status.st_mode & S_IFMT) != S_IFREG)
         return false;
 
-    FILE* f = fopen(pathName.data(), "r");
+    FILE* f = fopen(pathName.legacyCStringPointer(), "r");
 #endif
     if (!f) {
         SAFE_FPRINTF(stderr, "Could not open file: %s\n", fileName.utf8());
@@ -2125,8 +2125,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
         return throwVMError(globalObject, scope, "Could not open file."_s);
 
     auto size = WTF::visit(WTF::makeVisitor([&](const String& string) {
-        CString utf8 = string.utf8();
-        return handle.write(byteCast<uint8_t>(utf8.span()));
+        return handle.write(byteCast<uint8_t>(string.utf8().span()));
     }, [&] (const std::span<const uint8_t>& data) {
         return handle.write(data);
     }), data);
@@ -2984,8 +2983,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDumpBytecodeProfile, (JSGlobalObject* globalObj
     String path = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    auto pathUtf8 = path.utf8();
-    bool ok = vm.m_perBytecodeProfiler->save(pathUtf8.data());
+    bool ok = vm.m_perBytecodeProfiler->save(path.utf8().legacyCStringPointer());
     return JSValue::encode(jsBoolean(ok));
 }
 
@@ -4371,8 +4369,12 @@ void CommandLine::parseArguments(int argc, char** argv, int start)
         if (!strncmp(arg, singleStringSubArgList.characters(), singleStringSubArgList.length())) {
             // We just assume input is utf-8 (probably ascii)
             String subArgList = String::fromLatin1(arg + singleStringSubArgList.length());
-            Vector<CString> splitArgs = subArgList.split(" "_s).map([](const String& arg) { return arg.impl()->utf8(); });
-            Vector<char*> buffer = splitArgs.map([](const CString& arg) { return const_cast<char*>(arg.data()); });
+            auto splitArgs = subArgList.split(" "_s).map([](const String& arg) {
+                return arg.impl()->utf8();
+            });
+            Vector<char*> buffer = splitArgs.map([](const UTF8CString& arg) {
+                return const_cast<char*>(arg.legacyCStringPointer());
+            });
 
             parseArguments(buffer.mutableSpan().size(), buffer.mutableSpan().data(), 0);
             continue;

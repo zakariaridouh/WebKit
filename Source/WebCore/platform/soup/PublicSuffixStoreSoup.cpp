@@ -72,7 +72,7 @@ String PublicSuffixStore::platformTopPrivatelyControlledDomain(StringView domain
     const auto tldCString = tldView.utf8();
 
     GUniqueOutPtr<GError> error;
-    if (const char* baseDomain = soup_tld_get_base_domain(tldCString.data(), &error.outPtr()))
+    if (const char* baseDomain = soup_tld_get_base_domain(tldCString.legacyCStringPointer(), &error.outPtr()))
         return String::fromUTF8(baseDomain);
 
     if (g_error_matches(error.get(), SOUP_TLD_ERROR, SOUP_TLD_ERROR_NO_BASE_DOMAIN))

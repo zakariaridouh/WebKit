@@ -3515,11 +3515,11 @@ void webkitWebViewBaseSetPlugID(WebKitWebViewBase* webViewBase, const String& pl
     GUniqueOutPtr<GError> error;
 
     auto plugBusName = tokens[0].utf8();
-    RELEASE_ASSERT(g_dbus_is_name(plugBusName.data()));
+    RELEASE_ASSERT(g_dbus_is_name(plugBusName.legacyCStringPointer()));
 
-    auto* busNamePrefix = !g_dbus_is_unique_name(plugBusName.data()) ? "" : ":";
+    auto* busNamePrefix = !g_dbus_is_unique_name(plugBusName.legacyCStringPointer()) ? "" : ":";
 
-    GUniquePtr<char> busName(g_strdup_printf("%s%s", busNamePrefix, plugBusName.data()));
+    GUniquePtr<char> busName(g_strdup_printf("%s%s", busNamePrefix, plugBusName.legacyCStringPointer()));
 
     priv->socketAccessible = adoptGRef(gtk_at_spi_socket_new(busName.get(), tokens[1].utf8().legacyCStringPointer(), &error.outPtr()));
 

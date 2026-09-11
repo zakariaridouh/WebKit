@@ -63,7 +63,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return std::filesystem::u8path(path.utf8().legacyCStringPointer());
 ALLOW_DEPRECATED_DECLARATIONS_END
 #else
-    return { std::u8string(byteCast<char8_t>(path.utf8().legacyCStringPointer())) };
+    return { std::u8string(path.utf8().data()) };
 #endif
 }
 

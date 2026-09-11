@@ -31,6 +31,10 @@ header: <wtf/text/CString.h>
    std::span<const char> span()
 }
 
+[Alias=class CStringWithEncoding<char8_t>, CustomHeader, WebKitPlatform, AdditionalEncoder=StreamConnectionEncoder] alias WTF::UTF8CString {
+   std::span<const char8_t> span()
+}
+
 [AdditionalEncoder=StreamConnectionEncoder] class WTF::MediaTime {
     int64_t timeValue()
     uint32_t timeScale()

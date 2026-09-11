@@ -278,7 +278,7 @@ void AdapterImpl::requestDevice(const DeviceDescriptor& descriptor, CompletionHa
     WGPURequiredLimits requiredLimits { .limits = WTF::move(limits) };
 
     WGPUDeviceDescriptor backingDescriptor {
-        .label = label.data(),
+        .label = label.legacyCStringPointer(),
         .requiredFeatureCount = features.size(),
         .requiredFeatures = features.size() ? features.span().data() : nullptr,
         .requiredLimits = &requiredLimits,

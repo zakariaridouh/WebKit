@@ -1751,12 +1751,12 @@ UDateIntervalFormat* IntlDateTimeFormat::createDateIntervalFormatIfNecessary(JSG
         if (m_impl->m_hourCycle != HourCycle::None)
             localeBuilder.append("-hc-"_s, hourCycleString(m_impl->m_hourCycle));
     }
-    CString dataLocaleWithExtensions = localeBuilder.toString().utf8();
+    auto dataLocaleWithExtensions = localeBuilder.toString().utf8();
 
     UErrorCode status = U_ZERO_ERROR;
     String timeZoneForICU = m_impl->m_timeZone.toICUString();
     StringView timeZoneView(timeZoneForICU);
-    m_dateIntervalFormat = std::unique_ptr<UDateIntervalFormat, UDateIntervalFormatDeleter>(udtitvfmt_open(dataLocaleWithExtensions.data(), skeleton.span().data(), skeleton.size(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), &status));
+    m_dateIntervalFormat = std::unique_ptr<UDateIntervalFormat, UDateIntervalFormatDeleter>(udtitvfmt_open(dataLocaleWithExtensions.legacyCStringPointer(), skeleton.span().data(), skeleton.size(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), &status));
     if (U_FAILURE(status)) [[unlikely]] {
         throwTypeError(globalObject, scope, "failed to initialize DateIntervalFormat"_s);
         return nullptr;
@@ -2636,10 +2636,10 @@ IntlDateTimeFormat::createTemporalIntervalFormat(UDateFormat* tempFormat, Tempor
     localeBuilder.append(m_impl->m_dataLocale, "-u-ca-"_s, ensureCalendar(), "-nu-"_s, ensureNumberingSystem());
     if (m_impl->m_hourCycle != HourCycle::None)
         localeBuilder.append("-hc-"_s, hourCycleString(m_impl->m_hourCycle));
-    CString localeWithExt = localeBuilder.toString().utf8();
+    auto localeWithExt = localeBuilder.toString().utf8();
 
     return std::unique_ptr<UDateIntervalFormat, UDateIntervalFormatDeleter>(
-        udtitvfmt_open(localeWithExt.data(), tempSkeleton.span().data(), tempSkeleton.size(),
+        udtitvfmt_open(localeWithExt.legacyCStringPointer(), tempSkeleton.span().data(), tempSkeleton.size(),
         tzView.upconvertedCharacters(), tzView.length(), &status));
 }
 

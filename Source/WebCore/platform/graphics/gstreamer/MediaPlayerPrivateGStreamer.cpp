@@ -1445,8 +1445,8 @@ void MediaPlayerPrivateGStreamer::elementIdChanged(const String& elementId) cons
     auto tokens = currentName.split('-');
     auto newName = makeString(tokens[0], '-', elementId, '-', tokens.last());
     auto nameCString = newName.utf8();
-    GST_DEBUG_OBJECT(m_pipeline.get(), "Renaming to %s", nameCString.data());
-    gst_object_set_name(GST_OBJECT_CAST(m_pipeline.get()), nameCString.data());
+    GST_DEBUG_OBJECT(m_pipeline.get(), "Renaming to %s", nameCString.legacyCStringPointer());
+    gst_object_set_name(GST_OBJECT_CAST(m_pipeline.get()), nameCString.legacyCStringPointer());
 }
 
 void MediaPlayerPrivateGStreamer::handleTextSample(GRefPtr<GstSample>&& sample, TrackID streamId)

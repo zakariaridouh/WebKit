@@ -555,7 +555,7 @@ void RegExp::printTraceData()
     formattedRegExp[SameLineFormatedRegExpnWidth] = '\0';
 
     auto patternCStr = pattern().utf8(); // Hold a reference so it doesn't get destroyed.
-    auto patternStr = patternCStr.data();
+    auto patternStr = patternCStr.legacyCStringPointer();
     auto patternLength = pattern().length();
 
     auto appendRawPatternBuffer = [&] (size_t& index) {

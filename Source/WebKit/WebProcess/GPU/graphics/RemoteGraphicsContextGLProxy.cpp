@@ -584,7 +584,7 @@ void RemoteGraphicsContextGLProxy::wasLost()
     markContextLost();
 }
 
-void RemoteGraphicsContextGLProxy::addDebugMessage(GCGLenum type, GCGLenum id, GCGLenum severity, CString&& message)
+void RemoteGraphicsContextGLProxy::addDebugMessage(GCGLenum type, GCGLenum id, GCGLenum severity, UTF8CString&& message)
 {
     if (isContextLost())
         return;

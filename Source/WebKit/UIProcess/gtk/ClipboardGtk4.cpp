@@ -255,14 +255,14 @@ void Clipboard::write(WebCore::SelectionData&& selectionData, CompletionHandler<
 {
     Vector<GdkContentProvider*> providers;
     if (selectionData.hasMarkup()) {
-        CString markup = selectionData.markup().utf8();
-        GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new(markup.data(), markup.length()));
+        auto markup = selectionData.markup().utf8();
+        GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new(markup.legacyCStringPointer(), markup.length()));
         providers.append(gdk_content_provider_new_for_bytes("text/html", bytes.get()));
     }
 
     if (selectionData.hasURIList()) {
-        CString uriList = selectionData.uriList().utf8();
-        GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new(uriList.data(), uriList.length()));
+        auto uriList = selectionData.uriList().utf8();
+        GRefPtr<GBytes> bytes = adoptGRef(g_bytes_new(uriList.legacyCStringPointer(), uriList.length()));
         providers.append(gdk_content_provider_new_for_bytes("text/uri-list", bytes.get()));
     }
 

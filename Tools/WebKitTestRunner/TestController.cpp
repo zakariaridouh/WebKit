@@ -2143,7 +2143,7 @@ WKURLRef TestController::createTestURL(std::span<const char> pathOrURL)
 
     // Creating from filesytem path.
     auto urlString = makeString("file://"_s, FileSystem::realPath(String::fromUTF8(pathOrURL))).utf8();
-    auto url = adoptWK(WKURLCreateWithUTF8String(urlString.data(), urlString.length()));
+    auto url = adoptWK(WKURLCreateWithUTF8String(urlString.legacyCStringPointer(), urlString.length()));
     auto path = testPath(url.get());
     auto pathString = String::fromUTF8(std::span { path });
     if (!m_usingServerMode && !FileSystem::fileExists(pathString)) {
@@ -2491,7 +2491,7 @@ static WKRetainPtr<WKArrayRef> WKURLArrayFromWKStringArray(const WKTypeRef array
     for (size_t i = 0; i < length; i++) {
         auto str = WKArrayGetItemAtIndex(stringArray, i);
         auto cstr = toWTFString(stringValue(str)).utf8();
-        WKArrayAppendItem(urlArray.get(), adoptWK(WKURLCreateWithUTF8CString(cstr.data())).get());
+        WKArrayAppendItem(urlArray.get(), adoptWK(WKURLCreateWithUTF8CString(cstr.legacyCStringPointer())).get());
     }
 
     return urlArray;
@@ -3071,7 +3071,7 @@ void TestController::didReceiveScriptMessage(WKScriptMessageRef message, Complet
         for (size_t i = 0; i < length; i++) {
             auto key = WKArrayGetItemAtIndex(keys, i);
             auto keyStr = toWTFString(stringValue(key)).utf8();
-            auto intValue = doubleValue(dictionary, keyStr.data());
+            auto intValue = doubleValue(dictionary, keyStr.legacyCStringPointer());
             bytes.append(static_cast<unsigned char>(intValue));
         }
         WKDataRef data = WKDataCreate(bytes.begin(), bytes.size());

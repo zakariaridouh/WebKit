@@ -523,14 +523,14 @@ TEST(WTF, StringUTF8ConversionInvalidUTF16LenientMode)
 
     auto result = stringWithOrphanHigh.utf8(LenientConversion);
     // U+FFFD in UTF-8 is 0xEF 0xBF 0xBD
-    EXPECT_STREQ("abc\xEF\xBF\xBD" "def", result.data());
+    EXPECT_STREQ("abc\xEF\xBF\xBD" "def", result.legacyCStringPointer());
 
     // Create a string with an orphan low surrogate (0xDC00)
     char16_t orphanLowSurrogate[] = { 'x', 0xDC00, 'y', 0 };
     String stringWithOrphanLow = String(std::span { orphanLowSurrogate, 3 });
 
     auto resultLow = stringWithOrphanLow.utf8(LenientConversion);
-    EXPECT_STREQ("x\xEF\xBF\xBDy", resultLow.data());
+    EXPECT_STREQ("x\xEF\xBF\xBDy", resultLow.legacyCStringPointer());
 
     // Create a string with two consecutive orphan surrogates
     char16_t doubleOrphan[] = { 0xD800, 0xD800, 0 };
@@ -538,7 +538,7 @@ TEST(WTF, StringUTF8ConversionInvalidUTF16LenientMode)
 
     auto resultDouble = stringWithDoubleOrphan.utf8(LenientConversion);
     // Each orphan should become one replacement character
-    EXPECT_STREQ("\xEF\xBF\xBD\xEF\xBF\xBD", resultDouble.data());
+    EXPECT_STREQ("\xEF\xBF\xBD\xEF\xBF\xBD", resultDouble.legacyCStringPointer());
 
     // Create a string with reversed surrogate pair (low then high)
     char16_t reversedPair[] = { 0xDC00, 0xD800, 0 };
@@ -546,7 +546,7 @@ TEST(WTF, StringUTF8ConversionInvalidUTF16LenientMode)
 
     auto resultReversed = stringWithReversed.utf8(LenientConversion);
     // Both are invalid, should become two replacement characters
-    EXPECT_STREQ("\xEF\xBF\xBD\xEF\xBF\xBD", resultReversed.data());
+    EXPECT_STREQ("\xEF\xBF\xBD\xEF\xBF\xBD", resultReversed.legacyCStringPointer());
 }
 
 TEST(WTF, StringUTF8ConversionStrictReplacingMode)
@@ -559,7 +559,7 @@ TEST(WTF, StringUTF8ConversionStrictReplacingMode)
     String stringWithOrphan = String(std::span { orphanHighSurrogate, 4 });
 
     auto result = stringWithOrphan.utf8(StrictConversionReplacingUnpairedSurrogatesWithFFFD);
-    EXPECT_STREQ("ab\xEF\xBF\xBD" "c", result.data());
+    EXPECT_STREQ("ab\xEF\xBF\xBD" "c", result.legacyCStringPointer());
 }
 
 } // namespace TestWebKitAPI

@@ -206,7 +206,7 @@ int WebDriverService::run(int argc, char** argv)
 
     WTF::initializeMainThread();
 
-    CString hostStr = host && !host->isNull() ? host->utf8() : "local";
+    auto hostStr = host && !host->isNull() ? host->utf8() : "local"_s;
     auto programName = FileSystem::lastComponentOfPathIgnoringTrailingSlash(String::fromLatin1(argv[0]));
     if (programName.isEmpty())
         programName = "WebDriver"_s;
@@ -214,27 +214,27 @@ int WebDriverService::run(int argc, char** argv)
 
 #if ENABLE(WEBDRIVER_BIDI)
     if (m_targetAddress.isEmpty())
-        RELEASE_LOG_INFO(WebDriverClassic, "%s starting: http=%s:%d bidi=%d", programNameStr.data(), hostStr.data(), *port, *bidiPort);
+        RELEASE_LOG_INFO(WebDriverClassic, "%s starting: http=%s:%d bidi=%d", programNameStr.legacyCStringPointer(), hostStr.legacyCStringPointer(), *port, *bidiPort);
     else
-        RELEASE_LOG_INFO(WebDriverClassic, "%s starting: http=%s:%d bidi=%d target=%s:%d", programNameStr.data(), hostStr.data(), *port, *bidiPort, m_targetAddress.utf8().legacyCStringPointer(), m_targetPort);
+        RELEASE_LOG_INFO(WebDriverClassic, "%s starting: http=%s:%d bidi=%d target=%s:%d", programNameStr.legacyCStringPointer(), hostStr.legacyCStringPointer(), *port, *bidiPort, m_targetAddress.utf8().legacyCStringPointer(), m_targetPort);
 #else
     if (m_targetAddress.isEmpty())
-        RELEASE_LOG_INFO(WebDriverClassic, "%s starting: http=%s:%d", programNameStr.data(), hostStr.data(), *port);
+        RELEASE_LOG_INFO(WebDriverClassic, "%s starting: http=%s:%d", programNameStr.legacyCStringPointer(), hostStr.legacyCStringPointer(), *port);
     else
-        RELEASE_LOG_INFO(WebDriverClassic, "%s starting: http=%s:%d target=%s:%d", programNameStr.data(), hostStr.data(), *port, m_targetAddress.utf8().legacyCStringPointer(), m_targetPort);
+        RELEASE_LOG_INFO(WebDriverClassic, "%s starting: http=%s:%d target=%s:%d", programNameStr.legacyCStringPointer(), hostStr.legacyCStringPointer(), *port, m_targetAddress.utf8().legacyCStringPointer(), m_targetPort);
 #endif
 
     if (!m_server.listen(host, *port)) {
-        RELEASE_LOG_ERROR(WebDriverClassic, "Unable to listen for HTTP server at host %s and port %d", hostStr.data(), *port);
-        fprintf(stderr, "FATAL: Unable to listen for HTTP server at host %s and port %d.\n", hostStr.data(), *port);
+        RELEASE_LOG_ERROR(WebDriverClassic, "Unable to listen for HTTP server at host %s and port %d", hostStr.legacyCStringPointer(), *port);
+        SAFE_FPRINTF(stderr, "FATAL: Unable to listen for HTTP server at host %s and port %d.\n", hostStr, *port);
         return EXIT_FAILURE;
     }
-    RELEASE_LOG_INFO(WebDriverClassic, "Started HTTP server with host %s and port %d", hostStr.data(), *port);
+    RELEASE_LOG_INFO(WebDriverClassic, "Started HTTP server with host %s and port %d", hostStr.legacyCStringPointer(), *port);
 #if ENABLE(WEBDRIVER_BIDI)
     auto bidiServerURL = m_bidiServer->listen(host ? *host : nullString(), *bidiPort);
     if (!bidiServerURL) {
-        RELEASE_LOG_ERROR(WebDriverBiDi, "Unable to listen for WebSocket BiDi server at host %s and port %d", hostStr.data(), *bidiPort);
-        fprintf(stderr, "FATAL: Unable to listen for WebSocket BiDi server at host %s and port %d.\n", hostStr.data(), *bidiPort);
+        RELEASE_LOG_ERROR(WebDriverBiDi, "Unable to listen for WebSocket BiDi server at host %s and port %d", hostStr.legacyCStringPointer(), *bidiPort);
+        SAFE_FPRINTF(stderr, "FATAL: Unable to listen for WebSocket BiDi server at host %s and port %d.\n", hostStr, *bidiPort);
         return EXIT_FAILURE;
     }
     RELEASE_LOG_INFO(WebDriverBiDi, "Started WebSocket BiDi server at %s", bidiServerURL->utf8().legacyCStringPointer());

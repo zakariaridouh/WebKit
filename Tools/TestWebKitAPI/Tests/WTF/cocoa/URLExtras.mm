@@ -178,7 +178,7 @@ TEST(URLExtras, URLExtras_Spoof)
     };
     for (auto& host : punycodedSpoofHosts) {
         auto url = makeString("http://"_s, host, '/').utf8();
-        EXPECT_STREQ(url.data(), userVisibleString(literalURL(url.data())));
+        EXPECT_STREQ(url.legacyCStringPointer(), userVisibleString(literalURL(url.legacyCStringPointer())));
     }
 }
 

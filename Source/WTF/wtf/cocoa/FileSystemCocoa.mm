@@ -166,7 +166,7 @@ std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView su
     temporaryFilePath.append("XXXXXX"_span);
     
     // Append the file name suffix.
-    CString suffixUTF8 = suffix.utf8();
+    auto suffixUTF8 = suffix.utf8();
     temporaryFilePath.append(suffixUTF8.spanIncludingNullTerminator());
 
     auto fileHandle = FileHandle::adopt(mkostemps(temporaryFilePath.mutableSpan().data(), suffixUTF8.length(), O_CLOEXEC));

@@ -302,9 +302,9 @@ xmlDocPtr XSLStyleSheet::locateStylesheetSubResource(xmlDocPtr parentDoc, const 
             // In order to ensure that libxml canonicalized both URLs, we get the original href
             // string from the import rule and canonicalize it using libxml before comparing it
             // with the URI argument.
-            CString importHref = import->href().utf8();
+            auto importHref = import->href().utf8();
             xmlChar* base = xmlNodeGetBase(parentDoc, (xmlNodePtr)parentDoc);
-            xmlChar* childURI = xmlBuildURI((const xmlChar*)importHref.data(), base);
+            xmlChar* childURI = xmlBuildURI((const xmlChar*)importHref.legacyCStringPointer(), base);
             bool equalURIs = xmlStrEqual(uri, childURI);
             xmlFree(base);
             xmlFree(childURI);

@@ -509,7 +509,7 @@ static void bindV4l(Vector<CString>& args)
         if (!isV4LNode)
             continue;
 
-        CString path = FileSystem::pathByAppendingComponent("/dev"_s, fileName).utf8();
+        auto path = FileSystem::pathByAppendingComponent("/dev"_s, fileName).utf8();
         args.appendList<CString>({
             "--dev-bind-try", path, path,
         });

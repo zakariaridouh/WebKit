@@ -327,8 +327,8 @@ void NetworkStorageSession::saveCredentialToPersistentStorage(const ProtectionSp
         return;
 
     g_hash_table_insert(attributes.get(), g_strdup("user"), g_strdup(credential.user().utf8().legacyCStringPointer()));
-    CString utf8Password = credential.password().utf8();
-    GRefPtr<SecretValue> newSecretValue = adoptGRef(secret_value_new(utf8Password.data(), utf8Password.length(), "text/plain"));
+    auto utf8Password = credential.password().utf8();
+    GRefPtr<SecretValue> newSecretValue = adoptGRef(secret_value_new(utf8Password.legacyCStringPointer(), utf8Password.length(), "text/plain"));
     secret_service_store(nullptr, SECRET_SCHEMA_COMPAT_NETWORK, attributes.get(), SECRET_COLLECTION_DEFAULT, _("WebKitGTK password"),
         newSecretValue.get(), nullptr, nullptr, nullptr);
 #else
@@ -432,7 +432,7 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameS
         // before the day of the month. RFC 6265 section 5.1.1 accepts either ordering.
         auto dayFirst = CookieUtil::cookieStringWithDayFirstExpires(cookieString);
         auto utf8CookieString = (dayFirst ? *dayFirst : cookieString).utf8();
-        GUniquePtr<SoupCookie> cookie(soup_cookie_parse(utf8CookieString.data(), origin.get()));
+        GUniquePtr<SoupCookie> cookie(soup_cookie_parse(utf8CookieString.legacyCStringPointer(), origin.get()));
 
         if (!cookie)
             continue;
@@ -554,7 +554,7 @@ void NetworkStorageSession::deleteCookie(const URL&, const URL& url, const Strin
     if (!cookies)
         return completionHandler();
 
-    CString cookieName = name.utf8();
+    auto cookieName = name.utf8();
     bool wasDeleted = false;
     for (GSList* iter = cookies.get(); iter; iter = g_slist_next(iter)) {
         SoupCookie* cookie = static_cast<SoupCookie*>(iter->data);
@@ -600,7 +600,7 @@ void NetworkStorageSession::deleteCookiesForHostnames(std::span<const String> ho
 {
     SoupCookieJar* cookieJar = cookieStorage();
     for (const auto& hostname : hostnames) {
-        CString hostNameString = hostname.utf8();
+        auto hostNameString = hostname.utf8();
 
         CookieList cookies(soup_cookie_jar_all_cookies(cookieJar));
         for (auto* item = cookies.get(); item; item = g_slist_next(item)) {
@@ -608,7 +608,7 @@ void NetworkStorageSession::deleteCookiesForHostnames(std::span<const String> ho
             if (includeHttpOnlyCookies == IncludeHttpOnlyCookies::No && soup_cookie_get_http_only(cookie))
                 continue;
 
-            if (soup_cookie_domain_matches(cookie, hostNameString.data()))
+            if (soup_cookie_domain_matches(cookie, hostNameString.legacyCStringPointer()))
                 soup_cookie_jar_delete_cookie(cookieJar, cookie);
         }
     }
@@ -777,7 +777,7 @@ Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& url)
         auto* soupCookie = static_cast<SoupCookie*>(iter->data);
         if (soup_cookie_get_http_only(soupCookie))
             continue;
-        if (soup_cookie_domain_matches(soupCookie, host.data())) {
+        if (soup_cookie_domain_matches(soupCookie, host.legacyCStringPointer())) {
             // soup_cookie_jar_all_cookies() always returns a reversed list.
             cookies.insert(0, Cookie(soupCookie));
         }

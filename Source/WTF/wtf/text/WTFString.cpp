@@ -458,7 +458,7 @@ std::expected<UTF8CString, UTF8ConversionError> String::tryGetUTF8() const
     return tryGetUTF8(LenientConversion);
 }
 
-CString String::utf8(ConversionMode mode) const
+UTF8CString String::utf8(ConversionMode mode) const
 {
     auto expectedString = tryGetUTF8(mode);
     RELEASE_ASSERT(expectedString);

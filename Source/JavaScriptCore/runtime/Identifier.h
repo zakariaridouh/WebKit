@@ -99,7 +99,7 @@ public:
     int length() const { return m_string.length(); }
 
     CString ascii() const { return m_string.string().ascii(); }
-    CString utf8() const { return m_string.string().utf8(); }
+    UTF8CString utf8() const { return m_string.string().utf8(); }
 
     // There's 2 functions to construct Identifier from string, (1) fromString and (2) fromUid.
     // They have different meanings in keeping or discarding symbol-ness of strings.

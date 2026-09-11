@@ -1508,7 +1508,7 @@ inline SelectorCodeGenerator::SelectorCodeGenerator(const CSSSelector& rootSelec
 {
     if (shouldDumpCSSJITDisassembly()) [[unlikely]] {
         auto selectorTextUTF8 = m_originalSelector.selectorText().utf8();
-        auto selectorTextSpan = selectorTextUTF8.span();
+        auto selectorTextSpan = byteCast<char>(selectorTextUTF8.span());
         dataLogF("Compiling \"%.*s\"\n", static_cast<int>(selectorTextSpan.size()), selectorTextSpan.data());
     }
 
