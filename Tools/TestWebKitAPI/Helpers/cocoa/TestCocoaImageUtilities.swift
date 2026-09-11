@@ -29,6 +29,7 @@ private import TestWebKitAPILibrary.Helpers.cocoa.TestCocoaImageUtilities
 public import UIKit
 #else
 public import AppKit
+private import TestWebKitAPILibrary.Helpers.mac.AppKitSPI
 #endif
 
 /// A system appearance to draw with.
@@ -92,6 +93,17 @@ public func pixelColor(of image: CocoaImage, at point: CGPoint = .zero) -> Cocoa
 @MainActor
 public func compareColors(_ color: CocoaColor?, _ otherColor: CocoaColor?, tolerance: CGFloat = 0.01) -> Bool {
     TestCocoaImageUtilities.compareColors(color, otherColor, tolerance: tolerance)
+}
+
+extension CocoaImage {
+    /// Whether this image was created from a system symbol.
+    public var isSymbol: Bool {
+        #if WTF_PLATFORM_IOS_FAMILY
+        isSymbolImage
+        #else
+        _isSymbolImage
+        #endif
+    }
 }
 
 @MainActor

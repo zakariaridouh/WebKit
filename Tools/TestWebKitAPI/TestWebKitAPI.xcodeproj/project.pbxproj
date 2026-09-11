@@ -630,6 +630,7 @@
 				cocoa/TestPDFDocument.swift,
 				cocoa/UtilitiesCocoa.mm,
 				cocoa/WebExtensionUtilities.mm,
+				cocoa/WebExtensionUtilities.swift,
 				"cocoa/WebPage+Extras.swift",
 				"cocoa/WebPage+JavaScriptExpression.swift",
 				"cocoa/WebPageConfiguration+Extras.swift",
