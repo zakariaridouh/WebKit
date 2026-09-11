@@ -23,7 +23,6 @@
 
 import importlib.machinery
 import importlib.util
-import json
 import os
 import tempfile
 import unittest
@@ -40,43 +39,41 @@ built_product_archive = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(built_product_archive)
 
 
-class SwiftRuntimeIsRequiredTest(unittest.TestCase):
-    def test_detects_enabled_swift_features(self):
-        configurations = (
-            ('#define ENABLE_BACK_FORWARD_LIST_SWIFT 1\n#define ENABLE_SWIFT_DEMO_URI_SCHEME 0\n', True),
-            ('#define ENABLE_BACK_FORWARD_LIST_SWIFT 0\n#define ENABLE_SWIFT_DEMO_URI_SCHEME 1\n', True),
-            ('#define ENABLE_BACK_FORWARD_LIST_SWIFT 0\n#define ENABLE_SWIFT_DEMO_URI_SCHEME 0\n', False),
-        )
-        for contents, expected in configurations:
-            with self.subTest(contents=contents), tempfile.TemporaryDirectory() as directory:
-                with open(os.path.join(directory, 'cmakeconfig.h'), 'w') as file:
-                    file.write(contents)
-                self.assertEqual(built_product_archive.swiftRuntimeIsRequired(directory), expected)
+class SwiftRuntimeBinDirectoryTest(unittest.TestCase):
+    def test_reads_cmake_generated_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with open(os.path.join(directory, 'swift-runtime-bin-directory.txt'), 'w', encoding='utf-8') as file:
+                file.write('C:\\swift-runtime-p\N{LATIN SMALL LETTER A WITH DIAERESIS}th-goes-here\n')
+            self.assertEqual(
+                built_product_archive.swiftRuntimeBinDirectory(directory),
+                'C:\\swift-runtime-p\N{LATIN SMALL LETTER A WITH DIAERESIS}th-goes-here',
+            )
+
+    def test_returns_none_without_cmake_generated_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertIsNone(built_product_archive.swiftRuntimeBinDirectory(directory))
+
+    def test_rejects_empty_cmake_generated_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with open(os.path.join(directory, 'swift-runtime-bin-directory.txt'), 'w', encoding='utf-8'):
+                pass
+            with self.assertRaisesRegex(RuntimeError, 'file is empty'):
+                built_product_archive.swiftRuntimeBinDirectory(directory)
 
 
 class CopySwiftRuntimeLibrariesTest(unittest.TestCase):
     def test_copies_only_dlls_from_runtime_bin_directory(self):
         with tempfile.TemporaryDirectory() as directory:
-            compilerBinDirectory = os.path.join(directory, 'toolchain', 'usr', 'bin')
             runtimeBinDirectory = os.path.join(directory, 'usr', 'bin')
             destination = os.path.join(directory, 'archive')
-            os.makedirs(compilerBinDirectory)
             os.makedirs(runtimeBinDirectory)
             os.makedirs(destination)
 
-            with open(os.path.join(compilerBinDirectory, 'sourcekitdInProc.dll'), 'w') as file:
-                file.write('sourcekitdInProc.dll')
             for filename in ('swiftCore.dll', 'FoundationEssentials.DLL', 'README.txt'):
                 with open(os.path.join(runtimeBinDirectory, filename), 'w') as file:
                     file.write(filename)
 
-            targetInfo = json.dumps({
-                'paths': {'runtimeLibraryPaths': [compilerBinDirectory, runtimeBinDirectory]},
-            })
-            with patch.object(built_product_archive.shutil, 'which', return_value='swiftc'), patch.object(
-                built_product_archive.subprocess, 'check_output', return_value=targetInfo
-            ):
-                built_product_archive.copySwiftRuntimeLibraries(destination)
+            built_product_archive.copySwiftRuntimeLibraries(runtimeBinDirectory, destination)
 
             self.assertEqual(sorted(os.listdir(destination)), ['FoundationEssentials.DLL', 'swiftCore.dll'])
 
@@ -90,11 +87,7 @@ class CopySwiftRuntimeLibrariesTest(unittest.TestCase):
                 with open(os.path.join(parent, 'swiftCore.dll'), 'w') as file:
                     file.write('swiftCore.dll')
 
-            targetInfo = json.dumps({'paths': {'runtimeLibraryPaths': [runtimeBinDirectory]}})
-            with patch.object(built_product_archive.shutil, 'which', return_value='swiftc'), patch.object(
-                built_product_archive.subprocess, 'check_output', return_value=targetInfo
-            ):
-                built_product_archive.copySwiftRuntimeLibraries(destination)
+            built_product_archive.copySwiftRuntimeLibraries(runtimeBinDirectory, destination)
 
             self.assertEqual(os.listdir(destination), ['swiftCore.dll'])
 
@@ -109,33 +102,18 @@ class CopySwiftRuntimeLibrariesTest(unittest.TestCase):
             with open(os.path.join(destination, 'swiftCore.dll'), 'w') as file:
                 file.write('existing')
 
-            targetInfo = json.dumps({'paths': {'runtimeLibraryPaths': [runtimeBinDirectory]}})
-            with patch.object(built_product_archive.shutil, 'which', return_value='swiftc'), patch.object(
-                built_product_archive.subprocess, 'check_output', return_value=targetInfo
-            ):
-                with self.assertRaisesRegex(RuntimeError, 'conflicts with existing file'):
-                    built_product_archive.copySwiftRuntimeLibraries(destination)
+            with self.assertRaisesRegex(RuntimeError, 'conflicts with existing file'):
+                built_product_archive.copySwiftRuntimeLibraries(runtimeBinDirectory, destination)
 
-    def test_fails_when_swiftc_is_unavailable(self):
-        with tempfile.TemporaryDirectory() as destination, patch.object(
-            built_product_archive.shutil, 'which', return_value=None
-        ):
-            with self.assertRaisesRegex(RuntimeError, 'Could not find swiftc'):
-                built_product_archive.copySwiftRuntimeLibraries(destination)
-
-    def test_fails_when_runtime_bin_directory_is_unavailable(self):
+    def test_fails_when_swift_runtime_is_unavailable(self):
         with tempfile.TemporaryDirectory() as directory:
             runtimeBinDirectory = os.path.join(directory, 'usr', 'bin')
             destination = os.path.join(directory, 'archive')
             os.makedirs(runtimeBinDirectory)
             os.makedirs(destination)
 
-            targetInfo = json.dumps({'paths': {'runtimeLibraryPaths': [runtimeBinDirectory]}})
-            with patch.object(built_product_archive.shutil, 'which', return_value='swiftc'), patch.object(
-                built_product_archive.subprocess, 'check_output', return_value=targetInfo
-            ):
-                with self.assertRaisesRegex(RuntimeError, 'Could not find the Swift runtime bin directory'):
-                    built_product_archive.copySwiftRuntimeLibraries(destination)
+            with self.assertRaisesRegex(RuntimeError, 'Could not find the Swift runtime'):
+                built_product_archive.copySwiftRuntimeLibraries(runtimeBinDirectory, destination)
 
 
 class ArchiveBuiltProductTest(unittest.TestCase):
@@ -145,7 +123,9 @@ class ArchiveBuiltProductTest(unittest.TestCase):
         try:
             with patch.object(built_product_archive, 'removeDirectoryIfExists'), patch.object(
                 built_product_archive, 'copyBuildFiles'
-            ), patch.object(built_product_archive, 'swiftRuntimeIsRequired', return_value=True), patch.object(
+            ), patch.object(
+                built_product_archive, 'swiftRuntimeBinDirectory', return_value=os.path.join('Swift', 'Runtime')
+            ), patch.object(
                 built_product_archive, 'copySwiftRuntimeLibraries'
             ) as copyRuntime, patch.object(
                 built_product_archive, 'createZip', return_value=0
@@ -155,7 +135,10 @@ class ArchiveBuiltProductTest(unittest.TestCase):
             built_product_archive._configurationBuildDirectory = oldConfigurationBuildDirectory
 
         self.assertIsNone(result)
-        copyRuntime.assert_called_once_with(os.path.join('WebKitBuild', 'Release', 'thin', 'bin'))
+        copyRuntime.assert_called_once_with(
+            os.path.join('Swift', 'Runtime'),
+            os.path.join('WebKitBuild', 'Release', 'thin', 'bin'),
+        )
 
     def test_windows_archive_without_swift_does_not_copy_runtime_libraries(self):
         oldConfigurationBuildDirectory = built_product_archive._configurationBuildDirectory
@@ -163,7 +146,7 @@ class ArchiveBuiltProductTest(unittest.TestCase):
         try:
             with patch.object(built_product_archive, 'removeDirectoryIfExists'), patch.object(
                 built_product_archive, 'copyBuildFiles'
-            ), patch.object(built_product_archive, 'swiftRuntimeIsRequired', return_value=False), patch.object(
+            ), patch.object(built_product_archive, 'swiftRuntimeBinDirectory', return_value=None), patch.object(
                 built_product_archive, 'copySwiftRuntimeLibraries'
             ) as copyRuntime, patch.object(
                 built_product_archive, 'createZip', return_value=0

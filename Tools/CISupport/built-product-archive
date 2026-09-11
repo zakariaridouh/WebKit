@@ -28,7 +28,6 @@ from __future__ import print_function
 import errno
 import filecmp
 import fnmatch
-import json
 import optparse
 import os
 import shutil
@@ -142,27 +141,20 @@ def copyBuildFiles(source, destination, patterns):
     shutil.copytree(source, destination, ignore=shutil.ignore_patterns(*patterns))
 
 
-def swiftRuntimeIsRequired(buildDirectory):
-    with open(os.path.join(buildDirectory, 'cmakeconfig.h')) as configuration:
-        enabledDefinitions = set(line.strip() for line in configuration)
-    return any(
-        '#define {} 1'.format(feature) in enabledDefinitions
-        for feature in ('ENABLE_BACK_FORWARD_LIST_SWIFT', 'ENABLE_SWIFT_DEMO_URI_SCHEME')
-    )
-
-
-def copySwiftRuntimeLibraries(destination):
-    swiftCompiler = shutil.which('swiftc')
-    if not swiftCompiler:
-        raise RuntimeError('Could not find swiftc while archiving the Windows build')
-
-    targetInfo = json.loads(subprocess.check_output([swiftCompiler, '-print-target-info'], text=True))
-    runtimeBinDirectory = next((
-        path for path in targetInfo['paths']['runtimeLibraryPaths']
-        if os.path.isfile(os.path.join(path, 'swiftCore.dll'))
-    ), None)
+def swiftRuntimeBinDirectory(buildDirectory):
+    path = os.path.join(buildDirectory, 'swift-runtime-bin-directory.txt')
+    if not os.path.isfile(path):
+        return None
+    with open(path, encoding='utf-8') as file:
+        runtimeBinDirectory = file.read().strip()
     if not runtimeBinDirectory:
-        raise RuntimeError('Could not find the Swift runtime bin directory')
+        raise RuntimeError('Swift runtime bin directory file is empty: {}'.format(path))
+    return runtimeBinDirectory
+
+
+def copySwiftRuntimeLibraries(runtimeBinDirectory, destination):
+    if not os.path.isfile(os.path.join(runtimeBinDirectory, 'swiftCore.dll')):
+        raise RuntimeError('Could not find the Swift runtime in {}'.format(runtimeBinDirectory))
     runtimeLibraries = [
         os.path.join(runtimeBinDirectory, filename)
         for filename in sorted(os.listdir(runtimeBinDirectory))
@@ -323,8 +315,9 @@ def archiveBuiltProduct(configuration, platform, fullPlatform, minify=False):
 
         removeDirectoryIfExists(thinDirectory, platform)
         copyBuildFiles(binDirectory, thinBinDirectory, ['*.ilk'])
-        if swiftRuntimeIsRequired(_configurationBuildDirectory):
-            copySwiftRuntimeLibraries(thinBinDirectory)
+        swiftRuntimeDirectory = swiftRuntimeBinDirectory(_configurationBuildDirectory)
+        if swiftRuntimeDirectory:
+            copySwiftRuntimeLibraries(swiftRuntimeDirectory, thinBinDirectory)
 
         if createZip(thinDirectory, configuration):
             return 1

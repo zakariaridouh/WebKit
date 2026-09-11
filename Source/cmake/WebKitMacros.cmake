@@ -1348,24 +1348,29 @@ function(_webkit_setup_swift_header_deps _target _stamp _header _resp)
     add_dependencies(${_target}_SwiftInterop ${_target}_SwiftCxxHeader)
 endfunction()
 
+function(WEBKIT_QUERY_SWIFT_TARGET_INFO _result _swift_compiler)
+    set(_swift_target_info_args "")
+    if (CMAKE_Swift_COMPILER_TARGET)
+        list(APPEND _swift_target_info_args "-target" "${CMAKE_Swift_COMPILER_TARGET}")
+    endif ()
+    execute_process(
+        COMMAND "${_swift_compiler}" -print-target-info ${_swift_target_info_args}
+        RESULT_VARIABLE _swift_target_info_result
+        OUTPUT_VARIABLE _swift_target_info
+        ERROR_VARIABLE _swift_target_info_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (NOT _swift_target_info_result EQUAL 0)
+        message(FATAL_ERROR "Failed to query Swift target information: ${_swift_target_info_error}")
+    endif ()
+    set(${_result} "${_swift_target_info}" PARENT_SCOPE)
+endfunction()
+
 macro(WEBKIT_SETUP_SWIFT_AND_GENERATE_SWIFT_CPP_INTEROP_HEADER _target _module_name _interop_module_path _output_header)
     if (SWIFT_REQUIRED)
         set_target_properties(${_target} PROPERTIES Swift_MODULE_NAME ${_module_name})
-        # Ask swiftc where to find the header files which support C/C++ builds
-        # Right now this macro is used only once; if it's used more often then
-        # we should abstract this so it's executed only once.
-        # The target has to be named: without it swiftc answers for the platform
-        # it runs on, whose runtime library directory is macosx.
-        set(_swift_target_info_args "")
-        if (CMAKE_Swift_COMPILER_TARGET)
-            list(APPEND _swift_target_info_args -target ${CMAKE_Swift_COMPILER_TARGET})
-        endif ()
-        execute_process(
-            COMMAND ${ORIGINAL_Swift_COMPILER} -print-target-info ${_swift_target_info_args}
-            OUTPUT_VARIABLE _swift_target_info
-        )
-        unset(_swift_target_info_args)
-        string(JSON _swift_target_paths GET ${_swift_target_info} "paths")
+        # Ask swiftc where to find the header files which support C/C++ builds.
+        string(JSON _swift_target_paths GET "${WEBKIT_SWIFT_TARGET_INFO}" "paths")
         string(JSON _swift_runtime_resource_path GET ${_swift_target_paths} "runtimeResourcePath")
         target_include_directories(${_target} SYSTEM AFTER PRIVATE "${_swift_runtime_resource_path}")
         # Swift C++-interop objects auto-link swiftCxx/swiftCxxStdlib; consumers
