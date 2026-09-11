@@ -885,6 +885,9 @@ void FrameLoader::didBeginDocument(bool dispatch, LocalDOMWindow* previousWindow
         if (document->url().protocolIsInHTTPFamily() || document->url().protocolIsBlob()) {
             document->setCrossOriginEmbedderPolicy(obtainCrossOriginEmbedderPolicy(documentLoader->response(), document.ptr()));
 
+            if (auto ipAddressSpace = documentLoader->response().ipAddressSpace(); ipAddressSpace != IPAddressSpace::Unknown)
+                document->setIPAddressSpace(ipAddressSpace);
+
             if (frame->settings().originAgentClusterEnabled() && !m_stateMachine.creatingInitialEmptyDocument())
                 document->setIsOriginKeyed(documentLoader->isOriginKeyedFromUIProcess());
         }

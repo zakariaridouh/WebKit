@@ -24,9 +24,11 @@
 
 #include "ResourceResponse.h"
 
+#include "DNS.h"
 #include "GUniquePtrSoup.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
+#include "IPAddressSpace.h"
 #include "MIMETypeRegistry.h"
 #include "URLSoup.h"
 #include <unicode/uset.h>
@@ -34,6 +36,20 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+static IPAddressSpace resolvedIPAddressSpace(SoupMessage* soupMessage)
+{
+    auto* address = soup_message_get_remote_address(soupMessage);
+    if (!G_IS_INET_SOCKET_ADDRESS(address))
+        return IPAddressSpace::Unknown;
+
+    GUniquePtr<char> ipAddress(g_inet_address_to_string(g_inet_socket_address_get_address(G_INET_SOCKET_ADDRESS(address))));
+    auto resolvedIPAddress = IPAddress::fromString(String::fromUTF8(ipAddress.get()));
+    if (!resolvedIPAddress)
+        return IPAddressSpace::Unknown;
+
+    return classifyIPAddressSpace(*resolvedIPAddress);
+}
 
 ResourceResponse::ResourceResponse(SoupMessage* soupMessage, const CString& sniffedContentType)
 {
@@ -72,6 +88,8 @@ ResourceResponse::ResourceResponse(SoupMessage* soupMessage, const CString& snif
     setTextEncodingName(extractCharsetFromMediaType(contentType).toString());
 
     setExpectedContentLength(soup_message_headers_get_content_length(responseHeaders));
+
+    setIPAddressSpace(resolvedIPAddressSpace(soupMessage));
 }
 
 void ResourceResponse::updateSoupMessageHeaders(SoupMessageHeaders* soupHeaders) const
