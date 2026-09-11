@@ -163,7 +163,7 @@ public:
     inline bool isPlatformFont() const; // Defined in FontCascadeInlines.h
 
     inline const FontMetrics& metricsOfPrimaryFont() const; // Defined in FontCascadeInlines.h
-    float zeroWidth() const;
+    WEBCORE_EXPORT float zeroWidth() const;
     float tabWidth(const Font&, const TabSize&, float, Font::SyntheticBoldInclusion) const;
     bool hasValidAverageCharWidth() const;
     bool fastAverageCharWidthIfAvailable(float &width) const; // returns true on success
