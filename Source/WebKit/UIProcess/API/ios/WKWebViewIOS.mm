@@ -4660,10 +4660,12 @@ static bool isLockdownModeWarningNeeded()
     return nil;
 }
 
+#if HAVE(UIKIT_PRINTING)
 - (_WKWebViewPrintFormatter *)_webViewPrintFormatter
 {
     return checked_objc_cast<_WKWebViewPrintFormatter>(self.viewPrintFormatter);
 }
+#endif
 
 - (_WKDragInteractionPolicy)_dragInteractionPolicy
 {
@@ -5570,6 +5572,8 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 #endif // ENABLE(FULLSCREEN_API)
 
+#if HAVE(UIKIT_PRINTING)
+
 @implementation WKWebView (_WKWebViewPrintFormatter)
 
 - (Class)_printFormatterClass
@@ -5586,6 +5590,8 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 }
 
 @end
+
+#endif // HAVE(UIKIT_PRINTING)
 
 #if ENABLE(TWO_PHASE_CLICKS)
 
