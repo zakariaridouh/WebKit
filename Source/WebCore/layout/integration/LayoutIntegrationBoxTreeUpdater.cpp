@@ -178,17 +178,8 @@ void BoxTreeUpdater::tearDown()
 void BoxTreeUpdater::adjustStyleIfNeeded(const RenderElement& renderer, Style::ComputedStyle& style, Style::ComputedStyle* firstLineStyle)
 {
     auto adjustStyle = [&](auto& styleToAdjust) {
-        if (is<RenderBlock>(renderer)) {
-            if (renderer.isAnonymousBlock()) {
-                CheckedRef anonBlockParentStyle = renderer.parent()->style();
-                // overflow and text-overflow property values don't get forwarded to anonymous block boxes.
-                // e.g. <div style="overflow: hidden; text-overflow: ellipsis; width: 100px; white-space: pre;">this text should have ellipsis<div></div></div>
-                styleToAdjust.setTextOverflow(Style::TextOverflow { anonBlockParentStyle->textOverflow() });
-                styleToAdjust.setOverflowX(anonBlockParentStyle->overflowX());
-                styleToAdjust.setOverflowY(anonBlockParentStyle->overflowY());
-            }
-            return;
-        }
+        UNUSED_PARAM(renderer);
+        UNUSED_PARAM(styleToAdjust);
     };
     adjustStyle(style);
     if (firstLineStyle)
