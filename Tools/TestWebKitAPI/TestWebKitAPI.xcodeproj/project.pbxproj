@@ -775,6 +775,7 @@
 				WebCore/ContentExtensions.cpp,
 				WebCore/ContextMenuAction.cpp,
 				WebCore/CookieJar.cpp,
+				WebCore/CredentialStorage.cpp,
 				WebCore/CryptoDigest.cpp,
 				WebCore/CSSParser.cpp,
 				WebCore/CSSParserFastPaths.cpp,

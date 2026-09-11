@@ -270,6 +270,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/ComplexTextController.cpp
         Tests/WebCore/ContextMenuAction.cpp
         Tests/WebCore/CookieJar.cpp
+        Tests/WebCore/CredentialStorage.cpp
         Tests/WebCore/CryptoDigest.cpp
         Tests/WebCore/CtapPinTest.cpp
         Tests/WebCore/CtapRequestTest.cpp
