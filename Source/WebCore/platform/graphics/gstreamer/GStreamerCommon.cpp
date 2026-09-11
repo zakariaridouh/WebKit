@@ -953,11 +953,59 @@ size_t GstMappedFrame::planeHeight(uint32_t planeIndex) const
 }
 
 #if USE(GSTREAMER_GL)
-GLuint GstMappedFrame::textureID(int planeIndex) const
+GstGLMemory* GstMappedFrame::glMemory(uint32_t planeIndex) const
 {
     RELEASE_ASSERT(isValid());
     RELEASE_ASSERT(m_frame.map->flags & GST_MAP_GL);
-    return *reinterpret_cast<GLuint*>(m_frame.data[planeIndex]);
+    RELEASE_ASSERT(planeIndex < GST_VIDEO_INFO_N_PLANES(&m_frame.info));
+    return GST_GL_MEMORY_CAST(m_frame.map[planeIndex].memory);
+}
+
+unsigned GstMappedFrame::textureID(uint32_t planeIndex) const
+{
+    return gst_gl_memory_get_texture_id(glMemory(planeIndex));
+}
+
+IntSize GstMappedFrame::textureSize(uint32_t planeIndex) const
+{
+    auto* memory = glMemory(planeIndex);
+    return { gst_gl_memory_get_texture_width(memory), gst_gl_memory_get_texture_height(memory) };
+}
+
+unsigned GstMappedFrame::textureFormat(uint32_t planeIndex) const
+{
+    auto format = gst_gl_memory_get_texture_format(glMemory(planeIndex));
+    switch (format) {
+    case GST_GL_RED:
+        if (GST_VIDEO_INFO_COMP_DEPTH(&m_frame.info, planeIndex) == 8)
+            return GST_GL_R8;
+        return GST_GL_R16;
+    case GST_GL_RG:
+        if (GST_VIDEO_INFO_COMP_DEPTH(&m_frame.info, planeIndex) == 8)
+            return GST_GL_RG8;
+        return GST_GL_RG16;
+    case GST_GL_RGB:
+        if (GST_VIDEO_INFO_COMP_DEPTH(&m_frame.info, planeIndex) == 8)
+            return GST_GL_RGB8;
+        return GST_GL_RGB16;
+    case GST_GL_RGBA:
+        if (GST_VIDEO_INFO_COMP_DEPTH(&m_frame.info, planeIndex) == 8)
+            return GST_GL_RGBA8;
+        return GST_GL_RGBA16;
+    default:
+        break;
+    }
+    return format;
+}
+
+void GstMappedFrame::waitForCPUSyncIfNeeded() const
+{
+    RELEASE_ASSERT(isValid());
+    if (!m_needsCPUSync)
+        return;
+
+    if (auto* meta = gst_buffer_get_gl_sync_meta(m_frame.buffer))
+        gst_gl_sync_meta_wait_cpu(meta, reinterpret_cast<GstGLBaseMemory*>(gst_buffer_peek_memory(m_frame.buffer, 0))->context);
 }
 #endif
 
