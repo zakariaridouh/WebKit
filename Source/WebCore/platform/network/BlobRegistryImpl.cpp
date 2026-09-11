@@ -253,7 +253,9 @@ void BlobRegistryImpl::registerInternalBlobURLForSlice(const URL& url, const URL
     if (!originalData)
         return;
 
-    unsigned long long originalSize = blobSize(srcURL);
+    unsigned long long originalSize = 0;
+    for (auto& item : originalData->items())
+        originalSize += item.length();
 
     // Convert the negative value that is used to select from the end.
     if (start < 0)
