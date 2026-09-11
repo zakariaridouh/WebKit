@@ -22,6 +22,7 @@
 #pragma once
 
 #include "RenderInline.h"
+#include "RenderLineBoxList.h"
 #include "SVGPaintServerCache.h"
 
 namespace WebCore {
@@ -39,6 +40,16 @@ public:
     inline SVGGraphicsElement& graphicsElement() const;
 
     bool isChildAllowed(const RenderObject&, const Style::ComputedStyle&) const override;
+
+    // SVG inlines are the only inline boxes laid out by LegacyLineLayout, so they are the only ones
+    // holding legacy line boxes.
+    LegacyInlineFlowBox* createAndAppendInlineFlowBox();
+
+    RenderLineBoxList& legacyLineBoxes() LIFETIME_BOUND { return m_legacyLineBoxes; }
+    const RenderLineBoxList& legacyLineBoxes() const LIFETIME_BOUND { return m_legacyLineBoxes; }
+    void deleteLegacyLineBoxes();
+    LegacyInlineFlowBox* firstLegacyInlineBox() const LIFETIME_BOUND { return m_legacyLineBoxes.firstLegacyLineBox(); }
+    LegacyInlineFlowBox* lastLegacyInlineBox() const LIFETIME_BOUND { return m_legacyLineBoxes.lastLegacyLineBox(); }
 
 private:
     void element() const = delete;
@@ -75,7 +86,9 @@ private:
     void absoluteQuadsForSelection(Vector<FloatQuad>&) const final;
 #endif
 
-    std::unique_ptr<LegacyInlineFlowBox> createInlineFlowBox() final;
+    std::unique_ptr<LegacyInlineFlowBox> createInlineFlowBox();
+
+    void dirtyLineFromChangedChild() final { m_legacyLineBoxes.dirtyLineFromChangedChild(*this); }
 
     void willBeDestroyed() final;
     void styleDidChange(Style::Difference, const Style::ComputedStyle* oldStyle) final;
@@ -83,6 +96,9 @@ private:
     SVGPaintServerCache* svgPaintServerCache() const final { return &m_svgPaintServerCache; }
 
     mutable SVGPaintServerCache m_svgPaintServerCache;
+
+    // All of the line boxes created for this SVG inline.
+    RenderLineBoxList m_legacyLineBoxes;
 };
 
 } // namespace WebCore
