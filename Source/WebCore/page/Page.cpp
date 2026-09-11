@@ -473,8 +473,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
 #endif
     , m_corsDisablingPatterns(WTF::move(pageConfiguration.corsDisablingPatterns))
     , m_maskedURLSchemes(WTF::move(pageConfiguration.maskedURLSchemes))
-    , m_allowedNetworkHosts(WTF::move(pageConfiguration.allowedNetworkHosts))
-    , m_loadsSubresources(pageConfiguration.loadsSubresources)
+    , m_networkLoadPolicy { pageConfiguration.loadsSubresources, WTF::move(pageConfiguration.allowedNetworkHosts) }
     , m_shouldRelaxThirdPartyCookieBlocking(pageConfiguration.shouldRelaxThirdPartyCookieBlocking)
     , m_fixedContainerEdgesAndElements(std::make_pair(makeUniqueRef<FixedContainerEdges>(), WeakElementEdges { }))
     , m_httpsUpgradeEnabled(pageConfiguration.httpsUpgradeEnabled)
@@ -4826,13 +4825,7 @@ void Page::forEachWindowEventLoop(NOESCAPE const Function<void(WindowEventLoop&)
 
 bool Page::allowsLoadFromURL(const URL& url, MainFrameMainResource mainFrameMainResource) const
 {
-    if (mainFrameMainResource == MainFrameMainResource::No && !m_loadsSubresources)
-        return false;
-    if (!m_allowedNetworkHosts)
-        return true;
-    if (!url.protocolIsInHTTPFamily() && !url.protocolIs("ws"_s) && !url.protocolIs("wss"_s))
-        return true;
-    return m_allowedNetworkHosts->contains<StringViewHashTranslator>(url.host());
+    return m_networkLoadPolicy.allowsLoadFromURL(url, mainFrameMainResource);
 }
 
 bool Page::hasLocalDataForURL(const URL& url)

@@ -6299,6 +6299,7 @@
 		D61496E32E428EDB00BAF335 /* UserAgentStringParser.h in Headers */ = {isa = PBXBuildFile; fileRef = D61496E12E428EDB00BAF335 /* UserAgentStringParser.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		D619A308144E00BE004BC302 /* ChildListMutationScope.h in Headers */ = {isa = PBXBuildFile; fileRef = D619A306144E00BE004BC302 /* ChildListMutationScope.h */; };
 		D640B2462E30461D00EB6C49 /* NavigatorUAData.h in Headers */ = {isa = PBXBuildFile; fileRef = D640B2422E2F09F900EB6C49 /* NavigatorUAData.h */; };
+		08B786B0CEACA0F21D6A5676 /* NetworkLoadPolicy.h in Headers */ = {isa = PBXBuildFile; fileRef = 02357438619C3D1E3719E438 /* NetworkLoadPolicy.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		D640B24B2E30589300EB6C49 /* UALowEntropyJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = D640B2472E30587100EB6C49 /* UALowEntropyJSON.h */; };
 		D640B24F2E3058D500EB6C49 /* UADataValues.h in Headers */ = {isa = PBXBuildFile; fileRef = D640B24C2E3058C800EB6C49 /* UADataValues.h */; };
 		D6489D26166FFCF1007C031B /* JSHTMLTemplateElement.h in Headers */ = {isa = PBXBuildFile; fileRef = D6489D24166FFCF1007C031B /* JSHTMLTemplateElement.h */; };
@@ -21963,6 +21964,8 @@
 		D6306E5657152075F782FE3A /* SkipForward10.svg */ = {isa = PBXFileReference; lastKnownFileType = text; path = SkipForward10.svg; sourceTree = "<group>"; };
 		D640B2412E2F09DE00EB6C49 /* NavigatorUA.idl */ = {isa = PBXFileReference; lastKnownFileType = text; path = NavigatorUA.idl; sourceTree = "<group>"; };
 		D640B2422E2F09F900EB6C49 /* NavigatorUAData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NavigatorUAData.h; sourceTree = "<group>"; };
+		02357438619C3D1E3719E438 /* NetworkLoadPolicy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetworkLoadPolicy.h; sourceTree = "<group>"; };
+		E5E93BDFA28F5D63963BED0F /* NetworkLoadPolicy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkLoadPolicy.cpp; sourceTree = "<group>"; };
 		D640B2442E2F09F900EB6C49 /* NavigatorUAData.idl */ = {isa = PBXFileReference; lastKnownFileType = text; path = NavigatorUAData.idl; sourceTree = "<group>"; };
 		D640B2452E3038FD00EB6C49 /* NavigatorUAData.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NavigatorUAData.cpp; sourceTree = "<group>"; };
 		D640B2472E30587100EB6C49 /* UALowEntropyJSON.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UALowEntropyJSON.h; sourceTree = "<group>"; };
@@ -31506,6 +31509,8 @@
 				D640B2452E3038FD00EB6C49 /* NavigatorUAData.cpp */,
 				D640B2422E2F09F900EB6C49 /* NavigatorUAData.h */,
 				D640B2442E2F09F900EB6C49 /* NavigatorUAData.idl */,
+				E5E93BDFA28F5D63963BED0F /* NetworkLoadPolicy.cpp */,
+				02357438619C3D1E3719E438 /* NetworkLoadPolicy.h */,
 				F4E9E2462A23C5D000A5B134 /* OpportunisticTaskScheduler.cpp */,
 				F4E9E2452A23C5D000A5B134 /* OpportunisticTaskScheduler.h */,
 				00146288103CD1DE000B20DB /* OriginAccessEntry.cpp */,
@@ -47953,6 +47958,7 @@
 				628D214C12131ED10055DCFC /* NetworkingContext.h in Headers */,
 				416D75A220C651A500D02D2C /* NetworkLoadInformation.h in Headers */,
 				8A81BF8511DCFD9000DA2B98 /* NetworkLoadMetrics.h in Headers */,
+				08B786B0CEACA0F21D6A5676 /* NetworkLoadPolicy.h in Headers */,
 				59C27F07138D28CF0079B7E2 /* NetworkResourcesData.h in Headers */,
 				41E9DCE92319CA7600F35949 /* NetworkSendQueue.h in Headers */,
 				1A7FA6190DDA3B3A0028F8A5 /* NetworkStateNotifier.h in Headers */,

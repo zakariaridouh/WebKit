@@ -120,7 +120,8 @@ static WorkerParameters generateWorkerParameters(const ServiceWorkerContextData&
         { },
         advancedPrivacyProtections,
         noiseInjectionHashSalt,
-        makeString(Process::identifier().toUInt64(), "-serviceworker-"_s, contextData.serviceWorkerIdentifier.toUInt64())
+        makeString(Process::identifier().toUInt64(), "-serviceworker-"_s, contextData.serviceWorkerIdentifier.toUInt64()),
+        NetworkLoadPolicy::unrestricted()
     };
 }
 

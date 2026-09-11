@@ -828,6 +828,8 @@ public:
 
     inline const SettingsValues& settingsValues() const final; // Defined in DocumentSettingsValues.h.
 
+    const NetworkLoadPolicy& networkLoadPolicy() const final;
+
     void NODELETE suspendDeviceMotionAndOrientationUpdates();
     void NODELETE resumeDeviceMotionAndOrientationUpdates();
 
