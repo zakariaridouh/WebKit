@@ -49,9 +49,6 @@ class StringView;
 class UUID {
 WTF_DEPRECATED_MAKE_FAST_ALLOCATED(UUID);
 public:
-    static constexpr UInt128 emptyValue = 0;
-    static constexpr UInt128 deletedValue = 1;
-
     static UUID createVersion4()
     {
         return UUID { };
@@ -87,12 +84,13 @@ public:
     explicit constexpr UUID(UInt128 data)
         : m_data(data)
     {
+        RELEASE_ASSERT(data != emptyValue && data != deletedValue);
     }
 
     explicit UUID(uint64_t high, uint64_t low)
         : m_data((static_cast<UInt128>(high) << 64) | low)
     {
-        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!isHashTableDeletedValue());
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(isValid());
     }
 
     std::span<const uint8_t, 16> span() const LIFETIME_BOUND
@@ -102,20 +100,17 @@ public:
 
     friend bool operator==(const UUID&, const UUID&) = default;
 
-    explicit constexpr UUID(HashTableDeletedValueType)
-        : m_data(deletedValue)
-    {
-    }
-
-    explicit constexpr UUID(HashTableEmptyValueType)
-        : m_data(emptyValue)
-    {
-    }
-
     static bool isValid(uint64_t high, uint64_t low)
     {
         auto data = (static_cast<UInt128>(high) << 64) | low;
         return data != deletedValue && data != emptyValue;
+    }
+
+    // Public so that composite types can build their own hash traits. Unlike the empty value, the deleted
+    // value is not a usable "no UUID" sentinel, since Markable and HashTraits both treat it as engaged.
+    explicit constexpr UUID(HashTableDeletedValueType)
+        : m_data(deletedValue)
+    {
     }
 
     constexpr bool isHashTableDeletedValue() const { return m_data == deletedValue; }
@@ -132,8 +127,21 @@ public:
     uint64_t high() const { return static_cast<uint64_t>(m_data >> 64);  }
 
 private:
-    WTF_EXPORT_PRIVATE UUID();
+    friend struct HashTraits<UUID>;
+    friend struct MarkableTraits<UUID>;
     friend void add(Hasher&, UUID);
+
+    // The empty and deleted values are reserved for HashTraits and MarkableTraits. Code that needs to express
+    // "no UUID" should use Markable<WTF::UUID> or std::optional<WTF::UUID> rather than naming these.
+    static constexpr UInt128 emptyValue = 0;
+    static constexpr UInt128 deletedValue = 1;
+
+    explicit constexpr UUID(HashTableEmptyValueType)
+        : m_data(emptyValue)
+    {
+    }
+
+    WTF_EXPORT_PRIVATE UUID();
 
     WTF_EXPORT_PRIVATE static UInt128 generateWeakRandomUUIDVersion4();
 
@@ -143,7 +151,7 @@ private:
 template<>
 struct MarkableTraits<UUID> {
     static bool isEmptyValue(const UUID& uuid) { return !uuid; }
-    static UUID emptyValue() { return UUID { UInt128 { 0 } }; }
+    static UUID emptyValue() { return UUID { HashTableEmptyValue }; }
 };
 
 inline void add(Hasher& hasher, UUID uuid)

@@ -4572,7 +4572,7 @@ void Editor::selectionStartSetMarkerForTesting(DocumentMarkerType markerType, in
 
     switch (markerType) {
     case DocumentMarkerType::TransparentContent:
-        markers->addMarker(*text, unsignedFrom, unsignedLength, markerType, DocumentMarker::TransparentContentData { node, WTF::UUID { 0 } });
+        markers->addMarker(*text, unsignedFrom, unsignedLength, markerType, DocumentMarker::TransparentContentData { node, std::nullopt });
         return;
 
     case DocumentMarkerType::DraggedContent:

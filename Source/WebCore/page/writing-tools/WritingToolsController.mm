@@ -284,7 +284,7 @@ void WritingToolsController::willBeginWritingToolsSession(const std::optional<Wr
         // If there is no session, this implies that the Writing Tools delegate is used for the "non-inline editing" case;
         // as such, no mutating delegate methods will be invoked, and so there need not be any state tracked.
 
-        completionHandler({ { WTF::UUID { 0 }, attributedStringFromRange, selectedTextCharacterRange } });
+        completionHandler({ { std::nullopt, attributedStringFromRange, selectedTextCharacterRange } });
         return;
     }
 
@@ -320,7 +320,7 @@ void WritingToolsController::willBeginWritingToolsSession(const std::optional<Wr
 
     document->editor().setSuppressEditingForWritingTools(true);
 
-    completionHandler({ { WTF::UUID { 0 }, attributedStringFromRange, selectedTextCharacterRange } });
+    completionHandler({ { std::nullopt, attributedStringFromRange, selectedTextCharacterRange } });
 }
 
 void WritingToolsController::didBeginWritingToolsSession(const WritingTools::Session& session, const Vector<WritingTools::Context>& contexts)
@@ -377,7 +377,8 @@ void WritingToolsController::proofreadingSessionDidReceiveSuggestions(const Writ
 
     document->markers().forEach(adjustedProcessedRangeBeforeReplacement, { DocumentMarkerType::TransparentContent }, [&](auto&, auto marker) {
         auto& data = std::get<DocumentMarker::TransparentContentData>(marker.data());
-        transparentContentMarkerIdentifiers.add(data.uuid);
+        if (data.uuid)
+            transparentContentMarkerIdentifiers.add(*data.uuid);
 
         return false;
     });
@@ -634,12 +635,11 @@ void WritingToolsController::intelligenceTextAnimationsDidComplete()
 
 void WritingToolsController::compositionSessionDidFinishReplacement()
 {
-    // An empty optional range implies that an animation should be considered to have already been finished.
-    WTF::UUID emptyUUID { WTF::UUID::emptyValue };
-    m_page->chrome().client().addDestinationTextAnimationForActiveWritingToolsSession(emptyUUID, emptyUUID, std::nullopt, ""_s);
+    // No animation UUIDs and an empty optional range imply that an animation should be considered to have already been finished.
+    m_page->chrome().client().addDestinationTextAnimationForActiveWritingToolsSession({ }, { }, std::nullopt, ""_s);
 }
 
-void WritingToolsController::compositionSessionDidFinishReplacement(const WTF::UUID& sourceAnimationUUID, const WTF::UUID& destinationAnimationUUID, const CharacterRange& updatedRange, const String& replacementText)
+void WritingToolsController::compositionSessionDidFinishReplacement(Markable<WTF::UUID> sourceAnimationUUID, Markable<WTF::UUID> destinationAnimationUUID, const CharacterRange& updatedRange, const String& replacementText)
 {
     m_page->chrome().client().addDestinationTextAnimationForActiveWritingToolsSession(sourceAnimationUUID, destinationAnimationUUID, updatedRange, replacementText);
 }
@@ -689,7 +689,8 @@ void WritingToolsController::smartReplySessionDidReceiveTextWithReplacementRange
 
     document->markers().forEach(resolvedRange, { DocumentMarkerType::TransparentContent }, [&](auto&, auto& marker) {
         auto& data = std::get<DocumentMarker::TransparentContentData>(marker.data());
-        transparentContentMarkerIdentifiers.add(data.uuid);
+        if (data.uuid)
+            transparentContentMarkerIdentifiers.add(*data.uuid);
 
         return false;
     });
@@ -711,7 +712,7 @@ void WritingToolsController::smartReplySessionDidReceiveTextWithReplacementRange
     document->selection().clear();
 }
 
-void WritingToolsController::compositionSessionDidReceiveTextWithReplacementRangeAsync(const WTF::UUID& sourceAnimationUUID, const WTF::UUID& destinationAnimationUUID, const AttributedString& attributedText, const CharacterRange& range, const WritingTools::Context& context, bool finished, TextAnimationRunMode runMode)
+void WritingToolsController::compositionSessionDidReceiveTextWithReplacementRangeAsync(Markable<WTF::UUID> sourceAnimationUUID, Markable<WTF::UUID> destinationAnimationUUID, const AttributedString& attributedText, const CharacterRange& range, const WritingTools::Context& context, bool finished, TextAnimationRunMode runMode)
 {
     RefPtr document = this->document();
     if (!document) {
@@ -856,8 +857,7 @@ void WritingToolsController::compositionSessionDidReceiveTextWithReplacementRang
     state->pendingReplacedRange = range;
 
     if (session.compositionType == WritingTools::Session::CompositionType::Other) {
-        WTF::UUID emptyUUID { WTF::UUID::emptyValue };
-        compositionSessionDidReceiveTextWithReplacementRangeAsync(emptyUUID, emptyUUID, attributedText, range, context, finished, WebCore::TextAnimationRunMode::OnlyReplaceText);
+        compositionSessionDidReceiveTextWithReplacementRangeAsync({ }, { }, attributedText, range, context, finished, WebCore::TextAnimationRunMode::OnlyReplaceText);
         return;
     }
 

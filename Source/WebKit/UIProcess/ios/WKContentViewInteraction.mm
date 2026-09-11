@@ -14421,8 +14421,8 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
     if (!protect(_page->preferences())->textAnimationsEnabled())
         return;
 
-    if (data.style == WebCore::TextAnimationType::Final)
-        [_sourceAnimationIDtoDestinationAnimationID setObject:uuid forKey:data.sourceAnimationUUID.value_or(WTF::UUID(WTF::UUID::emptyValue)).createNSUUID().get()];
+    if (data.style == WebCore::TextAnimationType::Final && data.sourceAnimationUUID)
+        [_sourceAnimationIDtoDestinationAnimationID setObject:uuid forKey:data.sourceAnimationUUID->createNSUUID().get()];
 
     if (!_textAnimationManager)
         _textAnimationManager = adoptNS([WebKit::allocWKTextAnimationManagerInstance() initWithDelegate:self]);
