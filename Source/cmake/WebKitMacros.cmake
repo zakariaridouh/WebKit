@@ -1231,6 +1231,11 @@ function(_webkit_generate_platform_swift_args _target _resp_path)
     if (WEBKIT_ADDITIONS_INCLUDE_PATH)
         list(APPEND _clang_cmd "-I" "${WEBKIT_ADDITIONS_INCLUDE_PATH}")
     endif ()
+    set(_command_deps "")
+    if (USE_APPLE_INTERNAL_SDK)
+        list(APPEND _clang_cmd "-I" "${WebKitAdditions_FRAMEWORK_HEADERS_DIR}")
+        list(APPEND _command_deps WebKitAdditions_CopyHeaders)
+    endif ()
     # Use the same global definitions as C++ when deriving the Swift compilation arguments.
     _webkit_cxx_preprocessor_definitions(_cxx_defs)
     list(APPEND _clang_cmd ${_cxx_defs})
@@ -1258,6 +1263,7 @@ function(_webkit_generate_platform_swift_args _target _resp_path)
             "${_script}"
             "${CMAKE_BINARY_DIR}/cmakeconfig.h"
             WTF_CopyHeaders
+            ${_command_deps}
         COMMENT "Generating ${_target} platform-swift-args.resp"
         VERBATIM
     )
@@ -1466,6 +1472,9 @@ macro(WEBKIT_SETUP_SWIFT_AND_GENERATE_SWIFT_CPP_INTEROP_HEADER _target _module_n
         elseif (WEBKIT_ADDITIONS_INCLUDE_PATH)
             target_compile_options(${_target} PRIVATE
                 "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -isystem${WEBKIT_ADDITIONS_INCLUDE_PATH}>")
+        endif ()
+        if (USE_APPLE_INTERNAL_SDK)
+            add_dependencies(${_target} WebKitAdditions_CopyHeaders)
         endif ()
 
         # Empty list means: skip Swift C++ interop header generation entirely.

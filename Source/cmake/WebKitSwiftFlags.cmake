@@ -152,6 +152,12 @@ if (APPLE)
         "-Xcc -fexperimental-late-parse-attributes"
     )
 
+    if (USE_APPLE_INTERNAL_SDK)
+        webkit_add_swift_options(
+            "-Xcc -I${WebKitAdditions_FRAMEWORK_HEADERS_DIR}"
+        )
+    endif ()
+
     # FIXME: Consider building with -wmo in release / performance builds.
     webkit_add_swift_options(
         -enable-batch-mode
