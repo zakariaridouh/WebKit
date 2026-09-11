@@ -33,6 +33,11 @@ namespace WebCore {
 class CSSSelectorList;
 struct CSSSelectorParserContext;
 
+// The universal pseudo-element argument (::highlight(*), ::view-transition-group(*), etc.)
+// is represented by this otherwise-invalid <custom-ident> value (a real name can never be
+// empty).
+inline const AtomString& universalPseudoElementNameAtom() { return emptyAtom(); }
+
 struct PossiblyQuotedIdentifier {
     AtomString identifier;
     bool wasQuoted { false };
