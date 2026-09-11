@@ -175,17 +175,6 @@ void BoxTreeUpdater::tearDown()
         rootLayoutBox().destroyChildren();
 }
 
-void BoxTreeUpdater::adjustStyleIfNeeded(const RenderElement& renderer, Style::ComputedStyle& style, Style::ComputedStyle* firstLineStyle)
-{
-    auto adjustStyle = [&](auto& styleToAdjust) {
-        UNUSED_PARAM(renderer);
-        UNUSED_PARAM(styleToAdjust);
-    };
-    adjustStyle(style);
-    if (firstLineStyle)
-        adjustStyle(*firstLineStyle);
-}
-
 static Layout::ElementBox::IsListMarkerImage isListMarkerImage(const RenderListOutsideMarker& listMarkerRenderer)
 {
     return listMarkerRenderer.isImage() ? Layout::ElementBox::IsListMarkerImage::Yes : Layout::ElementBox::IsListMarkerImage::No;
@@ -256,7 +245,6 @@ UniqueRef<Layout::Box> BoxTreeUpdater::createLayoutBox(RenderObject& renderer)
     auto& renderElement = downcast<RenderElement>(renderer);
 
     auto style = Style::ComputedStyle::clone(renderElement.style());
-    adjustStyleIfNeeded(renderElement, style, firstLineStyle.get());
 
     if (CheckedPtr listMarkerRenderer = dynamicDowncast<RenderListOutsideMarker>(renderElement))
         return makeUniqueRef<Layout::ElementBox>(elementAttributes(renderElement), isListMarkerImage(*listMarkerRenderer), WTF::move(style), WTF::move(firstLineStyle));
@@ -360,7 +348,6 @@ void BoxTreeUpdater::updateStyle(const RenderObject& renderer)
 
     auto firstLineNewStyle = firstLineStyleFor(renderer);
     auto newStyle = Style::ComputedStyle::clone(downcast<RenderElement>(renderer).style());
-    adjustStyleIfNeeded(downcast<RenderElement>(renderer), newStyle, firstLineNewStyle.get());
     layoutBox->updateStyle(WTF::move(newStyle), WTF::move(firstLineNewStyle));
     if (auto* listMarkerRenderer = dynamicDowncast<RenderListOutsideMarker>(renderer)) {
         if (auto* elementBox = dynamicDowncast<Layout::ElementBox>(*layoutBox))
