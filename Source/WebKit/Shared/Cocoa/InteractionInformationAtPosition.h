@@ -83,7 +83,7 @@ struct InteractionInformationAtPosition {
 #if PLATFORM(IOS_FAMILY)
         bool hasSaveableImage,
 #endif
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
         bool isInteractiveModel,
 #endif
         bool isAttachment,
@@ -158,7 +158,7 @@ struct InteractionInformationAtPosition {
 #if PLATFORM(IOS_FAMILY)
     bool hasSaveableImage { false };
 #endif
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
     bool isInteractiveModel { false };
 #endif
     bool isAttachment { false };

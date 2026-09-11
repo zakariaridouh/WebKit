@@ -55,7 +55,7 @@ InteractionInformationAtPosition::InteractionInformationAtPosition(
 #if PLATFORM(IOS_FAMILY)
     bool hasSaveableImage,
 #endif
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
     bool isInteractiveModel,
 #endif
     bool isAttachment,
@@ -125,7 +125,7 @@ InteractionInformationAtPosition::InteractionInformationAtPosition(
 #if PLATFORM(IOS_FAMILY)
     , hasSaveableImage(hasSaveableImage)
 #endif
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
     , isInteractiveModel(isInteractiveModel)
 #endif
     , isAttachment(isAttachment)
