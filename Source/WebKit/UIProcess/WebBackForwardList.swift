@@ -85,25 +85,6 @@ private func loadingReleaseLog(_ msgCreator: @autoclosure () -> String) {
     doLoadingReleaseLog(WTF.String(msgCreator()))
 }
 
-// Temporary partial MESSAGE_CHECK_BASE support from Swift
-// Idiomatic equivalent represented by rdar://168139740
-private func messageCheck(process: WebKit.RefWebProcessProxy, _ assertion: @autoclosure () -> Bool) -> Bool {
-    messageCheckCompletion(process: process, completionHandler: {}, assertion())
-}
-
-private func messageCheckCompletion(
-    process: WebKit.RefWebProcessProxy,
-    completionHandler: () -> Void,
-    _ assertion: @autoclosure () -> Bool
-) -> Bool {
-    if !assertion() {
-        messageCheckFailed(process)
-        completionHandler()
-        return true
-    }
-    return false
-}
-
 // FIXME(rdar://130765784): We should be able use the built-in ===, but AnyObject currently excludes foreign reference types
 @_expose(!Cxx) // rdar://169474185
 func === (_ lhs: WebKit.WebBackForwardListItem, _ rhs: WebKit.WebBackForwardListItem) -> Bool {
@@ -1035,8 +1016,7 @@ final class WebBackForwardList {
         return frameState
     }
 
-    // Returns true if a message check failed, in which case the caller should bail out.
-    private func messageCheckItemURLs(frameState: WebKit.RefFrameState, process: WebKit.RefWebProcessProxy) -> Bool {
+    private func messageCheckItemURLs(frameState: WebKit.RefFrameState, process: WebKit.RefWebProcessProxy) throws(InvalidMessage) {
         // 'nil' works around rdar://162310543
         // Safety: it's OK to pass a null pointer to these two functions; in fact it's the default
         let itemURL = unsafe WTF.URL(frameState.ptr().urlString, nil)
@@ -1052,21 +1032,14 @@ final class WebBackForwardList {
             WTF.linkedOnOrAfterSDKWithBehavior(WTF.SDKAlignedBehavior.PushStateFilePathRestriction)
         #endif
         if doMessageChecks { // corresponds to the first 'if' condition in C++ messageCheckItemURLs
-            if messageCheck(
-                process: process,
+            try messageCheck {
                 !itemURL.protocolIsFile() || process.ptr().wasPreviouslyApprovedFileURL(itemURL)
-            ) {
-                return true
             }
-            if messageCheck(
-                process: process,
+            try messageCheck {
                 !itemOriginalURL.protocolIsFile() || process.ptr().wasPreviouslyApprovedFileURL(itemOriginalURL)
-            ) {
-                return true
             }
         }
         #endif
-        return false
     }
 
     @used
@@ -1075,6 +1048,22 @@ final class WebBackForwardList {
         navigatedFrameState: WebKit.RefFrameState,
         loadedWebArchive: WebKit.LoadedWebArchive
     ) {
+        // Also reached from C++ (WebPageProxy::backForwardAddItemShared), so this rather than
+        // the caller is the catch site.
+        dispatchMessage(on: connection) { () throws(InvalidMessage) in
+            try addItemInternal(
+                connection: connection,
+                navigatedFrameState: navigatedFrameState,
+                loadedWebArchive: loadedWebArchive
+            )
+        }
+    }
+
+    private func addItemInternal(
+        connection: IPC.Connection,
+        navigatedFrameState: WebKit.RefFrameState,
+        loadedWebArchive: WebKit.LoadedWebArchive
+    ) throws(InvalidMessage) {
         let process = WebKit.WebProcessProxy.fromConnection(connection)
 
         #if compiler(>=6.4) && !SWIFT_WEBKIT_TOOLCHAIN
@@ -1085,24 +1074,19 @@ final class WebBackForwardList {
         let hasFrameItemID = navigatedFrameState.ptr().frameItemID.__convertToBool()
         #endif
 
-        if messageCheck(
-            process: process,
-            !hasItemID || contentsMatch(navigatedFrameState.ptr().itemID.pointee.processIdentifier(), process.ptr().coreProcessIdentifier())
-        ) {
-            return
+        try messageCheck {
+            !hasItemID
+                || contentsMatch(navigatedFrameState.ptr().itemID.pointee.processIdentifier(), process.ptr().coreProcessIdentifier())
         }
-
-        if messageCheck(
-            process: process,
+        try messageCheck {
             !hasFrameItemID
-                || contentsMatch(navigatedFrameState.ptr().frameItemID.pointee.processIdentifier(), process.ptr().coreProcessIdentifier())
-        ) {
-            return
+                || contentsMatch(
+                    navigatedFrameState.ptr().frameItemID.pointee.processIdentifier(),
+                    process.ptr().coreProcessIdentifier()
+                )
         }
 
-        if messageCheckItemURLs(frameState: navigatedFrameState, process: process) {
-            return
-        }
+        try messageCheckItemURLs(frameState: navigatedFrameState, process: process)
 
         let navigatedFrameID = navigatedFrameState.ptr().frameID
         let targetFrame = WebKit.WebFrameProxy.webFrame(navigatedFrameID)
@@ -1121,9 +1105,7 @@ final class WebBackForwardList {
             pagesMatch = framePage == nil && listPage == nil
         }
 
-        if messageCheck(process: process, pagesMatch) {
-            return
-        }
+        try messageCheck { pagesMatch }
 
         if targetFrame.isPendingInitialHistoryItem() {
             targetFrame.setIsPendingInitialHistoryItem(false)
@@ -1180,10 +1162,18 @@ final class WebBackForwardList {
         frameItemID: WebCore.BackForwardFrameItemIdentifier,
         frameState: WebKit.RefFrameState
     ) {
-        let process = WebKit.WebProcessProxy.fromConnection(connection)
-        if messageCheckItemURLs(frameState: frameState, process: process) {
-            return
+        dispatchMessage(on: connection) { () throws(InvalidMessage) in
+            try setChildItem(connection: connection, frameItemID: frameItemID, frameState: frameState)
         }
+    }
+
+    private func setChildItem(
+        connection: IPC.Connection,
+        frameItemID: WebCore.BackForwardFrameItemIdentifier,
+        frameState: WebKit.RefFrameState
+    ) throws(InvalidMessage) {
+        let process = WebKit.WebProcessProxy.fromConnection(connection)
+        try messageCheckItemURLs(frameState: frameState, process: process)
 
         guard let item = currentItem() else {
             return
@@ -1203,15 +1193,19 @@ final class WebBackForwardList {
 
     @used
     func backForwardUpdateItem(connection: IPC.Connection, frameState: WebKit.RefFrameState) {
+        dispatchMessage(on: connection) { () throws(InvalidMessage) in
+            try updateItem(connection: connection, frameState: frameState)
+        }
+    }
+
+    private func updateItem(connection: IPC.Connection, frameState: WebKit.RefFrameState) throws(InvalidMessage) {
         let process = WebKit.WebProcessProxy.fromConnection(connection)
 
         // In the case of a process swap, the `backForwardUpdateItem` message can be received from the old process,
         // and therefore present an unexpected file: URL.
         // We can safely skip the message check in these cases.
         if !handlingProvisionalMessage {
-            if messageCheckItemURLs(frameState: frameState, process: process) {
-                return
-            }
+            try messageCheckItemURLs(frameState: frameState, process: process)
         }
 
         #if compiler(>=6.4) && !SWIFT_WEBKIT_TOOLCHAIN
@@ -1239,11 +1233,8 @@ final class WebBackForwardList {
         }
 
         // We can't use == here due to rdar://162357139
-        if messageCheck(
-            process: process,
+        try messageCheck {
             contentsMatch(webPageProxy.identifier(), item.pageID()) && contentsMatch(itemID, item.identifier())
-        ) {
-            return
         }
         let oldFrameID = frameItem.frameID()
         frameItem.updateFrameStatePayload(consuming: frameState)
@@ -1300,14 +1291,23 @@ final class WebBackForwardList {
     }
 
     @used
+    // Entry point for C++ (WebPageProxy::backForwardGoToItemShared), which is outside message
+    // dispatch and so has no connection to hand. A failed check is marked against the page's main
+    // frame process, as in C++, and only once it has failed: asking that process for a connection it
+    // no longer has is fatal.
     func backForwardGoToItemShared(itemID: WebCore.BackForwardItemIdentifier) {
-        if let webPageProxy = page.get() {
-            if messageCheck(
-                process: WebKit.RefWebProcessProxy(webPageProxy.legacyMainFrameProcess()),
-                !WebKit.isInspectorPage(webPageProxy)
-            ) {
-                return
+        do {
+            try goToItemInternal(itemID: itemID)
+        } catch {
+            if let webPageProxy = page.get() {
+                markMessageInvalid(error, on: connectionForProcess(webPageProxy.legacyMainFrameProcess()))
             }
+        }
+    }
+
+    private func goToItemInternal(itemID: WebCore.BackForwardItemIdentifier) throws(InvalidMessage) {
+        if let webPageProxy = page.get() {
+            try messageCheck { !WebKit.isInspectorPage(webPageProxy) }
         }
 
         if let item = itemForID(identifier: itemID) {
@@ -1346,26 +1346,28 @@ final class WebBackForwardList {
         frameID: WebCore.FrameIdentifier,
         completionHandler: CompletionHandlers.WebBackForwardList.BackForwardItemAtIndexForWebContentCompletionHandler
     ) {
-        let process = WebKit.WebProcessProxy.fromConnection(connection)
-        if messageCheckCompletion(
-            process: process,
-            completionHandler: { completionHandler.pointee(consuming: WebKit.RefPtrFrameState()) },
-            delta != Int32.min
-        ) {
-            return
+        var reply = WebKit.RefPtrFrameState()
+        dispatchMessage(on: connection) { () throws(InvalidMessage) in
+            reply = try itemAtIndexForWebContent(delta: delta, frameID: frameID)
         }
+        completionHandler.pointee(consuming: reply)
+    }
+
+    private func itemAtIndexForWebContent(
+        delta: Int32,
+        frameID: WebCore.FrameIdentifier
+    ) throws(InvalidMessage) -> WebKit.RefPtrFrameState {
+        try messageCheck { delta != Int32.min }
 
         // FIXME: This should verify that the web process requesting the item hosts the specified frame.
         let delta = Int(delta)
         guard let item = itemAtDeltaFromCurrentIndex(delta: delta, allowSkipping: false) else {
-            completionHandler.pointee(consuming: WebKit.RefPtrFrameState())
-            return
+            return WebKit.RefPtrFrameState()
         }
         guard let frameItem = item.mainFrameItem().childItemForFrameID(frameID) else {
-            completionHandler.pointee(consuming: WebKit.RefPtrFrameState(item.copyMainFrameStateWithChildren().ptr()))
-            return
+            return WebKit.RefPtrFrameState(item.copyMainFrameStateWithChildren().ptr())
         }
-        completionHandler.pointee(consuming: WebKit.RefPtrFrameState(frameItem.copyFrameStateWithChildren().ptr()))
+        return WebKit.RefPtrFrameState(frameItem.copyFrameStateWithChildren().ptr())
     }
 
     @used

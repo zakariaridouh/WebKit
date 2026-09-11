@@ -1121,10 +1121,10 @@ void doLoadingReleaseLog(const WTF::String& msg)
 {
     RELEASE_LOG(Loading, "%s", msg.utf8().legacyCStringPointer());
 }
-// rdar://168139740 is the task of doing a productionized Swift MESSAGE_CHECK
-void messageCheckFailed(Ref<WebKit::WebProcessProxy> process)
+
+IPC::Connection& connectionForProcess(WebKit::WebProcessProxy& process)
 {
-    MESSAGE_CHECK_BASE(false, process->connection());
+    return process.connection();
 }
 
 // Workarounds for rdar://171011011

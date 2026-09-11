@@ -3782,9 +3782,10 @@ void WebProcessProxy::updateWasmDebuggerTarget()
 #if ENABLE(IPC_TESTING_API)
 void WebProcessProxy::takeInvalidMessageStringForTesting(CompletionHandler<void(String&&)>&& callback)
 {
-    ASCIILiteral error = protect(connection())->takeErrorString();
-    String errorString = !error.isNull() ? String::fromUTF8(error) : emptyString();
-    callback(WTF::move(errorString));
+    String error = protect(connection())->takeErrorString();
+    if (error.isNull())
+        error = emptyString();
+    callback(WTF::move(error));
 }
 #endif
 

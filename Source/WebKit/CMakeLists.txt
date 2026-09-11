@@ -1449,6 +1449,12 @@ if (ENABLE_BACK_FORWARD_LIST_SWIFT)
     )
 endif ()
 
+if (ENABLE_BACK_FORWARD_LIST_SWIFT OR ENABLE_IPC_TESTING_SWIFT)
+    list(APPEND WebKit_SOURCES
+        ${WEBKIT_DIR}/Platform/IPC/MessageCheck.swift
+    )
+endif ()
+
 if (ENABLE_IPC_TESTING_SWIFT)
     list(APPEND WebKit_SOURCES
         ${WEBKIT_DIR}/Shared/IPCTesterReceiver.swift
