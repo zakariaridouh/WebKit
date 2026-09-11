@@ -40,7 +40,7 @@
 
 #if USE(ACCELERATE) && USE(CG)
 #include <Accelerate/Accelerate.h>
-#if HAVE(ARM_NEON_INTRINSICS)
+#if CPU(ARM64)
 #include <arm_neon.h>
 #endif
 #elif USE(SKIA)
@@ -185,7 +185,7 @@ static bool convertImagePixelsAcceleratedAnyToAny(const ConstPixelBufferConversi
     return true;
 }
 
-#if HAVE(ARM_NEON_INTRINSICS)
+#if CPU(ARM64)
 template<bool shouldUnpremultiply>
 static bool convertSmallImageAlpha(const ConstPixelBufferConversionView& source, const PixelBufferConversionView& destination, const IntSize& size)
 {
@@ -263,7 +263,7 @@ static bool convertImagePixelsAcceleratedMatchingSize(const ConstPixelBufferConv
     if (isAlphaApplied(sourceAlphaFormat) != isAlphaApplied(destinationAlphaFormat)) {
         bool shouldUnpremultiply = !isAlphaApplied(destinationAlphaFormat);
         bool converted = false;
-#if HAVE(ARM_NEON_INTRINSICS)
+#if CPU(ARM64)
         if (PixelBuffer::bytesPerPixelComponent(sourceView.format.pixelFormat) == 1) {
             converted = shouldUnpremultiply
                 ? convertSmallImageAlpha<true>(sourceView, destinationView, destinationSize)
