@@ -1461,7 +1461,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
     // We always want to include table cells (layout and CSS) that have rendered text content.
     if (is<RenderTableCell>(renderObject)) {
         for (const auto& child : childrenOfType<RenderObject>(downcast<RenderElement>(*renderObject))) {
-            if (is<RenderInline>(child) || is<RenderText>(child) || is<HTMLSpanElement>(child.node()))
+            if (child.isInlineBox() || is<RenderText>(child) || is<HTMLSpanElement>(child.node()))
                 return AccessibilityObjectInclusion::IncludeObject;
         }
         return AccessibilityObjectInclusion::DefaultBehavior;

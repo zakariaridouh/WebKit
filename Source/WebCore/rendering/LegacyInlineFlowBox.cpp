@@ -261,7 +261,7 @@ void LegacyInlineFlowBox::computeOverflow(LayoutUnit lineTop, LayoutUnit lineBot
             LayoutRect textBoxOverflow(enclosingLayoutRect(textBox.logicalFrameRect()));
             addTextBoxVisualOverflow(textBox, textBoxDataMap, textBoxOverflow);
             logicalVisualOverflow.unite(textBoxOverflow);
-        } else if (is<RenderInline>(child->renderer())) {
+        } else if (child->renderer().isInlineBox()) {
             auto& flow = downcast<LegacyInlineFlowBox>(*child);
             flow.computeOverflow(lineTop, lineBottom, textBoxDataMap);
             if (!flow.renderer().hasSelfPaintingLayer())

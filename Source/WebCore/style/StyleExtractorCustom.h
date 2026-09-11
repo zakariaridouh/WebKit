@@ -912,7 +912,7 @@ template<> struct PropertyExtractorAdaptor<CSSPropertyGridAutoFlow> {
 template<> struct PropertyExtractorAdaptor<CSSPropertyRotate> {
     template<typename F> decltype(auto) computedValue(ExtractorState& state, F&& functor) const
     {
-        if (is<RenderInline>(state.renderer))
+        if (state.renderer && state.renderer->isInlineBox())
             return functor(CSS::Keyword::None { });
         return functor(state.style.rotate());
     }
@@ -921,7 +921,7 @@ template<> struct PropertyExtractorAdaptor<CSSPropertyRotate> {
 template<> struct PropertyExtractorAdaptor<CSSPropertyScale> {
     template<typename F> decltype(auto) computedValue(ExtractorState& state, F&& functor) const
     {
-        if (is<RenderInline>(state.renderer))
+        if (state.renderer && state.renderer->isInlineBox())
             return functor(CSS::Keyword::None { });
         return functor(state.style.scale());
     }
@@ -930,7 +930,7 @@ template<> struct PropertyExtractorAdaptor<CSSPropertyScale> {
 template<> struct PropertyExtractorAdaptor<CSSPropertyTranslate> {
     template<typename F> decltype(auto) computedValue(ExtractorState& state, F&& functor) const
     {
-        if (is<RenderInline>(state.renderer))
+        if (state.renderer && state.renderer->isInlineBox())
             return functor(CSS::Keyword::None { });
         return functor(state.style.translate());
     }

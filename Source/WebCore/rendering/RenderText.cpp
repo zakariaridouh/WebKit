@@ -1628,7 +1628,7 @@ void RenderText::setSelectionState(HighlightState state)
 
 static inline bool NODELETE isInlineFlowOrEmptyText(const RenderObject& renderer)
 {
-    if (is<RenderInline>(renderer))
+    if (renderer.isInlineBox())
         return true;
     auto* textRenderer = dynamicDowncast<RenderText>(renderer);
     return textRenderer && textRenderer->text().isEmpty();
