@@ -1504,12 +1504,6 @@ if (USE_APPLE_INTERNAL_SDK)
 endif ()
 WEBKIT_ADD_PREFIX_HEADER(WebKit WebKitPrefix.h PREFIX_LANGUAGES CXX OBJCXX)
 
-if (APPLE AND USE_LIBWEBRTC)
-    target_link_options(WebKit PRIVATE
-        "LINKER:-weak_library,$<TARGET_FILE:webrtc>")
-    add_dependencies(WebKit webrtc)
-endif ()
-
 if (SWIFT_REQUIRED AND WEBKIT_SDK_IS_MACOS)
     WEBKIT_ADD_SWIFT_PREWARM(WebKit SwiftPrewarmMac.swift)
 endif ()

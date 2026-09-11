@@ -12,12 +12,6 @@ add_definitions(-DWEBRTC_WEBKIT_BUILD=1)
 # Suppress all warnings for third-party libwebrtc code.
 add_compile_options(-w)
 
-# The tree-wide -fvisibility=hidden makes these symbols private-extern, which
-# -exported_symbols_list cannot then export from libwebrtc.dylib.
-if (APPLE)
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-fvisibility=default>")
-endif ()
-
 # Match the Xcode build (Configurations/Base.xcconfig: CLANG_ENABLE_OBJC_ARC = YES).
 # The webkit_sdk Objective-C(++) sources rely on ARC for block/object ownership —
 # e.g. RTCVideoEncoderH264 stores its callback blocks via plain ivar assignment,
@@ -1383,18 +1377,6 @@ list(APPEND webrtc_SOURCES
     Source/webrtc/video/video_stream_encoder.cc
 )
 
-if (APPLE)
-    # Remove sources that cannot be linked into libwebrtc.dylib.
-    list(REMOVE_ITEM webrtc_SOURCES
-        Source/webrtc/api/task_queue/default_task_queue_factory_win.cc
-        Source/webrtc/modules/audio_coding/neteq/tools/neteq_rtpplay.cc
-        Source/webrtc/modules/audio_coding/neteq/tools/rtp_analyze.cc
-        Source/webrtc/modules/audio_coding/neteq/tools/rtp_encode.cc
-        Source/webrtc/modules/audio_coding/neteq/tools/rtp_jitter.cc
-        Source/webrtc/modules/audio_coding/neteq/tools/rtpcat.cc
-    )
-endif ()
-
 if (WIN32)
     list(APPEND websrc_SOURCES
         Source/webrtc/modules/audio_device/win/audio_device_core_win.cc
@@ -1994,28 +1976,6 @@ perlasm(CRYPTO_SOURCES x86_64 cipher/aes128gcmsiv-x86_64 ${CRYPTO_PATH}/cipher/a
 perlasm(CRYPTO_SOURCES x86_64 cipher/chacha20_poly1305_x86_64 ${CRYPTO_PATH}/cipher/asm/chacha20_poly1305_x86_64.pl)
 perlasm(CRYPTO_SOURCES x86_64 test/trampoline-x86_64 ${CRYPTO_PATH}/test/asm/trampoline-x86_64.pl)
 
-# The perlasm() calls above regenerate this same assembly, so carrying the
-# checked-in copies too would give libwebrtc.dylib duplicate symbols.
-if (APPLE)
-    list(REMOVE_ITEM CRYPTO_SOURCES_ASM
-        Source/third_party/boringssl/src/gen/crypto/aes128gcmsiv-x86_64-apple.S
-        Source/third_party/boringssl/src/gen/crypto/aes128gcmsiv-x86_64-linux.S
-        Source/third_party/boringssl/src/gen/crypto/chacha-armv4-linux.S
-        Source/third_party/boringssl/src/gen/crypto/chacha-armv8-apple.S
-        Source/third_party/boringssl/src/gen/crypto/chacha-armv8-linux.S
-        Source/third_party/boringssl/src/gen/crypto/chacha-armv8-win.S
-        Source/third_party/boringssl/src/gen/crypto/chacha-x86-apple.S
-        Source/third_party/boringssl/src/gen/crypto/chacha-x86-linux.S
-        Source/third_party/boringssl/src/gen/crypto/chacha-x86_64-apple.S
-        Source/third_party/boringssl/src/gen/crypto/chacha-x86_64-linux.S
-        Source/third_party/boringssl/src/gen/crypto/chacha20_poly1305_armv8-apple.S
-        Source/third_party/boringssl/src/gen/crypto/chacha20_poly1305_armv8-linux.S
-        Source/third_party/boringssl/src/gen/crypto/chacha20_poly1305_armv8-win.S
-        Source/third_party/boringssl/src/gen/crypto/chacha20_poly1305_x86_64-apple.S
-        Source/third_party/boringssl/src/gen/crypto/chacha20_poly1305_x86_64-linux.S
-    )
-endif ()
-
 # TODO: _NASM support for platforms that require it.
 list(APPEND webrtc_SOURCES ${BCM_SOURCES_ASM})
 list(APPEND webrtc_SOURCES ${CRYPTO_SOURCES_ASM})
@@ -2327,11 +2287,7 @@ else ()
     endif ()
 endif ()
 
-if (APPLE)
-    add_library(webrtc SHARED ${webrtc_SOURCES})
-else ()
-    add_library(webrtc STATIC ${webrtc_SOURCES})
-endif ()
+add_library(webrtc STATIC ${webrtc_SOURCES})
 
 target_compile_options(webrtc PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:-std=c++2b>"
@@ -2484,19 +2440,7 @@ if (APPLE)
     if (ENABLE_AV1)
         list(APPEND webrtc_INCLUDE_DIRECTORIES PRIVATE "${_dav1d_fwd}")
     endif ()
-    target_link_libraries(webrtc opus vpx yuv libsrtp webm
-        "-framework CoreFoundation"
-        "-framework CoreGraphics"
-        "-framework CoreMedia"
-        "-framework CoreVideo"
-        "-framework Foundation"
-        "-framework VideoToolbox"
-    )
-    if (WEBKIT_SDK_IS_MACOS)
-        # audio_device_mac.cc and audio_mixer_manager_mac.cc are macOS-only and
-        # call into the CoreAudio HAL and AudioConverter.
-        target_link_libraries(webrtc "-framework AudioToolbox" "-framework CoreAudio")
-    endif ()
+    target_link_libraries(webrtc opus vpx yuv libsrtp)
     if (ENABLE_AV1)
         target_link_libraries(webrtc aom dav1d)
     endif ()
@@ -3658,41 +3602,4 @@ if (ENABLE_AV1 AND APPLE)
             $<$<COMPILE_LANGUAGE:CXX>:-march=armv8.2-a+dotprod>
         )
     endif ()
-endif ()
-
-if (APPLE)
-    # ld treats the names in the export list as roots, so it pulls the defining
-    # members out of the archives linked below -- mkvmuxer out of libwebm.a.
-    set(_libwebrtc_exp_base "${CMAKE_CURRENT_SOURCE_DIR}/Configurations/libwebrtc.exp")
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(_libwebrtc_exp_config "${CMAKE_CURRENT_SOURCE_DIR}/Configurations/libwebrtc.debug.exp")
-    else ()
-        set(_libwebrtc_exp_config "${CMAKE_CURRENT_SOURCE_DIR}/Configurations/libwebrtc.release.exp")
-    endif ()
-    set(_libwebrtc_exp "${libwebrtc_DERIVED_SOURCES_DIR}/libwebrtc.generated.exp")
-
-    file(READ ${_libwebrtc_exp_base} _libwebrtc_exp_contents)
-    file(READ ${_libwebrtc_exp_config} _libwebrtc_exp_config_contents)
-    file(CONFIGURE OUTPUT ${_libwebrtc_exp}
-        CONTENT "${_libwebrtc_exp_contents}${_libwebrtc_exp_config_contents}"
-        @ONLY)
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-        ${_libwebrtc_exp_base} ${_libwebrtc_exp_config})
-
-    target_sources(webrtc PRIVATE $<TARGET_OBJECTS:webrtc_objc_categories>)
-
-    target_link_options(webrtc PRIVATE
-        "LINKER:-exported_symbols_list,${_libwebrtc_exp}")
-
-    # FIXME: Only correct for iOS-family platforms. On macOS the Xcode build
-    # resolves NORMAL_UMBRELLA_FRAMEWORKS_DIR to
-    # /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks.
-    set_target_properties(webrtc PROPERTIES
-        MACOSX_RPATH OFF
-        BUILD_WITH_INSTALL_NAME_DIR ON
-        INSTALL_NAME_DIR "/System/Library/PrivateFrameworks/WebCore.framework/${WEBKIT_FRAMEWORK_VERSION_PATH}Frameworks"
-    )
-    set_property(TARGET webrtc APPEND PROPERTY LINK_DEPENDS ${_libwebrtc_exp})
-
-    _WEBKIT_ADD_CODE_SIGN(webrtc)
 endif ()
