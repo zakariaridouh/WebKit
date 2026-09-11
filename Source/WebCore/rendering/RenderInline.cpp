@@ -460,8 +460,10 @@ LayoutRect RenderInline::linesVisualOverflowBoundingBox() const
     return rect;
 }
 
-LayoutRect RenderInline::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, const VisibleRectContext& context) const
+auto RenderInline::localRectsForRepaint(RepaintOutlineBounds) const -> RepaintRects
 {
+    // RepaintOutlineBounds is unused for inlines.
+
     // Only first-letter renderers are allowed in here during layout. They mutate the tree triggering repaints.
 #ifndef NDEBUG
     auto insideSelfPaintingInlineBox = [&] {
@@ -477,61 +479,12 @@ LayoutRect RenderInline::clippedOverflowRect(const RenderLayerModelObject* repai
     ASSERT_UNUSED(insideSelfPaintingInlineBox, !view().frameView().layoutContext().isPaintOffsetCacheEnabled() || style().pseudoElementType() == PseudoElementType::FirstLetter || insideSelfPaintingInlineBox());
 #endif
 
-    auto knownEmpty = [&] {
-        if (firstLegacyInlineBoxFor(*this))
-            return false;
-        if (LayoutIntegration::LineLayout::containing(*this))
-            return false;
-        return true;
-    };
-
-    if (knownEmpty())
-        return LayoutRect();
+    if (!firstLegacyInlineBoxFor(*this) && !LayoutIntegration::LineLayout::containing(*this))
+        return { };
 
     auto repaintRect = linesVisualOverflowBoundingBox();
-    bool hitRepaintContainer = false;
-
-    // We need to add in the in-flow position offsets of any inlines (including us) up to our
-    // containing block.
-    RenderBlock* containingBlock = this->containingBlock();
-    for (const RenderElement* inlineFlow = this; inlineFlow; inlineFlow = inlineFlow->parent()) {
-        auto* renderInline = dynamicDowncast<RenderInline>(*inlineFlow);
-        if (!renderInline || inlineFlow == containingBlock)
-            break;
-        if (inlineFlow == repaintContainer) {
-            hitRepaintContainer = true;
-            break;
-        }
-        if (inlineFlow->style().hasInFlowPosition() && inlineFlow->hasLayer())
-            repaintRect.move(renderInline->layer()->offsetForInFlowPosition());
-    }
-
-    LayoutUnit outlineSize { style().usedOutlineSize(style().usedZoomForLength(), style().deviceScaleFactor()) };
-    repaintRect.inflate(outlineSize);
-
-    if (hitRepaintContainer || !containingBlock)
-        return repaintRect;
-
-    auto rects = RepaintRects { repaintRect };
-
-    if (containingBlock->hasNonVisibleOverflow())
-        containingBlock->applyCachedClipAndScrollPosition(rects, repaintContainer, context);
-
-    rects = containingBlock->computeRects(rects, repaintContainer, context);
-    repaintRect = rects.clippedOverflowRect;
-
-    if (outlineSize) {
-        for (auto& child : childrenOfType<RenderElement>(*this))
-            repaintRect.unite(child.rectWithOutlineForRepaint(repaintContainer, outlineSize));
-    }
-
-    return repaintRect;
-}
-
-auto RenderInline::rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const -> RepaintRects
-{
-    // RepaintOutlineBounds is unused for inlines.
-    return { clippedOverflowRect(repaintContainer, visibleRectContextForRepaint()) };
+    repaintRect.inflate(LayoutUnit { style().usedOutlineSize(style().usedZoomForLength(), style().deviceScaleFactor()) });
+    return { repaintRect };
 }
 
 LayoutRect RenderInline::rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const
