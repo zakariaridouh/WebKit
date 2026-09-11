@@ -159,6 +159,7 @@
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 #include "FrameDestructionObserverInlines.h"
 
@@ -2492,9 +2493,7 @@ void FrameLoader::commitProvisionalLoad()
         }
     }
 
-    LOG(BackForwardCache, "WebCoreLoading frame %" PRIu64 ": About to commit provisional load from previous URL '%s' to new URL '%s' with cached page %p", m_frame->frameID().toUInt64(),
-        frame->document() ? frame->document()->url().stringCenterEllipsizedToLength().utf8().legacyCStringPointer() : "",
-        pdl ? pdl->url().stringCenterEllipsizedToLength().utf8().legacyCStringPointer() : "<no provisional DocumentLoader>", cachedPage.get());
+    LOG_WITH_STREAM(BackForwardCache, stream << "WebCoreLoading frame "_s << m_frame->frameID().toUInt64() << ": About to commit provisional load from previous URL '"_s << (frame->document() ? frame->document()->url().stringCenterEllipsizedToLength() : emptyString()) << "' to new URL '"_s << (pdl ? pdl->url().stringCenterEllipsizedToLength() : "<no provisional DocumentLoader>"_s) << "' with cached page "_s << cachedPage.get());
 
     if (RefPtr document = m_frame->document()) {
         auto canTriggerCrossDocumentViewTransition = CanTriggerCrossDocumentViewTransition::No;
@@ -2626,8 +2625,7 @@ void FrameLoader::commitProvisionalLoad()
         protect(document->editor())->confirmOrCancelCompositionAndNotifyClient();
 
 IGNORE_GCC_WARNINGS_BEGIN("format-overflow")
-    LOG(Loading, "WebCoreLoading frame %" PRIu64 ": Finished committing provisional load to URL %s", frame->frameID().toUInt64(),
-        frame->document() ? frame->document()->url().stringCenterEllipsizedToLength().utf8().legacyCStringPointer() : "");
+    LOG_WITH_STREAM(Loading, stream << "WebCoreLoading frame "_s << frame->frameID().toUInt64() << ": Finished committing provisional load to URL "_s << (frame->document() ? frame->document()->url().stringCenterEllipsizedToLength() : emptyString()));
 IGNORE_GCC_WARNINGS_END
 
     if (m_loadType == FrameLoadType::Standard && m_documentLoader && m_documentLoader->isClientRedirect())
@@ -4525,7 +4523,7 @@ bool FrameLoader::shouldInterruptLoadForXFrameOptions(const String& content, con
 void FrameLoader::loadProvisionalItemFromCachedPage()
 {
     RefPtr provisionalLoader = provisionalDocumentLoader();
-    LOG(BackForwardCache, "FrameLoader::loadProvisionalItemFromCachedPage Loading provisional DocumentLoader %p with URL '%s' from CachedPage", provisionalDocumentLoader(), provisionalDocumentLoader()->url().stringCenterEllipsizedToLength().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(BackForwardCache, stream << "FrameLoader::loadProvisionalItemFromCachedPage Loading provisional DocumentLoader "_s << provisionalDocumentLoader() << " with URL '"_s << provisionalDocumentLoader()->url().stringCenterEllipsizedToLength() << "' from CachedPage"_s);
 
     prepareForLoadStart();
 

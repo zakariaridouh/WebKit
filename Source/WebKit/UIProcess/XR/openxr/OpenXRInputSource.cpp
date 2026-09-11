@@ -26,6 +26,8 @@
 #include "config.h"
 #include "OpenXRInputSource.h"
 
+#include <wtf/text/TextStream.h>
+
 #if ENABLE(WEBXR) && USE(OPENXR)
 
 #include "OpenXRExtensions.h"
@@ -327,7 +329,7 @@ XrResult OpenXRInputSource::updateInteractionProfile()
     for (auto& profile : openXRInteractionProfiles) {
         if (equalSpans(profile.path.span(), unsafeSpan(buffer))) {
             m_usingHandInteractionProfile = equalSpans(profile.path.span(), handInteractionProfilePath.span());
-            LOG(XR, "Input source %s using interaction profile %s", m_subactionPathName.utf8().legacyCStringPointer(), profile.path.span().data());
+            LOG_WITH_STREAM(XR, stream << "Input source "_s << m_subactionPathName << " using interaction profile "_s << profile.path.span().data());
             for (const auto& id : profile.profileIds)
                 m_profiles.append(String::fromUTF8(id));
             break;

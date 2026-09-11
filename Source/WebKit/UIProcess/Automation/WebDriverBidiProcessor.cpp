@@ -28,6 +28,7 @@
 
 #include "AutomationBackendDispatchers.h"
 #include <optional>
+#include <wtf/text/TextStream.h>
 
 #if ENABLE(WEBDRIVER_BIDI)
 
@@ -83,8 +84,8 @@ void WebDriverBidiProcessor::processBidiMessage(const String& message)
         return;
     }
 
-    LOG(Automation, "[s:%s] processBidiMessage of length %d", session->sessionIdentifier().utf8().legacyCStringPointer(), message.length());
-    LOG(Automation, "%s", message.utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(Automation, stream << "[s:"_s << session->sessionIdentifier() << "] processBidiMessage of length "_s << message.length());
+    LOG_WITH_STREAM(Automation, stream << message);
 
     m_backendDispatcher->dispatch(message);
 }
@@ -203,8 +204,8 @@ void WebDriverBidiProcessor::sendBidiMessage(const String& message)
         return;
     }
 
-    LOG(Automation, "[s:%s] sendBidiMessage of length %d", session->sessionIdentifier().utf8().legacyCStringPointer(), message.length());
-    LOG(Automation, "%s", message.utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(Automation, stream << "[s:"_s << session->sessionIdentifier() << "] sendBidiMessage of length "_s << message.length());
+    LOG_WITH_STREAM(Automation, stream << message);
 
     auto msgValue = JSON::Object::parseJSON(message);
     if (!msgValue) {

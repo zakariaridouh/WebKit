@@ -2833,7 +2833,7 @@ void WebPage::goToBackForwardItem(GoToBackForwardItemParameters&& parameters)
             localMainFrame->loader().setNavigationUpgradeToHTTPSBehavior(item->url().protocolIs("http"_s) ? NavigationUpgradeToHTTPSBehavior::Disabled : NavigationUpgradeToHTTPSBehavior::BasedOnPolicy);
     }
 
-    LOG(Loading, "In WebProcess pid %i, WebPage %" PRIu64 " is navigating to back/forward URL %s", getCurrentProcessID(), m_identifier.toUInt64(), item->url().string().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(Loading, stream << "In WebProcess pid "_s << getCurrentProcessID() << ", WebPage "_s << m_identifier.toUInt64() << " is navigating to back/forward URL "_s << item->url().string());
 
 #if PLATFORM(COCOA)
     WebCore::PublicSuffixStore::singleton().addPublicSuffix(parameters.publicSuffix);

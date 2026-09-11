@@ -53,6 +53,7 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/TextStream.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "WebCoreThread.h"
@@ -544,7 +545,7 @@ void DatabaseTracker::addOpenDatabase(Database& database)
         .add(name, DatabaseSet { }).iterator->value
         .add(database);
 
-    LOG(StorageAPI, "Added open Database %s (%p)\n", name.utf8().legacyCStringPointer(), &database);
+    LOG_WITH_STREAM(StorageAPI, stream << "Added open Database "_s << name << " ("_s << &database << ")"_s);
 }
 
 void DatabaseTracker::removeOpenDatabase(Database& database)
@@ -566,7 +567,7 @@ void DatabaseTracker::removeOpenDatabase(Database& database)
 
     innerIterator->value.remove(database);
 
-    LOG(StorageAPI, "Removed open Database %s (%p)\n", name.utf8().legacyCStringPointer(), &database);
+    LOG_WITH_STREAM(StorageAPI, stream << "Removed open Database "_s << name << " ("_s << &database << ")"_s);
 
     if (!innerIterator->value.isEmptyIgnoringNullReferences())
         return;

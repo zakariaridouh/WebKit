@@ -1380,7 +1380,7 @@ void Options::dumpAllOptions(DumpLevel level, ASCIILiteral title)
 {
     StringBuilder builder;
     dumpAllOptions(builder, level, title, { }, "   "_s, "\n"_s, DumpDefaults);
-    dataLog(builder.toString().utf8().legacyCStringPointer());
+    dataLog(builder.toString());
 }
 
 void Options::dumpOption(StringBuilder& builder, DumpLevel level, Options::ID id,

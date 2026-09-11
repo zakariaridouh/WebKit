@@ -39,6 +39,7 @@
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/TextStream.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -389,7 +390,7 @@ void NetworkTaskCocoa::willPerformHTTPRedirection(WebCore::ResourceResponse&& re
     if (protect(m_networkSession)->shouldLogCookieInformation())
         RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), Network, "%p - NetworkTaskCocoa::willPerformHTTPRedirection::logCookieInformation: pageID=%" PRIu64 ", frameID=%" PRIu64 ", taskID=%lu: %s cookies for redirect URL %s", this, pageID() ? pageID()->toUInt64() : 0, frameID() ? frameID()->toUInt64() : 0, (unsigned long)[task() taskIdentifier], (m_hasBeenSetToUseStatelessCookieStorage ? "Blocking" : "Not blocking"), request.url().string().utf8().legacyCStringPointer());
 #else
-    LOG(NetworkSession, "%lu %s cookies for redirect URL %s", (unsigned long)[task() taskIdentifier], (m_hasBeenSetToUseStatelessCookieStorage ? "Blocking" : "Not blocking"), request.url().string().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(NetworkSession, stream << (unsigned long)[task() taskIdentifier] << " "_s << (m_hasBeenSetToUseStatelessCookieStorage ? "Blocking" : "Not blocking") << " cookies for redirect URL "_s << request.url().string());
 #endif
 
     updateTaskWithFirstPartyForSameSiteCookies(protect(task()).get(), request);

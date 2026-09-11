@@ -63,6 +63,7 @@
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/TextStream.h>
 
 using namespace PAL;
 
@@ -534,7 +535,7 @@ void ServiceWorkerThread::start(Function<void(const String&, bool)>&& callback)
     WorkerThread::start([callback = WTF::move(callback), weakThis = ThreadSafeWeakPtr { *this }](auto& errorMessage) mutable {
 #ifndef NDEBUG
         if (!errorMessage.isEmpty())
-            LOG(ServiceWorker, "Service worker thread failed to start: %s", errorMessage.utf8().legacyCStringPointer());
+            LOG_WITH_STREAM(ServiceWorker, stream << "Service worker thread failed to start: "_s << errorMessage);
 #endif
         bool doesHandleFetch = true;
         if (RefPtr protectedThis = weakThis.get()) {

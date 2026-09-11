@@ -138,7 +138,7 @@ TEST_F(FileMonitorTest, DetectChange)
 
     testQueue->dispatch([this] () mutable {
         String fileContents = readContentsOfFile(tempFilePath());
-        EXPECT_STREQ(FileMonitorTestData.utf8().legacyCStringPointer(), fileContents.utf8().legacyCStringPointer());
+        EXPECT_EQ(FileMonitorTestData, fileContents);
 
         auto command = createCommand(tempFilePath(), FileMonitorRevisedData);
         auto rc = system(command.utf8().legacyCStringPointer());
@@ -153,7 +153,7 @@ TEST_F(FileMonitorTest, DetectChange)
     EXPECT_FALSE(observedFileDeletion);
 
     String revisedFileContents = readContentsOfFile(tempFilePath());
-    EXPECT_STREQ(FileMonitorRevisedData.utf8().legacyCStringPointer(), revisedFileContents.utf8().legacyCStringPointer());
+    EXPECT_EQ(FileMonitorRevisedData, revisedFileContents);
 
     resetTestState();
 }
@@ -180,7 +180,7 @@ TEST_F(FileMonitorTest, DetectMultipleChanges)
     
     testQueue->dispatch([this] () mutable {
         String fileContents = readContentsOfFile(tempFilePath());
-        EXPECT_STREQ(FileMonitorTestData.utf8().legacyCStringPointer(), fileContents.utf8().legacyCStringPointer());
+        EXPECT_EQ(FileMonitorTestData, fileContents);
 
         auto firstCommand = createCommand(tempFilePath(), FileMonitorRevisedData);
         auto rc = system(firstCommand.utf8().legacyCStringPointer());
@@ -195,7 +195,7 @@ TEST_F(FileMonitorTest, DetectMultipleChanges)
     EXPECT_FALSE(observedFileDeletion);
 
     String revisedFileContents = readContentsOfFile(tempFilePath());
-    EXPECT_STREQ(FileMonitorRevisedData.utf8().legacyCStringPointer(), revisedFileContents.utf8().legacyCStringPointer());
+    EXPECT_EQ(FileMonitorRevisedData, revisedFileContents);
 
     resetTestState();
 
@@ -213,7 +213,7 @@ TEST_F(FileMonitorTest, DetectMultipleChanges)
     EXPECT_FALSE(observedFileDeletion);
 
     String secondRevisedfileContents = readContentsOfFile(tempFilePath());
-    EXPECT_STREQ(FileMonitorSecondRevisedData.utf8().legacyCStringPointer(), secondRevisedfileContents.utf8().legacyCStringPointer());
+    EXPECT_EQ(FileMonitorSecondRevisedData, secondRevisedfileContents);
 
     resetTestState();
 }
@@ -275,7 +275,7 @@ TEST_F(FileMonitorTest, DetectChangeAndThenDelete)
 
     testQueue->dispatch([this] () mutable {
         String fileContents = readContentsOfFile(tempFilePath());
-        EXPECT_STREQ(FileMonitorTestData.utf8().legacyCStringPointer(), fileContents.utf8().legacyCStringPointer());
+        EXPECT_EQ(FileMonitorTestData, fileContents);
 
         auto firstCommand = createCommand(tempFilePath(), FileMonitorRevisedData);
         auto rc = system(firstCommand.utf8().legacyCStringPointer());

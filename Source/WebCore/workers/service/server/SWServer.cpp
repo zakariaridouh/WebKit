@@ -57,6 +57,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -273,7 +274,7 @@ void SWServer::addRegistrationFromStore(ServiceWorkerContextData&& data, Complet
 
     ASSERT(!m_scopeToRegistrationMap.contains(data.registration.key));
 
-    LOG(ServiceWorker, "Adding registration from store for %s", data.registration.key.loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(ServiceWorker, stream << "Adding registration from store for "_s << data.registration.key.loggingString());
 
     auto registrationKey = data.registration.key;
     auto registrableDomain = WebCore::RegistrableDomain(registrationKey.topOrigin());
@@ -342,7 +343,7 @@ void SWServer::didSaveWorkerScriptsToDisk(ServiceWorkerIdentifier serviceWorkerI
 
 void SWServer::addRegistration(Ref<SWServerRegistration>&& registration)
 {
-    LOG(ServiceWorker, "Adding registration live for %s", registration->key().loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(ServiceWorker, stream << "Adding registration live for "_s << registration->key().loggingString());
 
     if (!m_scopeToRegistrationMap.contains(registration->key()) && !allowLoopbackIPAddress(registration->key().topOrigin().host()))
         m_uniqueRegistrationCount++;
@@ -695,7 +696,7 @@ void SWServer::scheduleUnregisterJob(ServiceWorkerJobDataIdentifier jobDataIdent
 
 void SWServer::rejectJob(const ServiceWorkerJobData& jobData, const ExceptionData& exceptionData)
 {
-    LOG(ServiceWorker, "Rejected ServiceWorker job %s in server", jobData.identifier().loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(ServiceWorker, stream << "Rejected ServiceWorker job "_s << jobData.identifier().loggingString() << " in server"_s);
     RefPtr connection = m_connections.get(jobData.connectionIdentifier());
     if (!connection)
         return;
@@ -705,7 +706,7 @@ void SWServer::rejectJob(const ServiceWorkerJobData& jobData, const ExceptionDat
 
 void SWServer::resolveRegistrationJob(const ServiceWorkerJobData& jobData, const ServiceWorkerRegistrationData& registrationData, ShouldNotifyWhenResolved shouldNotifyWhenResolved)
 {
-    LOG(ServiceWorker, "Resolved ServiceWorker job %s in server with registration %s", jobData.identifier().loggingString().utf8().legacyCStringPointer(), registrationData.identifier.loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(ServiceWorker, stream << "Resolved ServiceWorker job "_s << jobData.identifier().loggingString() << " in server with registration "_s << registrationData.identifier.loggingString());
     RefPtr connection = m_connections.get(jobData.connectionIdentifier());
     if (!connection) {
         if (shouldNotifyWhenResolved == ShouldNotifyWhenResolved::Yes && jobData.connectionIdentifier() == Process::identifier())
@@ -773,7 +774,7 @@ ResourceRequest SWServer::createScriptRequest(const URL& url, const ServiceWorke
 
 void SWServer::startScriptFetch(const ServiceWorkerJobData& jobData, SWServerRegistration& registration)
 {
-    LOG(ServiceWorker, "Server issuing startScriptFetch for current job %s in client", jobData.identifier().loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(ServiceWorker, stream << "Server issuing startScriptFetch for current job "_s << jobData.identifier().loggingString() << " in client"_s);
 
     // Set request's cache mode to "no-cache" if any of the following are true:
     // - registration's update via cache mode is not "all".
@@ -829,7 +830,7 @@ private:
 
 void SWServer::scriptFetchFinished(const ServiceWorkerJobDataIdentifier& jobDataIdentifier, const ServiceWorkerRegistrationKey& registrationKey, const std::optional<ProcessIdentifier>& requestingProcessIdentifier, WorkerFetchResult&& result)
 {
-    LOG(ServiceWorker, "Server handling scriptFetchFinished for current job %s in client", jobDataIdentifier.loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(ServiceWorker, stream << "Server handling scriptFetchFinished for current job "_s << jobDataIdentifier.loggingString() << " in client"_s);
 
     ASSERT(m_connections.contains(jobDataIdentifier.connectionIdentifier) || jobDataIdentifier.connectionIdentifier == Process::identifier());
 

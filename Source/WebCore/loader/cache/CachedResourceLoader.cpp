@@ -97,6 +97,7 @@
 #include <wtf/Scope.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 #include "LocalFrameInlines.h"
 
@@ -1553,7 +1554,7 @@ Ref<CachedResource> CachedResourceLoader::loadResource(CachedResource::Type type
     ASSERT(!request.allowsCaching() || mayAddToMemoryCache == MayAddToMemoryCache::No || !memoryCache->resourceForRequest(request.resourceRequest(), sessionID)
         || request.resourceRequest().cachePolicy() == ResourceRequestCachePolicy::DoNotUseAnyCache || request.resourceRequest().cachePolicy() == ResourceRequestCachePolicy::ReloadIgnoringCacheData || request.resourceRequest().cachePolicy() == ResourceRequestCachePolicy::RefreshAnyCacheData);
 
-    LOG(ResourceLoading, "Loading CachedResource for '%s'.", request.resourceRequest().url().stringCenterEllipsizedToLength().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(ResourceLoading, stream << "Loading CachedResource for '"_s << request.resourceRequest().url().stringCenterEllipsizedToLength() << "'."_s);
 
     auto resource = createResource(type, WTF::move(request), sessionID, &cookieJar, settings, protect(document()).get());
 

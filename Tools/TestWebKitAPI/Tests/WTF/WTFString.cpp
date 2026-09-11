@@ -242,33 +242,33 @@ TEST(WTF, StringReplaceWithLiteral)
     String testString = "1224"_s;
     EXPECT_TRUE(testString.is8Bit());
     testString = makeStringByReplacingAll(testString, '2', ""_s);
-    EXPECT_STREQ("14", testString.utf8().legacyCStringPointer());
+    EXPECT_EQ("14"_s, testString);
 
     testString = "1224"_s;
     EXPECT_TRUE(testString.is8Bit());
     testString = makeStringByReplacingAll(testString, '2', "3"_s);
-    EXPECT_STREQ("1334", testString.utf8().legacyCStringPointer());
+    EXPECT_EQ("1334"_s, testString);
 
     testString = "1224"_s;
     EXPECT_TRUE(testString.is8Bit());
     testString = makeStringByReplacingAll(testString, '2', "555"_s);
-    EXPECT_STREQ("15555554", testString.utf8().legacyCStringPointer());
+    EXPECT_EQ("15555554"_s, testString);
 
     testString = "1224"_s;
     EXPECT_TRUE(testString.is8Bit());
     testString = makeStringByReplacingAll(testString, '3', "NotFound"_s);
-    EXPECT_STREQ("1224", testString.utf8().legacyCStringPointer());
+    EXPECT_EQ("1224"_s, testString);
 
     // Cases for 16Bit source.
     testString = String::fromUTF8("résumé");
     EXPECT_FALSE(testString.is8Bit());
     testString = makeStringByReplacingAll(testString, char16_t(0x00E9 /*U+00E9 is 'é'*/), "e"_s);
-    EXPECT_STREQ("resume", testString.utf8().legacyCStringPointer());
+    EXPECT_EQ("resume"_s, testString);
 
     testString = String::fromUTF8("résumé");
     EXPECT_FALSE(testString.is8Bit());
     testString = makeStringByReplacingAll(testString, char16_t(0x00E9 /*U+00E9 is 'é'*/), ""_s);
-    EXPECT_STREQ("rsum", testString.utf8().legacyCStringPointer());
+    EXPECT_EQ("rsum"_s, testString);
 
     testString = String::fromUTF8("résumé");
     EXPECT_FALSE(testString.is8Bit());
@@ -488,13 +488,13 @@ TEST(WTF, StringSplitWithConsecutiveSeparators)
     Vector<String> expected { "This"_s, "is"_s, "a"_s, "sentence."_s };
     ASSERT_EQ(expected.size(), actual.size());
     for (auto i = 0u; i < actual.size(); ++i)
-        EXPECT_STREQ(expected[i].utf8().legacyCStringPointer(), actual[i].utf8().legacyCStringPointer()) << "Vectors differ at index " << i;
+        EXPECT_EQ(expected[i], actual[i]) << "Vectors differ at index " << i;
 
     actual = string.splitAllowingEmptyEntries(' ');
     expected = { ""_s, "This"_s, ""_s, ""_s, ""_s, ""_s, "is"_s, ""_s, "a"_s, ""_s, ""_s, ""_s, ""_s, ""_s, ""_s, "sentence."_s, ""_s };
     ASSERT_EQ(expected.size(), actual.size());
     for (auto i = 0u; i < actual.size(); ++i)
-        EXPECT_STREQ(expected[i].utf8().legacyCStringPointer(), actual[i].utf8().legacyCStringPointer()) << "Vectors differ at index " << i;
+        EXPECT_EQ(expected[i], actual[i]) << "Vectors differ at index " << i;
 }
 
 TEST(WTF, StringMakeStringByJoining)

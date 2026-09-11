@@ -182,7 +182,7 @@ TEST(WindowsKeyNames, DomKeyReflectsAltGraph)
     WindowsKeyNames keyNames;
 
     setKeysDown({ VK_RMENU, VK_LCONTROL, VK_MENU, VK_CONTROL });
-    EXPECT_STREQ(keyNames.domKeyFromParams(VK_MENU, lParamForKey(true)).utf8().legacyCStringPointer(), "AltGraph");
+    EXPECT_EQ(keyNames.domKeyFromParams(VK_MENU, lParamForKey(true)), "AltGraph"_s);
 
     setKeysDown({ VK_LMENU, VK_LCONTROL, VK_MENU, VK_CONTROL });
     EXPECT_STREQ(keyNames.domKeyFromParams('E', lParamForKey(false)).utf8().legacyCStringPointer(), "\xE2\x82\xAC" /* euro, UTF-8 */);

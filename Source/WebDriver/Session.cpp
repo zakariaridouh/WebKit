@@ -40,6 +40,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/UUID.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/TextStream.h>
 
 #if ENABLE(WEBDRIVER_BIDI)
 #include "WebSocketServer.h"
@@ -3333,7 +3334,7 @@ void Session::dispatchBidiMessage(RefPtr<JSON::Object>&& message)
         return;
     }
 
-    LOG(WebDriverBiDi, "Session::dispatchBidiMessage: received bidi message %s", bidiMessageValue->toJSONString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(WebDriverBiDi, stream << "Session::dispatchBidiMessage: received bidi message "_s << bidiMessageValue->toJSONString());
     auto bidiMessage = bidiMessageValue->asObject();
     if (!bidiMessage) {
         RELEASE_LOG(WebDriverBiDi, "Session::dispatchBidiMessage: Bidi message is not an object.");

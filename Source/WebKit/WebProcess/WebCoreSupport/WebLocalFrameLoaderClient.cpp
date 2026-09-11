@@ -114,6 +114,7 @@
 #include <wtf/ProcessID.h>
 #include <wtf/ProcessPrivilege.h>
 #include <wtf/RuntimeApplicationChecks.h>
+#include <wtf/text/TextStream.h>
 
 #if ENABLE(FULLSCREEN_API)
 #include <WebCore/DocumentFullscreen.h>
@@ -387,7 +388,7 @@ void WebLocalFrameLoaderClient::dispatchDidReceiveServerRedirectForProvisionalLo
 
     RefPtr<API::Object> userData;
 
-    LOG(Loading, "WebProcess %i - dispatchDidReceiveServerRedirectForProvisionalLoad to request url %s", getCurrentProcessID(), documentLoader->request().url().string().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(Loading, stream << "WebProcess "_s << getCurrentProcessID() << " - dispatchDidReceiveServerRedirectForProvisionalLoad to request url "_s << documentLoader->request().url().string());
 
     // Notify the bundle client.
     webPage->injectedBundleLoaderClient().didReceiveServerRedirectForProvisionalLoadForFrame(*webPage, m_frame, userData);

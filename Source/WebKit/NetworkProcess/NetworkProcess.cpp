@@ -112,6 +112,7 @@
 #include <wtf/WTFProcess.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/TextStream.h>
 
 #if ENABLE(SEC_ITEM_SHIM)
 #include "SecItemShim.h"
@@ -1756,7 +1757,7 @@ void NetworkProcess::preconnectTo(PAL::SessionID sessionID, WebPageProxyIdentifi
     auto url = request.url();
     auto userAgent = request.httpUserAgent();
 
-    LOG(Network, "(NetworkProcess) Preconnecting to URL %s (storedCredentialsPolicy %i)", url.string().utf8().legacyCStringPointer(), (int)storedCredentialsPolicy);
+    LOG_WITH_STREAM(Network, stream << "(NetworkProcess) Preconnecting to URL "_s << url.string() << " (storedCredentialsPolicy "_s << (int)storedCredentialsPolicy << ")"_s);
 
 #if ENABLE(SERVER_PRECONNECT)
 #if ENABLE(LEGACY_CUSTOM_PROTOCOL_MANAGER)

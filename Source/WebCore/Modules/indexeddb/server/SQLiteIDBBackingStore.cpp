@@ -54,6 +54,7 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -976,7 +977,7 @@ std::optional<IDBDatabaseNameAndVersion> SQLiteIDBBackingStore::databaseNameAndV
 
 IDBError SQLiteIDBBackingStore::getOrEstablishDatabaseInfo(IDBDatabaseInfo& info)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::getOrEstablishDatabaseInfo - database %s", m_identifier.databaseName().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::getOrEstablishDatabaseInfo - database "_s << m_identifier.databaseName());
 
     if (m_databaseInfo) {
         info = *m_databaseInfo;
@@ -1089,7 +1090,7 @@ uint64_t SQLiteIDBBackingStore::databasesSizeForDirectory(const String& director
 
 IDBError SQLiteIDBBackingStore::beginTransaction(const IDBTransactionInfo& info)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::beginTransaction - %s", info.identifier().loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::beginTransaction - "_s << info.identifier().loggingString());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -1121,7 +1122,7 @@ IDBError SQLiteIDBBackingStore::beginTransaction(const IDBTransactionInfo& info)
 
 IDBError SQLiteIDBBackingStore::abortTransaction(const IDBResourceIdentifier& identifier)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::abortTransaction - %s", identifier.loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::abortTransaction - "_s << identifier.loggingString());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -1140,7 +1141,7 @@ IDBError SQLiteIDBBackingStore::abortTransaction(const IDBResourceIdentifier& id
 
 IDBError SQLiteIDBBackingStore::commitTransaction(const IDBResourceIdentifier& identifier)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::commitTransaction - %s", identifier.loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::commitTransaction - "_s << identifier.loggingString());
 
     CheckedPtr sqliteDB = m_sqliteDB.get();
     ASSERT(sqliteDB);
@@ -1169,7 +1170,7 @@ IDBError SQLiteIDBBackingStore::commitTransaction(const IDBResourceIdentifier& i
 
 IDBError SQLiteIDBBackingStore::createObjectStore(const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo& info)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::createObjectStore - adding OS %s with ID %" PRIu64, info.name().utf8().legacyCStringPointer(), info.identifier().toUInt64());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::createObjectStore - adding OS "_s << info.name() << " with ID "_s << info.identifier().toUInt64());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -1452,7 +1453,7 @@ IDBError SQLiteIDBBackingStore::uncheckedGetExistingPrimaryKeyForIndexKey(const 
 // https://w3c.github.io/IndexedDB/#object-store-storage-operation
 IDBError SQLiteIDBBackingStore::overwriteRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo& objectStoreInfo, const IDBKeyData& keyData, const IndexIDToIndexKeyMap& indexKeys, const IDBValue& value)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::overwriteRecord - key %s, object store %" PRIu64, keyData.loggingString().utf8().legacyCStringPointer(), objectStoreInfo.identifier().toUInt64());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::overwriteRecord - key "_s << keyData.loggingString() << ", object store "_s << objectStoreInfo.identifier().toUInt64());
 
     // Before mutating anything, verify the record does not violate a unique index constraint. Otherwise deleting
     // the record being overwritten below would leave the store with neither the old nor the new record if adding
@@ -1518,7 +1519,7 @@ IDBError SQLiteIDBBackingStore::checkIndexConstraintsForPut(const IDBResourceIde
 
 IDBError SQLiteIDBBackingStore::uncheckedPutIndexKey(const IDBIndexInfo& info, const IDBKeyData& key, const IndexKey& indexKey, int64_t recordID)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::uncheckedPutIndexKey - (%" PRIu64 ") %s, %s", info.identifier().toUInt64(), key.loggingString().utf8().legacyCStringPointer(), indexKey.asOneKey().loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::uncheckedPutIndexKey - ("_s << info.identifier().toUInt64() << ") "_s << key.loggingString() << ", "_s << indexKey.asOneKey().loggingString());
 
     Vector<IDBKeyData> indexKeys;
     if (info.multiEntry())
@@ -1555,7 +1556,7 @@ IDBError SQLiteIDBBackingStore::uncheckedPutIndexKey(const IDBIndexInfo& info, c
 
 IDBError SQLiteIDBBackingStore::uncheckedPutIndexRecord(IDBObjectStoreIdentifier objectStoreID, IDBIndexIdentifier indexID, const WebCore::IDBKeyData& keyValue, const WebCore::IDBKeyData& indexKey, int64_t recordID)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::uncheckedPutIndexRecord - %s, %s", keyValue.loggingString().utf8().legacyCStringPointer(), indexKey.loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::uncheckedPutIndexRecord - "_s << keyValue.loggingString() << ", "_s << indexKey.loggingString());
 
     auto indexKeyBuffer = serializeIDBKeyData(indexKey);
     if (!indexKeyBuffer) {
@@ -1682,7 +1683,7 @@ IDBError SQLiteIDBBackingStore::renameIndex(const IDBResourceIdentifier& transac
 
 IDBError SQLiteIDBBackingStore::keyExistsInObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreID, const IDBKeyData& keyData, bool& keyExists)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::keyExistsInObjectStore - key %s, object store %" PRIu64, keyData.loggingString().utf8().legacyCStringPointer(), objectStoreID.toUInt64());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::keyExistsInObjectStore - key "_s << keyData.loggingString() << ", object store "_s << objectStoreID.toUInt64());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -1773,7 +1774,7 @@ IDBError SQLiteIDBBackingStore::deleteUnusedBlobFileRecords(SQLiteIDBTransaction
 
 IDBError SQLiteIDBBackingStore::deleteRecord(SQLiteIDBTransaction& transaction, IDBObjectStoreIdentifier objectStoreID, const IDBKeyData& keyData)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::deleteRecord - key %s, object store %" PRIu64, keyData.loggingString().utf8().legacyCStringPointer(), objectStoreID.toUInt64());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::deleteRecord - key "_s << keyData.loggingString() << ", object store "_s << objectStoreID.toUInt64());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -1876,7 +1877,7 @@ IDBError SQLiteIDBBackingStore::deleteRecord(SQLiteIDBTransaction& transaction, 
 
 IDBError SQLiteIDBBackingStore::deleteRange(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreID, const IDBKeyRangeData& keyRange)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::deleteRange - range %s, object store %" PRIu64, keyRange.loggingString().utf8().legacyCStringPointer(), objectStoreID.toUInt64());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::deleteRange - range "_s << keyRange.loggingString() << ", object store "_s << objectStoreID.toUInt64());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -1973,7 +1974,7 @@ IDBError SQLiteIDBBackingStore::updateAllIndexesForAddRecord(const IDBObjectStor
 
 IDBError SQLiteIDBBackingStore::addRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo& objectStoreInfo, const IDBKeyData& keyData, const IndexIDToIndexKeyMap& indexKeys, const IDBValue& value)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::addRecord - key %s, object store %" PRIu64, keyData.loggingString().utf8().legacyCStringPointer(), objectStoreInfo.identifier().toUInt64());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::addRecord - key "_s << keyData.loggingString() << ", object store "_s << objectStoreInfo.identifier().toUInt64());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -2262,7 +2263,7 @@ std::expected<IDBValue, IDBError> SQLiteIDBBackingStore::buildIDBValueForRecord(
 
 IDBError SQLiteIDBBackingStore::getRecord(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreID, const IDBKeyRangeData& keyRange, IDBGetRecordDataType type, IDBGetResult& resultValue)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::getRecord - key range %s, object store %" PRIu64, keyRange.loggingString().utf8().legacyCStringPointer(), objectStoreID.toUInt64());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::getRecord - key range "_s << keyRange.loggingString() << ", object store "_s << objectStoreID.toUInt64());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -2544,7 +2545,7 @@ IDBError SQLiteIDBBackingStore::getAllObjectStoreRecords(const IDBResourceIdenti
 
 IDBError SQLiteIDBBackingStore::getAllIndexRecords(const IDBResourceIdentifier& transactionIdentifier, const IDBGetAllRecordsData& getAllRecordsData, IDBGetAllResult& result)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::getAllIndexRecords - %s", getAllRecordsData.keyRangeData.loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::getAllIndexRecords - "_s << getAllRecordsData.keyRangeData.loggingString());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -2604,7 +2605,7 @@ IDBError SQLiteIDBBackingStore::getAllIndexRecords(const IDBResourceIdentifier& 
 
 IDBError SQLiteIDBBackingStore::getIndexRecord(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreID, IDBIndexIdentifier indexID, IndexedDB::IndexRecordType type, const IDBKeyRangeData& range, IDBGetResult& getResult)
 {
-    LOG(IndexedDB, "SQLiteIDBBackingStore::getIndexRecord - %s", range.loggingString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::getIndexRecord - "_s << range.loggingString());
 
     ASSERT(m_sqliteDB);
     ASSERT(m_sqliteDB->isOpen());
@@ -2984,7 +2985,7 @@ void SQLiteIDBBackingStore::deleteBackingStore()
 {
     String databasePath = fullDatabasePath();
 
-    LOG(IndexedDB, "SQLiteIDBBackingStore::deleteBackingStore deleting file '%s' on disk", databasePath.utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(IndexedDB, stream << "SQLiteIDBBackingStore::deleteBackingStore deleting file '"_s << databasePath << "' on disk"_s);
 
     if (FileSystem::fileExists(databasePath) && !m_sqliteDB) {
         m_sqliteDB = makeUnique<SQLiteDatabase>();

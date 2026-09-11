@@ -116,7 +116,7 @@ AXLogger::~AXLogger()
 void AXLogger::log(const String& message)
 {
     if (shouldLog())
-        LOG(Accessibility, "%s", message.utf8().legacyCStringPointer());
+        LOG_WITH_STREAM(Accessibility, stream << message);
 }
 
 void AXLogger::log(const char* message)

@@ -1358,7 +1358,7 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
         stream << " ";
 
     if (node())
-        stream << node()->nodeName().utf8().legacyCStringPointer() << " ";
+        stream << node()->nodeName() << " ";
 
     ASCIILiteral name = renderName();
     StringView nameView { name };
@@ -1401,9 +1401,9 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
         const int maxPrintedLength = 80;
         if (value.length() > maxPrintedLength) {
             auto substring = StringView(value).left(maxPrintedLength);
-            stream << " \"" << substring.utf8().legacyCStringPointer() << "\"...";
+            stream << " \"" << substring << "\"...";
         } else
-            stream << " \"" << value.utf8().legacyCStringPointer() << "\"";
+            stream << " \"" << value << "\"";
     }
 
     if (auto* box = dynamicDowncast<RenderBox>(*this)) {

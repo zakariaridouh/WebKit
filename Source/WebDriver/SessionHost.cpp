@@ -31,6 +31,7 @@
 #include <wtf/Observer.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebDriver {
 
@@ -89,7 +90,7 @@ long SessionHost::sendCommandToBackend(const String& command, RefPtr<JSON::Objec
 
 void SessionHost::dispatchMessage(const String& message)
 {
-    LOG(SessionHost, "SessionHost::dispatchMessage: %s", message.utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(SessionHost, stream << "SessionHost::dispatchMessage: "_s << message);
     auto messageValue = JSON::Value::parseJSON(message);
     if (!messageValue)
         return;
@@ -148,7 +149,7 @@ void SessionHost::removeBrowserTerminatedObserver(const BrowserTerminatedObserve
 
 void SessionHost::dispatchBidiMessage(RefPtr<JSON::Object>&& event)
 {
-    LOG(WebDriverBiDi, "SessionHost::dispatchBidiMessage: %s", event->toJSONString().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(WebDriverBiDi, stream << "SessionHost::dispatchBidiMessage: "_s << event->toJSONString());
     if (m_bidiHandler)
         m_bidiHandler->dispatchBidiMessage(WTF::move(event));
     else

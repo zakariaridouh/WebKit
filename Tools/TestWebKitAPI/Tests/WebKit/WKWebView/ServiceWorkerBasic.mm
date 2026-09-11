@@ -3862,7 +3862,7 @@ TEST(ServiceWorker, ExtensionServiceWorkerDisableCORS)
 
     // It should load bar.xml.
     Util::run(&madeHTTPGetRequest);
-    EXPECT_STREQ(filenameRequestedOverHTTP.utf8().legacyCStringPointer(), "/bar.xml");
+    EXPECT_EQ(filenameRequestedOverHTTP, "/bar.xml"_s);
 
     // It shouldn't have done a CORS preflight.
     EXPECT_FALSE(madeHTTPOptionsRequest);

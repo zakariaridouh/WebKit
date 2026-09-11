@@ -174,7 +174,7 @@ static bool outputMismatchingBlockBoxInformationIfNeeded(TextStream& stream, con
     bool firstMismatchingRect = true;
     auto outputRect = [&] (ASCIILiteral prefix, const LayoutRect& rendererRect, const LayoutRect& layoutRect) {
         if (firstMismatchingRect) {
-            stream << (renderer.element() ? renderer.element()->nodeName().utf8().legacyCStringPointer() : "") << " " << renderer.renderName().characters() << "(" << &renderer << ") layoutBox(" << &layoutBox << ")";
+            stream << (renderer.element() ? renderer.element()->nodeName() : emptyString()) << " " << renderer.renderName() << "(" << &renderer << ") layoutBox(" << &layoutBox << ")";
             stream.nextLine();
             firstMismatchingRect = false;
         }

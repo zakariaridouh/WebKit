@@ -45,6 +45,7 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebKit {
 namespace NetworkCache {
@@ -1393,7 +1394,7 @@ void Storage::deleteOldVersions()
             if (!directoryVersion || *directoryVersion >= version)
                 return;
             auto oldVersionPath = FileSystem::pathByAppendingComponent(cachePath, subdirName);
-            LOG(NetworkCacheStorage, "(NetworkProcess) deleting old cache version, path %s", oldVersionPath.utf8().legacyCStringPointer());
+            LOG_WITH_STREAM(NetworkCacheStorage, stream << "(NetworkProcess) deleting old cache version, path "_s << oldVersionPath);
             FileSystem::deleteNonEmptyDirectory(oldVersionPath);
         });
     });

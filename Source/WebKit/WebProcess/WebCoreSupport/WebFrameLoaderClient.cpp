@@ -42,6 +42,7 @@
 #include <WebCore/HitTestResult.h>
 #include <WebCore/LocalFrameInlines.h>
 #include <WebCore/PolicyChecker.h>
+#include <wtf/text/TextStream.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
@@ -192,7 +193,7 @@ std::optional<NavigationActionData> WebFrameLoaderClient::navigationActionData(c
 
 void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const NavigationAction& navigationAction, const ResourceRequest& request, const ResourceResponse& redirectResponse, FormState*, const String& clientRedirectSourceForHistory, std::optional<WebCore::NavigationIdentifier> navigationID, std::optional<WebCore::HitTestResult>&& hitTestResult, bool hasOpener, NavigationUpgradeToHTTPSBehavior navigationUpgradeToHTTPSBehavior, SandboxFlags sandboxFlags, PolicyDecisionMode policyDecisionMode, FramePolicyFunction&& function)
 {
-    LOG(Loading, "WebProcess %i - dispatchDecidePolicyForNavigationAction to request url %s", getCurrentProcessID(), request.url().string().utf8().legacyCStringPointer());
+    LOG_WITH_STREAM(Loading, stream << "WebProcess "_s << getCurrentProcessID() << " - dispatchDecidePolicyForNavigationAction to request url "_s << request.url().string());
 
     auto navigationActionData = this->navigationActionData(navigationAction, request, redirectResponse, clientRedirectSourceForHistory, navigationID, WTF::move(hitTestResult), hasOpener, navigationUpgradeToHTTPSBehavior, sandboxFlags);
     if (!navigationActionData)
