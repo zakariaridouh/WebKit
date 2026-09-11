@@ -68,8 +68,8 @@ void DNSResolveQueueCFNet::updateIsUsingProxy()
     RetainPtr<CFArrayRef> httpProxyArray = adoptCF(CFNetworkCopyProxiesForURL(httpCFURL.get(), proxySettings.get()));
     RetainPtr<CFArrayRef> httpsProxyArray = adoptCF(CFNetworkCopyProxiesForURL(httpsCFURL.get(), proxySettings.get()));
 
-    CFIndex httpProxyCount = CFArrayGetCount(httpProxyArray.get());
-    CFIndex httpsProxyCount = CFArrayGetCount(httpsProxyArray.get());
+    CFIndex httpProxyCount = httpProxyArray ? CFArrayGetCount(httpProxyArray) : 0;
+    CFIndex httpsProxyCount = httpsProxyArray ? CFArrayGetCount(httpsProxyArray) : 0;
     if (httpProxyCount == 1 && CFEqual(CFDictionaryGetValue(static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(httpProxyArray.get(), 0)), kCFProxyTypeKey), kCFProxyTypeNone))
         httpProxyCount = 0;
     if (httpsProxyCount == 1 && CFEqual(CFDictionaryGetValue(static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(httpsProxyArray.get(), 0)), kCFProxyTypeKey), kCFProxyTypeNone))
