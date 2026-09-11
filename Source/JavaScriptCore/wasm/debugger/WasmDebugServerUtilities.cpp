@@ -154,7 +154,7 @@ static const uint8_t* savedWasmToJSPC(CallFrame* wasmToJSFrame)
     return WTF::unalignedLoad<const uint8_t*>(reinterpret_cast<const uint8_t*>(wasmToJSFrame) + Wasm::WasmToJSIPIntReturnPCSlot);
 }
 
-bool getWasmReturnPC(CallFrame* currentFrame, uint8_t*& returnPC, VirtualAddress& virtualReturnPC)
+WasmReturnSite getWasmReturnPC(CallFrame* currentFrame)
 {
     // Safe to use the non-EntryFrame overload: IPInt WASM frames are always entered via a
     // JSToWasm trampoline (a normal CallFrame), never directly from C++, so no EntryFrame
@@ -162,20 +162,17 @@ bool getWasmReturnPC(CallFrame* currentFrame, uint8_t*& returnPC, VirtualAddress
     CallFrame* callerFrame = currentFrame->callerFrame();
 
     if (!callerFrame->callee().isNativeCallee())
-        return false;
+        return { };
 
     RefPtr caller = callerFrame->callee().asNativeCallee();
     if (caller->category() != NativeCallee::Category::Wasm)
-        return false;
+        return { };
 
     RefPtr wasmCaller = uncheckedDowncast<const Wasm::Callee>(caller.get());
     if (wasmCaller->compilationMode() != Wasm::CompilationMode::IPIntMode)
-        return false;
+        return { };
 
-    RefPtr ipintCaller = uncheckedDowncast<const Wasm::IPIntCallee>(wasmCaller.get());
-    returnPC = const_cast<uint8_t*>(savedWasmToWasmPC(currentFrame));
-    virtualReturnPC = VirtualAddress::toVirtual(callerFrame->wasmInstance(), ipintCaller->functionIndex(), returnPC);
-    return true;
+    return { const_cast<uint8_t*>(savedWasmToWasmPC(currentFrame)), callerFrame->wasmInstance() };
 }
 
 

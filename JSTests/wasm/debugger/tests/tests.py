@@ -1550,6 +1550,35 @@ class WasmUnreachableFaultTestCase:
         )
 
 
+class BreakpointOnUnreachableTestCase:
+    test_file = "resources/wasm/unreachable.js"
+
+    def execute(self):
+        # A breakpoint on unreachable reports the breakpoint first, then the trap.
+        self.session.cmd("b 0x4000000000000024", patterns=["Breakpoint 1"])
+        self.session.cmd(
+            "c",
+            patterns=["Process 1 stopped", "stop reason = breakpoint 1", "->  0x4000000000000024: unreachable"],
+        )
+        self.session.cmd(
+            "c",
+            patterns=["Process 1 stopped", "Unreachable code should not be executed"],
+        )
+
+
+class StepOffUnreachableTestCase:
+    test_file = "resources/wasm/unreachable.js"
+
+    def execute(self):
+        # Unreachable has no successor instruction, so a step off it lands on the trap.
+        self.session.cmd("b 0x4000000000000024", patterns=["Breakpoint 1"])
+        self.session.cmd(
+            "c",
+            patterns=["Process 1 stopped", "stop reason = breakpoint 1", "->  0x4000000000000024: unreachable"],
+        )
+        self.session.cmd("si", patterns=["Unreachable code should not be executed"])
+
+
 class WasmDivByZeroTrapTestCase:
     test_file = "resources/wasm/trap-div-by-zero.js"
 
@@ -1756,6 +1785,8 @@ ALL_TESTS = [
     WasmJsWasmJsWasmCallStackTestCase,
     SwiftWasmCrashTestCase,
     WasmUnreachableFaultTestCase,
+    BreakpointOnUnreachableTestCase,
+    StepOffUnreachableTestCase,
     WasmDivByZeroTrapTestCase,
     WasmOutOfBoundsCallIndirectTrapTestCase,
     WasmStackOverflowTrapTestCase,

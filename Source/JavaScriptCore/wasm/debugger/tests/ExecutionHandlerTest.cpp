@@ -60,7 +60,6 @@ using ExecutionHandlerTestSupport::workerThreadTask;
 using JSC::JSWebAssemblyInstance;
 using JSC::VM;
 using JSC::VMManager;
-using JSC::Wasm::Breakpoint;
 using JSC::Wasm::DebugServer;
 using JSC::Wasm::DebugState;
 using JSC::Wasm::ExecutionHandler;
@@ -141,13 +140,19 @@ static void switchTarget(VM* newDebuggee)
     CHECK(executionHandler->debuggeeVM() == newDebuggee, "Switch to new debuggee failed");
 }
 
-static void setBreakpointsAtAllFunctionEntries(Breakpoint::Type type)
+static JSC::Wasm::VirtualAddress entryAddress(JSWebAssemblyInstance* instance, JSC::Wasm::IPIntCallee* callee)
+{
+    return JSC::Wasm::VirtualAddress::toVirtual(instance, callee->functionIndex(), callee->bytecode());
+}
+
+static void setBreakpointsAtAllFunctionEntries()
 {
     VLOG("Setting breakpoints at all function entries...");
     unsigned count = 0;
 
     ModuleManager& moduleManager = debugServer->moduleManager();
     uint32_t maxInstanceId = moduleManager.nextInstanceId();
+    auto* breakpointManager = executionHandler->breakpointManager();
 
     // Breakpoints patch module bytecode, which all instances of a module share, so visit each once.
     UncheckedKeyHashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> patchedModuleIds;
@@ -169,7 +174,7 @@ static void setBreakpointsAtAllFunctionEntries(Breakpoint::Type type)
         for (uint32_t funcIndex = 0; funcIndex < internalCount; ++funcIndex) {
             FunctionSpaceIndex spaceIndex = moduleInfo.toSpaceIndex(JSC::Wasm::FunctionCodeIndex(funcIndex));
             auto callee = instance->calleeGroup()->ipintCalleeFromFunctionIndexSpace(spaceIndex);
-            executionHandler->setBreakpointAtEntry(instance, callee.ptr(), type);
+            breakpointManager->setBreakpointAt(entryAddress(instance, callee.ptr()), moduleInfo, const_cast<uint8_t*>(callee->bytecode()));
             count++;
         }
     }
@@ -226,7 +231,7 @@ static void testBreakpointContinueCycles()
 
     interrupt();
 
-    setBreakpointsAtAllFunctionEntries(Breakpoint::Type::Regular);
+    setBreakpointsAtAllFunctionEntries();
     for (unsigned i = 0; i < STRESS_TEST_ITERATIONS; ++i) {
         VLOG("Continue cycle ", i);
 
@@ -257,7 +262,7 @@ static void testBreakpointSingleStepping()
     interrupt();
 
     // 2. Set breakpoints at ALL function entries
-    setBreakpointsAtAllFunctionEntries(Breakpoint::Type::Regular);
+    setBreakpointsAtAllFunctionEntries();
 
     // 3. Continue - should hit a breakpoint immediately
     VLOG("Continuing execution (expecting breakpoint hit)...");
@@ -283,17 +288,13 @@ static void testBreakpointSingleStepping()
     for (unsigned step = 0; step < STRESS_TEST_ITERATIONS; ++step) {
         VLOG("Step ", step + 1, "/", STRESS_TEST_ITERATIONS);
 
-        // Simulate lldb behavior:
-        // 1. If at Regular breakpoint: remove it, step, then re-insert it
-        // 2. If at one-time breakpoint: just step directly
-        RefPtr<Breakpoint> breakpoint = executionHandler->breakpointManager()->findBreakpoint(beforeStepAddress);
-        RefPtr<Breakpoint> breakpointCopy;
-
-        if (breakpoint) {
-            breakpointCopy = Breakpoint::create(*breakpoint);
-            CHECK(breakpoint->type == Breakpoint::Type::Regular, "One-time breakpoints are cleared before stop. So, this must be a regular breakpoint");
-            executionHandler->breakpointManager()->removeBreakpoint(beforeStepAddress);
-        }
+        // Step over an existing breakpoint site by removing and re-arming it.
+        uint8_t* stoppedPC = state->stopData->pc;
+        JSC::Wasm::VirtualAddress stoppedAddress = state->stopData->address;
+        // Stepping clears stopData.
+        RefPtr<const JSC::Wasm::ModuleInformation> owner = &state->stopData->instance->moduleInformation();
+        bool hadSite = executionHandler->breakpointManager()->removeBreakpointAt(stoppedAddress);
+        CHECK(hadSite == (state->stopReason == DebugState::Reason::Breakpoint), "A breakpoint stop must be reported at an address that holds a site");
 
         unsigned expectedReplyCount = getReplyCount() + 1;
         executionHandler->step();
@@ -302,8 +303,8 @@ static void testBreakpointSingleStepping()
             return getReplyCount() == expectedReplyCount;
         });
 
-        if (breakpoint)
-            executionHandler->breakpointManager()->setBreakpoint(beforeStepAddress, breakpointCopy.releaseNonNull());
+        if (hadSite)
+            executionHandler->breakpointManager()->setBreakpointAt(stoppedAddress, *owner, stoppedPC);
 
         state = executionHandler->debuggeeStateForTest();
         CHECK(state->isStoppedAtBytecode(), "Should be at breakpoint after step");
@@ -367,6 +368,59 @@ static void testSoleInstanceOfModule()
     resume();
 
     TEST_LOG("PASS (", soleModules, " module(s) with one live instance, ", ambiguousModules, " with several)");
+}
+
+static void testPatchLifetime()
+{
+    TEST_LOG("\n=== Breakpoint Patch Lifetime ===");
+
+    interrupt();
+
+    ModuleManager& moduleManager = debugServer->moduleManager();
+    auto* breakpointManager = executionHandler->breakpointManager();
+
+    uint32_t maxInstanceId = moduleManager.nextInstanceId();
+    JSWebAssemblyInstance* instance = nullptr;
+    for (uint32_t instanceId = 0; instanceId < maxInstanceId && !instance; ++instanceId)
+        instance = moduleManager.jsInstance(instanceId);
+    CHECK(instance, "Expected at least one live instance while stopped");
+
+    auto& moduleInfo = instance->module().moduleInformation();
+    FunctionSpaceIndex spaceIndex = moduleInfo.toSpaceIndex(JSC::Wasm::FunctionCodeIndex(0));
+    auto callee = instance->calleeGroup()->ipintCalleeFromFunctionIndexSpace(spaceIndex);
+    auto address = entryAddress(instance, callee.ptr());
+    uint8_t* pc = const_cast<uint8_t*>(callee->bytecode());
+    const uint8_t originalBytecode = *pc;
+
+    CHECK(!breakpointManager->removeBreakpointAt(address), "Removing an address that holds no site should report there was nothing to remove");
+
+    breakpointManager->setBreakpointAt(address, moduleInfo, pc);
+    CHECK(*pc != originalBytecode, "Setting a breakpoint should patch the bytecode");
+
+    // Re-arming an existing site must not displace the patch byte over the real opcode.
+    breakpointManager->setBreakpointAt(address, moduleInfo, pc);
+
+    // A step target on a byte a site already patched: clearing it must leave the site armed.
+    breakpointManager->setStepBreakpoint(moduleInfo, pc);
+    CHECK(breakpointManager->hasOneTimeBreakpoints(), "The step target should be pending");
+    breakpointManager->clearAllOneTimeBreakpoints();
+    CHECK(!breakpointManager->hasOneTimeBreakpoints(), "Clearing should drop the step target");
+    CHECK(*pc != originalBytecode, "The bytecode must stay patched while the site refers to it");
+
+    CHECK(breakpointManager->removeBreakpointAt(address), "The site should be removable");
+    CHECK(*pc == originalBytecode, "Removing the last reference should restore the displaced opcode");
+
+    // The other order: the site goes away first, the step target holds the patch.
+    breakpointManager->setBreakpointAt(address, moduleInfo, pc);
+    breakpointManager->setStepBreakpoint(moduleInfo, pc);
+    CHECK(breakpointManager->removeBreakpointAt(address), "The site should be removable");
+    CHECK(*pc != originalBytecode, "The bytecode must stay patched while the step target refers to it");
+    breakpointManager->clearAllOneTimeBreakpoints();
+    CHECK(*pc == originalBytecode, "Clearing the last reference should restore the displaced opcode");
+
+    resume();
+
+    TEST_LOG("PASS");
 }
 
 // ========== TEST ORCHESTRATION HELPERS ==========
@@ -473,6 +527,7 @@ UNUSED_FUNCTION static int runTests()
         testBreakpointContinueCycles();
         testBreakpointSingleStepping();
         testSoleInstanceOfModule();
+        testPatchLifetime();
 
         cleanupAfterScript(script, workerThread);
 

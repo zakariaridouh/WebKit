@@ -133,21 +133,23 @@ void ExecutionHandler::stopTheWorld(VM& debuggee, StopTheWorldEvent event)
     VMManager::singleton().notifyVMStop(debuggee, event);
 }
 
-DebuggerTrapStatus ExecutionHandler::handleDebuggerTrapIfNeeded(CallFrame* callFrame, JSWebAssemblyInstance* instance, IPIntCallee* callee, uint8_t* pc, uint8_t* mc, IPInt::IPIntStackEntry* stack, Wasm::ExceptionType exceptionType)
+OpType ExecutionHandler::handleDebuggerTrapIfNeeded(CallFrame* callFrame, JSWebAssemblyInstance* instance, IPIntCallee* callee, uint8_t* pc, uint8_t* mc, IPInt::IPIntStackEntry* stack, Wasm::ExceptionType exceptionType)
 {
     VM& debuggee = instance->vm();
-    if (exceptionType == Wasm::ExceptionType::Unreachable && hasBreakpoints()) {
-        VirtualAddress address = VirtualAddress::toVirtual(instance, callee->functionIndex(), pc);
-        if (RefPtr breakpoint = m_breakpointManager->findBreakpoint(address)) {
-            debuggee.debugState()->setBreakpointStopData(breakpoint->type, address, breakpoint->originalBytecode, pc, mc, stack, callee, instance, callFrame);
-            dataLogLnIf(Options::verboseWasmDebugger(), "[Code][handleDebuggerTrapIfNeeded] Breakpoint at ", *breakpoint, " with ", *debuggee.debugState()->stopData);
+    if (exceptionType == Wasm::ExceptionType::Unreachable) {
+        if (auto action = m_breakpointManager->trapActionFor(pc)) {
+            VirtualAddress address = VirtualAddress::toVirtual(instance, callee->functionIndex(), pc);
+            debuggee.debugState()->setBreakpointStopData(action->stopType, address, action->displacedOpcode, pc, mc, stack, callee, instance, callFrame);
+            dataLogLnIf(Options::verboseWasmDebugger(), "[Code][handleDebuggerTrapIfNeeded] Breakpoint with ", *debuggee.debugState()->stopData);
             stopTheWorld(debuggee, StopTheWorldEvent::WasmProgramStop);
-            return DebuggerTrapStatus::ResolvedByDebugger; // Don't throw; resume execution at this breakpoint
+            // If the breakpoint was on an unreachable instruction, fall through to report the trap.
+            if (action->displacedOpcode != OpType::Unreachable)
+                return action->displacedOpcode;
         }
     }
 
     if (!m_debugServer.isDebuggerReady())
-        return DebuggerTrapStatus::NotResolvedByDebugger; // Throw; no debugger connected
+        return OpType::Unreachable; // Throw; no debugger connected
 
     if (exceptionType == Wasm::ExceptionType::StackOverflow || exceptionType == Wasm::ExceptionType::Termination) {
         // Prologue trap: pc/mc/stack are caller's, not the overflowing function's.
@@ -162,7 +164,7 @@ DebuggerTrapStatus ExecutionHandler::handleDebuggerTrapIfNeeded(CallFrame* callF
         debuggee.debugState()->setTrapStopData(callee, instance, callFrame, pc, mc, stack, exceptionType);
     dataLogLnIf(Options::verboseWasmDebugger(), "[Code][handleDebuggerTrapIfNeeded] Wasm trap at ", *debuggee.debugState()->stopData);
     stopTheWorld(debuggee, StopTheWorldEvent::WasmProgramStop);
-    return DebuggerTrapStatus::NotResolvedByDebugger; // Throw; trap was reported, now propagate it
+    return OpType::Unreachable; // Throw; trap was reported, now propagate it
 }
 
 ExecutionHandler::ResumeMode ExecutionHandler::stopCode(Locker<Lock>& locker, StopTheWorldEvent event)
@@ -423,7 +425,7 @@ void ExecutionHandler::step()
         resumeAll = stepAtBytecode(locker, state);
     else {
         RELEASE_ASSERT(state->isStoppedAtPrologue());
-        setBreakpointAtEntry(state->stopData->instance, state->stopData->callee.get(), Breakpoint::Type::Step);
+        setStepBreakpointAtEntry(state->stopData->callee.get(), state->stopData->instance->moduleInformation());
     }
 
     if (resumeAll) {
@@ -450,18 +452,13 @@ bool ExecutionHandler::stepAtBytecode(Locker<Lock>& locker, DebugState* state)
     uint8_t* currentPC = stopData.pc;
 
     auto setStepBreakpoint = [&](const uint8_t* nextPC) WTF_REQUIRES_LOCK(m_lock) {
-        VirtualAddress nextAddress = VirtualAddress(stopData.address.value() + (nextPC - currentPC));
-        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger][Step][SetOneTimeBreakpoint] current PC=", RawPointer(currentPC), "(", stopData.address, "), next PC=", RawPointer(nextPC), "(", nextAddress, ")");
-        if (m_breakpointManager->findBreakpoint(nextAddress))
-            return;
-        m_breakpointManager->setBreakpoint(nextAddress, Breakpoint::create(const_cast<uint8_t*>(nextPC), Breakpoint::Type::Step));
+        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger][Step][SetOneTimeBreakpoint] current PC=", RawPointer(currentPC), "(", stopData.address, "), next PC=", RawPointer(nextPC));
+        m_breakpointManager->setStepBreakpoint(stopData.instance->moduleInformation(), const_cast<uint8_t*>(nextPC));
     };
 
     auto setStepBreakpointAtCaller = [&]() WTF_REQUIRES_LOCK(m_lock) {
-        uint8_t* returnPC = nullptr;
-        VirtualAddress virtualReturnPC;
-        if (getWasmReturnPC(stopData.callFrame, returnPC, virtualReturnPC))
-            m_breakpointManager->setBreakpoint(virtualReturnPC, Breakpoint::create(const_cast<uint8_t*>(returnPC), Breakpoint::Type::Step));
+        if (WasmReturnSite returnSite = getWasmReturnPC(stopData.callFrame))
+            m_breakpointManager->setStepBreakpoint(returnSite.instance->moduleInformation(), returnSite.pc);
     };
 
     auto setStepBreakpointsFromDebugInfo = [&]() WTF_REQUIRES_LOCK(m_lock) {
@@ -476,6 +473,9 @@ bool ExecutionHandler::stepAtBytecode(Locker<Lock>& locker, DebugState* state)
     };
 
     switch (stopData.originalBytecode) {
+    case Unreachable:
+        // Unreachable has no successor.
+        break;
     case Nop:
     case Drop:
     case Select:
@@ -550,10 +550,8 @@ void ExecutionHandler::setStepIntoBreakpointForCall(VM& callerVM, CalleeBits box
         if (wasmCallee->compilationMode() != Wasm::CompilationMode::IPIntMode)
             return;
 
-        // Set breakpoint at the callee's entry point.
-        // Use calleeInstance (not caller's instance) because callee may be in a different Wasm module instance.
         RELEASE_ASSERT(&calleeInstance->vm() == &callerVM);
-        setBreakpointAtEntry(calleeInstance, downcast<IPIntCallee>(wasmCallee.get()), Breakpoint::Type::Step);
+        setStepBreakpointAtEntry(downcast<IPIntCallee>(wasmCallee.get()), calleeInstance->moduleInformation());
     }();
 
     stopTheWorld(callerVM, StopTheWorldEvent::WasmStepIntoSiteReached);
@@ -591,28 +589,27 @@ void ExecutionHandler::setStepIntoBreakpointForThrow(VM& throwVM)
             handlerPC = handlerPC + blockMetadata->deltaPC;
         }
 
-        // Set breakpoint at the exception handler.
-        // Use catchInstance (not thrower's instance) because exception may be caught in a different Wasm module instance.
         JSWebAssemblyInstance* catchInstance = throwVM.callFrameForCatch->wasmInstance();
         RELEASE_ASSERT(&catchInstance->vm() == &throwVM);
-        setBreakpointAtPC(catchInstance, catchCallee->functionIndex(), Breakpoint::Type::Step, handlerPC);
+        m_breakpointManager->setStepBreakpoint(catchInstance->moduleInformation(), const_cast<uint8_t*>(handlerPC));
     }();
 
     stopTheWorld(throwVM, StopTheWorldEvent::WasmStepIntoSiteReached);
 }
 
-void ExecutionHandler::setBreakpointAtEntry(JSWebAssemblyInstance* instance, IPIntCallee* callee, Breakpoint::Type type)
+void ExecutionHandler::setStepBreakpointAtEntry(IPIntCallee* callee, const ModuleInformation& owner)
 {
-    setBreakpointAtPC(instance, callee->functionIndex(), type, callee->bytecode());
+    m_breakpointManager->setStepBreakpoint(owner, const_cast<uint8_t*>(callee->bytecode()));
 }
 
-void ExecutionHandler::setBreakpointAtPC(JSWebAssemblyInstance* instance, FunctionCodeIndex functionIndex, Breakpoint::Type type, const uint8_t* pc)
+bool ExecutionHandler::requireModuleAddress(VirtualAddress address)
 {
-    RELEASE_ASSERT(pc);
-    VirtualAddress address = VirtualAddress::toVirtual(instance, functionIndex, pc);
-    if (m_breakpointManager->findBreakpoint(address))
-        return;
-    m_breakpointManager->setBreakpoint(address, Breakpoint::create(const_cast<uint8_t*>(pc), type));
+    VirtualAddress::Type addressType = address.type();
+    if (addressType == VirtualAddress::Type::Module)
+        return true;
+    dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] Breakpoint must be in module code region, got type: ", static_cast<int>(addressType));
+    sendErrorReply(ProtocolError::InvalidAddress);
+    return false;
 }
 
 void ExecutionHandler::setBreakpoint(StringView packet)
@@ -646,28 +643,19 @@ void ExecutionHandler::setBreakpoint(StringView packet)
         return;
     }
 
-    VirtualAddress::Type addressType = address.type();
-    if (addressType != VirtualAddress::Type::Module) {
-        dataLogLnIf(Options::verboseWasmDebugger(), "[ExecutionHandler] Breakpoint must be in module code region, got type: ", (int)addressType);
-        sendErrorReply(ProtocolError::InvalidAddress);
+    if (!requireModuleAddress(address))
         return;
-    }
-
-    if (m_breakpointManager->findBreakpoint(address)) {
-        dataLogLnIf(Options::verboseWasmDebugger(), "[ExecutionHandler] Breakpoint already exists at address: ", address);
-        sendErrorReply(ProtocolError::InvalidAddress);
-        return;
-    }
 
     uint8_t* pc = address.toPhysicalPC(m_moduleManager);
-    if (!pc) {
-        dataLogLnIf(Options::verboseWasmDebugger(), "[ExecutionHandler] Failed to convert virtual address to physical: ", address);
+    RefPtr module = m_moduleManager.module(address.id());
+    if (!pc || !module) {
+        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] No module bytecode at ", address);
         sendErrorReply(ProtocolError::InvalidAddress);
         return;
     }
 
-    m_breakpointManager->setBreakpoint(address, Breakpoint::create(pc, Breakpoint::Type::Regular));
-    dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger][SetBreakpoint] Successfully set breakpoint at ", address, " (physical: ", RawPointer(pc), ", original: 0x", hex(*pc, 2, Lowercase), ")");
+    m_breakpointManager->setBreakpointAt(address, module->moduleInformation(), pc);
+    dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger][SetBreakpoint] Successfully set breakpoint at ", address, " (physical: ", RawPointer(pc), ")");
     sendReplyOK();
 }
 
@@ -701,14 +689,12 @@ void ExecutionHandler::removeBreakpoint(StringView packet)
         return;
     }
 
-    // Delegate to breakpoint manager
-    if (m_breakpointManager->removeBreakpoint(address)) {
-        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] Breakpoint removed successfully from ", address);
-        sendReplyOK();
-    } else {
-        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] Breakpoint not found at address: ", address);
-        sendErrorReply(ProtocolError::InvalidAddress);
-    }
+    if (!requireModuleAddress(address))
+        return;
+
+    if (!m_breakpointManager->removeBreakpointAt(address))
+        dataLogLnIf(Options::verboseWasmDebugger(), "[Debugger] No breakpoint to remove at ", address);
+    sendReplyOK();
 }
 
 void ExecutionHandler::handleThreadStopInfo(StringView packet)
@@ -926,11 +912,6 @@ DebugState* ExecutionHandler::debuggeeStateForTest() const
     Locker locker { m_lock };
     RELEASE_ASSERT(m_debuggee);
     return m_debuggee->debugState();
-}
-
-bool ExecutionHandler::hasBreakpoints() const
-{
-    return m_breakpointManager && m_breakpointManager->hasBreakpoints();
 }
 
 String ExecutionHandler::callStackStringFor(uint64_t vmId)

@@ -29,6 +29,7 @@
 
 #include "WasmDebugServerUtilities.h"
 #include "WasmVirtualAddress.h"
+#include <optional>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -39,6 +40,7 @@
 namespace JSC {
 namespace Wasm {
 
+// A bytecode patch persists while either a breakpoint site or single-step references it.
 class JS_EXPORT_PRIVATE BreakpointManager {
     WTF_MAKE_TZONE_ALLOCATED(BreakpointManager);
 
@@ -46,21 +48,31 @@ public:
     BreakpointManager() = default;
     ~BreakpointManager();
 
-    bool hasBreakpoints();
+    struct TrapAction {
+        OpType displacedOpcode { OpType::Unreachable };
+        Breakpoint::Type stopType { Breakpoint::Type::Regular };
+    };
+
     bool hasOneTimeBreakpoints();
 
-    RefPtr<Breakpoint> findBreakpoint(VirtualAddress);
-    void setBreakpoint(VirtualAddress, Ref<Breakpoint>&&);
-    bool removeBreakpoint(VirtualAddress);
+    std::optional<TrapAction> trapActionFor(uint8_t* pc);
+
+    void setStepBreakpoint(const ModuleInformation& owner, uint8_t* pc);
     void clearAllOneTimeBreakpoints();
+
+    void setBreakpointAt(VirtualAddress, const ModuleInformation& owner, uint8_t* pc);
+    bool removeBreakpointAt(VirtualAddress);
+
     void clearAllBreakpoints();
 
 private:
-    bool removeBreakpointImpl(VirtualAddress) WTF_REQUIRES_LOCK(m_lock);
+    Breakpoint& ensurePatched(const ModuleInformation& owner, uint8_t* pc) WTF_REQUIRES_LOCK(m_lock);
+    void releasePatchIfUnused(uint8_t* pc) WTF_REQUIRES_LOCK(m_lock);
 
     mutable Lock m_lock;
-    UncheckedKeyHashMap<VirtualAddress, Ref<Breakpoint>> m_breakpoints WTF_GUARDED_BY_LOCK(m_lock);
-    UncheckedKeyHashSet<VirtualAddress> m_oneTimeBreakpoints WTF_GUARDED_BY_LOCK(m_lock);
+    UncheckedKeyHashMap<uint8_t*, Ref<Breakpoint>> m_breakpoints WTF_GUARDED_BY_LOCK(m_lock);
+    UncheckedKeyHashSet<uint8_t*> m_oneTimeBreakpoints WTF_GUARDED_BY_LOCK(m_lock);
+    UncheckedKeyHashMap<VirtualAddress, uint8_t*> m_addressToPC WTF_GUARDED_BY_LOCK(m_lock);
 };
 
 } // namespace Wasm
