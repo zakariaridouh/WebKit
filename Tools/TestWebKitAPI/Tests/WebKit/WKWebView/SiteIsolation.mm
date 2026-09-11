@@ -8285,6 +8285,7 @@ TEST(SiteIsolation, Events)
     }, HTTPServer::Protocol::HttpsProxy);
 
     __block bool receivedLastExpectedMessage = false;
+    __block bool receivedResize = false;
     __block RetainPtr<NSMutableArray<NSString *>> webkitMessages = adoptNS([NSMutableArray new]);
     __block RetainPtr<NSMutableArray<NSString *>> exampleMessages = adoptNS([NSMutableArray new]);
     __block RetainPtr<NSMutableArray<NSString *>> appleMessages = adoptNS([NSMutableArray new]);
@@ -8300,6 +8301,8 @@ TEST(SiteIsolation, Events)
         else
             EXPECT_FALSE(true);
         completionHandler();
+        if ([message isEqualToString:@"resize"] && [host isEqualToString:@"webkit.org"])
+            receivedResize = true;
         if ([message isEqualToString:@"pageshow"] && [frame.securityOrigin.host isEqualToString:@"apple.com"])
             receivedLastExpectedMessage = true;
     };
@@ -8309,6 +8312,7 @@ TEST(SiteIsolation, Events)
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
     [navigationDelegate waitForDidFinishNavigation];
     [webView evaluateJavaScript:@"wk.height = 75" completionHandler:nil];
+    Util::run(&receivedResize);
     [webView evaluateJavaScript:@"window.location = 'https://apple.com/iframe'" inFrame:[webView firstChildFrame] completionHandler:nil];
     Util::run(&receivedLastExpectedMessage);
     Util::runFor(Seconds(0.1));
