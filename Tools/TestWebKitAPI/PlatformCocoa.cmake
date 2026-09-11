@@ -645,6 +645,7 @@ add_library(TestWebKitAPILibrary OBJECT
     ${TESTWEBKITAPI_DIR}/Helpers/cocoa/SwiftUI+Extras.swift
     ${TESTWEBKITAPI_DIR}/Helpers/cocoa/TestCocoaImageUtilities.swift
     ${TESTWEBKITAPI_DIR}/Helpers/cocoa/TestPDFDocument.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/WebExtensionUtilities.swift
     ${TESTWEBKITAPI_DIR}/Helpers/cocoa/WebPage+Extras.swift
     ${TESTWEBKITAPI_DIR}/Helpers/cocoa/WebPage+JavaScriptExpression.swift
     ${TESTWEBKITAPI_DIR}/Helpers/cocoa/WebPageConfiguration+Extras.swift
@@ -660,6 +661,7 @@ webkit_target_add_swift_options(TestWebKitAPILibrary
 
 list(APPEND TestWebKit_SOURCES
     Tests/WebKit/WKWebView/CodingTests.swift
+    Tests/WebKit/WKWebView/TextFragments.swift
     Tests/WebKit/WKWebView/WKWebViewSwiftOverlayTests.swift
 
     Tests/WebKit/WebPage/ControlledByExternalAgent.swift
