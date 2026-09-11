@@ -366,6 +366,7 @@ public:
             || a.hyphens != b.hyphens
             || a.hyphenateLimitBefore != b.hyphenateLimitBefore
             || a.hyphenateLimitAfter != b.hyphenateLimitAfter
+            || a.hyphenateLimitLines != b.hyphenateLimitLines
             || a.hyphenateCharacter != b.hyphenateCharacter
             || a.rubyPosition != b.rubyPosition
             || a.rubyAlign != b.rubyAlign
