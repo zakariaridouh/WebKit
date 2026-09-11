@@ -236,6 +236,12 @@ bool Box::isInlineTableBox() const
     return m_style.display() == Style::DisplayType::InlineTable;
 }
 
+static bool NODELETE isInsideTable(const Box& box)
+{
+    auto& parent = box.parent();
+    return parent.isTableBox() || parent.isTableWrapperBox() || parent.style().display().isInternalTableBox();
+}
+
 bool Box::isBlockLevelBox() const
 {
     if (isInlineBox())
@@ -243,6 +249,8 @@ bool Box::isBlockLevelBox() const
 
     // Block level elements generate block level boxes.
     auto display = m_style.display();
+    if (display.isInternalTableBox() || display == Style::DisplayType::TableCaption)
+        return !isInsideTable(*this);
     return display == Style::DisplayType::BlockFlow
         || display == Style::DisplayType::BlockFlowRoot
         || display == Style::DisplayType::BlockTable

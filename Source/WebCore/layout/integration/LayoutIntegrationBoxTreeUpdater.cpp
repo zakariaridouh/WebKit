@@ -178,12 +178,6 @@ void BoxTreeUpdater::tearDown()
 void BoxTreeUpdater::adjustStyleIfNeeded(const RenderElement& renderer, Style::ComputedStyle& style, Style::ComputedStyle* firstLineStyle)
 {
     auto adjustStyle = [&](auto& styleToAdjust) {
-        // If we end up here with a box that has a table display type, just treat it as a regular block-level box.
-        if (styleToAdjust.display().isInternalTableBox() || styleToAdjust.display() == Style::DisplayType::TableCaption) {
-            styleToAdjust.setDisplay(Style::DisplayType::BlockFlow);
-            return;
-        }
-
         if (is<RenderBlock>(renderer)) {
             if (renderer.isAnonymousBlock()) {
                 CheckedRef anonBlockParentStyle = renderer.parent()->style();
