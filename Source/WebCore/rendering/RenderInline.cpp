@@ -67,17 +67,17 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderInline);
 
 RenderInline::RenderInline(Type type, Element& element, Style::ComputedStyle&& style)
-    : RenderBoxModelObject(type, element, WTF::move(style), TypeFlag::IsRenderInline, { })
+    : RenderBoxModelObject(type, element, WTF::move(style), TypeFlag::IsInlineBox, { })
 {
     setChildrenInline(true);
-    ASSERT(isRenderInline());
+    ASSERT(isInlineBox());
 }
 
 RenderInline::RenderInline(Type type, Document& document, Style::ComputedStyle&& style)
-    : RenderBoxModelObject(type, document, WTF::move(style), TypeFlag::IsRenderInline, { })
+    : RenderBoxModelObject(type, document, WTF::move(style), TypeFlag::IsInlineBox, { })
 {
     setChildrenInline(true);
-    ASSERT(isRenderInline());
+    ASSERT(isInlineBox());
 }
 
 RenderInline::~RenderInline() = default;

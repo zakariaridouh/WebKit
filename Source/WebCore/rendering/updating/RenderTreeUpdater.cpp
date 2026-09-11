@@ -579,7 +579,7 @@ bool RenderTreeUpdater::textRendererIsNeeded(const Text& textNode)
     if (previousRenderer && previousRenderer->isBR()) // <span><br/> <br/></span>
         return false;
 
-    if (parentRenderer.isRenderInline()) {
+    if (parentRenderer.isInlineBox()) {
         // <span><div/> <div/></span>
         if (previousRenderer && !previousRenderer->isInline() && !previousRenderer->isOutOfFlowPositioned())
             return false;

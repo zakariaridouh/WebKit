@@ -125,4 +125,4 @@ RenderObject* firstContentfulChild(RenderInline&);
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderInline, isRenderInline())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderInline, isInlineBox())

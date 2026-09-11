@@ -4872,7 +4872,7 @@ RenderObject* InlineMinMaxIterator::next()
 
         if (!candidate) {
             // We hit the end of our inline. (It was empty, e.g., <span></span>.)
-            if (!oldEndOfInline && m_current && m_current->isRenderInline()) {
+            if (!oldEndOfInline && m_current && m_current->isInlineBox()) {
                 candidate = m_current;
                 m_isEndOfInline = true;
                 break;
@@ -4883,7 +4883,7 @@ RenderObject* InlineMinMaxIterator::next()
                 if (candidate)
                     break;
                 m_current = m_current->parent();
-                if (m_current && m_current != &m_blockContainer && m_current->isRenderInline()) {
+                if (m_current && m_current != &m_blockContainer && m_current->isInlineBox()) {
                     candidate = m_current;
                     m_isEndOfInline = true;
                     break;
@@ -5451,7 +5451,7 @@ std::pair<LayoutUnit, LayoutUnit> RenderBlockFlow::computeInlineIntrinsicLogical
         if (child->isRenderListOutsideMarker())
             stripFrontSpaces = true;
 
-        isPrevChildInlineFlow = !child->isRenderText() && child->isRenderInline();
+        isPrevChildInlineFlow = !child->isRenderText() && child->isInlineBox();
         oldAutoWrap = autoWrap;
     }
 
