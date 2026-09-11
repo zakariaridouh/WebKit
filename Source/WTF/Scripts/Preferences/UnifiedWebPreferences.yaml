@@ -3622,6 +3622,7 @@ LocalNetworkAccessEnabled:
   humanReadableDescription: "Enable Local Network Access"
   webKitLegacyPreferenceKey: WebKitLocalNetworkAccessEnabledPreferenceKey
   defaultValue: false
+  sharedPreferenceForWebProcess: true
 
 LocalStorageEnabled:
   type: bool
