@@ -12249,16 +12249,6 @@ void WebPageProxy::resumeAllMediaPlayback(CompletionHandler<void()>&& completion
     });
 }
 
-void WebPageProxy::processWillSuspend()
-{
-    protect(m_legacyMainFrameProcess)->send(Messages::WebPage::ProcessWillSuspend(), webPageIDInMainFrameProcess());
-}
-
-void WebPageProxy::processDidResume()
-{
-    protect(m_legacyMainFrameProcess)->send(Messages::WebPage::ProcessDidResume(), webPageIDInMainFrameProcess());
-}
-
 void WebPageProxy::setMayStartMediaWhenInWindow(bool mayStartMedia)
 {
     if (mayStartMedia == m_mayStartMediaWhenInWindow)

@@ -1211,9 +1211,6 @@ public:
     WebCore::FloatRect selectionBoundingRectInRootViewCoordinates() const;
 #endif
 
-    void processWillSuspend();
-    void processDidResume();
-
 #if PLATFORM(COCOA)
     using SelectWithGestureCompletionHandler = CompletionHandler<void(SelectWithGestureResult)>;
     void selectWithGesture(std::optional<WebCore::FrameIdentifier>, WebCore::IntPoint, GestureType, GestureRecognizerState, bool isInteractingWithFocusedElement, SelectWithGestureCompletionHandler&&);
