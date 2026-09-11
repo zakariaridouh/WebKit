@@ -510,6 +510,25 @@ TEST(WTF, StringMakeStringByJoining)
     std::vector<String> test3 = { "foo"_s, "bar"_s };
     auto test3_result = makeStringByJoining(test3, ", "_s);
     ASSERT_EQ(test3_result, "foo, bar"_s);
+
+    Vector<String> test4 = { emptyString(), "a"_s };
+    ASSERT_EQ(makeStringByJoining(test4, "\n"_s), "\na"_s);
+
+    Vector<String> test5 = { emptyString(), emptyString(), "a"_s, "b"_s };
+    ASSERT_EQ(makeStringByJoining(test5, "\n"_s), "\n\na\nb"_s);
+
+    Vector<String> test6 = { emptyString(), emptyString() };
+    ASSERT_EQ(makeStringByJoining(test6, "\n"_s), "\n"_s);
+
+    Vector<String> test7 = { String { }, "a"_s };
+    ASSERT_EQ(makeStringByJoining(test7, "\n"_s), "\na"_s);
+
+    Vector<String> test8 = { "a"_s, emptyString(), "b"_s };
+    ASSERT_EQ(makeStringByJoining(test8, "\n"_s), "a\n\nb"_s);
+
+    auto test9_result = makeStringByJoining(Vector<String> { }, ", "_s);
+    ASSERT_TRUE(test9_result.isEmpty());
+    ASSERT_FALSE(test9_result.isNull());
 }
 
 TEST(WTF, StringUTF8ConversionInvalidUTF16LenientMode)

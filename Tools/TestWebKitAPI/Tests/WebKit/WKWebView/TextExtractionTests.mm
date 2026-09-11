@@ -1610,6 +1610,42 @@ TEST(TextExtractionTests, FilterOptions)
     }
 }
 
+TEST(TextExtractionTests, WordLimitDoesNotReportFilteringLeadingBlankLines)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:^{
+        RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+        [[configuration preferences] _setTextExtractionEnabled:YES];
+        return configuration.autorelease();
+    }()]);
+
+    auto extractWithWordLimit = [webView](NSUInteger wordLimit) {
+        return [webView synchronouslyExtractDebugTextResult:^{
+            RetainPtr configuration = adoptNS([_WKTextExtractionConfiguration new]);
+            [configuration setMaxWordsPerParagraph:wordLimit];
+            [configuration setMaxWordsPerParagraphPolicy:_WKTextExtractionWordLimitPolicyAlways];
+            return configuration.autorelease();
+        }()];
+    };
+
+    [webView synchronouslyLoadHTMLString:@"<div style='white-space: pre'>\n\nhello world</div>"];
+    {
+        RetainPtr result = extractWithWordLimit(100);
+        EXPECT_TRUE([[result textContent] containsString:@"hello world"]);
+        EXPECT_FALSE([result filteredOutAnyText]);
+    }
+    {
+        RetainPtr result = extractWithWordLimit(1);
+        EXPECT_TRUE([result filteredOutAnyText]);
+    }
+
+    [webView synchronouslyLoadHTMLString:@"<div style='white-space: pre'>hello world</div>"];
+    {
+        RetainPtr result = extractWithWordLimit(100);
+        EXPECT_TRUE([[result textContent] containsString:@"hello world"]);
+        EXPECT_FALSE([result filteredOutAnyText]);
+    }
+}
+
 TEST(TextExtractionTests, FilterRedundantTextInLinks)
 {
     RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:^{

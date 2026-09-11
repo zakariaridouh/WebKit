@@ -78,14 +78,7 @@ char32_t String::codePointAt(unsigned i) const
 
 String makeStringByJoining(std::span<const String> strings, const String& separator)
 {
-    StringBuilder builder;
-    for (const auto& string : strings) {
-        if (builder.isEmpty())
-            builder.append(string);
-        else
-            builder.append(separator, string);
-    }
-    return builder.toString();
+    return makeString(interleave(strings, separator));
 }
 
 String makeStringByRemoving(const String& string, unsigned position, unsigned lengthToRemove)
