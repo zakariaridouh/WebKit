@@ -175,6 +175,7 @@ public:
 
     Widows widows;
     Orphans orphans;
+    HyphenateLimitEdge internalHyphenateLimitCharsWord;
     HyphenateLimitEdge hyphenateLimitBefore;
     HyphenateLimitEdge hyphenateLimitAfter;
     HyphenateLimitLines hyphenateLimitLines;

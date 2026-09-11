@@ -364,6 +364,7 @@ public:
             || a.lineBreak != b.lineBreak
             || a.textSecurity != b.textSecurity
             || a.hyphens != b.hyphens
+            || a.internalHyphenateLimitCharsWord != b.internalHyphenateLimitCharsWord
             || a.hyphenateLimitBefore != b.hyphenateLimitBefore
             || a.hyphenateLimitAfter != b.hyphenateLimitAfter
             || a.hyphenateLimitLines != b.hyphenateLimitLines

@@ -82,6 +82,7 @@ InheritedRareData::InheritedRareData()
     , lineFitEdge(ComputedStyle::initialLineFitEdge())
     , widows(ComputedStyle::initialWidows())
     , orphans(ComputedStyle::initialOrphans())
+    , internalHyphenateLimitCharsWord(ComputedStyle::initialInternalHyphenateLimitCharsWord())
     , hyphenateLimitBefore(ComputedStyle::initialHyphenateLimitBefore())
     , hyphenateLimitAfter(ComputedStyle::initialHyphenateLimitAfter())
     , hyphenateLimitLines(ComputedStyle::initialHyphenateLimitLines())
@@ -190,6 +191,7 @@ inline InheritedRareData::InheritedRareData(const InheritedRareData& o)
     , lineFitEdge(o.lineFitEdge)
     , widows(o.widows)
     , orphans(o.orphans)
+    , internalHyphenateLimitCharsWord(o.internalHyphenateLimitCharsWord)
     , hyphenateLimitBefore(o.hyphenateLimitBefore)
     , hyphenateLimitAfter(o.hyphenateLimitAfter)
     , hyphenateLimitLines(o.hyphenateLimitLines)
@@ -303,6 +305,7 @@ bool InheritedRareData::operator==(const InheritedRareData& o) const
         && hyphenateLimitBefore == o.hyphenateLimitBefore
         && hyphenateLimitAfter == o.hyphenateLimitAfter
         && hyphenateLimitLines == o.hyphenateLimitLines
+        && internalHyphenateLimitCharsWord == o.internalHyphenateLimitCharsWord
 #if ENABLE(DARK_MODE_CSS)
         && colorScheme == o.colorScheme
 #endif
@@ -487,6 +490,7 @@ void InheritedRareData::dumpDifferences(TextStream& ts, const InheritedRareData&
     LOG_IF_DIFFERENT(visitedLinkStrokeColor);
 
     LOG_IF_DIFFERENT(hyphenateCharacter);
+    LOG_IF_DIFFERENT(internalHyphenateLimitCharsWord);
     LOG_IF_DIFFERENT(hyphenateLimitBefore);
     LOG_IF_DIFFERENT(hyphenateLimitAfter);
     LOG_IF_DIFFERENT(hyphenateLimitLines);

@@ -11207,7 +11207,7 @@
             }
         },
         "-webkit-hyphenate-limit-after": {
-            "animation-type": "not animatable (legacy)",
+            "animation-type": "by computed value",
             "inherited": true,
             "initial": "auto",
             "values": [
@@ -11218,12 +11218,12 @@
                 "computed-style-storage-path": ["m_inheritedRareData"],
                 "computed-style-storage-kind": "value",
                 "computed-style-type": "Style::HyphenateLimitEdge",
-                "parser-grammar": "auto | <number [0,inf]>"
+                "parser-grammar": "auto | <integer [0,inf]>"
             },
             "status": "non-standard"
         },
         "-webkit-hyphenate-limit-before": {
-            "animation-type": "not animatable (legacy)",
+            "animation-type": "by computed value",
             "inherited": true,
             "initial": "auto",
             "values": [
@@ -11234,7 +11234,7 @@
                 "computed-style-storage-path": ["m_inheritedRareData"],
                 "computed-style-storage-kind": "value",
                 "computed-style-type": "Style::HyphenateLimitEdge",
-                "parser-grammar": "auto | <number [0,inf]>"
+                "parser-grammar": "auto | <integer [0,inf]>"
             },
             "status": "non-standard"
         },
@@ -11261,6 +11261,42 @@
             "specification": {
                 "category": "css-text",
                 "url": "https://www.w3.org/TR/css-text-4/#propdef-hyphenate-limit-lines"
+            }
+        },
+        "-internal-hyphenate-limit-chars-word": {
+            "animation-type": "by computed value",
+            "inherited": true,
+            "initial": "auto",
+            "values": [
+                "auto"
+            ],
+            "codegen-properties": {
+                "computed-style-initial-constexpr": true,
+                "computed-style-storage-path": ["m_inheritedRareData"],
+                "computed-style-storage-kind": "value",
+                "computed-style-type": "Style::HyphenateLimitEdge",
+                "parser-grammar": "auto | <integer [0,inf]>",
+                "internal-only": true
+            },
+            "status": "non-standard"
+        },
+        "hyphenate-limit-chars": {
+            "codegen-properties": {
+                "longhands": [
+                    "-internal-hyphenate-limit-chars-word",
+                    "-webkit-hyphenate-limit-before",
+                    "-webkit-hyphenate-limit-after"
+                ],
+                "parser-function": "consumeHyphenateLimitCharsShorthand",
+                "parser-grammar-unused": "[ auto | <integer [0,inf]> ]{1,3}",
+                "parser-grammar-unused-reason": "Needs support for shorthand grammars."
+            },
+            "status": {
+                "status": "experimental"
+            },
+            "specification": {
+                "category": "css-text",
+                "url": "https://www.w3.org/TR/css-text-4/#propdef-hyphenate-limit-chars"
             }
         },
         "hyphens": {
