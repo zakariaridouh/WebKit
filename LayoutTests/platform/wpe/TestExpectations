@@ -1293,7 +1293,6 @@ webkit.org/b/323611 imported/w3c/web-platform-tests/css/css-anchor-position/posi
 webkit.org/b/323611 imported/w3c/web-platform-tests/css/css-anchor-position/position-area-overflow-icb-008-rtl.html [ ImageOnlyFailure Pass ]
 
 webkit.org/b/323612 imported/w3c/web-platform-tests/css/css-counter-styles/counter-style-at-rule/disclosure-line-height.html [ ImageOnlyFailure ]
-webkit.org/b/323615 imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-ontonechange.https.html?rest [ Pass Crash ]
 
 # Gardening 2026-09-02
 webkit.org/b/306026 media/video-muted-holds-sleep-assertion.html [ Failure ]
