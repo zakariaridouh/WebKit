@@ -43,16 +43,34 @@ add_custom_target(TestWebKitAPISwiftArgs DEPENDS "${_test_swift_resp}")
 
 # Swift flags for all Test* targets.
 _WEBKIT_COMPUTE_SWIFT_SHARED_CLANG_FLAGS(_test_swift_cc_flags)
-set(_testwebkitapi_swiftmodule_dir "${CMAKE_BINARY_DIR}/TestWebKitAPI/SwiftModules")
+
+set(_testwebkitapi_swiftmodule_dir "${CMAKE_CURRENT_BINARY_DIR}/SwiftModules")
 set(_testwebkitapi_swift_options
     ${WEBKIT_SWIFT_CXX_INTEROP_FLAGS}
+    "-D ENABLE_CXX_INTEROP"
     -no-verify-emitted-module-interface
     "@${_test_swift_resp}"
     -F${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     "-Xcc -I${CMAKE_BINARY_DIR}"
+    "-Xcc -I${TESTWEBKITAPI_DIR}"
+    "-I${_testwebkitapi_swiftmodule_dir}"
 )
 if (CMAKE_Swift_COMPILER_TARGET)
     list(APPEND _testwebkitapi_swift_options "-clang-target ${CMAKE_Swift_COMPILER_TARGET}")
+endif ()
+
+# @Test and @Suite expand through libTestingMacros, in a `testing` subdirectory
+# swiftc does not search on its own. It must come from the default toolchain to
+# match the Testing.framework staged above.
+WEBKIT_XCRUN(_swift_plugin_server --toolchain XcodeDefault --find swift-plugin-server)
+get_filename_component(_swift_toolchain_bin "${_swift_plugin_server}" DIRECTORY)
+get_filename_component(_swift_toolchain_usr "${_swift_toolchain_bin}" DIRECTORY)
+set(_swift_testing_plugins "${_swift_toolchain_usr}/lib/swift/host/plugins/testing")
+if (IS_DIRECTORY "${_swift_testing_plugins}")
+    # Out of process, as Xcode runs macros: the plugin is not from this compiler's toolchain.
+    list(APPEND _testwebkitapi_swift_options
+        "-external-plugin-path ${_swift_testing_plugins}#${_swift_plugin_server}"
+    )
 endif ()
 foreach (_f IN LISTS _test_swift_cc_flags)
     list(APPEND _testwebkitapi_swift_options "-Xcc ${_f}")
@@ -67,7 +85,12 @@ macro(WEBKIT_TEST_ENABLE_SWIFT _target)
         ${TESTWEBKITAPI_DIR}/Runner/SwiftTestingABI.swift
         ${TESTWEBKITAPI_DIR}/Runner/TestWebKitAPISupport.mm
     )
-    set_target_properties(${_target} PROPERTIES Swift_MODULE_NAME ${_target})
+
+    get_target_property(_swift_module_name ${_target} OUTPUT_NAME)
+    if (NOT _swift_module_name)
+        set(_swift_module_name ${_target})
+    endif ()
+    set_target_properties(${_target} PROPERTIES Swift_MODULE_NAME ${_swift_module_name})
     webkit_target_add_swift_options(${_target}
         ${_testwebkitapi_swift_options}
         "-import-objc-header ${TESTWEBKITAPI_DIR}/Runner/TestWebKitAPI-Bridging-Header.h"
@@ -255,12 +278,9 @@ list(APPEND TestWebKit_SOURCES
     Helpers/TestNotificationProvider.cpp
     Helpers/WebCoreTestUtilities.cpp
 
-    Helpers/cocoa/CocoaTypes.swift
     Helpers/cocoa/HTTPServer.mm
-    Helpers/cocoa/PDFTestHelpers.swift
     Helpers/cocoa/MiniTURNServer.mm
     Helpers/cocoa/TestCocoaImageAndCocoaColor.mm
-    Helpers/cocoa/TestCocoaImageUtilities.swift
     Helpers/cocoa/TestElementFullscreenDelegate.mm
     Helpers/cocoa/TestNSBundleExtras.m
     Helpers/cocoa/UtilitiesCocoa.mm
@@ -575,6 +595,87 @@ endif ()
 foreach (_dir IN LISTS _testapi_framework_headers)
     list(APPEND _testwebkitapi_swift_options "-Xcc -I${_dir}")
 endforeach ()
+
+macro(WEBKIT_TEST_SWIFT_HELPER_LIBRARY _library _test_target)
+    set_target_properties(${_library} PROPERTIES
+        Swift_MODULE_NAME ${_library}
+        Swift_MODULE_DIRECTORY ${_testwebkitapi_swiftmodule_dir}
+    )
+    webkit_target_add_swift_options(${_library} ${_testwebkitapi_swift_options})
+    target_include_directories(${_library} PRIVATE
+        ${CMAKE_BINARY_DIR}
+        ${TESTWEBKITAPI_DIR}
+        ${_testapi_framework_headers}
+    )
+    # config.h includes <gtest/gtest.h>.
+    target_link_libraries(${_library} PRIVATE WebKit::gtest)
+    add_dependencies(${_library} TestWebKitAPIStageTesting TestWebKitAPISwiftArgs)
+    target_link_libraries(${_test_target} PRIVATE ${_library})
+endmacro()
+
+add_library(TestWTFLibrary OBJECT
+    ${TESTWEBKITAPI_DIR}/TestWTFLibrary/SwiftCxxInteropTestbed.cpp
+    ${TESTWEBKITAPI_DIR}/TestWTFLibrary/TestWTFLibrary.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/WTFCompletionHandler+Extras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/WTFExpected+Extras.swift
+)
+WEBKIT_TEST_SWIFT_HELPER_LIBRARY(TestWTFLibrary TestWTF)
+
+list(APPEND TestWTF_SOURCES
+    Tests/WTF/cocoa/SwiftCxxInteropTests.swift
+)
+
+add_library(TestWebKitAPILibrary OBJECT
+    ${TESTWEBKITAPI_DIR}/TestWebKitAPILibrary/TestWebKitAPILibrary.swift
+
+    ${TESTWEBKITAPI_DIR}/Helpers/WTFCompletionHandler+Extras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/WTFExpected+Extras.swift
+
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/AppKit+Extras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/Bundle+Extras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/CocoaTypes.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/Foundation+Extras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/HTTPServer.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/ImageAnalysisTestingUtilities.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/JavaScriptMessages.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/JavaScriptTypes.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/PDFTestHelpers.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/SafeBrowsingTestUtilities.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/StdLibExtras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/SwiftUI+Extras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/TestCocoaImageUtilities.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/TestPDFDocument.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/WebPage+Extras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/WebPage+JavaScriptExpression.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/WebPageConfiguration+Extras.swift
+    ${TESTWEBKITAPI_DIR}/Helpers/cocoa/WKWebView+Extras.swift
+)
+WEBKIT_TEST_SWIFT_HELPER_LIBRARY(TestWebKitAPILibrary TestWebKit)
+target_include_directories(TestWebKitAPILibrary PRIVATE
+    ${TestWebKit_PRIVATE_INCLUDE_DIRECTORIES}
+)
+webkit_target_add_swift_options(TestWebKitAPILibrary
+    "-import-objc-header ${TESTWEBKITAPI_DIR}/Runner/TestWebKitAPI-Bridging-Header.h"
+)
+
+list(APPEND TestWebKit_SOURCES
+    Tests/WebKit/WKWebView/CodingTests.swift
+    Tests/WebKit/WKWebView/WKWebViewSwiftOverlayTests.swift
+
+    Tests/WebKit/WebPage/ControlledByExternalAgent.swift
+    Tests/WebKit/WebPage/EditingFontSizeTests.swift
+    Tests/WebKit/WebPage/JSHandleTests.swift
+    Tests/WebKit/WebPage/JavaScriptEvaluationTests.swift
+    Tests/WebKit/WebPage/JavaScriptExpressionTests.swift
+    Tests/WebKit/WebPage/NavigatorWebDriverOverride.swift
+    Tests/WebKit/WebPage/SendInspectorMessage.swift
+    Tests/WebKit/WebPage/SimulateClickOverTextTests.swift
+    Tests/WebKit/WebPage/URLSchemeHandlerTests.swift
+    Tests/WebKit/WebPage/UserContentControllerTests.swift
+    Tests/WebKit/WebPage/WebPageNavigationTests.swift
+)
+
+# FIXME: Support WebKitAdditions and tests which need the _WebKit_SwiftUI cross-import overlay linked.
 
 # TestWebKitAPIBase needs framework headers for config.h includes.
 target_include_directories(TestWebKitAPIBase PRIVATE ${_testapi_framework_headers})
