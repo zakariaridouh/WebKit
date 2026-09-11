@@ -295,6 +295,11 @@ static constexpr Quirk fullTable[] = {
         },
         .site = QuirkSite::GoogleProperty },
 
+    // google.com https://bugs.webkit.org/show_bug.cgi?id=323851 rdar://181740296
+    { .match = URLMatch::anyTopLevelDomain("google"_s).when(pathIs("/search"_s)),
+        .behaviors = { needsAnchorToBeMouseFocusableQuirk },
+        .site = QuirkSite::GoogleSearch },
+
     { .match = URLMatch::anyTopLevelDomain("google"_s).when(pathStartsWith("/maps/"_s)),
         .behaviors = {
             // maps.google.com rdar://152194074

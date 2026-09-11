@@ -235,11 +235,33 @@ bool Quirks::shouldDisableBlobFileAccessEnforcement()
 }
 
 // thesaurus.com, dictionary.com https://bugs.webkit.org/show_bug.cgi?id=312692 rdar://174959285
-bool Quirks::needsAnchorToBeMouseFocusable() const
+// google.com https://bugs.webkit.org/show_bug.cgi?id=323851 rdar://181740296
+bool Quirks::needsAnchorToBeMouseFocusable(const Element& anchor) const
 {
     QUIRKS_EARLY_RETURN_IF_DISABLED_WITH_VALUE(false);
 
-    return m_quirksData.quirkIsEnabled(QuirkBehaviors::needsAnchorToBeMouseFocusableQuirk);
+    if (!m_quirksData.quirkIsEnabled(QuirkBehaviors::needsAnchorToBeMouseFocusableQuirk))
+        return false;
+
+    // On a Google search page only the links inside the "Where to watch" panel need
+    // this. That panel closes on blur, so a link that does not take focus on press
+    // loses its click: the panel collapses before mouseup and the click retargets to
+    // an ancestor. Every other site opted into this quirk needs it for every anchor.
+    if (m_quirksData.isSite(QuirkSite::GoogleSearch)) {
+        // The panel carries data-expc. Bounded walk: this runs on every press on a link.
+        static MainThreadNeverDestroyed<const AtomString> expandablePanelAttribute("data-expc"_s);
+        static constexpr unsigned maxDepth = 12;
+        unsigned depth = 0;
+        for (Ref ancestor : lineageOfType<Element>(anchor)) {
+            if (ancestor->hasAttribute(expandablePanelAttribute.get()))
+                return true;
+            if (++depth > maxDepth)
+                break;
+        }
+        return false;
+    }
+
+    return true;
 }
 
 // ceac.state.gov https://bugs.webkit.org/show_bug.cgi?id=193478

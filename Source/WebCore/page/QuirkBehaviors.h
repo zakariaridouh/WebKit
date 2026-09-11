@@ -42,6 +42,7 @@ enum class QuirkSite : uint8_t {
     GoogleDocs,
     GoogleProperty,
     GoogleMaps,
+    GoogleSearch,
     IHeart,
     InVideo,
     LinkedIn,
