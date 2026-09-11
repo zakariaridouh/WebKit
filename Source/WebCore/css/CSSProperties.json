@@ -1430,7 +1430,6 @@
                 "auto"
             ],
             "codegen-properties": {
-                "font-description-name-for-methods": "SpecifiedLocale",
                 "font-property": true,
                 "high-priority": true,
                 "computed-style-storage-container": "opaque",

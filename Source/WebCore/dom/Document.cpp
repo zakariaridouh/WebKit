@@ -11683,7 +11683,7 @@ const Style::ComputedStyle& Document::initialStyle() const
         auto allowUserInstalledFonts = settings().shouldAllowUserInstalledFonts() ? AllowUserInstalledFonts::Yes : AllowUserInstalledFonts::No;
 
         FontCascadeDescription fontDescription;
-        fontDescription.setSpecifiedLocale(contentLanguage());
+        fontDescription.setComputedLocale(contentLanguage());
         fontDescription.setOneFamily(WTF::move(initialFontFamily));
         fontDescription.setKeywordSizeFromIdentifier(CSSValueMedium);
         fontDescription.setComputedSize(initialComputedFontSize);
