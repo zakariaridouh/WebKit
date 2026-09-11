@@ -2807,9 +2807,9 @@ void WebsiteDataStore::getNotifications(const URL& registrationalURL, Completion
 
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
-void WebsiteDataStore::setEmulatedConditions(std::optional<int64_t>&& bytesPerSecondLimit)
+void WebsiteDataStore::setEmulatedConditions(std::optional<uint64_t> bandwidthBytesPerSecond, Seconds latency)
 {
-    protect(networkProcess())->setEmulatedConditions(sessionID(), WTF::move(bytesPerSecondLimit));
+    protect(networkProcess())->setEmulatedConditions(sessionID(), bandwidthBytesPerSecond, latency);
 }
 
 #endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
