@@ -61,6 +61,8 @@ InheritedRareData::InheritedRareData()
 #endif
     , listStyleType(ComputedStyle::initialListStyleType())
     , blockEllipsis(ComputedStyle::initialBlockEllipsis())
+    , borderHorizontalSpacing(ComputedStyle::initialBorderHorizontalSpacing())
+    , borderVerticalSpacing(ComputedStyle::initialBorderVerticalSpacing())
     , textIndent(ComputedStyle::initialTextIndent())
     , listStyleImage(ComputedStyle::initialListStyleImage())
     , dynamicRangeLimit(ComputedStyle::initialDynamicRangeLimit())
@@ -167,6 +169,8 @@ inline InheritedRareData::InheritedRareData(const InheritedRareData& o)
 #endif
     , listStyleType(o.listStyleType)
     , blockEllipsis(o.blockEllipsis)
+    , borderHorizontalSpacing(o.borderHorizontalSpacing)
+    , borderVerticalSpacing(o.borderVerticalSpacing)
     , textIndent(o.textIndent)
     , listStyleImage(o.listStyleImage)
     , dynamicRangeLimit(o.dynamicRangeLimit)
@@ -354,6 +358,8 @@ bool InheritedRareData::operator==(const InheritedRareData& o) const
         && listStyleImage == o.listStyleImage
         && listStyleType == o.listStyleType
         && blockEllipsis == o.blockEllipsis
+        && borderHorizontalSpacing == o.borderHorizontalSpacing
+        && borderVerticalSpacing == o.borderVerticalSpacing
         && mathDepth == o.mathDepth;
 }
 
@@ -364,7 +370,6 @@ void InheritedRareData::dumpDifferences(TextStream& ts, const InheritedRareData&
 
     LOG_IF_DIFFERENT(usedZoom);
     LOG_IF_DIFFERENT(deviceScaleFactor);
-
     LOG_IF_DIFFERENT(listStyleImage);
 
     LOG_IF_DIFFERENT(textStrokeWidth);
@@ -505,6 +510,9 @@ void InheritedRareData::dumpDifferences(TextStream& ts, const InheritedRareData&
 
     LOG_IF_DIFFERENT(listStyleType);
     LOG_IF_DIFFERENT(blockEllipsis);
+
+    LOG_IF_DIFFERENT(borderHorizontalSpacing);
+    LOG_IF_DIFFERENT(borderVerticalSpacing);
 
     LOG_IF_DIFFERENT(mathDepth);
 }
