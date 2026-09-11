@@ -1815,7 +1815,7 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
 
         cancelDeferredWorkIfNeeded();
         reapWeakHandles();
-        pruneStaleEntriesFromWeakGCHashTables();
+        reconcileWeakGCHashTables();
         sweepArrayBuffers();
         snapshotUnswept();
         reconcileWeakReferencesAtGCEnd(); // Must precede clearCurrentlyExecuting: CodeBlock::reconcileWeakReferencesAtGCEnd queries which CodeBlocks are currently executing.
@@ -2522,12 +2522,24 @@ void Heap::reapWeakHandles()
     m_objectSpace.reapWeakSets();
 }
 
-void Heap::pruneStaleEntriesFromWeakGCHashTables()
+void Heap::reconcileWeakGCHashTables()
 {
-    if (!m_collectionScope || m_collectionScope.value() != CollectionScope::Full)
+    CollectionScope collectionScope = m_collectionScope.value_or(CollectionScope::Full);
+    if (collectionScope == CollectionScope::Full) {
+        for (auto* weakGCHashTable : m_weakGCHashTables)
+            weakGCHashTable->reconcileWeakReferencesAtGCEnd(vm(), collectionScope);
+        m_dirtyWeakGCHashTables.forEach([](WeakGCHashTable* weakGCHashTable) {
+            weakGCHashTable->remove();
+        });
         return;
-    for (auto* weakGCHashTable : m_weakGCHashTables)
-        weakGCHashTable->pruneStaleEntries();
+    }
+
+    // Only a table that gained an entry since the last collection can hold an entry that dies here:
+    // everything that survived that collection is old, and an eden collection cannot free it.
+    m_dirtyWeakGCHashTables.forEach([&](WeakGCHashTable* weakGCHashTable) {
+        weakGCHashTable->remove();
+        weakGCHashTable->reconcileWeakReferencesAtGCEnd(vm(), collectionScope);
+    });
 }
 
 void Heap::sweepArrayBuffers()
@@ -3027,7 +3039,20 @@ void Heap::registerWeakGCHashTable(WeakGCHashTable* weakGCHashTable)
 
 void Heap::unregisterWeakGCHashTable(WeakGCHashTable* weakGCHashTable)
 {
+    if (weakGCHashTable->isOnList())
+        weakGCHashTable->remove();
     m_weakGCHashTables.remove(weakGCHashTable);
+}
+
+void Heap::addDirtyWeakGCHashTable(WeakGCHashTable* weakGCHashTable)
+{
+    ASSERT(!weakGCHashTable->isOnList());
+    m_dirtyWeakGCHashTables.append(weakGCHashTable);
+}
+
+void WeakGCHashTable::addToDirtyList(VM& vm)
+{
+    vm.heap.addDirtyWeakGCHashTable(this);
 }
 
 void Heap::didAllocateBlock(size_t capacity)
