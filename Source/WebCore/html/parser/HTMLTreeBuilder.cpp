@@ -386,7 +386,7 @@ void HTMLTreeBuilder::updateTokenizerForAdjustedCurrentNode()
         && !HTMLElementStack::isHTMLIntegrationPoint(adjustedCurrentStackItem())
         && !HTMLElementStack::isMathMLTextIntegrationPoint(adjustedCurrentStackItem());
 
-    m_parser->tokenizer().setForceNullCharacterReplacement(m_insertionMode == InsertionMode::Text || inForeignContent);
+    m_parser->tokenizer().setForceNullCharacterReplacement(inForeignContent);
     m_parser->tokenizer().setShouldAllowCDATA(adjustedCurrentNodeIsForeign);
 }
 
