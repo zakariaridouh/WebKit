@@ -28,6 +28,7 @@
 #include <array>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/StringPrintStream.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringCommon.h>
@@ -471,4 +472,34 @@ TEST(WTF, CStringWithEncodingMakeString)
     Latin1CString latin1String { std::span<const Latin1Character> { latin1Cafe } };
     EXPECT_EQ(makeString(latin1String), String::fromUTF8(u8"café"_span));
     EXPECT_EQ(makeString(latin1String).length(), 4U);
+}
+
+template<typename StringType> concept PrintableToStream = requires(StringPrintStream& out, const StringType& string) {
+    WTF::printInternal(out, string);
+};
+
+TEST(WTF, CStringWithEncodingPrintStream)
+{
+    // A PrintStream holds UTF-8, so printing transcodes whatever it is given. An untyped CString
+    // has no encoding to transcode from, so printing one does not compile.
+    static_assert(PrintableToStream<UTF8CString>);
+    static_assert(PrintableToStream<Latin1CString>);
+    static_assert(PrintableToStream<ASCIICString>);
+    static_assert(!PrintableToStream<CString>);
+
+    auto print = [](const auto& string) {
+        StringPrintStream out;
+        out.print(string);
+        return out.toString();
+    };
+
+    UTF8CString utf8String { u8"Water🍉Melon"_span };
+    EXPECT_EQ(print(utf8String), String::fromUTF8(u8"Water🍉Melon"_span));
+
+    constexpr auto latin1Cafe = WTF::toArray<Latin1Character>({ 'c', 'a', 'f', 0xE9 });
+    Latin1CString latin1String { std::span<const Latin1Character> { latin1Cafe } };
+    EXPECT_EQ(print(latin1String), String::fromUTF8(u8"café"_span));
+
+    ASCIICString asciiString { "cafe"_s };
+    EXPECT_EQ(print(asciiString), "cafe"_s);
 }

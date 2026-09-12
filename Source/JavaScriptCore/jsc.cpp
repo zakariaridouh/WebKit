@@ -1571,7 +1571,7 @@ void GlobalObject::promiseRejectionTracker(JSGlobalObject*, JSPromise*, JSPromis
 
 #endif // ENABLE(FUZZILLI)
 
-static UTF8CString toCString(JSGlobalObject* globalObject, ThrowScope& scope, std::expected<UTF8CString, UTF8ConversionError> expectedString)
+static UTF8CString toUTF8CString(JSGlobalObject* globalObject, ThrowScope& scope, std::expected<UTF8CString, UTF8ConversionError> expectedString)
 {
     if (expectedString)
         return expectedString.value();
@@ -1587,9 +1587,9 @@ static UTF8CString toCString(JSGlobalObject* globalObject, ThrowScope& scope, st
     return { };
 }
 
-template<typename T> static UTF8CString toCString(JSGlobalObject* globalObject, ThrowScope& scope, T& string)
+template<typename T> static UTF8CString toUTF8CString(JSGlobalObject* globalObject, ThrowScope& scope, T& string)
 {
-    return toCString(globalObject, scope, string.tryGetUTF8());
+    return toUTF8CString(globalObject, scope, string.tryGetUTF8());
 }
 
 static EncodedJSValue printInternal(JSGlobalObject* globalObject, CallFrame* callFrame, FILE* out, bool pretty)
@@ -1612,7 +1612,7 @@ static EncodedJSValue printInternal(JSGlobalObject* globalObject, CallFrame* cal
 
         String string = pretty ? callFrame->uncheckedArgument(i).toWTFStringForConsole(globalObject) : callFrame->uncheckedArgument(i).toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        auto cString = toCString(globalObject, scope, string);
+        auto cString = toUTF8CString(globalObject, scope, string);
         RETURN_IF_EXCEPTION(scope, { });
         fwrite(cString.data(), sizeof(char), cString.length(), out);
         if (ferror(out))
@@ -1725,7 +1725,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDebug, (JSGlobalObject* globalObject, CallFrame
     RETURN_IF_EXCEPTION(scope, { });
     auto view = jsString->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    auto string = toCString(globalObject, scope, view.data);
+    auto string = toUTF8CString(globalObject, scope, view.data);
     RETURN_IF_EXCEPTION(scope, { });
     fputs("--> ", stderr);
     fwrite(string.data(), sizeof(char), string.length(), stderr);
@@ -3684,7 +3684,7 @@ int main(int argc, char** argv)
         CommaPrinter space(" "_s);
         for (int i = 0; i < argc; ++i)
             out.print(space, argv[i]);
-        WTF::setCrashLogMessage(out.toCString().data());
+        WTF::setCrashLogMessage(out.toUTF8CString().legacyCStringPointer());
     }
 #endif
 

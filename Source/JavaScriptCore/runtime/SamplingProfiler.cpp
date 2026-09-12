@@ -1199,7 +1199,7 @@ void SamplingProfiler::reportDataToOptionFile()
         StringPrintStream pathOut;
         pathOut.print(path, "/");
         pathOut.print("JSCSampilingProfile-", reinterpret_cast<uintptr_t>(this), ".txt");
-        auto out = FilePrintStream::open(pathOut.toCString().data(), "w");
+        auto out = FilePrintStream::open(pathOut.toUTF8CString().legacyCStringPointer(), "w");
         reportTopFunctions(*out);
         reportTopBytecodes(*out);
     }
@@ -1315,7 +1315,7 @@ void SamplingProfiler::reportTopBytecodes(PrintStream& out)
         auto frameDescription = makeString(frame.displayName(m_vm), descriptionForLocation(frame.semanticLocation, frame.wasmCompilationMode, frame.wasmOffset));
         if (std::optional<std::pair<StackFrame::CodeLocation, CodeBlock*>> machineLocation = frame.machineLocation) {
             frameDescription = makeString(frameDescription, " <-- "_s,
-                unsafeSpan(machineLocation->second->inferredName().data()), descriptionForLocation(machineLocation->first, std::nullopt, BytecodeIndex()));
+                machineLocation->second->inferredName(), descriptionForLocation(machineLocation->first, std::nullopt, BytecodeIndex()));
         }
         bytecodeCounts.add(frameDescription, 0).iterator->value++;
 

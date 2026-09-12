@@ -1588,7 +1588,7 @@ void Structure::dumpInContext(PrintStream& out, DumpContext* context) const
         dump(out);
 }
 
-void Structure::dumpBrief(PrintStream& out, const CString& string) const
+void Structure::dumpBrief(PrintStream& out, const ASCIICString& string) const
 {
     out.print("%", string, ":", classInfoForCells()->className);
     if (indexingType() & IndexingShapeMask)

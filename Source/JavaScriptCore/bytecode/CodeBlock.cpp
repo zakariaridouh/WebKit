@@ -109,20 +109,20 @@ const ClassInfo CodeBlock::s_info = {
     CREATE_METHOD_TABLE(CodeBlock)
 };
 
-CString CodeBlock::inferredName() const
+UTF8CString CodeBlock::inferredName() const
 {
     switch (codeType()) {
     case GlobalCode:
-        return "<global>"_span;
+        return "<global>"_s;
     case EvalCode:
-        return "<eval>"_span;
+        return "<eval>"_s;
     case FunctionCode:
         return uncheckedDowncast<FunctionExecutable>(ownerExecutable())->ecmaName().utf8();
     case ModuleCode:
-        return "<module>"_span;
+        return "<module>"_s;
     default:
         CRASH();
-        return ""_span;
+        return ""_s;
     }
 }
 
@@ -164,7 +164,7 @@ CodeBlockHash CodeBlock::hash() const
     return m_hash;
 }
 
-CString CodeBlock::sourceCodeForTools() const
+UTF8CString CodeBlock::sourceCodeForTools() const
 {
     if (codeType() != FunctionCode)
         return ownerExecutable()->source().toUTF8();
@@ -175,7 +175,7 @@ CString CodeBlock::sourceCodeForTools() const
         executable->parametersStartOffset() + executable->source().length()).utf8();
 }
 
-CString CodeBlock::sourceCodeOnOneLine() const
+UTF8CString CodeBlock::sourceCodeOnOneLine() const
 {
     return reduceWhitespace(sourceCodeForTools());
 }
@@ -3832,7 +3832,7 @@ void CodeBlock::dumpMathICStats()
 
 void setPrinter(Printer::PrintRecord& record, CodeBlock* codeBlock)
 {
-    Printer::setPrinter(record, toCString(codeBlock));
+    Printer::setPrinter(record, toUTF8CString(codeBlock));
 }
 
 } // namespace JSC

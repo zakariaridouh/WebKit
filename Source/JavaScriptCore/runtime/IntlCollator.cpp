@@ -206,7 +206,7 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
     RETURN_IF_EXCEPTION(scope, void());
 
     // UCollator does not offer an option to configure "usage" via ucol_setAttribute. So we need to pass this option via locale.
-    CString dataLocaleWithExtensions;
+    UTF8CString dataLocaleWithExtensions;
     switch (m_usage) {
     case Usage::Sort:
         if (collation.isNull())
@@ -225,7 +225,7 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
     dataLogLnIf(IntlCollatorInternal::verbose, "locale:(", resolved.locale, "),dataLocaleWithExtensions:(", dataLocaleWithExtensions, ")");
 
     UErrorCode status = U_ZERO_ERROR;
-    m_collator = std::unique_ptr<UCollator, UCollatorDeleter>(ucol_open(dataLocaleWithExtensions.data(), &status));
+    m_collator = std::unique_ptr<UCollator, UCollatorDeleter>(ucol_open(dataLocaleWithExtensions.legacyCStringPointer(), &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize Collator"_s);
         return;

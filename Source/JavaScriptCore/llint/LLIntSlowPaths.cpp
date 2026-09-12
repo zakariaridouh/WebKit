@@ -276,7 +276,7 @@ extern "C" UGPRPair SYSV_ABI llint_trace_value(CallFrame* callFrame, const JSIns
         operand.offset(),
         u.bits.tag,
         u.bits.payload,
-        toCString(value).data());
+        toUTF8CString(value).legacyCStringPointer());
     LLINT_END_IMPL();
 }
 

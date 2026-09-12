@@ -1267,7 +1267,7 @@ public:
     FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(DEFINE_NON_ISO_SUBSPACE_MEMBER)
 #undef DEFINE_NON_ISO_SUBSPACE_MEMBER
 
-    CString m_signpostMessage;
+    UTF8CString m_signpostMessage;
 };
 
 namespace GCClient {

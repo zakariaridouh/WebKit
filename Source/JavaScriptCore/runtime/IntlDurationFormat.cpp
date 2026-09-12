@@ -677,7 +677,7 @@ UNumberFormatter* IntlDurationFormat::createNumberFormatterIfNecessary(JSGlobalO
     StringView skeletonView(skeleton);
     auto upconverted = skeletonView.upconvertedCharacters();
     UErrorCode status = U_ZERO_ERROR;
-    formatter = std::unique_ptr<UNumberFormatter, UNumberFormatterDeleter>(unumf_openForSkeletonAndLocale(upconverted.get(), skeletonView.length(), m_dataLocaleWithExtensions.data(), &status));
+    formatter = std::unique_ptr<UNumberFormatter, UNumberFormatterDeleter>(unumf_openForSkeletonAndLocale(upconverted.get(), skeletonView.length(), m_dataLocaleWithExtensions.legacyCStringPointer(), &status));
     if (U_FAILURE(status)) [[unlikely]] {
         formatter = nullptr;
         throwTypeError(globalObject, scope, "Failed to initialize NumberFormat"_s);

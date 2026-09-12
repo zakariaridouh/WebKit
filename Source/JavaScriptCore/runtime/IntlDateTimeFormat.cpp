@@ -846,7 +846,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             localeBuilder.append("-nu-"_s, impl->m_numberingSystem);
     }
     impl->m_dataLocaleWithExtensions = localeBuilder.toString().utf8();
-    const CString& dataLocaleWithExtensions = impl->m_dataLocaleWithExtensions;
+    const UTF8CString& dataLocaleWithExtensions = impl->m_dataLocaleWithExtensions;
 
     JSValue tzValue = jsUndefined();
     if (options) {
@@ -976,7 +976,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
         UErrorCode status = U_ZERO_ERROR;
         String timeZoneForICU = impl->m_timeZone.toICUString();
         StringView timeZoneView(timeZoneForICU);
-        auto dateFormatFromStyle = std::unique_ptr<UDateFormat, UDateFormatDeleter>(udat_open(parseUDateFormatStyle(impl->m_timeStyle), parseUDateFormatStyle(impl->m_dateStyle), dataLocaleWithExtensions.data(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), nullptr, -1, &status));
+        auto dateFormatFromStyle = std::unique_ptr<UDateFormat, UDateFormatDeleter>(udat_open(parseUDateFormatStyle(impl->m_timeStyle), parseUDateFormatStyle(impl->m_dateStyle), dataLocaleWithExtensions.legacyCStringPointer(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), nullptr, -1, &status));
         if (U_FAILURE(status)) [[unlikely]] {
             throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
             return;

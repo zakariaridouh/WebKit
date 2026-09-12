@@ -143,7 +143,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     stream.vprintf(format, argList);
     va_end(argList);
 
-    os_log_error(m_osLog, "%{public}s", stream.toCString().data());
+    os_log_error(m_osLog, "%{public}s", stream.toUTF8CString().legacyCStringPointer());
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 

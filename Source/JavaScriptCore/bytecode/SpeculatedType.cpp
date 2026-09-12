@@ -363,7 +363,7 @@ void dumpSpeculation(PrintStream& outStream, SpeculatedType value)
     else if (isTop)
         out.print("Top");
     else
-        out.print(strStream.toCString());
+        out.print(strStream.toUTF8CString());
 }
 
 // We don't expose this because we don't want anyone relying on the fact that this method currently
