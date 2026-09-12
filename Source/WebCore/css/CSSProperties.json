@@ -7323,8 +7323,7 @@
             "specification": {
                 "category": "css-scroll-anchoring",
                 "url": "https://www.w3.org/TR/css-scroll-anchoring-1/#propdef-overflow-anchor"
-            },
-            "status": "in development"
+            }
         },
         "overflow-wrap": {
             "animation-type": "discrete",
@@ -11220,7 +11219,7 @@
                 "computed-style-type": "Style::HyphenateLimitEdge",
                 "parser-grammar": "auto | <integer [0,inf]>"
             },
-            "status": "non-standard"
+            "status": "obsolete"
         },
         "-webkit-hyphenate-limit-before": {
             "animation-type": "by computed value",
@@ -11236,7 +11235,7 @@
                 "computed-style-type": "Style::HyphenateLimitEdge",
                 "parser-grammar": "auto | <integer [0,inf]>"
             },
-            "status": "non-standard"
+            "status": "obsolete"
         },
         "hyphenate-limit-lines": {
             "animation-type": "by computed value",
@@ -11254,9 +11253,6 @@
                 "computed-style-storage-kind": "value",
                 "computed-style-type": "Style::HyphenateLimitLines",
                 "parser-grammar": "no-limit | <integer [0,inf]>"
-            },
-            "status": {
-                "status": "experimental"
             },
             "specification": {
                 "category": "css-text",
@@ -11290,9 +11286,6 @@
                 "parser-function": "consumeHyphenateLimitCharsShorthand",
                 "parser-grammar-unused": "[ auto | <integer [0,inf]> ]{1,3}",
                 "parser-grammar-unused-reason": "Needs support for shorthand grammars."
-            },
-            "status": {
-                "status": "experimental"
             },
             "specification": {
                 "category": "css-text",
@@ -12617,7 +12610,7 @@
                 "parser-grammar": "<<values>>",
                 "comment": "Not an alias of 'user-select': this property is inherited, and it only applies when it has been specified and 'user-select' has not (hence the has-explicitly-set flags on both)."
             },
-            "status": "non-standard"
+            "status": "obsolete"
         },
         "user-select": {
             "animation-type": "not animatable (needs triage)",
@@ -12642,9 +12635,6 @@
                 "computed-style-type": "UserSelect",
                 "parser-grammar": "<<values>>",
                 "settings-flag": "cssUserSelectEnabled"
-            },
-            "status": {
-                "status": "experimental"
             },
             "specification": {
                 "category": "css-ui",
