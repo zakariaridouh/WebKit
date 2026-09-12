@@ -92,6 +92,7 @@ struct InteractionInformationAtPosition {
         bool isPausedVideo,
         bool isElement,
         bool isContentEditable,
+        bool isOverEditableContent,
         Markable<WebCore::ScrollingNodeID>&& containerScrollingNodeID,
 #if ENABLE(DATA_DETECTION)
         bool isDataDetectorLink,
@@ -167,6 +168,7 @@ struct InteractionInformationAtPosition {
     bool isPausedVideo { false };
     bool isElement { false };
     bool isContentEditable { false };
+    bool isOverEditableContent { false };
     Markable<WebCore::ScrollingNodeID> containerScrollingNodeID;
 #if ENABLE(DATA_DETECTION)
     bool isDataDetectorLink { false };
@@ -218,6 +220,13 @@ struct InteractionInformationAtPosition {
     void mergeCompatibleOptionalInformation(const InteractionInformationAtPosition& oldInformation);
 
     bool isSelectable() const { return selectability == Selectability::Selectable; }
+
+    // A focusable element can still hold selectable text: a `contenteditable` host the hit landed on
+    // directly, or a text form control, whose value lives in a shadow tree.
+    bool isFocusableWithSelectableText() const
+    {
+        return selectability == Selectability::UnselectableDueToFocusableElement && isOverEditableContent;
+    }
 #if ENABLE(DATA_DETECTION) && PLATFORM(IOS_FAMILY)
     Vector<RetainPtr<DDScannerResult>> serializableDataDetectorResults() const;
 #endif

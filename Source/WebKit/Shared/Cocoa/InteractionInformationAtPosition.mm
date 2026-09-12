@@ -64,6 +64,7 @@ InteractionInformationAtPosition::InteractionInformationAtPosition(
     bool isPausedVideo,
     bool isElement,
     bool isContentEditable,
+    bool isOverEditableContent,
     Markable<WebCore::ScrollingNodeID>&& containerScrollingNodeID,
 #if ENABLE(DATA_DETECTION)
     bool isDataDetectorLink,
@@ -134,6 +135,7 @@ InteractionInformationAtPosition::InteractionInformationAtPosition(
     , isPausedVideo(isPausedVideo)
     , isElement(isElement)
     , isContentEditable(isContentEditable)
+    , isOverEditableContent(isOverEditableContent)
     , containerScrollingNodeID(WTF::move(containerScrollingNodeID))
 #if ENABLE(DATA_DETECTION)
     , isDataDetectorLink(isDataDetectorLink)
