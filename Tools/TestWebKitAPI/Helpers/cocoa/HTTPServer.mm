@@ -27,6 +27,7 @@
 #import "Helpers/cocoa/HTTPServer.h"
 
 #import "Helpers/Utilities.h"
+#import "Helpers/cocoa/HTTPServerBridging.h"
 #import "Helpers/cocoa/NetworkSPI.h"
 #import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
@@ -51,6 +52,27 @@ static HashMap<String, HTTPResponse> makeRequestMap(std::initializer_list<std::p
     for (auto& pair : responses)
         map.add(pair.first, pair.second);
     return map;
+}
+
+static RetainPtr<NSDictionary<NSString *, NSString *>> toNSDictionary(const HashMap<String, String>& map)
+{
+    RetainPtr result = adoptNS([[NSMutableDictionary alloc] initWithCapacity:map.size()]);
+    for (auto& pair : map)
+        [result setObject:pair.value.createNSString() forKey:pair.key.createNSString()];
+    return result;
+}
+
+static RetainPtr<NSArray<NSArray<NSString *> *>> toNSHeaderFields(const Vector<WTF::KeyValuePair<String, String>>& headerFields)
+{
+    RetainPtr result = adoptNS([[NSMutableArray alloc] initWithCapacity:headerFields.size()]);
+    for (auto& field : headerFields)
+        [result addObject:@[field.key.createNSString().get(), field.value.createNSString().get()]];
+    return result;
+}
+
+static RetainPtr<HTTPResponseDataBridge> toHTTPResponseDataBridge(const HTTPResponse& response)
+{
+    return adoptNS([[HTTPResponseDataBridge alloc] initWithStatusCode:response.statusCode headerFields:toNSHeaderFields(response.headerFields) body:toNSData(response.body.span()) behavior:static_cast<HTTPResponseBehaviorBridge>(response.behavior) shouldRespondWith304:response.shouldRespondWith304ToConditionalRequests headerFieldsFor304:toNSDictionary(response.headerFieldsFor304)]);
 }
 
 HTTPServer::RequestData::RequestData(HashMap<String, HTTPResponse>&& responses)
@@ -118,6 +140,23 @@ static bool shouldDisableTLS(HTTPServer::Protocol protocol)
     case HTTPServer::Protocol::HttpsProxyWithAuthentication:
     case HTTPServer::Protocol::Http2Proxy:
         return true;
+    case HTTPServer::Protocol::Https:
+    case HTTPServer::Protocol::HttpsWithLegacyTLS:
+    case HTTPServer::Protocol::Http2Raw:
+    case HTTPServer::Protocol::Http2:
+    case HTTPServer::Protocol::Http3:
+        return false;
+    }
+}
+
+static bool useSwiftImplementation(HTTPServer::Protocol protocol)
+{
+    switch (protocol) {
+    case HTTPServer::Protocol::Http:
+        return true;
+    case HTTPServer::Protocol::HttpsProxy:
+    case HTTPServer::Protocol::HttpsProxyWithAuthentication:
+    case HTTPServer::Protocol::Http2Proxy:
     case HTTPServer::Protocol::Https:
     case HTTPServer::Protocol::HttpsWithLegacyTLS:
     case HTTPServer::Protocol::Http2Raw:
@@ -228,6 +267,14 @@ RetainPtr<nw_parameters_t> HTTPServer::listenerParameters(Protocol protocol, Cer
 
 void HTTPServer::startListening(CompletionHandler<void()>&& completionHandler)
 {
+    if (m_serverBridge) {
+        [m_serverBridge startListeningWithCompletionHandler:makeBlockPtr([completionHandler = WTF::move(completionHandler)](NSError *error) mutable {
+            RELEASE_ASSERT(!error);
+            completionHandler();
+        }).get()];
+        return;
+    }
+
     nw_listener_set_state_changed_handler(m_listener.get(), makeBlockPtr([completionHandler = WTF::move(completionHandler)](nw_listener_state_t state, nw_error_t error) mutable {
         ASSERT_UNUSED(error, !error);
         if (state == nw_listener_state_ready)
@@ -238,6 +285,14 @@ void HTTPServer::startListening(CompletionHandler<void()>&& completionHandler)
 
 void HTTPServer::cancel(CompletionHandler<void()>&& completionHandler)
 {
+    if (m_serverBridge) {
+        // The Swift implementation terminates its own connections as part of cancelling.
+        [m_serverBridge cancelWithCompletionHandler:makeBlockPtr([completionHandler = WTF::move(completionHandler)] mutable {
+            completionHandler();
+        }).get()];
+        return;
+    }
+
     nw_listener_set_state_changed_handler(m_listener.get(), makeBlockPtr([this, weakThis = WeakPtr { *this }, completionHandler = WTF::move(completionHandler)](nw_listener_state_t state, nw_error_t error) mutable {
         ASSERT_UNUSED(error, !error);
 
@@ -262,6 +317,13 @@ void HTTPServer::cancel() {
 
 void HTTPServer::terminateAllConnections(CompletionHandler<void()>&& completionHandler)
 {
+    if (m_serverBridge) {
+        [m_serverBridge terminateAllConnectionsWithCompletionHandler:makeBlockPtr([completionHandler = WTF::move(completionHandler)] mutable {
+            completionHandler();
+        }).get()];
+        return;
+    }
+
     auto aggregator = CallbackAggregator::create(WTF::move(completionHandler));
     for (auto& connection : std::exchange(m_requestData->connections, { }))
         connection.terminate([aggregator] { });
@@ -288,23 +350,31 @@ HTTPServer::HTTPServer(
     DeferListening deferListening
 )
     : m_requestData(adoptRef(*new RequestData(WTF::move(responses))))
-    , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, WTF::move(verifier), identity, port).get())))
     , m_protocol(protocol)
 {
-    nw_listener_set_queue(m_listener.get(), mainDispatchQueueSingleton());
-    nw_listener_set_new_connection_handler(m_listener.get(), makeBlockPtr([requestData = m_requestData, protocol](nw_connection_t connection) {
-        requestData->connections.append(Connection(connection));
-        nw_connection_set_queue(connection, mainDispatchQueueSingleton());
-        nw_connection_start(connection);
-        if (protocol == Protocol::Http2 || protocol == Protocol::Http3 || protocol == Protocol::Http2Proxy) {
+    if (useSwiftImplementation(protocol)) {
+        RetainPtr<NSMutableDictionary<NSString *, HTTPResponseDataBridge *>> routes = adoptNS([[NSMutableDictionary alloc] initWithCapacity:m_requestData->requestMap.size()]);
+        for (auto& pair : m_requestData->requestMap)
+            [routes setObject:toHTTPResponseDataBridge(pair.value) forKey:pair.key.createNSString()];
+
+        m_serverBridge = adoptNS([[HTTPServerBridge alloc] initWithRoutes:routes protocol:static_cast<HTTPServerProtocolBridge>(protocol) port:port.value_or(0)]);
+    } else {
+        m_listener = adoptNS(nw_listener_create(listenerParameters(protocol, WTF::move(verifier), identity, port).get()));
+        nw_listener_set_queue(m_listener.get(), mainDispatchQueueSingleton());
+        nw_listener_set_new_connection_handler(m_listener.get(), makeBlockPtr([requestData = m_requestData, protocol](nw_connection_t connection) {
+            requestData->connections.append(Connection(connection));
+            nw_connection_set_queue(connection, mainDispatchQueueSingleton());
+            nw_connection_start(connection);
+            if (protocol == Protocol::Http2 || protocol == Protocol::Http3 || protocol == Protocol::Http2Proxy) {
 #if HAVE(NETWORK_FRAMEWORK_HTTP_MESSAGING)
-            respondToHTTPMessagingRequests(Connection(connection), requestData);
+                respondToHTTPMessagingRequests(Connection(connection), requestData);
 #else
-            RELEASE_ASSERT_NOT_REACHED();
+                RELEASE_ASSERT_NOT_REACHED();
 #endif
-        } else
-            respondToRequests(Connection(connection), requestData);
-    }).get());
+            } else
+                respondToRequests(Connection(connection), requestData);
+        }).get());
+    }
 
     if (deferListening == DeferListening::No) {
         bool done = false;
@@ -357,12 +427,22 @@ HTTPServer::HTTPServer(UseCoroutines, Function<ConnectionTask(Connection)>&& con
 
 void HTTPServer::addResponse(String&& path, HTTPResponse&& response)
 {
+    if (m_serverBridge) {
+        [m_serverBridge addResponse:toHTTPResponseDataBridge(response).get() forPath:path.createNSString()];
+        return;
+    }
+
     RELEASE_ASSERT(!m_requestData->requestMap.contains(path));
     m_requestData->requestMap.add(WTF::move(path), WTF::move(response));
 }
 
 void HTTPServer::setResponse(String&& path, HTTPResponse&& response)
 {
+    if (m_serverBridge) {
+        [m_serverBridge setResponse:toHTTPResponseDataBridge(response).get() forPath:path.createNSString()];
+        return;
+    }
+
     ASSERT(m_requestData->requestMap.contains(path));
     m_requestData->requestMap.set(WTF::move(path), WTF::move(response));
 }
@@ -402,21 +482,33 @@ void HTTPServer::respondWithOK(Connection connection)
 
 size_t HTTPServer::totalConnections() const
 {
+    if (m_serverBridge)
+        return [m_serverBridge totalConnections];
+
     return m_requestData->connections.size();
 }
 
 size_t HTTPServer::totalRequests() const
 {
+    if (m_serverBridge)
+        return [m_serverBridge totalRequests];
+
     return m_requestData->requestCount;
 }
 
 String HTTPServer::lastRequestCookies() const
 {
+    if (m_serverBridge)
+        return [m_serverBridge lastRequestCookies];
+
     return m_requestData->lastRequestCookies;
 }
 
 bool HTTPServer::sawAuthorizationHeader() const
 {
+    if (m_serverBridge)
+        return [m_serverBridge sawAuthorizationHeader];
+
     return m_requestData->sawAuthorizationHeader;
 }
 
@@ -621,6 +713,9 @@ void HTTPServer::respondToHTTPMessagingRequests(Connection connection, Ref<Reque
 
 uint16_t HTTPServer::port() const
 {
+    if (m_serverBridge)
+        return [m_serverBridge port];
+
     return nw_listener_get_port(m_listener.get());
 }
 
