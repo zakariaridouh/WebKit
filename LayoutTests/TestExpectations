@@ -8186,8 +8186,6 @@ imported/w3c/web-platform-tests/html/semantics/forms/form-submission-target/form
 
 imported/w3c/web-platform-tests/html/browsers/the-window-object/open-close/open_fires_resize.tentative.html [ Skip ] # timeout
 
-webkit.org/b/311207 imported/w3c/web-platform-tests/workers/semantics/structured-clone/shared.html [ Pass Failure ]
-
 imported/w3c/web-platform-tests/svg/animations/conditional-processing-02.html [ Skip ] # Flaky
 imported/w3c/web-platform-tests/svg/animations/animate-fill-underlying-value-change.html [ Skip ] # Flaky
 imported/w3c/web-platform-tests/svg/embedded/image-large-bitmap.svg [ ImageOnlyFailure ] # Might be just fuzziness issue
