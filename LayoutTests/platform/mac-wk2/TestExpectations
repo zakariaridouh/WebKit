@@ -1398,8 +1398,8 @@ http/tests/webgpu/webgpu/api/validation/capability_checks/limits/maxSamplersPerS
 
 # shader tests that timeout
 http/tests/webgpu/webgpu/shader/execution/expression/binary/bitwise.html [ Pass Timeout ]
-http/tests/webgpu/webgpu/shader/execution/expression/binary/f32_matrix_matrix_multiplication.html [ Pass Timeout ]
-http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureDimensions.html [ Pass Timeout ]
+[ arm64 ] http/tests/webgpu/webgpu/shader/execution/expression/binary/f32_matrix_matrix_multiplication.html [ Pass Timeout ]
+[ arm64 ] http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureDimensions.html [ Pass Timeout ]
 http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureGather.html [ Timeout ]
 http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureGatherCompare.html [ Timeout ]
 http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureLoad.html [ Pass Timeout ]
@@ -1992,7 +1992,7 @@ http/tests/webgpu/webgpu/web_platform/copyToTexture [ Pass Timeout ]
 http/tests/webgpu/webgpu/web_platform/copyToTexture/image_file.html [ Pass ]
 
 # this test is very slow so expect a timeout or pass
-http/tests/webgpu/webgpu/web_platform/copyToTexture/ImageBitmap.html [ Pass Timeout ]
+[ arm64 ] http/tests/webgpu/webgpu/web_platform/copyToTexture/ImageBitmap.html [ Pass Timeout ]
 
 # skip on intel for now due to small precision error differences
 [ x86_64 ] http/tests/webgpu/webgpu/web_platform/copyToTexture/video.html [ Skip ]
@@ -2461,6 +2461,6 @@ webkit.org/b/322847 [ Debug ] imported/w3c/web-platform-tests/css/css-grid/grid-
 
 webkit.org/b/323246 [ Debug x86_64 ] accessibility/isolated-tree/canvas-fallback-content-2.html [ Timeout Pass ]
 
-webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/web_platform/copyToTexture/ImageBitmap.html [ Pass Crash ]
-webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/expression/binary/f32_matrix_matrix_multiplication.html [ Pass Crash ]
-webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureDimensions.html [ Pass Crash ]
+webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/web_platform/copyToTexture/ImageBitmap.html [ Pass Crash Timeout ]
+webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/expression/binary/f32_matrix_matrix_multiplication.html [ Pass Crash Timeout ]
+webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/expression/call/builtin/textureDimensions.html [ Pass Crash Timeout ]
