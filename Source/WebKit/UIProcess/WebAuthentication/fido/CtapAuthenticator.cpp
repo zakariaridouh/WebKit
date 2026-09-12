@@ -46,6 +46,7 @@
 #include <array>
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/EnumTraits.h>
+#include <wtf/HexNumber.h>
 #include <wtf/RunLoop.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/MakeString.h>
@@ -747,9 +748,35 @@ Vector<AuthenticatorTransport> CtapAuthenticator::transports() const
     return Vector { driver().transport() };
 }
 
+// An AAGUID is 16 arbitrary vendor bytes, commonly all-zero, so it is not a UUID and cannot be held
+// in one. It is only formatted like one.
+static String aaguidToString(std::span<const std::byte, aaguidLength> aaguid)
+{
+    auto group = [&](size_t offset, size_t length) {
+        uint64_t value = 0;
+        for (auto byte : aaguid.subspan(offset, length))
+            value = (value << 8) | std::to_integer<uint8_t>(byte);
+        return value;
+    };
+
+    return makeString(
+        hex(group(0, 4), 8, Lowercase),
+        '-',
+        hex(group(4, 2), 4, Lowercase),
+        '-',
+        hex(group(6, 2), 4, Lowercase),
+        '-',
+        hex(group(8, 2), 4, Lowercase),
+        '-',
+        hex(group(10, 6), 12, Lowercase));
+}
+
 String CtapAuthenticator::aaguidForDebugging() const
 {
-    return WTF::UUID { std::span<const uint8_t, 16> { m_info.aaguid() } }.toString();
+    auto aaguid = m_info.aaguid().span();
+    if (aaguid.size() != aaguidLength)
+        return { };
+    return aaguidToString(std::as_bytes(aaguid.first<aaguidLength>()));
 }
 
 bool CtapAuthenticator::isUVSetup() const

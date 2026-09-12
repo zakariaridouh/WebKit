@@ -70,27 +70,30 @@ public:
     WTF_EXPORT_PRIVATE static std::optional<UUID> parse(StringView);
     WTF_EXPORT_PRIVATE static std::optional<UUID> parseVersion4(StringView);
 
-    explicit UUID(std::span<const uint8_t, 16> span)
+    static std::optional<UUID> tryCreate(std::span<const uint8_t> span)
     {
-        memcpySpan(asMutableByteSpan(m_data), span);
+        if (span.size() != 16)
+            return std::nullopt;
+        UUID uuid { span.first<16>() };
+        if (!uuid.isValid())
+            return std::nullopt;
+        return uuid;
     }
 
-    explicit UUID(std::span<const uint8_t> span)
+    // Used by the generated IPC decoder, see WTFArgumentCoders.serialization.in.
+    static std::optional<UUID> tryCreate(uint64_t high, uint64_t low)
     {
-        RELEASE_ASSERT(span.size() == 16);
-        memcpySpan(asMutableByteSpan(m_data), span);
+        auto data = (static_cast<UInt128>(high) << 64) | low;
+        if (data == emptyValue || data == deletedValue)
+            return std::nullopt;
+        return UUID { data };
     }
 
-    explicit constexpr UUID(UInt128 data)
-        : m_data(data)
+    // For hardcoded UUID constants. consteval, so a reserved value is a build error rather than a
+    // crash, and raw values still have no way in at runtime other than the fallible factories.
+    static consteval UUID createConstant(uint64_t high, uint64_t low)
     {
-        RELEASE_ASSERT(data != emptyValue && data != deletedValue);
-    }
-
-    explicit UUID(uint64_t high, uint64_t low)
-        : m_data((static_cast<UInt128>(high) << 64) | low)
-    {
-        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(isValid());
+        return UUID { (static_cast<UInt128>(high) << 64) | low };
     }
 
     std::span<const uint8_t, 16> span() const LIFETIME_BOUND
@@ -99,12 +102,6 @@ public:
     }
 
     friend bool operator==(const UUID&, const UUID&) = default;
-
-    static bool isValid(uint64_t high, uint64_t low)
-    {
-        auto data = (static_cast<UInt128>(high) << 64) | low;
-        return data != deletedValue && data != emptyValue;
-    }
 
     // Public so that composite types can build their own hash traits. Unlike the empty value, the deleted
     // value is not a usable "no UUID" sentinel, since Markable and HashTraits both treat it as engaged.
@@ -135,6 +132,18 @@ private:
     // "no UUID" should use Markable<WTF::UUID> or std::optional<WTF::UUID> rather than naming these.
     static constexpr UInt128 emptyValue = 0;
     static constexpr UInt128 deletedValue = 1;
+
+    // Private so that raw bytes can only enter through tryCreate(), which rejects the reserved values.
+    explicit UUID(std::span<const uint8_t, 16> span)
+    {
+        memcpySpan(asMutableByteSpan(m_data), span);
+    }
+
+    explicit constexpr UUID(UInt128 data)
+        : m_data(data)
+    {
+        RELEASE_ASSERT(data != emptyValue && data != deletedValue);
+    }
 
     explicit constexpr UUID(HashTableEmptyValueType)
         : m_data(emptyValue)

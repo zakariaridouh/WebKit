@@ -573,8 +573,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         uuid_t proxyIdentifier;
         nw_proxy_config_get_identifier(proxyConfig, proxyIdentifier);
 
-        WTF::UUID uuid { std::span<const uint8_t, 16> { proxyIdentifier } };
-        configDataVector.append({ makeVector(agentData.get()), uuid.isValid() ? std::optional { uuid } : std::nullopt });
+        configDataVector.append({ makeVector(agentData.get()), WTF::UUID::tryCreate(proxyIdentifier) });
     }
 
     protect(*_websiteDataStore)->setProxyConfigData(WTF::move(configDataVector));

@@ -2216,13 +2216,9 @@ IDBError SQLiteIDBBackingStore::getFileSystemHandleRecordsForObjectStoreRecord(i
         auto kindInt = statement->columnInt(1);
         auto path = statement->columnText(2);
         auto name = statement->columnText(3);
-        if (blob.size() != 16) {
-            LOG_ERROR("FileSystemHandleRecords row has invalid identifier blob size %zu", blob.size());
-            return IDBError { ExceptionCode::UnknownError, "FileSystemHandleRecords row corrupt"_s };
-        }
-        auto uuid = WTF::UUID(blob.span());
+        auto uuid = WTF::UUID::tryCreate(blob.span());
         if (!uuid) {
-            LOG_ERROR("FileSystemHandleRecords row has empty UUID");
+            LOG_ERROR("FileSystemHandleRecords row has invalid identifier blob of size %zu", blob.size());
             return IDBError { ExceptionCode::UnknownError, "FileSystemHandleRecords row corrupt"_s };
         }
         if (kindInt != static_cast<int>(FileSystemHandleKind::File) && kindInt != static_cast<int>(FileSystemHandleKind::Directory)) {
@@ -2230,7 +2226,7 @@ IDBError SQLiteIDBBackingStore::getFileSystemHandleRecordsForObjectStoreRecord(i
             return IDBError { ExceptionCode::UnknownError, "FileSystemHandleRecords row corrupt"_s };
         }
         records.append(FileSystemHandleRecord {
-            FileSystemHandleGlobalIdentifier { uuid },
+            FileSystemHandleGlobalIdentifier { *uuid },
             static_cast<FileSystemHandleKind>(kindInt),
             WTF::move(path),
             WTF::move(name),

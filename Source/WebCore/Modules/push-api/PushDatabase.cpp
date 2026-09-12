@@ -367,14 +367,6 @@ static std::span<const uint8_t> NODELETE uuidToSpan(const std::optional<WTF::UUI
     return uuid->span();
 }
 
-static std::optional<WTF::UUID> uuidFromSpan(std::span<const uint8_t> span)
-{
-    if (span.size() != 16)
-        return std::nullopt;
-
-    return WTF::UUID(span.first<16>());
-}
-
 static SQLValue expirationTimeToValue(std::optional<EpochTimeStamp> timestamp)
 {
     if (!timestamp)
@@ -578,7 +570,7 @@ static PushRecord makePushRecordFromRow(SQLiteStatementAutoResetScope& sql, int 
         .subscriptionSetIdentifier = {
             .bundleIdentifier = sql->columnText(columnIndex + 1),
             .pushPartition = sql->columnText(columnIndex + 2),
-            .dataStoreIdentifier = uuidFromSpan(sql->columnBlobAsSpan(columnIndex + 3))
+            .dataStoreIdentifier = WTF::UUID::tryCreate(sql->columnBlobAsSpan(columnIndex + 3))
         },
         .securityOrigin = sql->columnText(columnIndex + 4),
         .scope = sql->columnText(columnIndex + 5),
@@ -681,7 +673,7 @@ void PushDatabase::getPushSubscriptionSetRecords(CompletionHandler<void(Vector<P
             PushSubscriptionSetIdentifier identifier {
                 .bundleIdentifier = sql->columnText(0),
                 .pushPartition = sql->columnText(1),
-                .dataStoreIdentifier = uuidFromSpan(sql->columnBlobAsSpan(2))
+                .dataStoreIdentifier = WTF::UUID::tryCreate(sql->columnBlobAsSpan(2))
             };
             String securityOrigin = sql->columnText(3);
             bool enabled = static_cast<SubscriptionSetsStateColumn>(sql->columnInt(4)) == SubscriptionSetsStateColumn::Enabled;

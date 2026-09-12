@@ -58,9 +58,9 @@ header: <wtf/text/AtomString.h>
     String string()
 }
 
-[WebKitPlatform, AdditionalEncoder=StreamConnectionEncoder] class WTF::UUID {
+[WebKitPlatform, AdditionalEncoder=StreamConnectionEncoder, CreateUsing=tryCreate] class WTF::UUID {
     uint64_t high();
-    [Validator='WTF::UUID::isValid(*high, *low)'] uint64_t low();
+    uint64_t low();
 }
 
 header: <wtf/JSONValues.h>
