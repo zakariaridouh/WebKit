@@ -1105,6 +1105,7 @@
 				WebKit/WKWebView/mac/NSRefreshControllerTests.mm,
 				WebKit/WKWebView/mac/NSResponderTests.mm,
 				WebKit/WKWebView/mac/PageVisibilityStateWithWindowChanges.mm,
+				WebKit/WKWebView/mac/PasteboardFileTypeBlocklist.mm,
 				WebKit/WKWebView/mac/PopupMenuTests.mm,
 				WebKit/WKWebView/mac/RenderedImageFromDOMNode.mm,
 				WebKit/WKWebView/mac/RenderedImageFromDOMRange.mm,
