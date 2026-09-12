@@ -941,8 +941,7 @@ consteval bool everyQuirkHasValidParameters()
             if (!behavior.parameters)
                 return false;
 
-            // FIXME: ASCIILiteral::isEmpty() is not constexpr, but length() is.
-            if (parametersNeeded.contains(QuirkParametersNeeded::NeedsScript) && !behavior.parameters->script.length())
+            if (parametersNeeded.contains(QuirkParametersNeeded::NeedsScript) && behavior.parameters->script.isEmpty())
                 return false;
         }
     }
