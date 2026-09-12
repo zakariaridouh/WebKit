@@ -291,7 +291,7 @@ bool GraphicsContextGLANGLE::initialize()
     auto debugMessageCallback = [](GCGLenum, GCGLenum type, GCGLenum id, GCGLenum severity, GCGLsizei length, const GCGLchar* message, const void* context) {
         auto* gl = reinterpret_cast<const GraphicsContextGLANGLE*>(context);
         if (gl->m_client)
-            gl->m_client->addDebugMessage(type, id, severity, UTF8CString { byteCast<char8_t>(unsafeMakeSpan(message, length)) });
+            gl->m_client->addDebugMessage(type, id, severity, byteCast<char8_t>(unsafeMakeSpan(message, length)));
     };
     GL_DebugMessageCallbackKHR(debugMessageCallback, this);
 

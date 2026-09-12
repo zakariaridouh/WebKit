@@ -5693,7 +5693,7 @@ static ASCIILiteral debugMessageSeverityToString(GCGLenum severity)
     }
 }
 
-void WebGLRenderingContextBase::addDebugMessage(GCGLenum type, GCGLenum id, GCGLenum severity, const UTF8CString& message)
+void WebGLRenderingContextBase::addDebugMessage(GCGLenum type, GCGLenum id, GCGLenum severity, std::span<const char8_t> message)
 {
     if (!shouldPrintToConsole())
         return;

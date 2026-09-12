@@ -416,7 +416,7 @@ private:
     // Messages to be received.
     void wasCreated(std::optional<RemoteGraphicsContextGLInitializationState>&&);
     void wasLost();
-    void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, UTF8CString&&);
+    void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, std::span<const char8_t>);
     void memoryCostChanged(std::optional<uint64_t>);
 
     void NODELETE initialize(const RemoteGraphicsContextGLInitializationState&);

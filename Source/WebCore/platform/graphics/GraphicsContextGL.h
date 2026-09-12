@@ -1223,7 +1223,7 @@ public:
         WEBCORE_EXPORT Client();
         WEBCORE_EXPORT virtual ~Client();
         virtual void forceContextLost() = 0;
-        virtual void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const UTF8CString&) = 0;
+        virtual void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, std::span<const char8_t> message) = 0;
         virtual void didChangeMemoryCost() = 0;
     };
 
