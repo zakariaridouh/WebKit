@@ -492,7 +492,7 @@ bool ensureGStreamerInitialized()
         int argc = parameters.size() + 1;
         char** argv = g_new0(char*, argc + 1);
         auto argvSpan = unsafeMakeSpan(argv, argc);
-        argvSpan[0] = g_strdup(FileSystem::currentExecutableName().data());
+        argvSpan[0] = g_strdup(FileSystem::currentExecutableName().legacyCStringPointer());
         for (auto [arg, parameter] : zippedRange(argvSpan.subspan(1), parameters))
             arg = g_strdup(parameter.utf8().legacyCStringPointer());
 

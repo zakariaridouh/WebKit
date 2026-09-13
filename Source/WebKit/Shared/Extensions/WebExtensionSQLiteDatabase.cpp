@@ -171,7 +171,7 @@ bool WebExtensionSQLiteDatabase::openWithAccessType(AccessType accessType, RefPt
         }
     }
 
-    int result = sqlite3_open_v2(FileSystem::fileSystemRepresentation(databasePath).data(), &m_db, flags, vfs.isEmpty() ? nullptr : vfs.utf8().legacyCStringPointer());
+    int result = sqlite3_open_v2(FileSystem::fileSystemRepresentation(databasePath).legacyCStringPointer(), &m_db, flags, vfs.isEmpty() ? nullptr : vfs.utf8().legacyCStringPointer());
     if (result == SQLITE_OK)
         return true;
 

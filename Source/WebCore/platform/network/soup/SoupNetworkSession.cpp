@@ -186,8 +186,8 @@ void SoupNetworkSession::setHSTSPersistentStorage(const String& directory)
         return;
     }
 
-    CString storagePath = FileSystem::fileSystemRepresentation(directory);
-    GUniquePtr<char> dbFilename(g_build_filename(storagePath.data(), "hsts-storage.sqlite", nullptr));
+    auto storagePath = FileSystem::fileSystemRepresentation(directory);
+    GUniquePtr<char> dbFilename(g_build_filename(storagePath.legacyCStringPointer(), "hsts-storage.sqlite", nullptr));
     GRefPtr<SoupHSTSEnforcer> enforcer = adoptGRef(soup_hsts_enforcer_db_new(dbFilename.get()));
     soup_session_remove_feature_by_type(m_soupSession.get(), SOUP_TYPE_HSTS_ENFORCER);
     soup_session_add_feature(m_soupSession.get(), SOUP_SESSION_FEATURE(enforcer.get()));
@@ -242,12 +242,12 @@ static inline bool stringIsNumeric(const std::string_view& str)
 // Old versions of WebKit created this cache.
 void SoupNetworkSession::clearOldSoupCache(const String& cacheDirectory)
 {
-    CString cachePath = FileSystem::fileSystemRepresentation(cacheDirectory);
-    GUniquePtr<char> cacheFile(g_build_filename(cachePath.data(), "soup.cache2", nullptr));
+    auto cachePath = FileSystem::fileSystemRepresentation(cacheDirectory);
+    GUniquePtr<char> cacheFile(g_build_filename(cachePath.legacyCStringPointer(), "soup.cache2", nullptr));
     if (!g_file_test(cacheFile.get(), G_FILE_TEST_IS_REGULAR))
         return;
 
-    GUniquePtr<GDir> dir(g_dir_open(cachePath.data(), 0, nullptr));
+    GUniquePtr<GDir> dir(g_dir_open(cachePath.legacyCStringPointer(), 0, nullptr));
     if (!dir)
         return;
 
@@ -256,7 +256,7 @@ void SoupNetworkSession::clearOldSoupCache(const String& cacheDirectory)
         if (!nameView.starts_with("soup.cache") && !stringIsNumeric(nameView))
             continue;
 
-        GUniquePtr<gchar> filename(g_build_filename(cachePath.data(), name, nullptr));
+        GUniquePtr<gchar> filename(g_build_filename(cachePath.legacyCStringPointer(), name, nullptr));
         if (g_file_test(filename.get(), G_FILE_TEST_IS_REGULAR))
             g_unlink(filename.get());
     }

@@ -2548,10 +2548,10 @@ static WKRetainPtr<WKURLRef> makeOpenPanelURL(WKURLRef baseURL, const String& fi
 {
 #if OS(WINDOWS)
     auto cFilePath = FileSystem::fileSystemRepresentation(filePath);
-    if (!PathIsRelativeA(cFilePath.data())) {
+    if (!PathIsRelativeA(cFilePath.legacyCStringPointer())) {
         char fileURI[INTERNET_MAX_PATH_LENGTH];
         DWORD fileURILength = INTERNET_MAX_PATH_LENGTH;
-        UrlCreateFromPathA(cFilePath.data(), fileURI, &fileURILength, 0);
+        UrlCreateFromPathA(cFilePath.legacyCStringPointer(), fileURI, &fileURILength, 0);
         return adoptWK(WKURLCreateWithUTF8CString(fileURI));
     }
 #else

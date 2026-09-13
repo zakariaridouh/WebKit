@@ -95,7 +95,7 @@ void SleepDisablerGLib::acquireInhibitor()
     } else if (const gchar* prgname = g_get_prgname()) {
         parameters = g_variant_new("(ss)", prgname, m_reason.utf8().legacyCStringPointer());
     } else if (const auto executablePath = FileSystem::currentExecutablePath(); !executablePath.isNull()) {
-        GUniquePtr<char> executableName(g_path_get_basename(executablePath.data()));
+        GUniquePtr<char> executableName(g_path_get_basename(executablePath.legacyCStringPointer()));
         parameters = g_variant_new("(ss)", executableName.get(), m_reason.utf8().legacyCStringPointer());
     } else
         return;

@@ -39,7 +39,7 @@ FileMonitor::FileMonitor(const String& path, Ref<WorkQueue>&& handlerQueue, Func
         return;
 
     Function<void ()> createPlatformMonitor = [&] {
-        GRefPtr file = adoptGRef(g_file_new_for_path(FileSystem::fileSystemRepresentation(path).data()));
+        GRefPtr file = adoptGRef(g_file_new_for_path(FileSystem::fileSystemRepresentation(path).legacyCStringPointer()));
         GUniqueOutPtr<GError> error;
         m_platformMonitor = adoptGRef(g_file_monitor(file.get(), G_FILE_MONITOR_NONE, nullptr, &error.outPtr()));
         if (m_platformMonitor)

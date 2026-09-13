@@ -256,6 +256,20 @@ public:
     // FIXME: Should go away once callers that only need bytes have moved to span().
     const char* legacyCStringPointer() const LIFETIME_BOUND requires (!std::same_as<CharacterType, Latin1Character>) { return CString::data(); }
 
+#if USE(FOUNDATION) && defined(__OBJC__)
+    // Converts a null string to an empty string, like String::createNSString(). ASCII decodes as
+    // Latin-1, matching how the comparison operators below treat it, so that an ASCIICString holding
+    // a mislabeled non-ASCII byte round-trips instead of failing.
+    RetainPtr<NSString> createNSString() const
+    {
+        auto characters = span();
+        if (characters.empty())
+            return @"";
+        constexpr auto encoding = std::same_as<CharacterType, char8_t> ? NSUTF8StringEncoding : NSISOLatin1StringEncoding;
+        return adoptNS([[NSString alloc] initWithBytes:characters.data() length:characters.size() encoding:encoding]);
+    }
+#endif
+
 private:
     explicit CStringWithEncoding(CStringBuffer* buffer)
         : CString(buffer)
