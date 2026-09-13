@@ -1584,6 +1584,14 @@ void WebPageProxy::removeTextEffectForID(IPC::Connection& connection, const WTF:
 }
 #endif // ENABLE(WRITING_TOOLS_TEXT_EFFECTS)
 
+static bool isValidTextAnimationData(const WebCore::TextAnimationData& styleData)
+{
+    if (styleData.style != WebCore::TextAnimationType::Source)
+        return true;
+
+    return styleData.destinationAnimationUUID && styleData.destinationAnimationUUID->isValid();
+}
+
 void WebPageProxy::addTextAnimationForAnimationID(IPC::Connection& connection, const WTF::UUID& uuid, const WebCore::TextAnimationData& styleData, const RefPtr<WebCore::TextIndicator> textIndicator)
 {
     addTextAnimationForAnimationIDWithCompletionHandler(connection, uuid, styleData, textIndicator, { });
@@ -1591,10 +1599,13 @@ void WebPageProxy::addTextAnimationForAnimationID(IPC::Connection& connection, c
 
 void WebPageProxy::addTextAnimationForAnimationIDWithCompletionHandler(IPC::Connection& connection, const WTF::UUID& uuid, const WebCore::TextAnimationData& styleData, const RefPtr<WebCore::TextIndicator> textIndicator, CompletionHandler<void(WebCore::TextAnimationRunMode)>&& completionHandler)
 {
-    if (completionHandler)
+    if (completionHandler) {
         MESSAGE_CHECK_COMPLETION(uuid.isValid(), connection, completionHandler({ }));
-    else
+        MESSAGE_CHECK_COMPLETION(isValidTextAnimationData(styleData), connection, completionHandler({ }));
+    } else {
         MESSAGE_CHECK(uuid.isValid(), connection);
+        MESSAGE_CHECK(isValidTextAnimationData(styleData), connection);
+    }
 
     internals().textIndicatorForAnimationID.add(uuid, textIndicator);
 
