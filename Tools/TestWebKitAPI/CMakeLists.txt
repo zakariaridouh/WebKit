@@ -591,7 +591,7 @@ if (ENABLE_WEBKIT)
         set(TestWebKitAPIInjectedBundle_LIBRARY_TYPE SHARED)
     endif ()
     add_library(TestWebKitAPIInjectedBundle ${TestWebKitAPIInjectedBundle_LIBRARY_TYPE} ${TestWebKitAPIInjectedBundle_SOURCES})
-    WEBKIT_ADD_PREFIX_HEADER(TestWebKitAPIInjectedBundle Helpers/TestWebKitAPIPrefix.h PREFIX_LANGUAGES CXX)
+    WEBKIT_ADD_PREFIX_HEADER(TestWebKitAPIInjectedBundle Helpers/TestWebKitAPIPrefix.h PREFIX_LANGUAGES CXX OBJCXX)
 
     target_compile_definitions(TestWebKitAPIInjectedBundle PRIVATE BUILDING_TestWebKit)
     target_include_directories(TestWebKitAPIInjectedBundle PRIVATE ${TestWebKit_PRIVATE_INCLUDE_DIRECTORIES})

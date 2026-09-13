@@ -39,6 +39,11 @@
 #include <wtf/text/Latin1Character.h>
 #include <wtf/unicode/UTF8Conversion.h>
 
+#ifdef __OBJC__
+#include <objc/objc.h>
+#include <wtf/RetainPtr.h>
+#endif
+
 namespace WTF {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CStringBuffer);
