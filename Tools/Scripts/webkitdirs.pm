@@ -187,6 +187,7 @@ BEGIN {
        &setBaseProductDir
        &setConfiguration
        &setConfigurationProductDir
+       &setCoverageIsEnabled
        &setPathForRunningWebKitApp
        &setUpGuardMallocIfNeeded
        &setXcodeSDK
@@ -795,12 +796,13 @@ sub determineCoverageIsEnabled
 {
     return if defined $coverageIsEnabled;
     determineBaseProductDir();
+    # Honor an explicit --coverage (like --asan) in addition to the marker file.
+    $coverageIsEnabled = checkForArgumentAndRemoveFromARGV("--coverage") || readSanitizerConfiguration("Coverage");
+}
 
-    if (open Coverage, "$baseProductDir/Coverage") {
-        $coverageIsEnabled = <Coverage>;
-        close Coverage;
-        chomp $coverageIsEnabled;
-    }
+sub setCoverageIsEnabled($)
+{
+    ($coverageIsEnabled) = @_;
 }
 
 sub determineFuzzilliIsEnabled
@@ -1260,13 +1262,15 @@ sub cmakeCocoaTreeName
 }
 
 # The directory a Cocoa CMake build puts its products in, matching the binaryDir
-# of the presets in CMakePresets.json. A sanitizer or a forced optimization level
-# gets a directory of its own, since the products are built with other flags.
+# of the presets in CMakePresets.json. A sanitizer, coverage instrumentation or a
+# forced optimization level gets a directory of its own, since the products are
+# built with other flags.
 sub cmakeCocoaConfigurationName($)
 {
     my ($configurationName) = @_;
     $configurationName = "ASan" if asanIsEnabled();
     $configurationName = "TSan" if tsanIsEnabled();
+    $configurationName = "Coverage" if coverageIsEnabled();
     $configurationName .= "O" . forceOptimizationLevel() if defined forceOptimizationLevel();
     return $configurationName;
 }
@@ -1294,7 +1298,13 @@ sub determineConfigurationProductDir
     } elsif (usesPerConfigurationBuildDirectory()) {
         $configurationProductDir = "$baseProductDir";
     } elsif (isGtk() or isWPE() or isJSCOnly() or shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
-        $configurationProductDir = "$baseProductDir/$portName/$configuration";
+        # A coverage build's products are not interchangeable with a normal build's --
+        # every object carries counters and coverage mapping -- so it gets its own
+        # directory rather than clobbering Release or Debug. Same reasoning as the Cocoa
+        # CMake sanitizer directories below, and it matches the gtk-coverage /
+        # wpe-coverage CMake presets.
+        my $portConfiguration = coverageIsEnabled() ? "Coverage" : $configuration;
+        $configurationProductDir = "$baseProductDir/$portName/$portConfiguration";
     } elsif (isAppleCocoaWebKit() && isCMakeBuild()) {
         $configurationProductDir = File::Spec->catdir($baseProductDir, cmakeCocoaTreeName(), cmakeCocoaConfigurationName($configuration));
     } else {
@@ -1566,7 +1576,9 @@ sub XcodeOptions
     }
 
     # When this environment variable is set Tools/Scripts/check-for-weak-vtables-and-externals
-    # treats errors as non-fatal when it encounters missing symbols related to coverage.
+    # excuses the profiling runtime's own weak externals by name. It does not disable the
+    # check: a coverage build used to make every error in the four check-for-* scripts
+    # non-fatal, which turned real checks off wholesale.
     appendToEnvironmentVariableList("WEBKIT_COVERAGE_BUILD", "1") if $coverageIsEnabled;
 
     die "Cannot enable both ASAN and TSAN at the same time\n" if $asanIsEnabled && $tsanIsEnabled;
@@ -1586,9 +1598,60 @@ sub XcodeOptionStringNoConfig
     return join " ", @baseProductDirOption;
 }
 
+my $explainedCoverageBuildSettings = 0;
+
 sub XcodeCoverageSupportOptions()
 {
-    return ("CLANG_COVERAGE_MAPPING=YES");
+    # CLANG_COVERAGE_MAPPING turns on the instrumentation itself
+    # (-fprofile-instr-generate -fcoverage-mapping). ENABLE_LLVM_COVERAGE is the
+    # feature define, which the per-framework xcconfigs turn into
+    # ENABLE_LLVM_COVERAGE=1 in GCC_PREPROCESSOR_DEFINITIONS. That is what makes the
+    # baked-in __llvm_profile_filename symbols and the sandbox profiles' file-write
+    # allowance for /private/tmp/WebKitCoverage compile in, and what selects the
+    # __llvm_prf_cnts section rename that continuous mode ("%c") requires.
+    my @options = ("CLANG_COVERAGE_MAPPING=YES", "ENABLE_LLVM_COVERAGE=YES");
+
+    # The third setting a coverage build needs, and the one nobody remembers. It is applied
+    # rather than detected because there is no reliable detector: nesting sandbox-exec
+    # succeeds from a shell on a machine whose Xcode script phases still fail, since the
+    # phases are applied by the build service and not by this process, so a probe that passes
+    # would license leaving the setting off. Applying it unconditionally also keeps one
+    # coverage tree's build settings stable, which a probe would not -- XcodeOptions() warns
+    # that a setting which does not line up with the IDE's invalidates incremental builds.
+    # Kept in step with MANDATORY_BUILD_SETTINGS in
+    # Tools/Scripts/webkitpy/coverage_requirements.py, which webkit-coverage uses.
+    my $sandboxingWasSpecified = (grep { /^ENABLE_USER_SCRIPT_SANDBOXING=/ } @ARGV)
+        || defined $ENV{"ENABLE_USER_SCRIPT_SANDBOXING"};
+    push @options, "ENABLE_USER_SCRIPT_SANDBOXING=NO" unless $sandboxingWasSpecified;
+
+    return @options if $explainedCoverageBuildSettings;
+    $explainedCoverageBuildSettings = 1;
+
+    if ($sandboxingWasSpecified) {
+        print STDERR "Coverage build: honoring the ENABLE_USER_SCRIPT_SANDBOXING you passed. A coverage build\n" .
+                     "would otherwise set it to NO, because Xcode wraps every script phase in sandbox-exec\n" .
+                     "and a process already inside a sandbox cannot apply another one.\n";
+    } else {
+        print STDERR "Coverage build: adding ENABLE_USER_SCRIPT_SANDBOXING=NO. Xcode wraps every script\n" .
+                     "phase in sandbox-exec, and a process that is already inside a sandbox cannot apply\n" .
+                     "another one, so inside an agent or CI sandbox every script phase fails with\n" .
+                     "\"sandbox-exec: sandbox_apply: Operation not permitted\". It does not affect the\n" .
+                     "output binaries. Pass ENABLE_USER_SCRIPT_SANDBOXING=YES to keep them sandboxed.\n";
+    }
+
+    # The same restriction, in the place it is unrecognisable. Not set for you: it is not
+    # coverage-specific, and it disables a security sandbox.
+    unless (defined $ENV{"SWIFTC_DISABLE_SANDBOX"} || (grep { /^SWIFTC_DISABLE_SANDBOX=/ } @ARGV)) {
+        print STDERR "Coverage build: not adding SWIFTC_DISABLE_SANDBOX=YES, which is a separate setting for\n" .
+                     "the same restriction. Without it swift-frontend cannot load the _SwiftifyImport macro\n" .
+                     "plugin; Swift reports that as a warning, silently drops the safe Span overloads, and\n" .
+                     "the build then fails with ten \"cannot convert value of type 'Span<T>' to expected\n" .
+                     "argument type 'UnsafePointer<T>'\" errors in Source/WebGPU/WebGPU/CommandEncoder.swift.\n" .
+                     "That is rdar://185533403 and not a coverage problem. Pass SWIFTC_DISABLE_SANDBOX=YES\n" .
+                     "by hand if you need it -- it disables a security sandbox, so it is your call.\n";
+    }
+
+    return @options;
 }
 
 sub XcodeExportCompileCommandsOptions()
@@ -3051,6 +3114,11 @@ sub generateBuildSystemFromCMakeProject
     push @args, "-DENABLE_SANITIZERS=thread" if tsanIsEnabled();
     push @args, "-DENABLE_SANITIZERS=undefined" if ubsanIsEnabled();
     push @args, "-DENABLE_SANITIZERS=fuzzer" if libFuzzerIsEnabled();
+
+    # ENABLE_COVERAGE turns on -fprofile-instr-generate -fcoverage-mapping globally and
+    # excludes Source/ThirdParty via -fprofile-list. On macOS it also implies
+    # ENABLE_LLVM_COVERAGE, which bakes /private/tmp/WebKitCoverage into the frameworks.
+    push @args, "-DENABLE_COVERAGE=ON" if coverageIsEnabled();
 
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 

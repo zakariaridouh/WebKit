@@ -144,7 +144,7 @@ Usage: $programName [options] [options to pass to build system]
   --visionos-simulator              Use "xrsimulator" (visionOS only) 
   --watchos-device                  Use "watchos.internal" SDK if installed, else "watchos" SDK (watchOS only)
   --watchos-simulator               Use "watchsimulator" (watchOS only)
-  --coverage                        Enable code coverage support (Mac only)
+  --coverage                        Enable LLVM source-based code coverage (Xcode and CMake builds; Source/ThirdParty is left uninstrumented on CMake)
   --analyze                         Enable static anaylsis (Apple platforms only)
   --lto-mode=<mode>                 Set Link Time Optimization mode (full, thin, or none) (LLVM only)
   --cross-target=<target_machine>   Use the cross-toolchain-helper to build WebKit for the specified machine (Linux platforms only)
@@ -213,6 +213,13 @@ if ($showHelp) {
 }
 
 $ENV{'VERBOSE'} = 1 if $verbose;
+
+# Hand --coverage off to webkitdirs so that everything gated on coverageIsEnabled()
+# agrees with it -- most importantly WEBKIT_COVERAGE_BUILD, which is what tells
+# Tools/Scripts/check-for-weak-vtables-and-externals to expect the __llvm_profile_*
+# weak externals. Without this, --coverage set the compiler flag but not the marker
+# state, and the build failed on those symbols. https://webkit.org/b/264202
+setCoverageIsEnabled(1) if $coverageSupport;
 
 if ($useCCache == 1) {
     $ENV{'WK_USE_CCACHE'} = "YES";
@@ -284,6 +291,10 @@ if (isAppleCocoaWebKit()) {
 my $result = 0;
 
 if (isCMakeBuild() && !isAnyWindows() && !isWin()) {
+    # --coverage reaches CMake through generateBuildSystemFromCMakeProject(), which
+    # turns coverageIsEnabled() into -DENABLE_COVERAGE=ON, and through
+    # determineConfigurationProductDir(), which puts the products in a Coverage
+    # directory of their own. https://webkit.org/b/264202
     if (defined $ENV{'BUILD_WEBKIT_PRE_SCRIPT'}) {
         my $preScript = $ENV{'BUILD_WEBKIT_PRE_SCRIPT'};
 
@@ -391,7 +402,8 @@ if (isWin() || isPlayStation() || (isJSCOnly() && isWindows())) {
     exit 0 if isGenerateProjectOnly();
 
     my @local_options = @options;
-    push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
+    # Coverage is already in @options via XcodeOptions(), which also exports
+    # WEBKIT_COVERAGE_BUILD; see setCoverageIsEnabled() above.
     push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
     push @local_options, "WK_LTO_MODE=$ltoMode" if ($ltoMode ne "default");
     push @local_options, XcodeExportCompileCommandsOptions() if $exportCompileCommands;

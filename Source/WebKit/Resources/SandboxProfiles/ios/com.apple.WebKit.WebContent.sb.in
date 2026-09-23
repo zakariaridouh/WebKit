@@ -550,3 +550,20 @@
         (require-any
             (apply subpath issue-extension-secondary-paths))))
 #endif
+
+;; A coverage build (ENABLE_LLVM_COVERAGE, off in every other build) bakes
+;; /private/tmp/WebKitCoverage/<Product>_%8m%c.profraw into each instrumented image, matching
+;; the same rule in com.apple.WebProcess.sb.in and the two other macOS profiles.
+;;
+;; This rule is not what makes coverage work in the simulator, and it is here so that it cannot
+;; stop working. No sandbox profile is applied to a simulator process today: sandbox_check(getpid(),
+;; NULL, 0) returned 0 in an app launched with `simctl launch` on an iPhone 17 Pro simulator, and
+;; the one iOS-family path that would apply a compiled profile -- sandbox_apply_bytecode() in
+;; WebProcessCocoa.mm -- is behind ENABLE(SIMULATOR_SANDBOX), which is defined nowhere in either
+;; checkout. If that is ever turned on, the profile writes would start being denied and a run
+;; would report that the tests executed nothing. /private/tmp inside a CoreSimulator runtime is
+;; the host's /private/tmp, which is why this is the same path macOS uses and why nothing has to
+;; translate it. See Tools/CodeCoverage/iOSCoverage.md.
+#if ENABLE(LLVM_COVERAGE)
+(allow file-write* (subpath "/private/tmp/WebKitCoverage"))
+#endif

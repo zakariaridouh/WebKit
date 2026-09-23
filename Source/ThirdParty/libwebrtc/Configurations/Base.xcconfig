@@ -101,6 +101,11 @@ WK_DEFAULT_GCC_OPTIMIZATION_LEVEL[config=Debug] = 0;
 // This is overridden in libwebrtc.xcconfig, but it must be NO for static library targets to have symbols.
 STRIP_INSTALLED_PRODUCT = NO;
 
+// Third-party target: opt every target in this project out of coverage
+// instrumentation. The reasoning and the measurement are in
+// Configurations/CommonBase.xcconfig.
+WK_DEFAULT_COVERAGE_OPT_OUT = YES;
+
 OTHER_CFLAGS = $(inherited) -fvisibility=default;
 OTHER_LDFLAGS = $(inherited) -fvisibility=default;
 
