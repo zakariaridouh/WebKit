@@ -34,6 +34,10 @@ maybe_enter_webkit_container_sdk()
 from webkitpy.api_tests.manager import Manager
 from webkitpy.api_tests.test_expectations import APITestExpectations
 from webkitpy.common.host import Host
+from webkitpy.common.webkit_finder import WebKitFinder
+from webkitpy.coverage_attribution import (prepare_per_test_options,
+                                           prepare_per_test_profile_root,
+                                           summarize_per_test_run)
 from webkitpy.layout_tests.views.metered_stream import MeteredStream
 from webkitpy.llvm_profile_utils import (COVERAGE_PROFILE_DIRECTORY, collect_coverage_profiles,
                                          prepare_coverage_profile_directory)
@@ -79,6 +83,21 @@ def main(argv, stdout, stderr):
         except RuntimeError as error:
             print(str(error), file=stderr)
             return EXCEPTIONAL_EXIT_STATUS
+
+    if options.per_test_coverage:
+        # Checked here, with the rest of the coverage plumbing, for the same reason: every one of
+        # these failures otherwise arrives after the tests have run, when the profiles the run
+        # would have reduced have already been discarded one test at a time.
+        try:
+            prepare_per_test_options(options, WebKitFinder(port.host.filesystem).webkit_base())
+        except (ValueError, OSError) as error:
+            print(str(error), file=stderr)
+            return EXCEPTIONAL_EXIT_STATUS
+        # A batched shard runs several tests in one process, and the profile path is read once at
+        # process start, so every test in such a shard would be attributed the counters of the
+        # whole shard under the first test's name. This is already the default; it is set here so
+        # that per-test attribution does not silently depend on that staying true.
+        options.run_singly = True
 
     if options.print_expectations:
         return print_expectations(port, options, args, stderr)
@@ -187,6 +206,15 @@ def run(port, options, args, logging_stream):
 
         if options.coverage:
             prepare_coverage_profile_directory()
+        if options.per_test_coverage:
+            # prepare_coverage_profile_directory() unlinks the *.profraw at the top level of the
+            # machine-global directory and does not recurse, so the per-test subdirectories an
+            # interrupted run left behind -- up to 142 MB each -- are this call's to remove.
+            prepare_per_test_profile_root()
+            _log.info('Per-test coverage: each test writes into a directory of its own under '
+                      '%s, which is indexed, reduced to its covered lines in %s and deleted '
+                      'before the next test starts.', COVERAGE_PROFILE_DIRECTORY,
+                      ', '.join(options.per_test_coverage_sources))
 
         try:
             result = manager.run(args, json_output=options.json_output)
@@ -201,9 +229,27 @@ def run(port, options, args, logging_stream):
             # KeyboardInterrupt's exit status. The profiles are the less important of the two
             # things at stake and they are still on disk, so say where they are and let the run
             # stand.
-            if options.coverage:
+            if options.per_test_coverage:
+                # Nothing to collect: per-test mode overrides the baked-in profile path, so the
+                # raw profiles were indexed and deleted as the run went. What is left to do is
+                # say where the index is, and say so if anything wrote outside it.
+                #
+                # Guarded like the collection below, and for the same reason: this is a finally
+                # block, so a raise here would replace the run's own result with a traceback.
                 try:
-                    collect_coverage_profiles(options.coverage_dir)
+                    summarize_per_test_run(options.per_test_coverage_index,
+                                           options.per_test_coverage_profdata)
+                except (OSError, IOError, ValueError) as error:
+                    _log.error('Could not summarize the per-test coverage index %s: %s',
+                               options.per_test_coverage_index, error)
+            elif options.coverage:
+                try:
+                    if not collect_coverage_profiles(options.coverage_dir):
+                        # See the matching call in run_webkit_tests.py: on a simulator, nothing in
+                        # the machine-global directory can mean the profiles are inside the
+                        # simulator because the baked path is TMPDIR-relative, which is a
+                        # different failure from a run that executed nothing.
+                        port.collect_stray_coverage_profiles(options.coverage_dir)
                 except (OSError, IOError) as error:
                     _log.error('Could not collect coverage profiles into %s: %s',
                                options.coverage_dir, error)
@@ -291,6 +337,36 @@ def parse_args(args):
                              help='Directory to collect coverage profiles into. Successive runs '
                                   'accumulate, so an API-test run and a layout-test run can share one '
                                   'directory and produce a single report'),
+        optparse.make_option('--per-test-coverage', action='store_true', default=False,
+                             help='Keep each test\'s coverage separate instead of pooling it, so '
+                                  'that "which tests execute this line" can be answered. Requires '
+                                  '--coverage and at least one --per-test-coverage-sources. Costs '
+                                  'one llvm-profdata merge and one llvm-cov export per test, so '
+                                  'it is for a named set of tests and not for a whole suite. Query '
+                                  'the result with Tools/Scripts/coverage-attribution'),
+        optparse.make_option('--per-test-coverage-sources', action='append', default=[],
+                             metavar='PATH',
+                             help='Restrict per-test attribution to source under PATH, relative '
+                                  'to the checkout root or absolute (repeatable). Required, '
+                                  'because it is what bounds the per-test cost: an unscoped '
+                                  'export is 23 s and 751 MB per test'),
+        optparse.make_option('--per-test-coverage-index', type='string', metavar='DIR',
+                             help='Where to write the per-test index (default: per-test/ under '
+                                  '--coverage-dir). Successive runs append shards to it'),
+        optparse.make_option('--per-test-coverage-products', type='string', metavar='LIST',
+                             help='Comma-separated instrumented frameworks to attribute against, '
+                                  'defaulting to all of them. The API test binary is always '
+                                  'included. This is the per-test cost knob: reducing one test '
+                                  'against the five frameworks takes 8.3 s and against TestWTF '
+                                  'alone 0.48 s, so an empty list is the fast path for a question '
+                                  'about statically linked code such as WTF'),
+        optparse.make_option('--no-per-test-coverage-profdata', action='store_false',
+                             dest='per_test_coverage_profdata', default=None,
+                             help='Do not also merge the run\'s counters into one indexed profile. '
+                                  'Per-test mode overrides the baked-in profile path, so nothing '
+                                  'lands in --coverage-dir for generate-coverage-report to read; '
+                                  'the incremental merge is what keeps a whole-run report '
+                                  'possible, at the cost of one more merge per test'),
         optparse.make_option('--test-parallel-safety', type='string', action='append', default=[],
                              help='Run specified test(s) constantly in parallel against all allowlist tests to test parallel safety'),
 

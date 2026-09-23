@@ -28,6 +28,7 @@ from webkitcorepy import string_utils
 from webkitcorepy import TaskPool
 
 from webkitpy.common.iteration_compatibility import iteritems
+from webkitpy.coverage_attribution import collector_for_port
 from webkitpy.port.server_process import ServerProcess, _log as server_process_logger
 
 _log = logging.getLogger(__name__)
@@ -341,6 +342,8 @@ class _Worker(object):
 
     @classmethod
     def teardown(cls):
+        if cls.instance and cls.instance._coverage_collector:
+            cls.instance._coverage_collector.close()
         cls.instance = None
 
     def __init__(self, port, log_limit):
@@ -350,6 +353,12 @@ class _Worker(object):
 
         # ServerProcess doesn't allow for a timeout of 'None,' this uses a week instead of None.
         self._timeout = int(self._port.get_option('timeout')) if self._port.get_option('timeout') else 60 * 24 * 7
+
+        # None unless this run was asked for per-test coverage. Built here, once per worker
+        # process, because the path canonicalizer it holds walks the framework source trees and
+        # the index shard it writes is this worker's.
+        self._coverage_collector = collector_for_port(
+            port, getattr(TaskPool.Process, 'name', None) or 'worker', 'api')
 
     @classmethod
     def _filter_noisy_output(cls, output):
@@ -375,10 +384,18 @@ class _Worker(object):
                 else:
                     timeout = self._timeout * 5
 
+        environment = self._port.environment_for_api_tests()
+        if self._coverage_collector:
+            # Merged into the environment this process is given rather than exported, because
+            # setup_environ_for_server() copies a fixed allow-list out of os.environ and
+            # LLVM_PROFILE_FILE is not on it. This is also why it has to happen here, per test:
+            # the profile runtime reads the variable once, at process start.
+            environment.update(self._coverage_collector.begin(full_test_name))
+
         server_process = ServerProcess(
             self._port, binary_name,
             Runner.command_for_port(self._port, [self._port.path_to_api_test(binary_name), '--filter', test]),
-            env=self._port.environment_for_api_tests())
+            env=environment)
 
         status = Runner.STATUS_RUNNING
         if Runner._is_disabled_test(f'{binary_name}.{test}') and not self._port.get_option('force'):
@@ -388,8 +405,10 @@ class _Worker(object):
         stderr_buffer = ''
         line_count = 0
 
+        # Out of the try, so that the reduction below can charge its own time correctly even if
+        # the process fails to start at all.
+        started = time.time()
         try:
-            started = time.time()
             if status != Runner.STATUS_DISABLED:
                 server_process.start()
 
@@ -451,13 +470,27 @@ class _Worker(object):
                     break
 
             server_process.stop()
+            elapsed = time.time() - started
+            if self._coverage_collector:
+                # After the process has stopped, never before: continuous mode keeps the counter
+                # file mmapped for the life of the process, so indexing it while the test is
+                # still running reads a file that is still being written.
+                #
+                # The test binary is added to the object list because it is where the coverage
+                # mapping for a statically linked WTF or bmalloc function instantiated only by a
+                # test lives -- without it, exactly the lines an API test is most likely to be
+                # the only cover for are absent from its record. elapsed is taken above so that
+                # the reduction is not charged to the test's own time.
+                self._coverage_collector.finish(
+                    full_test_name,
+                    extra_objects=[self._port.path_to_api_test(binary_name)])
 
         TaskPool.Process.queue.send(TaskPool.Task(
             report_result, None, TaskPool.Process.name,
             f'{binary_name}.{test}',
             status,
             self._filter_noisy_output(output_buffer),
-            elapsed=time.time() - started,
+            elapsed=elapsed,
         ))
 
     def run(self, name, *tests):

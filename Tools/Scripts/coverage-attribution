@@ -1,0 +1,438 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2026 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+"""Ask a per-test coverage index which tests execute a line, and what a test reaches.
+
+The index is produced by a run with --per-test-coverage, which is scoped on purpose:
+
+    Tools/Scripts/run-api-tests --release --cmake --coverage --coverage-dir=/tmp/cov \\
+        --per-test-coverage --per-test-coverage-sources=Source/WTF WTF_Vector
+
+    Tools/Scripts/coverage-attribution --index=/tmp/cov/per-test \\
+        --covers Source/WTF/wtf/Vector.h:512
+
+Three questions, and they are not symmetrical.
+
+  --covers PATH:LINE     which tests execute it. The answer a merged profile cannot give at
+                         all, and the one that turns "this line is covered" into "this line is
+                         covered by one test, and that test is flaky".
+  --test NAME            what that test reaches, inside the scope it was measured over.
+  --tests-for-diff REF   the tests to run for a change, from the lines the diff added.
+
+Two limits are structural and are printed with the answers rather than left in a document.
+
+The index holds only EXECUTED lines. So "no test in this index executes Foo.cpp:42" does not
+distinguish a line no test reaches from a line the compiler emitted no code for -- a comment, a
+brace, a declaration -- or from a line in a file this configuration never compiled. The
+whole-run report answers that exactly; this cannot.
+
+The index has a SCOPE, per test, and a query outside it is unanswerable rather than negative.
+An index collected with --per-test-coverage-sources=Source/WTF says nothing whatsoever about
+Source/WebCore, and saying "no test covers it" would be the most misleading answer available.
+Every query below reports how many tests were measured over the file it was asked about.
+
+--tests-for-diff inherits both, so read its output as a floor and not as a sufficient set: the
+tests it names really do execute the lines you changed, and there may be others it cannot see.
+Coverage-driven selection was measured over 1,656 real commits (PLAN 10) and leaves 86.1% of the
+layout suite to run at the mean, so this is a way to find the tests that touch your change, not
+a way to avoid running the suite.
+"""
+
+import json
+import logging
+import optparse
+import os
+import sys
+
+from webkitpy.common.system.filesystem import FileSystem
+from webkitpy.common.webkit_finder import WebKitFinder
+from webkitpy.coverage_attribution import PerTestIndex, encode_lines, parse_location
+from webkitpy.coverage_delta import format_line_numbers
+
+_log = logging.getLogger('coverage-attribution')
+
+# The index could not answer, which is not the same as answering "nothing". Distinct from 1 so
+# that a script can tell a query outside the index's scope from a broken invocation, and from 0
+# so that `--covers X && run-the-tests` cannot be fed an answer that was never measured.
+CANNOT_ANSWER_EXIT_CODE = 3
+
+_EPILOG = """
+WHAT AN EMPTY ANSWER MEANS. The index records the lines tests executed and nothing else, so it
+cannot tell a line no test reaches from a line with no code on it. Every query prints how many
+of the index's tests were measured over the file, which is the number that makes an empty answer
+readable: 0 of 40 means the question was outside the scope the run was collected with, and 40 of
+40 means no test in it reaches that line.
+
+WHY THE INDEX IS SMALL. A per-test profile is around 200 MB and one pool slot of live counters
+is 142 MB across the five frameworks, so a per-test-for-the-whole-suite run is not a thing that
+fits on a disk. What is kept per test is the set of covered (file, line) pairs inside the scope
+the run declared -- 50,255 bytes for the largest measured record -- and the raw profiles are
+indexed and deleted as the run goes.
+"""
+
+
+class _PreformattedEpilog(optparse.IndentedHelpFormatter):
+    def format_epilog(self, epilog):
+        return epilog or ''
+
+
+def parse_args(args):
+    parser = optparse.OptionParser(
+        usage='%prog --index=DIR [--covers PATH:LINE | --test NAME | --tests-for-diff REF]',
+        epilog=_EPILOG, formatter=_PreformattedEpilog())
+    parser.add_option('--index', help='The per-test coverage index a --per-test-coverage run '
+                                      'wrote, which is per-test/ under its --coverage-dir')
+    parser.add_option('--covers', action='append', default=[], metavar='PATH[:LINE[-LAST]]',
+                      help='Which tests execute this line, this range of lines, or -- with no '
+                           'line at all -- any line of this file. Repeatable')
+    parser.add_option('--test', action='append', default=[], dest='tests', metavar='NAME',
+                      help='What this test reaches. A substring of a test name is accepted and '
+                           'reports every test it matches, since an API test name is long and a '
+                           'layout test name is a path. Repeatable')
+    parser.add_option('--tests-for-diff', metavar='REF',
+                      help='The tests to run for a change, from the lines it adds or modifies. '
+                           'The ref is passed to git diff verbatim, so `main` means "everything '
+                           'since main, including my working tree" and `main...HEAD` means "only '
+                           'my commits"')
+    parser.add_option('--redundant', action='store_true', default=False,
+                      help='Tests every one of whose covered lines is also covered by the rest of '
+                           'this index, so dropping any one of them cannot reduce the index\'s '
+                           'coverage by a line. A statement about this index and its scope, never '
+                           'about the suite, and not a claim that they can all be dropped')
+    parser.add_option('--source-root', help='The checkout root, if not the one this script is in')
+    parser.add_option('--limit', type='int', default=40, metavar='N',
+                      help='How many rows to print per section (default: 40). 0 for all of them')
+    parser.add_option('--json', action='store_true', default=False, dest='as_json',
+                      help='Write the answer as JSON on stdout, for a tool rather than a person')
+    parser.add_option('-v', '--verbose', action='store_true', default=False, help='Verbose logging')
+
+    options, remaining = parser.parse_args(args)
+    if remaining:
+        parser.error('Unexpected arguments: {}'.format(' '.join(remaining)))
+    if not options.index:
+        parser.error('--index is required')
+    if not os.path.isdir(options.index):
+        parser.error('--index {} is not a directory'.format(options.index))
+    for location in options.covers:
+        try:
+            parse_location(location)
+        except ValueError as error:
+            parser.error(str(error))
+    return options
+
+
+def _limited(rows, limit):
+    return rows if not limit else rows[:limit]
+
+
+def _plural(count, word, plural=None):
+    return '{:,} {}'.format(count, word if count == 1 else (plural or word + 's'))
+
+
+def _describe_test(coverage):
+    return '{:<8} {}'.format(coverage.suite or '-', coverage.test)
+
+
+def report_index(index, options):
+    """What is in the index, which is the denominator of every answer it gives."""
+    statistics = index.statistics()
+    _log.info('%s over %s, %s covered (file, line) pair%s, %s covered by exactly one test',
+              _plural(statistics.test_count, 'test'), _plural(statistics.file_count, 'file'),
+              '{:,}'.format(statistics.line_count), '' if statistics.line_count == 1 else 's',
+              '{:,}'.format(statistics.singly_covered_line_count))
+    if statistics.suites:
+        _log.info('Suites: %s', ', '.join(statistics.suites))
+    if statistics.sources:
+        _log.info('Scope: %s. Nothing outside it was measured, so nothing outside it can be '
+                  'answered about.', ', '.join(statistics.sources))
+    else:
+        _log.info('No scope was declared for this index, so its records are whatever the export '
+                  'produced.')
+    return statistics
+
+
+def _measured_sentence(measured, total):
+    """'Of the 40 tests in this index, 12 were measured over that file.'
+
+    The number that makes an empty answer readable: 0 of 40 is a question outside the scope the
+    run was collected with, and 40 of 40 is a finding about the line.
+    """
+    return 'Of the {} in this index, {} {} measured over that file.'.format(
+        _plural(total, 'test'), measured, 'was' if measured == 1 else 'were')
+
+
+def report_covers(index, location, options):
+    """Which tests execute a line, a range, or any line of a file. -> (exit code, json)"""
+    path, first, last = parse_location(location)
+    relative = index.normalize(path)
+    counts = index.line_test_counts(relative)
+    _, measured, unmeasured = index.covering(relative)
+
+    print('')
+    if not measured:
+        print('{}: {} So this index cannot say anything about it.'.format(
+            relative, _measured_sentence(measured, measured + unmeasured)))
+        print('The scope a run declares is what its export covered; ask a run collected with '
+              '--per-test-coverage-sources that includes this path.')
+        return CANNOT_ANSWER_EXIT_CODE, {'path': relative, 'measured': 0, 'lines': {}}
+
+    lines = sorted(counts) if first is None else list(range(first, last + 1))
+    answer = {'path': relative, 'measured': measured, 'unmeasured': unmeasured, 'lines': {}}
+    if first is None:
+        print('{}: {} {} of its lines were executed by at least one of them.'.format(
+            relative, _measured_sentence(measured, measured + unmeasured),
+            '{:,}'.format(len(counts))))
+    else:
+        print('{}:{}: {}'.format(
+            relative, first if first == last else '{}-{}'.format(first, last),
+            _measured_sentence(measured, measured + unmeasured)))
+
+    uncovered = [line for line in lines if not counts.get(line)]
+    covered = [line for line in lines if counts.get(line)]
+    for line in _limited(covered, options.limit):
+        tests, _, _ = index.covering(relative, line)
+        answer['lines'][line] = [coverage.test for coverage in tests]
+        print('')
+        print('  {}:{} is executed by {}{}'.format(
+            relative, line, _plural(len(tests), 'test'),
+            ' -- so if that test is flaky or is deleted, this line stops being covered'
+            if len(tests) == 1 else ''))
+        for coverage in _limited(tests, options.limit):
+            print('      {}'.format(_describe_test(coverage)))
+        if options.limit and len(tests) > options.limit:
+            print('      ... and {:,} more'.format(len(tests) - options.limit))
+    if options.limit and len(covered) > options.limit:
+        print('')
+        print('  ... and {:,} more executed line(s)'.format(len(covered) - options.limit))
+
+    if uncovered:
+        print('')
+        print('  No test in this index executes {}: {}'.format(
+            _plural(len(uncovered), 'line'), format_line_numbers(uncovered)))
+        print('  Which is not the same as untested: this index holds only executed lines, so a '
+              'line with no code on it looks identical to one nothing reached.')
+    answer['uncovered'] = uncovered
+    return 0, answer
+
+
+def report_test(index, pattern, options):
+    """What a test reaches. -> (exit code, json)"""
+    names = index.matching_tests(pattern)
+    print('')
+    if not names:
+        print('No test in this index is named {} or contains it. It has {}; --redundant or no '
+              'query at all lists what is there.'.format(pattern,
+                                                         _plural(len(index.tests), 'test')))
+        return CANNOT_ANSWER_EXIT_CODE, {'pattern': pattern, 'tests': []}
+    if len(names) > 1:
+        print('{} matches {}:'.format(pattern, _plural(len(names), 'test')))
+
+    answers = []
+    for name in _limited(names, options.limit):
+        coverage = index.for_test(name)
+        rows = sorted(coverage.files.items(), key=lambda entry: (-len(entry[1]), entry[0]))
+        print('')
+        print('{} ({}) executed {} in {}{}'.format(
+            name, coverage.suite or 'unknown suite',
+            _plural(coverage.line_count, 'line'), _plural(len(rows), 'file'),
+            ', measured over {}'.format(', '.join(coverage.sources)) if coverage.sources
+            else ''))
+        for path, lines in _limited(rows, options.limit):
+            print('  {:>7}  {}'.format('{:,}'.format(len(lines)), path))
+            print('           {}'.format(format_line_numbers(sorted(lines), limit=8)))
+        if options.limit and len(rows) > options.limit:
+            print('  ... and {:,} more file(s)'.format(len(rows) - options.limit))
+        answers.append({'test': name, 'suite': coverage.suite,
+                        'sources': list(coverage.sources),
+                        'files': {path: encode_lines(lines)
+                                  for path, lines in sorted(coverage.files.items())}})
+    return 0, {'pattern': pattern, 'tests': answers}
+
+
+def report_tests_for_diff(index, source_root, ref, options):
+    """The tests to run for a change. -> (exit code, json)"""
+    # Imported here rather than at the top: coverage_patch pulls in the HTML report modules, and
+    # every other query in this tool needs neither them nor git.
+    from webkitpy.coverage_patch import git_diff_added_lines
+
+    try:
+        added = git_diff_added_lines(source_root, ref)
+    except (EnvironmentError, RuntimeError) as error:
+        _log.error('%s', error)
+        return 1, {}
+    if not added:
+        _log.error('%s names no changed files, so there is nothing to select tests for.', ref)
+        return 1, {}
+
+    selection = index.for_added_lines(added)
+    print('')
+    print('{} touches {}. Of the lines it adds or modifies, {} in {} are executed by some test '
+          'in this index.'.format(
+              ref, _plural(len(added), 'path'),
+              '{:,}'.format(sum(len(lines) for lines in selection.covered_lines.values())),
+              _plural(len(selection.covered_lines), 'file')))
+
+    if selection.tests:
+        print('')
+        print('{} to run:'.format(_plural(len(selection.tests), 'test')))
+        for coverage in _limited(selection.tests, options.limit):
+            print('  {}'.format(_describe_test(coverage)))
+        if options.limit and len(selection.tests) > options.limit:
+            print('  ... and {:,} more'.format(len(selection.tests) - options.limit))
+        for suite in sorted({coverage.suite for coverage in selection.tests}):
+            names = [coverage.test for coverage in selection.tests if coverage.suite == suite]
+            harness = {'layout': 'run-webkit-tests', 'api': 'run-api-tests'}.get(suite)
+            if harness:
+                print('')
+                print('  Tools/Scripts/{} {}'.format(harness, ' '.join(names[:options.limit or
+                                                                             len(names)])))
+    else:
+        print('')
+        print('No test in this index executes any line this change adds.')
+
+    if selection.uncovered_lines:
+        print('')
+        print('Added lines no test in this index executes, which is where a new test would go:')
+        for path, lines in _limited(sorted(selection.uncovered_lines.items()), options.limit):
+            print('  {}'.format(path))
+            print('      {}'.format(format_line_numbers(lines, limit=12)))
+        print('')
+        print('  Read that as a floor. This index holds executed lines only, so a comment or a '
+              'declaration is in that list too, and a line outside the run\'s scope is not.')
+
+    if selection.out_of_scope:
+        print('')
+        print('{} outside the scope this index was collected over, so it says nothing at all '
+              'about {}:'.format(_plural(len(selection.out_of_scope), 'changed path'),
+                                 'it' if len(selection.out_of_scope) == 1 else 'them'))
+        for path in _limited(selection.out_of_scope, options.limit):
+            print('  {}'.format(path))
+        if options.limit and len(selection.out_of_scope) > options.limit:
+            print('  ... and {:,} more'.format(len(selection.out_of_scope) - options.limit))
+
+    print('')
+    print('These are the tests that touch the change, not a sufficient set to run instead of '
+          'the suite: measured over 1,656 real commits, coverage-driven selection still leaves '
+          '86.1% of the layout suite to run at the mean.')
+    return 0, {
+        'ref': ref,
+        'tests': [{'test': coverage.test, 'suite': coverage.suite}
+                  for coverage in selection.tests],
+        'covered_lines': {path: lines for path, lines in selection.covered_lines.items()},
+        'uncovered_lines': {path: lines for path, lines in selection.uncovered_lines.items()},
+        'out_of_scope': selection.out_of_scope,
+    }
+
+
+def report_redundant(index, options):
+    redundant = index.redundant_tests()
+    print('')
+    if not redundant:
+        print('Every test in this index executes at least one line no other test in it '
+              'executes.')
+        return 0, {'redundant': []}
+    print('{} whose every covered line is also covered by the rest of this index, so dropping '
+          'any ONE of them cannot reduce this index\'s coverage by a line:'.format(
+              _plural(len(redundant), 'test')))
+    for coverage in _limited(redundant, options.limit):
+        print('  {:>7}  {}'.format('{:,}'.format(coverage.line_count),
+                                   _describe_test(coverage)))
+    if options.limit and len(redundant) > options.limit:
+        print('  ... and {:,} more'.format(len(redundant) - options.limit))
+    print('')
+    print('Any one of them, not all of them: three tests covering lines {1,2}, {2} and {1} are '
+          'all listed here and deleting all three loses both lines. Drop one and ask again.')
+    print('This is also about this index and its scope only. A test that looks redundant here '
+          'may be the only test in the suite that reaches a line outside the scope the run '
+          'declared, and redundancy is not the only reason to keep a test.')
+    return 0, {'redundant': [{'test': coverage.test, 'suite': coverage.suite,
+                              'lines': coverage.line_count} for coverage in redundant]}
+
+
+def main(args):
+    options = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(levelname)s: %(message)s')
+
+    source_root = options.source_root or WebKitFinder(FileSystem()).webkit_base()
+    try:
+        index = PerTestIndex.read(options.index)
+    except OSError as error:
+        _log.error('%s', error)
+        return 1
+
+    statistics = report_index(index, options)
+    if not statistics.test_count:
+        _log.error('This index holds no tests, so there is nothing to ask it.')
+        return 1
+
+    status = 0
+    answers = {'index': options.index, 'tests': statistics.test_count,
+               'files': statistics.file_count, 'sources': list(statistics.sources)}
+    asked = False
+    for location in options.covers:
+        asked = True
+        code, answer = report_covers(index, location, options)
+        answers.setdefault('covers', []).append(answer)
+        status = max(status, code)
+    for pattern in options.tests:
+        asked = True
+        code, answer = report_test(index, pattern, options)
+        answers.setdefault('test', []).append(answer)
+        status = max(status, code)
+    if options.tests_for_diff:
+        asked = True
+        code, answer = report_tests_for_diff(index, source_root, options.tests_for_diff, options)
+        if code == 1:
+            return 1
+        answers['tests_for_diff'] = answer
+        status = max(status, code)
+    if options.redundant:
+        asked = True
+        code, answer = report_redundant(index, options)
+        answers.update(answer)
+        status = max(status, code)
+
+    if not asked:
+        # No query is not an error: the index's own contents are the useful default, since the
+        # first thing anybody needs to know is which tests are in it and what scope they cover.
+        print('')
+        print('{:>7}  {:<8} {}'.format('LINES', 'SUITE', 'TEST'))
+        for coverage in _limited(sorted(index.tests, key=lambda entry: -entry.line_count),
+                                 options.limit):
+            print('{:>7}  {}'.format('{:,}'.format(coverage.line_count),
+                                     _describe_test(coverage)))
+        if options.limit and len(index.tests) > options.limit:
+            print('... and {:,} more'.format(len(index.tests) - options.limit))
+        print('')
+        print('Ask it something with --covers PATH:LINE, --test NAME or --tests-for-diff REF.')
+
+    if options.as_json:
+        print(json.dumps(answers, indent=2, sort_keys=True))
+    return status
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

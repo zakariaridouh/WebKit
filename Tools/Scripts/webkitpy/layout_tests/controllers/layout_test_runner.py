@@ -36,6 +36,7 @@ from webkitcorepy import TaskPool
 
 from webkitpy.common.iteration_compatibility import iteritems
 from webkitpy.common.interrupt_debugging import log_stack_trace_on_signal
+from webkitpy.coverage_attribution import collector_for_port
 from webkitpy.layout_tests.controllers import single_test_runner
 from webkitpy.layout_tests.models.test_run_results import TestRunResults
 from webkitpy.layout_tests.models import test_expectations
@@ -335,6 +336,11 @@ class Worker(object):
         self._batch_count = 0
         self._driver = None
         self._batch_size = self._port.get_option('batch_size') or 0
+        # None unless this run was asked for per-test coverage. Built once per worker process,
+        # because it holds a path canonicalizer that walks the framework source trees and it
+        # writes this worker's shard of the index.
+        self._coverage_collector = collector_for_port(
+            port, getattr(TaskPool.Process, 'name', None) or 'worker', 'layout')
 
     def run_tests(self, shard):
         for input in shard.test_inputs:
@@ -360,6 +366,17 @@ class Worker(object):
             self._batch_count = 0
             stop_when_done = True
 
+        if self._coverage_collector:
+            # The profile runtime reads LLVM_PROFILE_FILE once, at process start, so a driver
+            # that is already running is already writing into the previous test's file. Kill it
+            # first, publish this test's directory, and let the next _run_test_in_this_thread()
+            # start a driver that picks the new path up -- the same restart --run-singly does,
+            # for a different reason. This is most of what per-test coverage costs on the layout
+            # side: driver launch is charged outside the per-test deadline, but not outside the
+            # wall clock.
+            self._kill_driver()
+            self._coverage_collector.begin(test_input.test_name)
+
         test_timeout_sec = self._timeout(test_input)
         start = time.time()
 
@@ -374,6 +391,14 @@ class Worker(object):
         result.total_run_time = time.time() - start
         result.test_number = self._num_tests
         self._num_tests += 1
+
+        if self._coverage_collector:
+            # After the driver has gone, and after total_run_time has been taken so that the
+            # reduction is not charged to the test: continuous mode keeps the counter files
+            # mmapped for the life of every process in the driver's tree, so indexing them while
+            # any of them is alive reads files that are still being written.
+            self._kill_driver()
+            self._coverage_collector.finish(test_input.test_name)
 
         TaskPool.Process.queue.send(TaskPool.Task(
             handle_finished_test, None, TaskPool.Process.name,
@@ -396,6 +421,8 @@ class Worker(object):
     def stop(self):
         _log.debug('cleaning up')
         self._kill_driver()
+        if self._coverage_collector:
+            self._coverage_collector.close()
 
     def _timeout(self, test_input):
         """Compute the appropriate timeout value for a test."""
