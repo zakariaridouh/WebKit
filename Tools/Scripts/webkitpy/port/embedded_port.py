@@ -324,10 +324,14 @@ class EmbeddedPort(DarwinPort):
             if version_name:
                 break
 
+        # Kept in step with Port.configuration_for_upload(), which this does not call: an
+        # instrumented run's timeouts and flakes must not land in the plain Release history.
         if self.get_option('guard_malloc'):
             style = 'guard-malloc'
         elif self._config.asan:
             style = 'asan'
+        elif self.get_option('coverage'):
+            style = 'coverage'
         else:
             style = configuration.build_type
 

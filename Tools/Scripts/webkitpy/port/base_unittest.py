@@ -130,6 +130,25 @@ class PortTest(unittest.TestCase):
         # This routine is a no-op. We just test it for coverage.
         port.setup_test_run()
 
+    def test_driver_stop_timeout_scales_with_the_test_timeout(self):
+        port = self.make_port(options=optparse.Values({'time_out_ms': '60000'}))
+        self.assertEqual(port.driver_stop_timeout(), 6.0)
+
+    def test_driver_stop_timeout_has_a_floor_under_coverage(self):
+        # The scaled value is 3.0s at the standard 30s test timeout, which --coverage no longer
+        # inflates, so the floor is the only thing holding the deadline open for an instrumented
+        # driver. A driver killed for missing it took the whole worker pool down with it --
+        # rdar://173715411.
+        options = optparse.Values({'time_out_ms': '30000', 'coverage': True})
+        self.assertEqual(self.make_port(options=options).driver_stop_timeout(), 90.0)
+
+        options = optparse.Values({'time_out_ms': '30000', 'coverage': False})
+        self.assertEqual(self.make_port(options=options).driver_stop_timeout(), 3.0)
+
+    def test_driver_stop_timeout_floor_does_not_shrink_a_larger_value(self):
+        options = optparse.Values({'time_out_ms': '1200000', 'coverage': True})
+        self.assertEqual(self.make_port(options=options).driver_stop_timeout(), 120.0)
+
     def test_skipped_perf_tests(self):
         port = self.make_port()
 
@@ -289,6 +308,39 @@ class PortTest(unittest.TestCase):
             options=optparse.Values({'build_directory': '/my-build-directory/'}),
         )
         self.assertEqual(port._build_path(), '/my-build-directory/Debug-embedded-port')
+
+    def test_build_path_accepts_the_configuration_directory_itself(self):
+        # The documented recipes spell every coverage path as .../WebKitBuild-Coverage/Release,
+        # because that is where the frameworks are. Appending the configuration to that gave
+        # .../Release/Release, which does not exist, so every product was missing and the report
+        # was empty rather than wrong.
+        Config._clear_cache_for_testing()
+        port = self.make_port(
+            executive=MockExecutive2(output='/default-build-path/Release'),
+            options=optparse.Values({'build_directory': '/my-build-directory/Release',
+                                     'configuration': 'Release'}),
+        )
+        self.assertEqual(port._build_path(), '/my-build-directory/Release')
+
+        Config._clear_cache_for_testing()
+        port = self.make_port(
+            executive=MockExecutive2(output='/default-build-path/Release'),
+            options=optparse.Values({'build_directory': '/my-build-directory/Release/',
+                                     'configuration': 'Release'}),
+        )
+        self.assertEqual(port._build_path('WebCore.framework'),
+                         '/my-build-directory/Release/WebCore.framework')
+
+    def test_build_path_still_appends_a_configuration_that_is_not_there(self):
+        # Only the trailing component matching *this* configuration is accepted, so a directory
+        # that happens to end in something else is untouched.
+        Config._clear_cache_for_testing()
+        port = self.make_port(
+            executive=MockExecutive2(output='/default-build-path/Release'),
+            options=optparse.Values({'build_directory': '/my-build-directory/Debug',
+                                     'configuration': 'Release'}),
+        )
+        self.assertEqual(port._build_path(), '/my-build-directory/Debug/Release')
 
     def test_jhbuild_wrapper(self):
         port = self.make_port(port_name='foo')

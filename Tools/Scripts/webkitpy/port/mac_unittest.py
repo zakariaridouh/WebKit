@@ -130,6 +130,30 @@ class MacTest(darwin_testcase.DarwinTest):
         )
         self.assertEqual(child_processes, 1)
 
+    def test_default_child_processes_under_coverage(self):
+        # A full instrumented layout-test run at full parallelism exhausted memory and lost its
+        # workers ("sandbox_extension_consume failed: 12 (Cannot allocate memory)"), because
+        # every process in every driver's tree maps the instrumented frameworks plus its own
+        # preallocated continuous-mode profile -- rdar://173715411. The cap is a performance and
+        # memory decision, not a correctness one, so it stays, but it must not be silent.
+        def port_with_cores(cores, coverage):
+            port = self.make_port(port_name='mac-lion',
+                                  options=MockOptions(configuration='Release', coverage=coverage))
+            port._executive.cpu_count = lambda: cores
+            port.host.platform.total_bytes_memory = lambda: 256 * 1024 * 1024 * 1024
+            return port
+
+        self.assertEqual(port_with_cores(32, False).default_child_processes(), 24)
+
+        with OutputCapture(level=logging.INFO) as captured:
+            self.assertEqual(port_with_cores(32, True).default_child_processes(), 8)
+        self.assertIn('capping child processes at 8 (from 24)', captured.root.log.getvalue())
+
+        # A machine small enough that the cap does not bind should say nothing about it.
+        with OutputCapture(level=logging.INFO) as captured:
+            self.assertEqual(port_with_cores(4, True).default_child_processes(), 4)
+        self.assertNotIn('capping child processes', captured.root.log.getvalue())
+
     def test_32bit(self):
         port = self.make_port(options=MockOptions(architecture='x86'))
 
@@ -177,6 +201,41 @@ class MacTest(darwin_testcase.DarwinTest):
     def test_sdk_name(self):
         port = self.make_port()
         self.assertEqual(port.SDK, 'macosx')
+
+    def test_a_coverage_run_rebuilds_the_drivers_as_a_coverage_build(self):
+        # Without this, `run-webkit-tests --coverage --build` recompiles and relinks
+        # WebKitTestRunner and DumpRenderTree with a different OTHER_CFLAGS than
+        # `build-webkit --coverage` gave them, and the next coverage build recompiles them
+        # back. It also means the driver rebuild gets ENABLE_USER_SCRIPT_SANDBOXING=NO, without
+        # which every script phase of it fails inside a sandbox.
+        port = self.make_port(options=MockOptions(architecture='arm64e', coverage=True))
+        scripts = []
+
+        def run_script(script, args=None, env=None):
+            scripts.append((script, args))
+
+        port._run_script = run_script
+        port._build_driver()
+        self.assertEqual(scripts, [('build-dumprendertree', ['ARCHS=arm64', '--coverage']),
+                                   ('build-webkittestrunner', ['ARCHS=arm64', '--coverage'])])
+
+        scripts = []
+        port._build_image_diff()
+        self.assertEqual(scripts, [('build-imagediff', ['--coverage'])])
+
+    def test_an_ordinary_run_does_not_mention_coverage(self):
+        port = self.make_port(options=MockOptions(architecture='arm64e'))
+        scripts = []
+
+        def run_script(script, args=None, env=None):
+            scripts.append((script, args))
+
+        port._run_script = run_script
+        port._build_driver()
+        port._build_image_diff()
+        self.assertEqual(scripts, [('build-dumprendertree', ['ARCHS=arm64']),
+                                   ('build-webkittestrunner', ['ARCHS=arm64']),
+                                   ('build-imagediff', [])])
 
     def test_layout_test_searchpath_with_apple_additions(self):
         with port_testcase.bind_mock_apple_additions():
