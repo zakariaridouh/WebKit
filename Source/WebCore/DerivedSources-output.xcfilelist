@@ -3774,6 +3774,7 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentParts.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentParts.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentScripts.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentScriptsData.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentScriptsFlags
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentStyleSheets.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/UserAgentStyleSheetsData.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/WebCoreJSBuiltinInternals.cpp
