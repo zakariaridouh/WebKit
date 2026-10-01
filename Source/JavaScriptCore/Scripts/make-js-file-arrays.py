@@ -35,6 +35,13 @@ def stringifyCodepoint(code):
         return "'\\x{0:02x}'".format(code)
 
 
+def escapeNonASCII(characters):
+    def escape(character):
+        units = character.encode('utf-16-be')
+        return ''.join('\\u{0:02x}{1:02x}'.format(units[i], units[i + 1]) for i in range(0, len(units), 2))
+    return ''.join(character if ord(character) < 128 else escape(character) for character in characters)
+
+
 def chunk(list, chunkSize):
     for i in range(0, len(list), chunkSize):
         yield list[i:i + chunkSize]
@@ -81,9 +88,13 @@ def main():
             characters = sourceURLDirective + data
 
         if options.fail_if_non_ascii:
-            for character in characters:
+            # Unminified, the input keeps its comments, which may be non-ASCII. Check the code a
+            # minified build would ship, then escape what is left so the output is still ASCII.
+            for character in jsmin(data) if options.no_minify else characters:
                 if ord(character) >= 128:
                     raise Exception("%s is not ASCII" % character)
+            if options.no_minify:
+                characters = escapeNonASCII(characters)
 
         codepoints = bytearray(characters, encoding='utf-8')
 
@@ -101,6 +112,7 @@ def main():
 
     print('}} // namespace {0:s}'.format(namespace), file=headerFile)
     print('}} // namespace {0:s}'.format(namespace), file=sourceFile)
+
 
 if __name__ == '__main__':
     main()
