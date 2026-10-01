@@ -36,6 +36,10 @@ import traceback
 
 from webkitpy.common.host import Host
 from webkitpy.common.interrupt_debugging import log_stack_trace_on_signal
+from webkitpy.common.webkit_finder import WebKitFinder
+from webkitpy.coverage_attribution import (prepare_per_test_options,
+                                           prepare_per_test_profile_root,
+                                           summarize_per_test_run)
 from webkitpy.layout_tests.controllers.manager import Manager
 from webkitpy.layout_tests.models.test_run_results import INTERRUPTED_EXIT_STATUS
 from webkitpy.llvm_profile_utils import (COVERAGE_PROFILE_DIRECTORY, collect_coverage_profiles,
@@ -189,6 +193,36 @@ def parse_args(args):
             help="Directory to collect coverage profiles into (default: coverage/ under the results "
                  "directory). Successive runs accumulate, so a layout-test run and an API-test run "
                  "can share one directory and produce a single report"),
+        optparse.make_option(
+            "--per-test-coverage", action="store_true", default=False,
+            help="Keep each test's coverage separate instead of pooling it, so that \"which tests "
+                 "execute this line\" can be answered. Requires --coverage and at least one "
+                 "--per-test-coverage-sources. It restarts the driver for every test and reduces "
+                 "each test's profiles before the next one starts, which costs seconds per test, "
+                 "so it is for a named set of tests or one directory and not for the suite. Query "
+                 "the result with Tools/Scripts/coverage-attribution"),
+        optparse.make_option(
+            "--per-test-coverage-sources", action="append", default=[], metavar="PATH",
+            help="Restrict per-test attribution to source under PATH, relative to the checkout "
+                 "root or absolute (repeatable). Required, because it is what bounds the per-test "
+                 "cost: an unscoped export is slow and large for every test"),
+        optparse.make_option(
+            "--per-test-coverage-index", metavar="DIR",
+            help="Where to write the per-test index (default: per-test/ under --coverage-dir). "
+                 "Successive runs append shards to it"),
+        optparse.make_option(
+            "--per-test-coverage-products", metavar="LIST",
+            help="Comma-separated instrumented frameworks to attribute against, defaulting to all "
+                 "of them. This is the per-test cost knob: reducing one test against the five "
+                 "frameworks is much slower than against one binary, almost all of it spent "
+                 "loading coverage mappings rather than on the scope"),
+        optparse.make_option(
+            "--no-per-test-coverage-profdata", action="store_false",
+            dest="per_test_coverage_profdata", default=None,
+            help="Do not also merge the run's counters into one indexed profile. Per-test mode "
+                 "overrides the baked-in profile path, so nothing lands in --coverage-dir for "
+                 "generate-coverage-report to read; the incremental merge is what keeps a "
+                 "whole-run report possible, at the cost of one more merge per test"),
         optparse.make_option("--build-directory",
             help="Path to the directory under which build files are kept (should not include configuration)"),
         optparse.make_option("--add-platform-exceptions", action="store_true", default=False,
@@ -525,8 +559,22 @@ def _set_up_derived_options(port, options):
         raise RuntimeError('--coverage-dir was passed but --coverage was not')
 
     if options.coverage:
+        # Ask the port first: a device cannot do coverage, and finding that out after the run costs the run.
+        unsupported = port.coverage_unsupported_reason()
+        if unsupported:
+            raise RuntimeError(unsupported)
+
+    if options.coverage:
         # Check now: a bad --coverage-dir would otherwise surface only after the run, in the finally block.
         _verify_coverage_directory_is_writable(port.host.filesystem, options.coverage_dir)
+
+    if options.per_test_coverage:
+        # A per-test run deletes each test's raw profiles as it goes, so an empty scope wastes the whole run.
+        prepare_per_test_options(options, WebKitFinder(port.host.filesystem).webkit_base())
+        _log.info('Per-test coverage: the driver restarts for every test, its profiles are '
+                  'indexed and reduced to the lines it executed under %s, and the raw profiles '
+                  'are deleted before the next test starts.',
+                  ', '.join(options.per_test_coverage_sources))
 
     if port.port_name == "mac" and options.use_gpu_process and options.remote_layer_tree:
         host = Host()
@@ -673,15 +721,29 @@ def run(port, options, args, logging_stream):
                       'uncollected profiles already in that directory will be discarded.'
                       % (COVERAGE_PROFILE_DIRECTORY, options.coverage_dir))
             prepare_coverage_profile_directory()
+        if options.per_test_coverage:
+            # prepare_coverage_profile_directory() does not recurse, so leftover per-test subdirectories go here.
+            prepare_per_test_profile_root()
 
         try:
             run_details = manager.run(args)
         finally:
             # Collect even after a failed or interrupted run. A collection error must not replace its
             # outcome: an exception in this finally block would discard run_details.
-            if options.coverage:
+            if options.per_test_coverage:
+                # Per-test mode indexes and deletes each test's profiles as it goes; only the index is left.
                 try:
-                    collect_coverage_profiles(options.coverage_dir)
+                    summarize_per_test_run(options.per_test_coverage_index,
+                                           options.per_test_coverage_profdata)
+                except (OSError, IOError, ValueError) as error:
+                    _log.error('Could not summarize the per-test coverage index %s: %s',
+                               options.per_test_coverage_index, error)
+            elif options.coverage:
+                try:
+                    if not collect_coverage_profiles(options.coverage_dir):
+                        # Nothing in the global directory: on a simulator the profiles may be inside
+                        # it (a wrong baked path), which is not the same as a run that executed nothing.
+                        port.collect_stray_coverage_profiles(options.coverage_dir)
                 except (OSError, IOError) as error:
                     _log.error('Could not collect coverage profiles into %s: %s',
                                options.coverage_dir, error)

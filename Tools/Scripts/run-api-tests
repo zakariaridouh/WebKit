@@ -34,6 +34,10 @@ maybe_enter_webkit_container_sdk()
 from webkitpy.api_tests.manager import Manager
 from webkitpy.api_tests.test_expectations import APITestExpectations
 from webkitpy.common.host import Host
+from webkitpy.common.webkit_finder import WebKitFinder
+from webkitpy.coverage_attribution import (prepare_per_test_options,
+                                           prepare_per_test_profile_root,
+                                           summarize_per_test_run)
 from webkitpy.layout_tests.views.metered_stream import MeteredStream
 from webkitpy.llvm_profile_utils import (COVERAGE_PROFILE_DIRECTORY, collect_coverage_profiles,
                                          prepare_coverage_profile_directory)
@@ -79,6 +83,17 @@ def main(argv, stdout, stderr):
         except RuntimeError as error:
             print(str(error), file=stderr)
             return EXCEPTIONAL_EXIT_STATUS
+
+    if options.per_test_coverage:
+        # Checked up front: these failures would otherwise arrive after the tests have run.
+        try:
+            prepare_per_test_options(options, WebKitFinder(port.host.filesystem).webkit_base())
+        except (ValueError, OSError) as error:
+            print(str(error), file=stderr)
+            return EXCEPTIONAL_EXIT_STATUS
+        # The profile path is read once per process, so a batched shard would attribute all its counters to its
+        # first test. Already the default; set here so per-test attribution does not depend on that.
+        options.run_singly = True
 
     if options.print_expectations:
         return print_expectations(port, options, args, stderr)
@@ -182,15 +197,32 @@ def run(port, options, args, logging_stream):
 
         if options.coverage:
             prepare_coverage_profile_directory()
+        if options.per_test_coverage:
+            # prepare_coverage_profile_directory() does not recurse, so per-test subdirectories left by an
+            # interrupted run are removed here.
+            prepare_per_test_profile_root()
+            _log.info('Per-test coverage: each test writes into a directory of its own under '
+                      '%s, which is indexed, reduced to its covered lines in %s and deleted '
+                      'before the next test starts.', COVERAGE_PROFILE_DIRECTORY,
+                      ', '.join(options.per_test_coverage_sources))
 
         try:
             result = manager.run(args, json_output=options.json_output)
         finally:
             # Collect even on failure: continuous-mode profiles stay complete after a crash. Guarded, because an
             # exception raised in a finally block would replace the run's result.
-            if options.coverage:
+            if options.per_test_coverage:
+                # Per-test mode indexes and deletes the raw profiles as it goes. Guarded like the collection below.
                 try:
-                    collect_coverage_profiles(options.coverage_dir)
+                    summarize_per_test_run(options.per_test_coverage_index,
+                                           options.per_test_coverage_profdata)
+                except (OSError, IOError, ValueError) as error:
+                    _log.error('Could not summarize the per-test coverage index %s: %s',
+                               options.per_test_coverage_index, error)
+            elif options.coverage:
+                try:
+                    if not collect_coverage_profiles(options.coverage_dir):
+                        port.collect_stray_coverage_profiles(options.coverage_dir)
                 except (OSError, IOError) as error:
                     _log.error('Could not collect coverage profiles into %s: %s',
                                options.coverage_dir, error)
@@ -278,6 +310,36 @@ def parse_args(args):
                              help='Directory to collect coverage profiles into. Successive runs '
                                   'accumulate, so an API-test run and a layout-test run can share one '
                                   'directory and produce a single report'),
+        optparse.make_option('--per-test-coverage', action='store_true', default=False,
+                             help='Keep each test\'s coverage separate instead of pooling it, so '
+                                  'that "which tests execute this line" can be answered. Requires '
+                                  '--coverage and at least one --per-test-coverage-sources. Costs '
+                                  'one llvm-profdata merge and one llvm-cov export per test, so '
+                                  'it is for a named set of tests and not for a whole suite. Query '
+                                  'the result with Tools/Scripts/coverage-attribution'),
+        optparse.make_option('--per-test-coverage-sources', action='append', default=[],
+                             metavar='PATH',
+                             help='Restrict per-test attribution to source under PATH, relative '
+                                  'to the checkout root or absolute (repeatable). Required, '
+                                  'because it is what bounds the per-test cost: an unscoped '
+                                  'export is slow and large for every test'),
+        optparse.make_option('--per-test-coverage-index', type='string', metavar='DIR',
+                             help='Where to write the per-test index (default: per-test/ under '
+                                  '--coverage-dir). Successive runs append shards to it'),
+        optparse.make_option('--per-test-coverage-products', type='string', metavar='LIST',
+                             help='Comma-separated instrumented frameworks to attribute against, '
+                                  'defaulting to all of them. The API test binary is always '
+                                  'included. This is the per-test cost knob: reducing one test '
+                                  'against the five frameworks is much slower than against '
+                                  'TestWTF alone, so an empty list is the fast path for a question '
+                                  'about statically linked code such as WTF'),
+        optparse.make_option('--no-per-test-coverage-profdata', action='store_false',
+                             dest='per_test_coverage_profdata', default=None,
+                             help='Do not also merge the run\'s counters into one indexed profile. '
+                                  'Per-test mode overrides the baked-in profile path, so nothing '
+                                  'lands in --coverage-dir for generate-coverage-report to read; '
+                                  'the incremental merge is what keeps a whole-run report '
+                                  'possible, at the cost of one more merge per test'),
         optparse.make_option('--test-parallel-safety', type='string', action='append', default=[],
                              help='Run specified test(s) repeatedly while the allowlisted tests run on repeat as background load'),
         optparse.make_option('--parallel-safety-iterations', type='int', default=10,

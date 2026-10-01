@@ -338,6 +338,12 @@ class Worker(object):
         self._batch_count = 0
         self._driver = None
         self._batch_size = self._port.get_option('batch_size') or 0
+        # One per worker: it writes this worker's index shard.
+        self._coverage_collector = None
+        if port.get_option('per_test_coverage'):
+            from webkitpy.coverage_attribution import collector_for_port
+            self._coverage_collector = collector_for_port(
+                port, getattr(TaskPool.Process, 'name', None) or 'worker', 'layout')
 
     def run_tests(self, shard):
         for input in shard.test_inputs:
@@ -363,6 +369,12 @@ class Worker(object):
             self._batch_count = 0
             stop_when_done = True
 
+        if self._coverage_collector:
+            # The profile runtime reads LLVM_PROFILE_FILE once, at process start, so restart the
+            # driver for each test, as --run-singly does.
+            self._kill_driver()
+            self._coverage_collector.begin(test_input.test_name)
+
         test_timeout_sec = self._timeout(test_input)
         start = time.time()
 
@@ -377,6 +389,12 @@ class Worker(object):
         result.total_run_time = time.time() - start
         result.test_number = self._num_tests
         self._num_tests += 1
+
+        if self._coverage_collector:
+            # Index only after the driver is gone: continuous mode keeps counter files mmapped
+            # while any process in its tree is alive.
+            self._kill_driver()
+            self._coverage_collector.finish(test_input.test_name)
 
         TaskPool.Process.queue.send(TaskPool.Task(
             handle_finished_test, None, TaskPool.Process.name,
@@ -399,6 +417,8 @@ class Worker(object):
     def stop(self):
         _log.debug('cleaning up')
         self._kill_driver()
+        if self._coverage_collector:
+            self._coverage_collector.close()
 
     def _timeout(self, test_input):
         """Compute the appropriate timeout value for a test."""

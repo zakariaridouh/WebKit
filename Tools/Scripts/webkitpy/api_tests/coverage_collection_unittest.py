@@ -29,13 +29,21 @@ import importlib.util
 import io
 import logging
 import os
+import subprocess
+import sys
 import unittest
 
 from unittest import mock
 
+from webkitcorepy import TaskPool
+
+from webkitpy.api_tests import runner
 from webkitpy.common.system.filesystem_mock import MockFileSystem
 from webkitpy.layout_tests import run_webkit_tests
+from webkitpy.layout_tests.controllers import layout_test_runner
 from webkitpy.llvm_profile_utils import COVERAGE_PROFILE_DIRECTORY
+
+COLLECTOR_FACTORY = 'webkitpy.coverage_attribution.collector_for_port'
 
 
 def _scripts_directory():
@@ -170,3 +178,123 @@ class CoverageDirectoryCheckParityTest(_RunAPITests):
     def test_both_harnesses_probe_the_same_file_and_report_the_same_failure(self):
         self.assertEqual(self.failure(self.script._verify_coverage_directory_is_writable),
                          self.failure(run_webkit_tests._verify_coverage_directory_is_writable))
+
+
+class _WorkerTest(unittest.TestCase):
+    PROCESS_NAME = 'worker/2'
+
+    def setUp(self):
+        self.options = {}
+        self.port = mock.MagicMock()
+        self.port.get_option.side_effect = self.options.get
+        self.port.DEVICE_MANAGER = None
+        self.port.port_name = 'mac'
+        self.port.host.platform.is_win.return_value = False
+        for name, value in (('name', self.PROCESS_NAME), ('queue', mock.MagicMock())):
+            patcher = mock.patch.object(TaskPool.Process, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+
+class _CollectorConstruction:
+    """Mixed into a _WorkerTest that defines SUITE and make_worker()."""
+
+    def test_no_collector_is_built_unless_per_test_coverage_is_requested(self):
+        with mock.patch(COLLECTOR_FACTORY) as factory:
+            worker = self.make_worker()
+        factory.assert_not_called()
+        self.assertIsNone(worker._coverage_collector)
+
+    def test_the_collector_is_built_for_this_worker(self):
+        self.options['per_test_coverage'] = True
+        with mock.patch(COLLECTOR_FACTORY) as factory:
+            worker = self.make_worker()
+        factory.assert_called_once_with(self.port, self.PROCESS_NAME, self.SUITE)
+        self.assertIs(worker._coverage_collector, factory.return_value)
+
+
+class LayoutWorkerCollectorTest(_CollectorConstruction, _WorkerTest):
+    SUITE = 'layout'
+
+    def make_worker(self):
+        return layout_test_runner.Worker(self.port, '/results')
+
+
+class APIWorkerCollectorTest(_CollectorConstruction, _WorkerTest):
+    SUITE = 'api'
+
+    def make_worker(self):
+        return runner._Worker(self.port, 1000)
+
+
+class APIWorkerRunsATestTest(_WorkerTest):
+    TEST = 'Suite.Case'
+    FULL_NAME = 'TestWTF.Suite.Case'
+    PROFILE_ENVIRONMENT = {'LLVM_PROFILE_FILE': '/profiles/case.profraw'}
+
+    def setUp(self):
+        super().setUp()
+        self.events = []
+        self.port.environment_for_api_tests.return_value = {'PATH': '/bin'}
+        self.port.path_to_api_test.return_value = '/build/TestWTF'
+
+        self.server = mock.MagicMock()
+        self.server.read_either_stdout_or_stderr_line.return_value = ('**PASS**\n', None)
+        self.server.timed_out = False
+        self.server.has_crashed.return_value = False
+        self.server.pop_all_buffered_stdout.return_value = ''
+        self.server.pop_all_buffered_stderr.return_value = ''
+        self.server.stop.side_effect = lambda: self.events.append(('stop',))
+
+        def start_process(*arguments, **keywords):
+            self.events.append(('process', keywords['env']))
+            return self.server
+
+        patcher = mock.patch.object(runner, 'ServerProcess', side_effect=start_process)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def run_test(self, collector=None):
+        if collector:
+            self.options['per_test_coverage'] = True
+        with mock.patch(COLLECTOR_FACTORY, return_value=collector):
+            worker = runner._Worker(self.port, 1000)
+        worker._run_single_test('TestWTF', self.TEST)
+
+    def test_the_test_process_gets_the_collectors_environment_and_is_indexed_after_it_stops(self):
+        collector = mock.MagicMock()
+        collector.begin.side_effect = lambda name: (
+            self.events.append(('begin', name)) or dict(self.PROFILE_ENVIRONMENT))
+        collector.finish.side_effect = lambda name, extra_objects=(): self.events.append(
+            ('finish', name, list(extra_objects)))
+        self.run_test(collector)
+        self.assertEqual(self.events, [
+            ('begin', self.FULL_NAME),
+            ('process', {'PATH': '/bin', **self.PROFILE_ENVIRONMENT}),
+            ('stop',),
+            ('finish', self.FULL_NAME, ['/build/TestWTF']),
+        ])
+
+    def test_a_run_without_per_test_coverage_adds_nothing_to_the_environment(self):
+        self.run_test()
+        self.assertEqual(self.events, [('process', {'PATH': '/bin'}), ('stop',)])
+
+
+class LazyCoverageImportTest(unittest.TestCase):
+    SCRIPT = ('import importlib, sys; importlib.import_module(sys.argv[1]); '
+              'assert "webkitpy.coverage_attribution" not in sys.modules')
+
+    def test_starting_a_harness_does_not_import_the_coverage_stack(self):
+        for module in ('webkitpy.layout_tests.controllers.layout_test_runner',
+                       'webkitpy.api_tests.runner',
+                       'webkitpy.port.driver'):
+            with self.subTest(module):
+                result = subprocess.run(
+                    [sys.executable, '-c', self.SCRIPT, module], cwd=_scripts_directory(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True,
+                    timeout=300)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+
+if __name__ == '__main__':
+    unittest.main()

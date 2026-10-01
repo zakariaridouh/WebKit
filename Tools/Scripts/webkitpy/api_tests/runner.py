@@ -318,6 +318,8 @@ class _Worker(object):
 
     @classmethod
     def teardown(cls):
+        if cls.instance and cls.instance._coverage_collector:
+            cls.instance._coverage_collector.close()
         cls.instance = None
 
     def __init__(self, port, log_limit):
@@ -329,6 +331,13 @@ class _Worker(object):
         # ServerProcess doesn't allow for a timeout of 'None,' this uses a week instead of None.
         self._timeout = int(self._port.get_option('timeout')) if self._port.get_option('timeout') else 60 * 24 * 7
         self._background_chunk_index = 0
+
+        # One per worker: it writes this worker's index shard.
+        self._coverage_collector = None
+        if port.get_option('per_test_coverage'):
+            from webkitpy.coverage_attribution import collector_for_port
+            self._coverage_collector = collector_for_port(
+                port, getattr(TaskPool.Process, 'name', None) or 'worker', 'api')
 
     @classmethod
     def _filter_noisy_output(cls, output):
@@ -354,10 +363,16 @@ class _Worker(object):
                 else:
                     timeout = self._timeout * 5
 
+        environment = self._port.environment_for_api_tests()
+        if self._coverage_collector:
+            # Not exported: setup_environ_for_server() copies a fixed allow-list from os.environ.
+            # Set per test because the profile runtime reads LLVM_PROFILE_FILE once, at process start.
+            environment.update(self._coverage_collector.begin(full_test_name))
+
         server_process = ServerProcess(
             self._port, binary_name,
             Runner.command_for_port(self._port, [self._port.path_to_api_test(binary_name), '--filter', test], worker_number=self.worker_number),
-            env=self._port.environment_for_api_tests())
+            env=environment)
 
         status = Runner.STATUS_RUNNING
         if Runner._is_disabled_test(f'{binary_name}.{test}') and not self._port.get_option('force'):
@@ -367,8 +382,9 @@ class _Worker(object):
         stderr_buffer = ''
         line_count = 0
 
+        # Outside the try so elapsed is defined even if the process fails to start.
+        started = time.time()
         try:
-            started = time.time()
             if status != Runner.STATUS_DISABLED:
                 server_process.start()
 
@@ -430,13 +446,20 @@ class _Worker(object):
                     break
 
             server_process.stop()
+            elapsed = time.time() - started
+            if self._coverage_collector:
+                # Index only after the process stops: continuous mode keeps the counter file mmapped.
+                # The test binary holds the mapping for static WTF/bmalloc code instantiated only by a test.
+                self._coverage_collector.finish(
+                    full_test_name,
+                    extra_objects=[self._port.path_to_api_test(binary_name)])
 
         TaskPool.Process.queue.send(TaskPool.Task(
             report_result, None, TaskPool.Process.name,
             f'{binary_name}.{test}',
             status,
             self._filter_noisy_output(output_buffer),
-            elapsed=time.time() - started,
+            elapsed=elapsed,
         ))
 
     def run_next_background_chunk(self, chunks):

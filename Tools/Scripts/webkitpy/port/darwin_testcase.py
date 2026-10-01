@@ -25,7 +25,7 @@ import os
 import re
 import time
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from webkitpy.port import darwin as darwin_module
 from webkitpy.port import port_testcase
@@ -64,6 +64,14 @@ class DarwinTest(port_testcase.PortTestCase):
         run_test = port.create_driver.return_value.run_test
         self.assertEqual(run_test.call_args.args[0].test_name, 'file:///warmup-does-not-exist')
         self.assertEqual(run_test.call_args.kwargs, {'stop_when_done': True})
+
+    def test_warm_up_runner_discards_its_profile_under_per_test_coverage(self):
+        for per_test_coverage, expected_calls in ((True, 1), (False, 0)):
+            port = self.make_port(options=MockOptions(configuration='Release', per_test_coverage=per_test_coverage))
+            port.create_driver = Mock()
+            with patch.object(darwin_module, 'remove_raw_profiles') as remove_raw_profiles:
+                port._warm_up_runner(1)
+            self.assertEqual(remove_raw_profiles.call_count, expected_calls)
 
     def test_warm_up_runner_with_no_timeout(self):
         port = self.make_port(options=MockOptions(configuration='Release', no_timeout=True))

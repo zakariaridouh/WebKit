@@ -40,6 +40,7 @@ from webkitcorepy import string_utils
 
 from webkitpy.common.system import path
 from webkitpy.common.system.profiler import ProfilerFactory
+from webkitpy.coverage_profile_environment import current_profile_environment
 
 
 _log = logging.getLogger(__name__)
@@ -504,6 +505,10 @@ class Driver(object):
 
         if self._profiler:
             environment = self._profiler.adjusted_environment(environment)
+
+        # LLVM_PROFILE_FILE and __XPC_LLVM_PROFILE_FILE for per-test coverage, empty otherwise. Applied here, last:
+        # the runtime reads them once at start and setup_environ_for_server() copies only an allow-list.
+        environment.update(current_profile_environment())
         return environment
 
     def _setup_environ_for_test(self):

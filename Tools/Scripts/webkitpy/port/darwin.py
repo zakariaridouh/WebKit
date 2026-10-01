@@ -29,6 +29,7 @@ from webkitpy.common.memoized import memoized
 from webkitpy.common.system.crashlogs import CrashLogs
 from webkitpy.common.system.executive import ScriptError
 from webkitpy.common.version_name_map import PUBLIC_TABLE, VersionNameMap
+from webkitpy.llvm_profile_utils import COVERAGE_PROFILE_DIRECTORY, remove_raw_profiles
 from webkitpy.port.apple import ApplePort
 from webkitpy.port.driver import DriverInput
 from webkitpy.port.leakdetector import LeakDetector
@@ -146,6 +147,8 @@ class DarwinPort(ApplePort):
         _log.debug('Warming up the runner for worker {} ...'.format(worker_number))
         warmup_driver = self.create_driver(worker_number)
         warmup_driver.run_test(DriverInput('file:///warmup-does-not-exist', 60000., None, should_run_pixel_test=False), stop_when_done=True)
+        if self.get_option('per_test_coverage'):
+            remove_raw_profiles(COVERAGE_PROFILE_DIRECTORY)
 
     def _api_test_version_name(self, version, table=PUBLIC_TABLE):
         name = VersionNameMap.map(self.host.platform).to_name(version, platform=self.port_name, table=table)
