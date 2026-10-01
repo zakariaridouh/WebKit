@@ -89,8 +89,8 @@ class MacPort(DarwinPort):
         if architecture == 'arm64' and apple_additions():
             architecture = 'arm64e'
         if architecture == 'x86':
-            return ['ARCHS=i386']
-        return ['ARCHS={}'.format(architecture)]
+            return ['ARCHS=i386'] + super(MacPort, self)._build_driver_flags()
+        return ['ARCHS={}'.format(architecture)] + super(MacPort, self)._build_driver_flags()
 
     def default_baseline_search_path(self, **kwargs):
         versions_to_fallback = []
@@ -278,10 +278,21 @@ class MacPort(DarwinPort):
             # <rdar://problem/25750302>
             default_count = min(default_count, 12)
 
+        if self.get_option('coverage'):
+            # Instrumented frameworks are huge and every process in a driver's tree maps them; full
+            # parallelism exhausted memory (rdar://173715411).
+            if default_count > 8:
+                _log.info('Coverage run: capping child processes at 8 (from %s); instrumented '
+                          'frameworks are an order of magnitude larger and full parallelism '
+                          'exhausts memory. Pass --child-processes to override.' % default_count)
+            default_count = min(default_count, 8)
+
         # Make sure we have enough ram to support that many instances:
         total_memory = self.host.platform.total_bytes_memory()
         if total_memory:
             bytes_per_drt = 256 * 1024 * 1024  # Assume each DRT needs 256MB to run.
+            if self.get_option('coverage'):
+                bytes_per_drt = 2048 * 1024 * 1024  # Instrumented frameworks are much larger.
             overhead = 2048 * 1024 * 1024  # Assume we need 2GB free for the O/S
             supportable_instances = max((total_memory - overhead) / bytes_per_drt, 1)  # Always use one process, even if we don't have space for it.
             if supportable_instances < default_count:

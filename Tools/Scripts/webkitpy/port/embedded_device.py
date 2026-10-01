@@ -83,6 +83,14 @@ class EmbeddedDevicePort(EmbeddedPort, metaclass=ABCMeta):
     def supports_layout_tests(self):
         return self.DEVICE_MANAGER is not None
 
+    def coverage_unsupported_reason(self):
+        """Refuse --coverage on a device: the baked profile path does not exist there."""
+        return ('--coverage is not supported on {}: the profile path baked into the frameworks is '
+                '/private/tmp/WebKitCoverage, which a device does not have, and nothing retrieves '
+                'a profile from a device. Use --{} instead, whose /private/tmp is the host\'s. See '
+                'Tools/CodeCoverage/iOSCoverage.md.'.format(
+                    self.operating_system(), self.operating_system().replace('-device', '-simulator')))
+
     def abspath_for_test(self, test_name, target_host=None):
         if not apple_additions() or type(target_host) is not Device:
             return super().abspath_for_test(test_name, target_host)

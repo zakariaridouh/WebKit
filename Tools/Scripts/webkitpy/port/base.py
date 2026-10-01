@@ -185,6 +185,7 @@ class Port(object):
             use_cmake=bool(getattr(self._options, 'use_cmake', False)),
             use_xcode=bool(getattr(self._options, 'use_xcode', False)),
             asan=bool(getattr(self._options, 'asan', False)),
+            coverage=bool(getattr(self._options, 'coverage', False)),
         )
         self.pretty_patch = PrettyPatch(self._executive, self.path_from_webkit_base(), self._filesystem)
 
@@ -214,6 +215,14 @@ class Port(object):
     def is_simulator(self):
         return False
 
+    def coverage_unsupported_reason(self):
+        """Why --coverage cannot work on this target, or None. Depends on where tests run, not the build."""
+        return None
+
+    def collect_stray_coverage_profiles(self, destination_directory):
+        """Profiles written where collect_coverage_profiles() cannot see. Called only if a run collected nothing."""
+        return []
+
     def architecture(self):
         return self.get_option('architecture') or self.DEFAULT_ARCHITECTURE
 
@@ -237,7 +246,12 @@ class Port(object):
         """ Returns the amount of time in seconds to wait before killing the process in driver.stop()."""
         # We want to wait for at least 3 seconds, but if we are really slow, we want to be slow on cleanup as
         # well (for things like ASAN, Valgrind, etc.)
-        return 3.0 * float(self.get_option('time_out_ms', '0')) / self.default_timeout_ms()
+        timeout = 3.0 * float(self.get_option('time_out_ms', '0')) / self.default_timeout_ms()
+        if self.get_option('coverage'):
+            # Flushing a large continuous-mode profile on exit is slow, and a driver killed at this
+            # deadline tore down the worker pool. --coverage does not scale time_out_ms, so keep this floor.
+            timeout = max(timeout, 90.0)
+        return timeout
 
     def should_retry_crashes(self):
         return False
@@ -1239,7 +1253,7 @@ class Port(object):
             root_directory = self._config.build_directory(self.get_option('configuration'))
             build_directory = self.get_option('build_directory')
             if build_directory:
-                root_directory = self._filesystem.join(build_directory, root_directory.split('/')[-1])
+                root_directory = self._resolve_build_directory(build_directory, root_directory)
 
             # We take advantage of the behavior that self._options is passed by reference to worker
             # subprocesses to use it as data store to cache the computed root directory path. This
@@ -1255,6 +1269,17 @@ class Port(object):
             return self._filesystem.join(root_directory, *comps)
 
         return self._filesystem.join(self._filesystem.abspath(root_directory), *comps)
+
+    def _resolve_build_directory(self, build_directory, default_root_directory):
+        """--build-directory joined with the configuration directory, unless it already names it."""
+        configuration_directory = default_root_directory.split('/')[-1]
+        given = build_directory.rstrip('/') or build_directory
+        if self._filesystem.basename(given) != configuration_directory:
+            return self._filesystem.join(given, configuration_directory)
+        _log.debug('--build-directory %s already names the %s configuration directory, which is '
+                   'what the configuration would have been appended to; using it as given.',
+                   given, configuration_directory)
+        return given
 
     def _path_to_driver(self, configuration=None):
         """Returns the full path to the test driver (DumpRenderTree)."""
@@ -1447,6 +1472,8 @@ class Port(object):
             config_args.append('--xcode')
         if self.get_option('asan'):
             config_args.append('--asan')
+        if self.get_option('coverage'):
+            config_args.append('--coverage')
         return config_args
 
     def _run_script(self, script_name, args=None, include_configuration_arguments=True, decode_output=True, env=None):
@@ -1536,10 +1563,14 @@ class Port(object):
         configuration = self.test_configuration()
         host = self.host or host
 
+        # Own style rather than flavor, so --coverage composes with --site-isolation. Not applied in
+        # test_configuration(): its style is a TestExpectations specifier, and none says [ Coverage ].
         if self.get_option('guard_malloc'):
             style = 'guard-malloc'
         elif self._config.asan:
             style = 'asan'
+        elif self.get_option('coverage'):
+            style = 'coverage'
         else:
             style = configuration.build_type
 

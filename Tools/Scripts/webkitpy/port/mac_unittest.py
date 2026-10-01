@@ -163,6 +163,26 @@ class MacTest(darwin_testcase.DarwinTest):
             "['/usr/bin/sample', 42, 10, 10, '-file', '/__im_tmp/tmp_0_/test-42-sample.txt']\n",
         )
 
+    def test_default_child_processes_under_coverage(self):
+        # Full parallelism exhausted memory under coverage (rdar://173715411); the cap must not be silent.
+        def port_with_cores(cores, coverage):
+            port = self.make_port(port_name='mac-lion',
+                                  options=MockOptions(configuration='Release', coverage=coverage))
+            port._executive.cpu_count = lambda: cores
+            port.host.platform.total_bytes_memory = lambda: 256 * 1024 * 1024 * 1024
+            return port
+
+        self.assertEqual(port_with_cores(32, False).default_child_processes(), 24)
+
+        with OutputCapture(level=logging.INFO) as captured:
+            self.assertEqual(port_with_cores(32, True).default_child_processes(), 8)
+        self.assertIn('capping child processes at 8 (from 24)', captured.root.log.getvalue())
+
+        # A machine small enough that the cap does not bind should say nothing about it.
+        with OutputCapture(level=logging.INFO) as captured:
+            self.assertEqual(port_with_cores(4, True).default_child_processes(), 4)
+        self.assertNotIn('capping child processes', captured.root.log.getvalue())
+
     def test_32bit(self):
         port = self.make_port(options=MockOptions(architecture='x86'))
 
@@ -210,6 +230,33 @@ class MacTest(darwin_testcase.DarwinTest):
     def test_sdk_name(self):
         port = self.make_port()
         self.assertEqual(port.SDK, 'macosx')
+
+    def test_a_coverage_run_rebuilds_the_drivers_as_a_coverage_build(self):
+        port = self.make_port(options=MockOptions(architecture='arm64e', coverage=True))
+        scripts = []
+
+        def run_script(script, args=None, env=None):
+            scripts.append((script, args))
+
+        port._run_script = run_script
+        port._build_driver()
+        self.assertEqual(scripts, [('build-dumprendertree', ['ARCHS=arm64']),
+                                   ('build-webkittestrunner', ['ARCHS=arm64'])])
+        self.assertIn('--coverage', port._arguments_for_configuration())
+
+    def test_an_ordinary_run_does_not_mention_coverage(self):
+        port = self.make_port(options=MockOptions(architecture='arm64e'))
+        scripts = []
+
+        def run_script(script, args=None, env=None):
+            scripts.append((script, args))
+
+        port._run_script = run_script
+        port._build_driver()
+        port._build_image_diff()
+        self.assertEqual(scripts, [('build-dumprendertree', ['ARCHS=arm64']),
+                                   ('build-webkittestrunner', ['ARCHS=arm64']),
+                                   ('build-imagediff', None)])
 
     def test_layout_test_searchpath_with_apple_additions(self):
         with port_testcase.bind_mock_apple_additions():

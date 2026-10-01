@@ -38,6 +38,8 @@ from webkitpy.common.host import Host
 from webkitpy.common.interrupt_debugging import log_stack_trace_on_signal
 from webkitpy.layout_tests.controllers.manager import Manager
 from webkitpy.layout_tests.models.test_run_results import INTERRUPTED_EXIT_STATUS
+from webkitpy.llvm_profile_utils import (COVERAGE_PROFILE_DIRECTORY, collect_coverage_profiles,
+                                         prepare_coverage_profile_directory)
 from webkitpy.port import configuration_options, platform_options
 from webkitpy.layout_tests.views import buildbot_results
 from webkitpy.layout_tests.views import printing
@@ -177,6 +179,16 @@ def parse_args(args):
             help="Ignore image differences less than this percentage (some "
                 "ports may ignore this option)", type="float"),
         optparse.make_option("--results-directory", help="Location of test results"),
+        optparse.make_option(
+            "--coverage", action="store_true", default=False,
+            help="Collect LLVM source-based coverage profiles from this run. Requires a build made "
+                 "with build-webkit --coverage. Use Tools/Scripts/generate-coverage-report to turn "
+                 "the collected profiles into a report"),
+        optparse.make_option(
+            "--coverage-dir",
+            help="Directory to collect coverage profiles into (default: coverage/ under the results "
+                 "directory). Successive runs accumulate, so a layout-test run and an API-test run "
+                 "can share one directory and produce a single report"),
         optparse.make_option("--build-directory",
             help="Path to the directory under which build files are kept (should not include configuration)"),
         optparse.make_option("--add-platform-exceptions", action="store_true", default=False,
@@ -499,6 +511,23 @@ def _set_up_derived_options(port, options):
 
     options.slow_time_out_ms = str(5 * int(options.time_out_ms))
 
+    if options.coverage:
+        # Deliberately no timeout multiplier: scaling the budget changes what counts as a regression.
+        _log.info('Coverage run: using the standard %s ms test timeout (%s ms for slow tests). '
+                  'Timeout expectations and wptserve baselines are calibrated against it, so '
+                  '--coverage does not scale it; pass --time-out-ms to override.'
+                  % (options.time_out_ms, options.slow_time_out_ms))
+
+    if options.coverage and not options.coverage_dir:
+        options.coverage_dir = port.host.filesystem.join(port.results_directory(), 'coverage')
+
+    if options.coverage_dir and not options.coverage:
+        raise RuntimeError('--coverage-dir was passed but --coverage was not')
+
+    if options.coverage:
+        # Check now: a bad --coverage-dir would otherwise surface only after the run, in the finally block.
+        _verify_coverage_directory_is_writable(port.host.filesystem, options.coverage_dir)
+
     if port.port_name == "mac" and options.use_gpu_process and options.remote_layer_tree:
         host = Host()
         host.initialize_scm()
@@ -599,6 +628,20 @@ def _set_up_derived_options(port, options):
         options.skia_rendering_backend = "gpu" if port.port_name == "gtk" else "cpu"
 
 
+def _verify_coverage_directory_is_writable(filesystem, coverage_dir):
+    """Create --coverage-dir and prove a file can be written into it, or raise RuntimeError."""
+    probe = filesystem.join(coverage_dir, '.webkit-coverage-writable')
+    try:
+        filesystem.maybe_make_directory(coverage_dir)
+        filesystem.write_binary_file(probe, b'')
+        filesystem.remove(probe)
+    except (OSError, IOError) as error:
+        raise RuntimeError(
+            '--coverage-dir {} cannot be written to: {}. The profiles this run collects are '
+            'moved there when it finishes, so this is being reported now rather than after the '
+            'run.'.format(coverage_dir, error))
+
+
 def run(port, options, args, logging_stream):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG if options.debug_rwt_logging else logging.INFO)
@@ -624,7 +667,27 @@ def run(port, options, args, logging_stream):
         manager = Manager(port, options, printer)
         printer.print_config(port.results_directory())
 
-        run_details = manager.run(args)
+        if options.coverage:
+            # The profile path is baked into the frameworks, so this directory is shared by every coverage run.
+            _log.info('Coverage: resetting %s and collecting profiles into %s afterwards. Any '
+                      'uncollected profiles already in that directory will be discarded.'
+                      % (COVERAGE_PROFILE_DIRECTORY, options.coverage_dir))
+            prepare_coverage_profile_directory()
+
+        try:
+            run_details = manager.run(args)
+        finally:
+            # Collect even after a failed or interrupted run. A collection error must not replace its
+            # outcome: an exception in this finally block would discard run_details.
+            if options.coverage:
+                try:
+                    collect_coverage_profiles(options.coverage_dir)
+                except (OSError, IOError) as error:
+                    _log.error('Could not collect coverage profiles into %s: %s',
+                               options.coverage_dir, error)
+                    _log.error('This run\'s profiles are still in %s. Move them somewhere '
+                               'before the next coverage run, which clears that directory.',
+                               COVERAGE_PROFILE_DIRECTORY)
         _log.debug("Testing completed, Exit status: %d" % run_details.exit_code)
         return run_details
     finally:

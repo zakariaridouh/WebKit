@@ -25,6 +25,8 @@ import logging
 from webkitcorepy import Version
 
 from webkitpy.common.memoized import memoized
+from webkitpy.coverage_simulator import (report_stray_container_profiles,
+                                         simulator_data_paths)
 from webkitpy.port.embedded_port import EmbeddedPort
 from webkitpy.xcode.simulated_device import SimulatedDeviceManager
 
@@ -77,6 +79,16 @@ class EmbeddedSimulatorPort(EmbeddedPort):
 
     def reset_preferences(self):
         SimulatedDeviceManager.tear_down(self.host)
+
+    def collect_stray_coverage_profiles(self, destination_directory):
+        """Profiles inside the simulators this run used, not on the host. Called only if collection found none."""
+        udids = None
+        try:
+            udids = [device.udid for device in self.devices() if getattr(device, 'udid', None)]
+        except Exception as failure:  # noqa: BLE001 - device enumeration raises several types
+            _log.debug('Could not list this run\'s simulators: %s', failure)
+        data_paths = simulator_data_paths(executive=self._executive, udids=udids or None)
+        return report_stray_container_profiles(destination_directory, data_paths)
 
     @property
     @memoized

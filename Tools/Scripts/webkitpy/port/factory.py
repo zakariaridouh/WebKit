@@ -90,6 +90,11 @@ def configuration_options():
                              help='Use the Xcode build tree (e.g. WebKitBuild/<configuration>), overriding set-webkit-configuration'),
         optparse.make_option('--asan', action='store_true', default=False, dest='asan',
                              help='Use the ASan (AddressSanitizer) build tree (with CMake: WebKitBuild/cmake-mac/ASan). Does not require --debug/--release.'),
+        # Not --coverage: run-webkit-tests defines that one, and optparse accepts two options sharing a dest.
+        optparse.make_option('--coverage-build', action='store_true', default=False, dest='coverage',
+                             help='Use the LLVM coverage build tree (with CMake: WebKitBuild/cmake-mac/Coverage, '
+                                  'WebKitBuild/GTK/Coverage). Does not require --debug/--release. run-webkit-tests '
+                                  'spells this --coverage.'),
         optparse.make_option('--64-bit', action='store_const', const='x86_64', default=None, dest="architecture",
                              help='use 64-bit binaries by default (x86_64 instead of x86)'),
         optparse.make_option('--32-bit', action='store_const', const='x86', default=None, dest="architecture",

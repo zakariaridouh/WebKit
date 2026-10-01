@@ -202,3 +202,10 @@ class IOSDeviceTest(ios_testcase.IOSTest):
         self.assertEqual(configuration['platform'], port.host.platform.os_name)
         self.assertEqual(configuration['style'], 'release')
         self.assertEqual(configuration['version_name'], 'iOS {}'.format(port.device_version()))
+
+    def test_coverage_is_refused(self):
+        # Refused up front, and the message names the simulator as the alternative.
+        reason = self.make_port().coverage_unsupported_reason()
+        self.assertIn('ios-device', reason)
+        self.assertIn('ios-simulator', reason)
+        self.assertIn('/private/tmp/WebKitCoverage', reason)

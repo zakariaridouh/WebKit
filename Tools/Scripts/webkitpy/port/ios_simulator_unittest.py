@@ -20,6 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from unittest import mock
 from unittest.mock import Mock, patch
 
 from webkitcorepy import Version
@@ -199,6 +200,18 @@ class IOSSimulatorTest(ios_testcase.IOSTest):
         with patch.object(port, '_warm_up_runner') as warm_up_runner:
             port.did_spawn_worker(1)
         warm_up_runner.assert_not_called()
+
+    def test_coverage_is_supported(self):
+        # /private/tmp inside a CoreSimulator runtime is the host's, so the baked profile path needs no translation.
+        self.assertIsNone(self.make_port().coverage_unsupported_reason())
+
+    def test_collect_stray_coverage_profiles_is_empty_for_a_correct_build(self):
+        # Called on every simulator run that collected nothing, so a correct build must create nothing.
+        port = self.make_port()
+        with mock.patch('webkitpy.port.embedded_simulator.simulator_data_paths',
+                        return_value=[]) as data_paths:
+            self.assertEqual(port.collect_stray_coverage_profiles('/does/not/exist'), [])
+        self.assertTrue(data_paths.called)
 
 
 class TeardownFailureTest(unittest.TestCase):

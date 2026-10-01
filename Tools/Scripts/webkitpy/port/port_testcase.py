@@ -765,3 +765,21 @@ MOCK output of child process
     def test_guard_malloc_configuration(self):
         port = self.make_port(options=MockOptions(guard_malloc=True))
         self.assertEqual(port.configuration_for_upload()['style'], 'guard-malloc')
+
+    def test_coverage_upload_configuration(self):
+        # Else an instrumented run is indistinguishable from a plain Release one in the upload history.
+        port = self.make_port(options=MockOptions(coverage=True))
+        self.assertEqual(port.configuration_for_upload()['style'], 'coverage')
+
+    def test_a_coverage_run_can_still_have_a_flavor(self):
+        # A style, not a flavor: flavor setters raise when the slot is taken.
+        options = MockOptions(coverage=True, result_report_flavor='site-isolation')
+        port = self.make_port(options=options)
+        configuration = port.configuration_for_upload()
+        self.assertEqual(configuration['style'], 'coverage')
+        self.assertEqual(configuration['flavor'], 'site-isolation')
+
+    def test_coverage_does_not_change_the_expectations_style(self):
+        # A coverage build type would stop every [ Debug ] or [ Release ] expectation from applying.
+        port = self.make_port(options=MockOptions(coverage=True))
+        self.assertEqual(port.test_configuration().build_type, 'release')

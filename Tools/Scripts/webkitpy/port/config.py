@@ -58,7 +58,7 @@ class Config(object):
     # perl invocation whose result is invariant for given inputs within a run.
     _build_directories = {}
 
-    def __init__(self, executive, filesystem, port_implementation=None, use_cmake=False, use_xcode=False, asan=False):
+    def __init__(self, executive, filesystem, port_implementation=None, use_cmake=False, use_xcode=False, asan=False, coverage=False):
         self._executive = executive
         self._filesystem = filesystem
         self._webkit_finder = webkit_finder.WebKitFinder(self._filesystem)
@@ -67,6 +67,7 @@ class Config(object):
         self._use_cmake = use_cmake
         self._use_xcode = use_xcode
         self._asan = asan
+        self._coverage = coverage
 
     @classmethod
     def _clear_cache_for_testing(cls):
@@ -75,7 +76,7 @@ class Config(object):
     def build_directory(self, configuration, for_host=False):
         """Returns the path to the build directory for the configuration."""
         port_impl = self._port_implementation if not for_host else None
-        cache_key = (port_impl, configuration or "", for_host, self._use_cmake, self._use_xcode, self._asan)
+        cache_key = (port_impl, configuration or "", for_host, self._use_cmake, self._use_xcode, self._asan, self._coverage)
         if self._build_directories.get(cache_key):
             return self._build_directories[cache_key]
 
@@ -91,6 +92,8 @@ class Config(object):
             flags.append('--xcode')
         if self._asan:
             flags.append('--asan')
+        if self._coverage:
+            flags.append('--coverage')
 
         args = ["perl", self._webkit_finder.path_to_script("webkit-build-directory")] + flags
         output = self._executive.run_command(args, cwd=self._webkit_finder.webkit_base(), return_stderr=False).rstrip()
@@ -103,7 +106,7 @@ class Config(object):
             default_configuration = parts[1][len(parts[0]):]
             if default_configuration.startswith("/"):
                 default_configuration = default_configuration[1:]
-            self._build_directories[(port_impl, default_configuration, for_host, self._use_cmake, self._use_xcode, self._asan)] = parts[1]
+            self._build_directories[(port_impl, default_configuration, for_host, self._use_cmake, self._use_xcode, self._asan, self._coverage)] = parts[1]
 
         return self._build_directories[cache_key]
 
@@ -157,4 +160,16 @@ class Config(object):
         try:
             return self._filesystem.exists(self._filesystem.join(self.build_directory(None), "ASan"))
         except:
+            return False
+
+    @property
+    @memoized
+    def coverage(self):
+        # --coverage forces it on; otherwise use the marker file set-webkit-configuration writes,
+        # as webkitdirs.pm does, so build_directory() and the Perl side agree.
+        if self._coverage:
+            return True
+        try:
+            return self._filesystem.exists(self._filesystem.join(self.build_directory(None), "Coverage"))
+        except Exception:
             return False
