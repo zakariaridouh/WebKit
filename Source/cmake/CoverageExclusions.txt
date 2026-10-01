@@ -1,0 +1,53 @@
+# Sources left out of LLVM source-based coverage instrumentation, passed to Clang as
+# -fprofile-list=<this file> by the ENABLE_COVERAGE block in WebKitCommon.cmake.
+#
+# Why this exists: instrumenting Source/ThirdParty is pure cost. libwebrtc, ANGLE and
+# skia are the largest translation units in the tree, they are not what a WebKit change
+# is ever measured against, and the report step throws their results away again (see
+# THIRD_PARTY_IGNORE_REGEXES in Tools/Scripts/generate-coverage-report). What is left
+# behind is a much bigger binary: the counters, the __llvm_prf_data records and the
+# __llvm_covmap tables all ship in the linked image, and that size is what drags
+# layout-test parallelism down. Skipping these sources at compile time removes all of
+# it -- a skipped object file carries no __llvm_covfun, __llvm_covmap, __llvm_prf_cnts,
+# __llvm_prf_data or __llvm_prf_names section at all.
+#
+# Format is Clang's SanitizerSpecialCaseList: a [section] naming the instrumentation
+# kind ([clang] for -fprofile-instr-generate, [llvm] for -fprofile-generate), then
+# <prefix>:<glob>=<category> lines, where prefix is "function" or "source" and
+# category is "allow", "skip" or "forbid". "skip" is the right category here: it marks
+# the function skipprofile, so no counters and no coverage mapping are emitted for it.
+#
+# Two things about the globs are easy to get wrong:
+#
+#  * The pattern is anchored at both ends and "*" does not match across a missing
+#    directory separator that the pattern spells literally. "*/ThirdParty/*" therefore
+#    fails to match the relative path "Source/ThirdParty/foo.cpp" (nothing precedes
+#    "Source", so there is no leading "/"). Ninja compiles with paths relative to the
+#    build directory, so the patterns below deliberately omit the leading slash.
+#
+#  * Matching is on the source location of each function, not on the file being
+#    compiled. That is what we want: it excludes third-party inline functions that get
+#    pulled into a WebKit translation unit through a header, and it stays correct
+#    inside a unified-sources bundle, where one object file mixes many sources.
+#
+# A prefix Clang does not recognise is silently ignored rather than diagnosed, so a
+# typo here fails open (more instrumentation, not less). A syntactically malformed
+# line, by contrast, is a hard error, which is why the configure-time probe in
+# WebKitCommon.cmake compiles a file with this list rather than only checking that
+# -fprofile-list is a known flag.
+
+[clang]
+# Everything vendored under Source/ThirdParty: ANGLE, libwebrtc, skia, dav1d, gtest...
+source:*ThirdParty/*=skip
+# Headers that get copied out of Source/ThirdParty into the build directory are
+# attributed to the copy, which no longer has "ThirdParty" anywhere in its path. The
+# Xcode build lands libwebrtc's there; keep the patterns so the two builds agree.
+source:*usr/local/include/webrtc/*=skip
+source:*usr/local/include/libwebrtc/*=skip
+
+# Same list for IR-instrumented builds (-fprofile-generate), so that this file stays
+# usable if PGO ever wants the same exclusions. Harmless when only [clang] applies.
+[llvm]
+source:*ThirdParty/*=skip
+source:*usr/local/include/webrtc/*=skip
+source:*usr/local/include/libwebrtc/*=skip

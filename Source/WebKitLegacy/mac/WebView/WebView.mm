@@ -405,6 +405,24 @@ SOFT_LINK_CLASS(AVKit, AVTouchBarPlaybackControlsProvider)
 SOFT_LINK_CLASS(AVKit, AVTouchBarScrubber)
 #endif
 
+#if ENABLE(LLVM_PROFILE_GENERATION) && ENABLE(LLVM_COVERAGE)
+#error "LLVM_PROFILE_GENERATION and LLVM_COVERAGE both define __llvm_profile_filename. Enable only one."
+#endif
+
+#if ENABLE(LLVM_COVERAGE)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+#error "LLVM_COVERAGE has no iOS-device support; see Tools/CodeCoverage/iOSCoverage.md. The simulator is supported."
+#else
+// WebKitLegacy.framework is a separate linked image from WebKit.framework, which reexports
+// it, and the profiling runtime reads each image's own copy of this symbol, so it needs its
+// own baked path. WebView is the framework's principal class and +[WebView initialize] is
+// its initialization entry point, which is the counterpart of InitializeWebKit2().
+// See the matching comment in Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm, including
+// why an iOS-family simulator uses the same /private/tmp directory macOS does.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/WebKitLegacy_%8m%c.profraw";
+#endif
+#endif
+
 #if !PLATFORM(IOS_FAMILY)
 
 @interface NSView (WebNSViewDetails)

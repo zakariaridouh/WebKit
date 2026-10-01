@@ -61,12 +61,24 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
+#if ENABLE(LLVM_PROFILE_GENERATION) && ENABLE(LLVM_COVERAGE)
+#error "LLVM_PROFILE_GENERATION and LLVM_COVERAGE both define __llvm_profile_filename. Enable only one."
+#endif
+
 #if ENABLE(LLVM_PROFILE_GENERATION)
 #if PLATFORM(IOS_FAMILY)
 #include <wtf/LLVMProfilingUtils.h>
 extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
 #else
 extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
+#endif
+#elif ENABLE(LLVM_COVERAGE)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+#error "LLVM_COVERAGE has no iOS-device support; see Tools/CodeCoverage/iOSCoverage.md. The simulator is supported."
+#else
+// See the matching comment in Source/WebKit/Shared/Cocoa/WebKit2InitializeCocoa.mm, including
+// why an iOS-family simulator uses the same /private/tmp directory macOS does.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/JavaScriptCore_%8m%c.profraw";
 #endif
 #endif
 

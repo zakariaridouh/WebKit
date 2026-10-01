@@ -439,6 +439,10 @@ set(LLIntSettingsExtractor_DEPENDENCIES
     WTF_CopyHeaders
     bmalloc_CopyHeaders
 )
+# Runs during the build, to extract offsets for the LLInt assembler, so nothing ever collects
+# its profile. Without this it would write a preallocated continuous-mode profile into the
+# shared /private/tmp/WebKitCoverage on every build.
+set(LLIntSettingsExtractor_SKIP_COVERAGE_PROFILE_PATH ON)
 # Only used for local analysis; skip the normal post-link steps.
 set_property(TARGET LLIntSettingsExtractor PROPERTY SKIP_CODESIGN YES)
 set_property(TARGET LLIntSettingsExtractor PROPERTY SKIP_DSYM YES)
@@ -469,6 +473,8 @@ set(LLIntOffsetsExtractor_DEPENDENCIES
     WTF_CopyHeaders
     bmalloc_CopyHeaders
 )
+# Same as LLIntSettingsExtractor above: a build-time generator, not something to measure.
+set(LLIntOffsetsExtractor_SKIP_COVERAGE_PROFILE_PATH ON)
 # Only used for local analysis; skip the normal post-link steps.
 set_property(TARGET LLIntOffsetsExtractor PROPERTY SKIP_CODESIGN YES)
 set_property(TARGET LLIntOffsetsExtractor PROPERTY SKIP_DSYM YES)
