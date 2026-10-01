@@ -1,0 +1,554 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2026 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+"""Which web-facing IDL attributes and operations did no test ever call?
+
+This reads a profile that already exists and runs no tests. `generate-coverage-report`
+excludes DerivedSources, so the generated JS bindings -- where WebKit's web-platform API
+surface lives -- are invisible to it; this lifts their per-function coverage back onto the IDL
+declarations that produced it.
+
+    Tools/Scripts/generate-bindings-coverage --cmake \\
+        --profdata=WebKitBuild/coverage-report/coverage.profdata
+
+    Tools/Scripts/generate-bindings-coverage --cmake --profdata=... --interface=Document
+    Tools/Scripts/generate-bindings-coverage --cmake --profdata=... --idl-directory=Source/WebCore/svg
+
+The headline is the list of never-executed declarations, because that is the part somebody can
+act on: each line is one missing test. The percentages come after it.
+
+The llvm-cov export is the slow part, so it is cached. `--save-lcov=PATH` writes it and
+`--lcov=PATH` reads one back, which makes a second query against the same profile instant.
+
+See Tools/CodeCoverage/BindingsCoverage.md for what the join can and cannot see.
+"""
+
+import logging
+import optparse
+import os
+import sys
+
+from webkitpy.common.host import Host
+from webkitpy.coverage_bindings import (
+    BindingsCoverageJoin, BindingsCoverageTotals, IDLModel, IDLParseError, REASON_ORDER,
+    SymbolCoverage, join_interfaces, never_executed_lines, parse_idl_files, read_feature_defines,
+    read_supplemental_dependencies, scan_generated_symbols, setter_gap_lines, totals_lines,
+    tsv_rows, unattributed_detail_lines, unattributed_lines)
+from webkitpy.coverage_requirements import normalize_build_root
+from webkitpy.coverage_scope import CoverageScope
+from webkitpy.llvm_profile_utils import LLVMCov
+from webkitpy.port import configuration_options, platform_options
+
+_log = logging.getLogger('generate-bindings-coverage')
+
+# Where the WebCore bindings generator's output lands, relative to the build directory. The
+# CMake build puts a target's derived sources under <target>/DerivedSources and the Xcode build
+# puts them under DerivedSources/<target>, so both spellings are tried rather than one being
+# assumed: getting it wrong produces an empty report with no error.
+_DERIVED_SOURCES_CANDIDATES = (
+    os.path.join('WebCore', 'DerivedSources'),
+    os.path.join('DerivedSources', 'WebCore'),
+)
+
+# The truthy feature macros the build handed the generators. Written by
+# webkit_generate_platform_feature_defines_file in Source/cmake/WebKitMacros.cmake.
+_FEATURE_DEFINES_CANDIDATES = (
+    os.path.join('DerivedSources', 'platform-feature-defines.txt'),
+    os.path.join('WebCore', 'DerivedSources', 'platform-feature-defines.txt'),
+)
+
+# Only WebCore carries the JS bindings, so only WebCore has to be exported. That is the whole
+# reason this tool is fast: the same profile exported over every instrumented framework is
+# minutes and gigabytes, and over WebCore scoped to the bindings it is seconds.
+_WEBCORE_PRODUCT = os.path.join('WebCore.framework', 'Versions', 'A', 'WebCore')
+
+# Hand-written binding bodies. A [Custom] or [CustomGetter] member's trampoline is still named
+# by the generator, but its body is here, and all 97 JS*Custom.cpp files in the checkout are in
+# this one directory.
+_CUSTOM_BINDINGS_DIRECTORY = os.path.join('Source', 'WebCore', 'bindings', 'js')
+
+_EPILOG = """
+WHAT THE NUMBERS MEAN. A declaration is in one of three states, never two:
+
+  executed        some test called it.
+  never executed  the generated code has a counter for it and the counter is zero. This is the
+                  actionable list, and it is printed first.
+  unattributed    there is no counter to read, for a reason that is named. NOT counted as 0%:
+                  a declaration with no coverage mapping has no denominator, so calling it 0%
+                  would invent a number. The same rule generate-coverage-report applies to a
+                  file this configuration never compiled.
+
+The largest unattributed bucket is [DelegateToSharedSyntheticAttribute]: several hundred CSS
+property IDL attributes share four generated accessors that dispatch on the property name at
+run time, so the shared accessor has a counter and the individual property does not. Its count
+is reported as context. Per-property coverage of those would have to be measured on the JS side.
+
+ATTRIBUTES ARE MEASURED PER ACCESSOR, so "read but never written" is visible and is listed
+separately, under a heading of its own. The attribute itself counts as executed, which is why
+whole-declaration coverage cannot show it.
+
+OVERLOADS are reported as one operation. The generator emits a numbered body per overload and
+those bodies do have counters, but attributing body 3 to a specific IDL line would mean
+reproducing the generator's flattening order across an interface, its partials and its mixins.
+So the bodies are counted in the totals and not attributed.
+
+A SELECTIVE RUN's numbers are lower bounds. Pass --test-scope-file to say so, and every
+percentage is written >= and the never-executed list is described as a candidate list: adding
+tests can only turn a counter from zero to nonzero, so in a subset run an executed declaration
+is exact and a never-executed one is unknown.
+"""
+
+
+class _PreformattedEpilog(optparse.IndentedHelpFormatter):
+    def format_epilog(self, epilog):
+        return epilog or ''
+
+
+def parse_args(args):
+    parser = optparse.OptionParser(usage='%prog [options] --profdata=PATH',
+                                   epilog=_EPILOG, formatter=_PreformattedEpilog())
+    parser.add_options(platform_options())
+    parser.add_options(configuration_options())
+    # Same default as generate-coverage-report, and for the same reason: every tree this can
+    # describe is a coverage build tree, and on the CMake build the coverage products live in
+    # WebKitBuild/cmake-mac/Coverage rather than in Release.
+    parser.set_defaults(coverage=True)
+    parser.add_option('--no-coverage-build', action='store_false', dest='coverage',
+                      help='Read a tree that is not a coverage build directory')
+    parser.add_option('--profdata', metavar='PATH',
+                      help='The indexed profile to read counts from. Needed unless --lcov gives '
+                           'an export that was already taken from one')
+    parser.add_option('--lcov', metavar='PATH',
+                      help='Read function counts from an lcov trace instead of running llvm-cov. '
+                           'The export is the slow part, so this is how a second query against '
+                           'the same profile becomes instant. Any trace works, including a whole '
+                           'report\'s coverage.lcov.gz -- but note the shipped one is produced '
+                           'with --ignore-filename-regex=/DerivedSources/ and so contains none '
+                           'of the generated bindings at all, which this warns about')
+    parser.add_option('--save-lcov', metavar='PATH',
+                      help='Write the export here so that --lcov can read it back')
+    parser.add_option('--build-directory', metavar='PATH',
+                      help='Path to the build directory, if not the default. Either the tree or '
+                           'its configuration directory')
+    parser.add_option('--object', action='append', dest='extra_objects', default=[],
+                      metavar='PATH',
+                      help='Additional instrumented binary to export from. WebCore is the only '
+                           'framework that carries JS bindings, so it is the only one exported '
+                           'by default (repeatable)')
+    parser.add_option('--interface', action='append', default=[], metavar='NAME',
+                      help='Report only on this interface. Repeatable. Case-sensitive, and the '
+                           'IDL name rather than the class name: Document, not JSDocument')
+    parser.add_option('--idl-directory', action='append', default=[], metavar='PATH',
+                      help='Report only on interfaces whose IDL is under PATH, relative to the '
+                           'checkout root or absolute. Repeatable')
+    parser.add_option('--include-test-support', action='store_true', default=False,
+                      help='Also report on the test-support IDL under Source/WebCore/testing '
+                           '(Internals and friends). Off by default: it is not web-facing '
+                           'surface, and it would put its members in the denominator')
+    parser.add_option('--all-idl', action='store_true', default=False,
+                      help='Parse every .idl in the checkout rather than the ones the build '
+                           "says it compiled. Slower, and it adds interfaces that no "
+                           'configuration builds, which then land in the unattributed bucket')
+    parser.add_option('--explain', action='append', default=[], metavar='REASON',
+                      help='List the declarations behind one unattributed reason, out of {}. '
+                           'Repeatable, and "all" takes every one'.format(', '.join(REASON_ORDER)))
+    parser.add_option('--explain-limit', type='int', default=40, metavar='N',
+                      help='How many declarations --explain prints per reason (default 40, 0 for '
+                           'all of them)')
+    parser.add_option('--tsv', metavar='PATH',
+                      help='Write one row per declaration and accessor here, tab separated. This '
+                           'is the form to diff between two runs or load into a spreadsheet; the '
+                           'printed report is the form to read')
+    parser.add_option('--test-scope-file', metavar='FILE',
+                      help='JSON record of which tests the profile came from, as webkit-coverage '
+                           'writes it. With a selective scope every percentage is written >= and '
+                           'the never-executed list is a candidate list, because a counter that '
+                           'is zero in a subset run is unknown rather than untested')
+    parser.add_option('--perl', default='perl',
+                      help='The perl to drive the checkout\'s IDLParser.pm with (default perl)')
+    parser.add_option('-v', '--verbose', action='store_true', default=False,
+                      help='Verbose logging')
+
+    options, remaining = parser.parse_args(args)
+    if remaining:
+        parser.error('Unexpected arguments: {}'.format(' '.join(remaining)))
+    if not options.profdata and not options.lcov:
+        parser.error('pass --profdata=PATH, or --lcov=PATH to read an export back')
+    if options.profdata and not os.path.isfile(options.profdata):
+        parser.error('--profdata {} does not exist'.format(options.profdata))
+    if options.lcov and not os.path.isfile(options.lcov):
+        parser.error('--lcov {} does not exist'.format(options.lcov))
+    if options.build_directory:
+        build_root = normalize_build_root(options.build_directory, options.configuration)
+        options.build_directory_note = build_root.note
+        options.build_directory = build_root.root
+    else:
+        options.build_directory_note = None
+    unknown = [reason for reason in options.explain
+               if reason != 'all' and reason not in REASON_ORDER]
+    if unknown:
+        parser.error('--explain {} is not one of {}'.format(
+            ', '.join(unknown), ', '.join(REASON_ORDER)))
+    options.scope = CoverageScope.full_suite()
+    if options.test_scope_file:
+        if not os.path.isfile(options.test_scope_file):
+            parser.error('--test-scope-file {} does not exist'.format(options.test_scope_file))
+        try:
+            options.scope = CoverageScope.read(options.test_scope_file)
+        except (ValueError, OSError) as error:
+            parser.error('--test-scope-file {} could not be read: {}'.format(
+                options.test_scope_file, error))
+    return options
+
+
+def first_existing(build_directory, candidates):
+    for relative in candidates:
+        path = os.path.join(build_directory, relative)
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def idl_files_to_parse(source_root, derived_sources, all_idl):
+    """(paths, how they were chosen).
+
+    The build's own supplemental_dependency.tmp is preferred over walking the source tree, for
+    two reasons that both matter. It is the set of IDL files THIS configuration compiled, so an
+    interface that only another port builds does not arrive as a false gap. And it names the
+    files from outside the OpenSource checkout -- four from Internal/WebKit/WebKitAdditions on
+    the build measured here -- which a walk of Source/WebCore cannot find at all.
+    """
+    if not all_idl and derived_sources:
+        dependency_file = os.path.join(derived_sources, 'supplemental_dependency.tmp')
+        if os.path.exists(dependency_file):
+            main, supplemental = read_supplemental_dependencies(dependency_file)
+            paths = list(dict.fromkeys(main + sorted(supplemental)))
+            existing = [path for path in paths if os.path.exists(path)]
+            missing = len(paths) - len(existing)
+            note = ('the {} IDL file(s) {} says this build compiled'.format(
+                len(existing), os.path.basename(dependency_file)))
+            if missing:
+                note += ', {} of which no longer exist on disk'.format(missing)
+            return existing, note
+    paths = []
+    for root, _, filenames in os.walk(os.path.join(source_root, 'Source', 'WebCore')):
+        for filename in filenames:
+            if filename.endswith('.idl'):
+                paths.append(os.path.join(root, filename))
+    return sorted(paths), 'every .idl under Source/WebCore ({})'.format(len(paths))
+
+
+def generated_interface_classes(derived_sources):
+    """{'JSDocument', ...} for every JS<Interface>.cpp the build generated.
+
+    Presence of the file rather than presence of a symbol in it: a constants-only interface --
+    the WebGL extension objects, GPUBufferUsage -- generates a class with no accessors at all,
+    and treating those as not built would report their absence as an unattributed reason that
+    is not the true one.
+    """
+    classes = set()
+    if not derived_sources or not os.path.isdir(derived_sources):
+        return classes
+    for filename in os.listdir(derived_sources):
+        if filename.startswith('JS') and filename.endswith('.cpp'):
+            classes.add(filename[:-len('.cpp')])
+    return classes
+
+
+def export_function_coverage(port, options, derived_sources, output_path):
+    """Run llvm-cov over WebCore, scoped to the bindings, and return the trace's path.
+
+    Scoped with --sources, which is what makes this cheap: an unscoped export of WebCore is
+    hundreds of megabytes, and this scope is 2,837 files. Note that --sources must be the last
+    thing on the command line and must not be spelled --sources=PATH -- see
+    LLVMCov._sources_arguments, where getting that wrong silently produced the whole report.
+
+    The DerivedSources filter that generate-coverage-report applies is deliberately NOT applied
+    here. Excluding DerivedSources is the reason the generated bindings are invisible to that
+    report and the reason this tool exists.
+    """
+    objects = []
+    webcore = port._build_path(*_WEBCORE_PRODUCT.split(os.sep))
+    if os.path.exists(webcore):
+        objects.append(webcore)
+    for path in options.extra_objects:
+        if not os.path.exists(path):
+            raise RuntimeError('--object {} does not exist'.format(path))
+        objects.append(path)
+    if not objects:
+        raise RuntimeError(
+            'No instrumented WebCore at {}. Build with coverage instrumentation first, or pass '
+            '--build-directory, or --object'.format(webcore))
+    sources = [derived_sources] if derived_sources else []
+    custom = os.path.join(port.webkit_base(), _CUSTOM_BINDINGS_DIRECTORY)
+    if os.path.isdir(custom):
+        sources.append(custom)
+    for path in objects:
+        _log.info('Exporting from %s', path)
+    _log.info('Scoped to %s', ', '.join(sources) if sources else 'the whole binary')
+    result = LLVMCov.export_lcov(objects, options.profdata, output_path,
+                                 compress=output_path.endswith('.gz'), sources=sources)
+    if result.stderr:
+        # llvm-cov's "profile data may be out of date" and "N functions have mismatched data"
+        # come out here, and both are worth seeing: the second is the count of functions whose
+        # counters this export dropped, so it bounds how much of the join is missing.
+        for line in result.stderr.strip().splitlines():
+            _log.info('llvm-cov: %s', line)
+    if result.returncode:
+        raise RuntimeError('llvm-cov export failed with status {}'.format(result.returncode))
+    return output_path
+
+
+def selected_interface_names(model, options, source_root):
+    """The interfaces to report on, after --interface, --idl-directory and the default filters."""
+    directories = []
+    for given in options.idl_directory:
+        path = given if os.path.isabs(given) else os.path.join(source_root, given)
+        directories.append(os.path.normpath(path) + os.sep)
+    wanted = set(options.interface)
+    names = []
+    for name in model.measurable_interface_names(
+            include_test_support=options.include_test_support):
+        if wanted and name not in wanted:
+            continue
+        if directories:
+            path = model.main_declaration(name)['idl_path']
+            if not any(path.startswith(directory) for directory in directories):
+                continue
+        names.append(name)
+    if wanted:
+        unknown = sorted(wanted - set(names))
+        if unknown:
+            _log.warning('No IDL interface named %s in the scope being reported on. '
+                         '--interface takes the IDL name, not the class name.',
+                         ', '.join(unknown))
+    return names
+
+
+def warn_if_the_trace_has_no_bindings(coverage, trace_path):
+    """A trace with no generated-binding records is almost always the shipped coverage.lcov.gz.
+
+    That trace is produced with --ignore-filename-regex=/DerivedSources/, so it contains none of
+    the generated bindings -- but it DOES contain Source/WebCore/bindings/js, the hand-written
+    custom bodies, so a check for "any binding symbol at all" passes and the report comes out
+    looking healthy: measured against the shipped trace, 1,174 of 1,287 declarations executed,
+    91.22%, with 8,620 of 9,907 declarations quietly unattributed. That is the worst possible
+    shape for a coverage artifact, so the check is on generated files specifically and it is an
+    error rather than a warning.
+    """
+    if coverage.derived_sources_files:
+        return False
+    _log.error('%s has coverage records for %d file(s) and not one of them is under '
+               'DerivedSources, so it contains none of the generated bindings.',
+               trace_path, len(coverage.source_files))
+    _log.error("A report's coverage.lcov.gz is exported with "
+               '--ignore-filename-regex=/DerivedSources/, which excludes every generated binding '
+               'by construction. It still holds the hand-written custom bindings, so the report '
+               'would come out looking plausible with most declarations unattributed. Pass '
+               '--profdata instead and let this tool take its own export.')
+    return True
+
+
+def main(args):
+    options = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(levelname)s: %(message)s')
+
+    host = Host()
+    port = host.port_factory.get(options.platform, options)
+    source_root = port.webkit_base()
+    build_directory = port._build_path()
+    if options.build_directory_note:
+        _log.info('%s', options.build_directory_note)
+
+    derived_sources = first_existing(build_directory, _DERIVED_SOURCES_CANDIDATES)
+    if derived_sources:
+        _log.info('Generated bindings: %s', derived_sources)
+    else:
+        _log.warning('No generated bindings directory under %s (looked for %s). Every '
+                     'declaration will be unattributed.', build_directory,
+                     ' and '.join(_DERIVED_SOURCES_CANDIDATES))
+
+    feature_defines_path = first_existing(build_directory, _FEATURE_DEFINES_CANDIDATES)
+    if feature_defines_path:
+        enabled_features = read_feature_defines(feature_defines_path)
+        _log.info('%d feature macro(s) on in this build, from %s',
+                  len(enabled_features), feature_defines_path)
+    else:
+        # Without the list, conditional_is_enabled() would call every [Conditional] member
+        # disabled and the conditional-off bucket would swallow everything. Say so rather than
+        # producing a report whose largest bucket is an artefact.
+        enabled_features = frozenset()
+        _log.warning('No platform-feature-defines.txt under %s, so [Conditional=...] cannot be '
+                     'evaluated and every guarded declaration this build did compile will be '
+                     'reported as conditional-off.', build_directory)
+
+    paths, how = idl_files_to_parse(source_root, derived_sources, options.all_idl)
+    if not paths:
+        _log.error('Found no IDL files to parse.')
+        return 1
+    _log.info('Parsing %s with the checkout\'s own IDLParser.pm', how)
+    try:
+        records = parse_idl_files(paths, source_root, perl=options.perl)
+    except IDLParseError as error:
+        _log.error('%s', error)
+        return 1
+    model = IDLModel.from_records(records)
+    if model.parse_errors:
+        # Not fatal, and not silent: a file the parser rejected is a hole in the denominator.
+        _log.warning('%d IDL file(s) did not parse, so their declarations are missing from '
+                     'every total below:', len(model.parse_errors))
+        for path, message in model.parse_errors[:10]:
+            _log.warning('    %s: %s', path, message.splitlines()[0] if message else '')
+    _log.info('%d interface(s) and %d mixin(s) parsed', len(model.interfaces), len(model.mixins))
+
+    trace_path = options.lcov
+    temporary_trace = None
+    if not trace_path:
+        trace_path = options.save_lcov
+        if not trace_path:
+            import tempfile
+            handle, temporary_trace = tempfile.mkstemp(prefix='bindings-coverage-',
+                                                       suffix='.lcov.gz')
+            os.close(handle)
+            trace_path = temporary_trace
+        try:
+            export_function_coverage(port, options, derived_sources, trace_path)
+        except RuntimeError as error:
+            _log.error('%s', error)
+            if temporary_trace:
+                os.unlink(temporary_trace)
+            return 1
+        if options.save_lcov:
+            _log.info('Kept the export at %s; pass --lcov=%s to reuse it',
+                      options.save_lcov, options.save_lcov)
+    else:
+        _log.info('Reading function counts from %s', trace_path)
+
+    try:
+        coverage = SymbolCoverage.from_lcov(trace_path)
+    finally:
+        if temporary_trace:
+            os.unlink(temporary_trace)
+    _log.info('%d function record(s) read from %d file(s), %d of them generated; %d binding '
+              'symbol(s) have a counter, %d of them nonzero',
+              coverage.records, len(coverage.source_files), coverage.derived_sources_files,
+              len(coverage.counts),
+              sum(1 for count in coverage.counts.values() if count))
+    if warn_if_the_trace_has_no_bindings(coverage, trace_path):
+        return 1
+
+    generated_symbols = scan_generated_symbols(
+        [path for path in (derived_sources,
+                           os.path.join(source_root, _CUSTOM_BINDINGS_DIRECTORY))
+         if path])
+    _log.info('%d symbol definition(s) found in the generated and custom binding sources',
+              len(generated_symbols))
+
+    join = BindingsCoverageJoin(coverage, generated_symbols, enabled_features,
+                                generated_interface_classes(derived_sources))
+    names = selected_interface_names(model, options, source_root)
+    if not names:
+        _log.error('No interfaces in scope.')
+        return 1
+    interface_results = join_interfaces(model, join, names)
+    totals = BindingsCoverageTotals(interface_results)
+
+    for line in options.scope.banner_lines():
+        _log.info('%s', line)
+
+    if options.tsv:
+        # Written before the report is printed, so that the log line naming the file does not
+        # land in the middle of the report when both go to a terminal.
+        with open(options.tsv, 'w') as handle:
+            for row in tsv_rows(interface_results):
+                handle.write('\t'.join(row) + '\n')
+        _log.info('Wrote %s', options.tsv)
+
+    print()
+    print('NEVER EXECUTED -- every IDL declaration with a counter that stayed at zero')
+    if options.scope.is_selective:
+        print('(a candidate list: this profile is from part of the suite, so a zero counter '
+              'here means "no test in this run", not "no test exists")')
+    print()
+    gaps = never_executed_lines(interface_results, options.scope)
+    if gaps:
+        for line in gaps:
+            print(line)
+    else:
+        print('  Nothing. Every measurable declaration in scope was executed.')
+
+    setters = setter_gap_lines(interface_results)
+    if setters:
+        print()
+        print('READ BUT NEVER WRITTEN -- {} attribute(s) whose getter ran and whose setter '
+              'never did'.format(totals.setter_gaps))
+        print('(the attribute itself counts as executed, so whole-declaration coverage hides '
+              'these)')
+        print()
+        for line in setters:
+            print(line)
+
+    print()
+    print('TOTALS')
+    print()
+    for line in totals_lines(totals, options.scope):
+        print(line)
+
+    if totals.total_unattributed() or totals.unenumerated:
+        print()
+        print('UNATTRIBUTED -- {} declaration(s) with no counter to read. Not 0%: a declaration '
+              'with'.format(totals.total_unattributed()))
+        print('no coverage mapping has no denominator, so reporting it as 0% would invent a '
+              'number.')
+        print()
+        for line in unattributed_lines(totals):
+            print(line)
+
+    explain = list(REASON_ORDER) if 'all' in options.explain else options.explain
+    for reason in explain:
+        if not totals.by_reason.get(reason):
+            continue
+        print()
+        print('{} ({})'.format(reason, totals.by_reason[reason]))
+        limit = options.explain_limit or None
+        for line in unattributed_detail_lines(interface_results, reason, limit):
+            print(line)
+
+    print()
+    measurable = totals.total_measurable()
+    print('{} of {} measurable IDL declaration(s) executed ({}); {} never executed; {} '
+          'unattributed of {} declared.'.format(
+              measurable - totals.total_never_executed(), measurable,
+              options.scope.format_percent(
+                  100.0 * (measurable - totals.total_never_executed()) / measurable)
+              if measurable else '-',
+              totals.total_never_executed(), totals.total_unattributed(),
+              totals.total_declared()))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
