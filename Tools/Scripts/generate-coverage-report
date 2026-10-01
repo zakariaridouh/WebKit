@@ -1,0 +1,1092 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2026 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+"""Turn LLVM raw profiles from an instrumented test run into a coverage report.
+
+Build with coverage instrumentation, run the tests, then generate the report. Or let
+Tools/Scripts/webkit-coverage do all four steps, which is the shorter path:
+
+    Tools/Scripts/build-webkit --xcode --release --coverage
+    Tools/Scripts/run-api-tests --release --coverage --coverage-dir=/tmp/cov WTF
+    Tools/Scripts/run-webkit-tests --release --coverage --coverage-dir=/tmp/cov fast/forms
+    Tools/Scripts/generate-coverage-report --release --coverage-dir=/tmp/cov --output-dir=/tmp/covreport
+
+Give each run its own --coverage-dir instead, and each suite gets a column of its own:
+
+    Tools/Scripts/run-api-tests --release --coverage --coverage-dir=/tmp/cov-api WTF
+    Tools/Scripts/run-webkit-tests --release --coverage --coverage-dir=/tmp/cov-layout fast/forms
+    Tools/Scripts/generate-coverage-report --release --output-dir=/tmp/covreport \\
+        --suite=api:/tmp/cov-api --suite=layout:/tmp/cov-layout
+"""
+
+import logging
+import optparse
+import os
+import re
+import sys
+
+from concurrent.futures import ThreadPoolExecutor
+
+from webkitpy.common.host import Host
+from webkitpy.coverage_build_inventory import find_absent_files
+from webkitpy.coverage_directory_index import write_directory_index, write_report
+from webkitpy.coverage_lcov import (
+    PathCanonicalizer, canonicalize_lcov, parse_lcov, parse_lcov_source_files, project_totals,
+    staged_equivalents_for_scope, third_party_copied_header_ignore_regexes, uncovered_regions)
+from webkitpy.coverage_provenance import (
+    add_trace_measurements, provenance_record, summary_lines, trace_comment, write_provenance)
+from webkitpy.coverage_requirements import (
+    INSTRUMENTED_PRODUCTS, KNOWN_PRODUCTS, TEST_SUPPORT_PRODUCTS, UNREPORTED_PROFILE_WRITERS,
+    normalize_build_root, product_name)
+from webkitpy.coverage_scope import CoverageScope
+from webkitpy.coverage_suites import (
+    SuiteSpecError, check_union_equals_combined, line_totals, log_union_check,
+    merge_suite_profiles, parse_suite_specs, resolve_suites)
+from webkitpy.coverage_thresholds import (
+    COVERAGE_GATE_EXIT_CODE, GATED_METRICS, check_absolute_thresholds, destination_name,
+    option_name, thresholds_from_options)
+from webkitpy.llvm_profile_utils import (
+    LLVMCov, UNREADABLE_RAW_PROFILE_LIMIT, collected_profiles_with_no_object,
+    merge_coverage_profiles, objects_with_no_profile_data, partition_unclaimed_profiles,
+    survey_instrumentation)
+from webkitpy.port import configuration_options, platform_options
+
+_log = logging.getLogger('generate-coverage-report')
+
+
+# Report-time exclusions. Both build systems now also exclude third-party code at compile
+# time -- the Xcode build through WK_DEFAULT_COVERAGE_OPT_OUT, which works because a target's
+# OTHER_CFLAGS is appended after the flags CLANG_COVERAGE_MAPPING injects and clang is
+# last-wins, and the CMake build through -fprofile-list=Source/cmake/CoverageExclusions.txt.
+# So this is no longer the only place third-party code can be excluded. It is still needed:
+# compile-time exclusion cannot catch a header that was copied into the build directory and
+# is attributed to the copy, and it does not apply to a tree built before the opt-out landed.
+#
+# Matching only 'Source/ThirdParty/' is not enough. Headers that get copied into the build
+# directory are attributed to the copy, so libwebrtc's headers arrive as
+# .../usr/local/include/webrtc/... and slip past a Source/ThirdParty/ pattern entirely --
+# that was 12,900 lines of 5%-covered code silently dragging the totals down.
+#
+# Nor is naming the copy locations that have been seen enough, which is why
+# coverage_lcov.third_party_copied_header_ignore_regexes() adds the rest from the build
+# directory's own layout: libwebrtc also installs headers under api/, rtc_base/, p2p/,
+# logging/ and video/, and 26 of those were still in a full-suite report.
+THIRD_PARTY_IGNORE_REGEXES = (
+    'Source/ThirdParty/',
+    '/usr/local/include/webrtc/',
+    '/usr/local/include/libwebrtc/',
+    '/ThirdParty/',
+)
+
+DEFAULT_IGNORE_REGEXES = (
+    '/DerivedSources/',
+    '/Applications/Xcode.app/',
+    r'\.sdk/',
+    '/usr/include/',
+)
+
+# The absolute-coverage gate, whose exit code and metric list live in coverage_thresholds so
+# that this tool and compare-coverage-reports fail a build the same way. Per-suite attribution
+# lives in coverage_suites; the note below is the short version of that module's docstring.
+_EPILOG = """
+--suite=NAME:PATH gives one test suite a line-coverage column of its own, so that a gap can be
+attributed to the suite that should have closed it. Give each harness run its own
+--coverage-dir and then name them:
+
+  Tools/Scripts/run-webkit-tests --release --coverage --coverage-dir=/tmp/cov-layout
+  Tools/Scripts/run-api-tests    --release --coverage --coverage-dir=/tmp/cov-api
+  Tools/Scripts/generate-coverage-report --release --output-dir=/tmp/report \\
+      --suite=layout:/tmp/cov-layout --suite=api:/tmp/cov-api
+
+Separating the runs has to be asked for when they run: collected profiles are named after the
+framework that wrote them and not after the run, so two runs that shared one --coverage-dir
+cannot be told apart afterwards. This warns when it is given a directory that holds more than
+one run's profiles, because the alternative is a silently mislabelled column.
+
+The combined column is reported from the merge of the suites' profiles, so it is the union of
+the lines they executed and not the sum -- a line two suites reach counts once -- and it is by
+construction what a single merged profile produces. Every run checks that against the union of
+the per-suite traces and says so.
+
+--fail-under-lines, --fail-under-functions and --fail-under-branches gate on absolute
+coverage. A report that is written but below the threshold exits {gate} rather than 1, so that
+a bot can tell "coverage is too low" from "the tooling broke", and the report is written
+either way, because the report is how somebody works out why the gate fired.
+
+They are checked against the totals this report displays, which are NOT the TOTAL line in
+summary.txt: llvm-cov counts a copied header once per framework that includes it, which on a
+full-suite run is 2,098,175 lines against the report's 1,889,061, and 72.09% function coverage
+against 55.05%, because llvm-cov counts each template instantiation as a function while lcov's
+records are keyed by mangled name.
+
+There is deliberately no --fail-under-regions: regions exist only in summary.txt, on that
+other denominator, and lcov carries no region records to compute a comparable number from.
+There is deliberately no bare --fail-under either. The four metrics span 15 percentage points
+on a full-suite run -- 72.09% of functions, 67.41% of lines, 57.60% of regions, 52.80% of
+branches -- so one flag meaning whichever of them the tool happened to pick would gate the
+wrong thing without saying so.
+
+--test-scope-file says which TESTS the profiles came from, and it changes what every number
+here means. Adding tests can only turn a line from uncovered to covered, so for a run over part
+of the suite a covered line is exact and an uncovered line is unknown. A selective report
+therefore writes every total as `>= 41.30%`, marks its title, names the shortfall in test
+counts, gets a -selective infix in its directory name and its trace filename, and fails
+--fail-under-lines rather than gating on a lower bound over a whole-tree denominator. Use
+--fail-under-patch in compare-coverage-reports instead: it is sound under selection, since a
+line it calls covered really was executed.
+
+Without the flag the report says full-suite, which is what every report before this was. If the
+tests were in fact a subset, nothing here can tell, and the percentages will be quoted as exact.
+webkit-coverage always passes it.
+""".format(gate=COVERAGE_GATE_EXIT_CODE)
+
+
+class _PreformattedEpilog(optparse.IndentedHelpFormatter):
+    """optparse rewraps the epilog into one blob, and the paragraph breaks carry meaning."""
+
+    def format_epilog(self, epilog):
+        return epilog or ''
+
+
+def resolve_source_scopes(scopes, source_root):
+    """(absolute paths for --sources, the ones that do not exist).
+
+    llvm-cov matches --sources against the absolute paths recorded in the coverage mapping, and
+    resolves a relative argument against its own working directory -- so a relative path works
+    only when the tool happens to have been run from the checkout root, and silently scopes to
+    nothing otherwise. Resolve it here instead: absolute as given, else relative to the current
+    directory when something is there, else relative to the checkout root, which is where the
+    recorded paths are rooted.
+    """
+    resolved, missing = [], []
+    for scope in scopes:
+        if os.path.isabs(scope):
+            path = os.path.normpath(scope)
+        elif os.path.exists(scope):
+            path = os.path.abspath(scope)
+        else:
+            path = os.path.normpath(os.path.join(source_root, scope))
+        if not os.path.exists(path):
+            missing.append(path)
+        resolved.append(path)
+    return resolved, missing
+
+
+def is_under_any(path, prefixes):
+    return any(path == prefix or path.startswith(prefix.rstrip('/') + os.sep)
+               for prefix in prefixes)
+
+
+def selected_products(products, available):
+    """The entries of available that products names, or all of them when products is None.
+
+    An empty --products selects nothing, which together with --object is how a tool that
+    already knows its own product's path asks for exactly that one and nothing else. Names
+    are validated in parse_args, against every known product rather than against one list:
+    --products=JavaScriptCore has to be a legal restriction of the test-support list too, and
+    select none of it.
+    """
+    if products is None:
+        return list(available)
+    wanted = [name for name in products.split(',') if name]
+    return [entry for entry in available if product_name(entry) in wanted]
+
+
+def instrumented_binary_paths(port, extra_objects, include_test_support, products=None):
+    """Locate every instrumented Mach-O to pass to llvm-cov.
+
+    All of them must go into a single llvm-cov invocation. Omitting one silently
+    under-reports the files only it contains, and reporting per-binary and stitching the
+    results afterwards double-counts the header-inline functions that llvm-profdata has
+    already merged by function name.
+    """
+    objects = []
+    missing = []
+    for relative in selected_products(products, INSTRUMENTED_PRODUCTS):
+        path = port._build_path(*relative.split('/'))
+        if os.path.exists(path):
+            objects.append(path)
+        else:
+            missing.append(relative)
+    if missing:
+        # Loud, not debug: a product that exists but was not found here is indistinguishable
+        # in the report from a product with no coverage at all.
+        _log.warning('Not found in the build directory, so absent from the report: %s',
+                     ', '.join(missing))
+
+    skipped = []
+    for relative in selected_products(products, TEST_SUPPORT_PRODUCTS):
+        path = port._build_path(*relative.split('/'))
+        if not os.path.exists(path):
+            continue
+        if include_test_support:
+            objects.append(path)
+        else:
+            skipped.append(relative)
+    if skipped:
+        _log.info('Skipping test-support and tool binaries (pass --include-test-support to '
+                  'include them): %s', ', '.join(skipped))
+
+    for path in extra_objects:
+        if not os.path.exists(path):
+            raise RuntimeError('--object {} does not exist'.format(path))
+        objects.append(path)
+
+    return objects
+
+
+def parse_args(args):
+    parser = optparse.OptionParser(usage='%prog [options] --coverage-dir=DIR --output-dir=DIR',
+                                   epilog=_EPILOG, formatter=_PreformattedEpilog())
+    parser.add_options(platform_options())
+    parser.add_options(configuration_options())
+    # Every tree this tool can describe is a coverage build tree, so ask for one by default
+    # rather than making the caller say so. It matters on the CMake build, where coverage
+    # products live in a directory of their own (WebKitBuild/cmake-mac/Coverage,
+    # WebKitBuild/GTK/Coverage) instead of in Release: without this, --cmake --release
+    # resolved cmake-mac/Release and the tool reported "Found no instrumented frameworks"
+    # against a perfectly good coverage build.
+    parser.set_defaults(coverage=True)
+    parser.add_option('--no-coverage-build', action='store_false', dest='coverage',
+                      help='Report on a tree that is not a coverage build directory, e.g. an '
+                           'Xcode build where --coverage does not move the products')
+    parser.add_option('--coverage-dir', help='Directory holding the .profraw files from an instrumented test run')
+    parser.add_option('--profdata', help='Report from an already-indexed profile instead of raw profiles. Use this '
+                                         'when a run was sharded and the shards were merged incrementally, which is '
+                                         'how a full-suite run avoids accumulating hundreds of GB of raw profiles')
+    parser.add_option('--output-dir', help='Directory to write the report into')
+    parser.add_option('--suite', action='append', default=[], metavar='NAME:PATH',
+                      help='Report one test suite as a column of its own, from its own '
+                           'profiles. PATH is a --coverage-dir from that suite\'s run, or an '
+                           'already-indexed .profdata. Repeatable, and the combined column is '
+                           'the union of all of them. See the note below')
+    parser.add_option('--build-directory',
+                      help='Path to the build directory, if not the default. Either the tree or '
+                           'its configuration directory: the configuration is appended to '
+                           'whatever is given, so .../WebKitBuild-Coverage/Release would '
+                           'otherwise resolve to .../WebKitBuild-Coverage/Release/Release and '
+                           'find no products at all')
+    parser.add_option('--object', action='append', dest='extra_objects', default=[],
+                      help='Additional instrumented binary to include (repeatable)')
+    parser.add_option('--products', metavar='LIST',
+                      help='Comma-separated list of the instrumented products to report on, out '
+                           'of {}. Defaults to all of them. An empty list selects none, which '
+                           'together with --object is how a tool that already knows its own '
+                           "product's path asks for that one and nothing else".format(
+                               ', '.join(product_name(entry) for entry in INSTRUMENTED_PRODUCTS)))
+    parser.add_option('--sources', '--only', action='append', dest='sources', default=[],
+                      metavar='PATH',
+                      help='Report only on source under PATH, which may be a directory or a '
+                           'single file, relative to the checkout root or absolute. Repeatable. '
+                           'This is the difference between an all-day artifact and an answer to '
+                           '"is the code I just wrote tested": measured against the same profile '
+                           'and binaries, --sources Source/WebCore/dom takes the lcov export from '
+                           '751 MB and 18,237 files to 3.7 MB and 497. It scopes the numbers as '
+                           'well as the output, so the totals are then the scope\'s totals and '
+                           'not the project\'s -- which the provenance record says. Pair it with '
+                           '--no-build-inventory for the fastest loop')
+    parser.add_option('--path-equivalence', action='append', default=[], metavar='FROM,TO',
+                      help='Passed through to llvm-cov, for reporting on a different machine than the '
+                           'one that built. Note this only affects where llvm-cov looks for source text; '
+                           'it does not rewrite the paths shown in the report (repeatable)')
+    parser.add_option('--ignore-filename-regex', action='append', dest='ignore_regexes', default=[],
+                      help='Additional exclusion regex, on top of the defaults (repeatable)')
+    parser.add_option('--include-test-support', action='store_true', default=False,
+                      help='Also report on instrumented test-support and tool binaries '
+                           '(libWebCoreTestSupport, jsc, webpushd, adattributiond). Off by default '
+                           'so their line counts stay out of the product denominator')
+    parser.add_option('--include-third-party', action='store_true', default=False,
+                      help='Report on Source/ThirdParty too. The code is already instrumented -- '
+                           'libwebrtc and libANGLE both carry __llvm_prf sections and are linked into '
+                           'WebCore -- so this only stops filtering it out, at the cost of a much '
+                           'larger report')
+    parser.add_option('--no-html', action='store_false', dest='html', default=True,
+                      help='Skip the HTML report: the directory index and the per-file line views')
+    parser.add_option('--no-regions', action='store_false', dest='regions', default=True,
+                      help='Do not highlight the parts of a line that did not run. They come '
+                           'from a second llvm-cov export, run alongside the first.')
+    parser.add_option('--no-source-views', action='store_false', dest='source_views', default=True,
+                      help='Write the directory index but not the per-file line views. They are '
+                           'the largest part of the report -- 288 MB for 16,149 files -- and the '
+                           'slowest part of an unscoped run, and the index alone answers "which '
+                           'directory is the gap in". --no-html would drop the index too')
+    parser.add_option('--llvm-cov-html', action='store_true', default=False,
+                      help="Also produce llvm-cov's own per-file HTML pages, in html/. They are "
+                           'off by default because they are 909 MB of the 1.7 GB a full-suite '
+                           'report used to be, against 288 MB for the line views this generates '
+                           "from the trace. What they add is sub-line detail lcov cannot express: "
+                           'on a full-suite run, 23,081 covered lines contain a region that never '
+                           'executed. Reach for this when tracking down one of those')
+    parser.add_option('--show-instantiations', action='store_true', default=False,
+                      help='Include per-template-instantiation sub-views in the llvm-cov HTML '
+                           'pages, so this only does anything together with --llvm-cov-html. They '
+                           'are omitted by default because they are expensive on template-heavy '
+                           'code (395 MB versus 300 MB of HTML for JavaScriptCore alone) and do '
+                           'not affect aggregate per-file line coverage')
+    parser.add_option('--no-lcov', action='store_false', dest='lcov', default=True,
+                      help='Skip the lcov export')
+    parser.add_option('--no-compress-lcov', action='store_false', dest='compress_lcov', default=True,
+                      help='Write coverage.lcov instead of coverage.lcov.gz. The trace is gzipped '
+                           'by default because it is 94%% mangled function names and so compresses '
+                           '13.8x -- 751 MB to 54 MB on a full-suite run -- and because piping '
+                           'llvm-cov into the compressor keeps the uncompressed trace off disk '
+                           'entirely. Everything that reads a trace sniffs for gzip, so an '
+                           'uncompressed one is only needed by other tools')
+    parser.add_option('--no-build-inventory', action='store_false', dest='build_inventory',
+                      default=True,
+                      help='Do not work out which files this configuration never compiled. '
+                           'That third state is what stops 23%% of the tree being invisible '
+                           'rather than visibly untested, so this is only for a build '
+                           'directory whose intermediates have been pruned')
+    parser.add_option('--keep-raw-profiles', action='store_true', default=False,
+                      help='Keep the .profraw files. They are deleted once indexed by default: the raw '
+                           'format has no compatibility guarantees, so it should not be archived')
+    for metric in GATED_METRICS:
+        parser.add_option(option_name(metric), type='float', metavar='PERCENT',
+                          dest=destination_name(metric),
+                          help='Exit {} if {} coverage is below PERCENT. See the note below'.format(
+                              COVERAGE_GATE_EXIT_CODE, metric))
+    parser.add_option('--allow-profile-mismatch', action='store_true', default=False,
+                      help='Report anyway when the profile does not match the binaries. The default '
+                           'is to refuse, because the resulting numbers look plausible but are wrong')
+    parser.add_option('--allow-unreadable-profiles', action='store_true', default=False,
+                      help='Report from the readable remainder when more than {:.0f}%% of the raw '
+                           'profiles cannot be read. The default is to refuse: llvm-profdata is '
+                           'run with --failure-mode=all, which fails only if every input fails, so '
+                           'a collection that mostly failed otherwise produces a confidently low '
+                           'report and exit 0'.format(100.0 * UNREADABLE_RAW_PROFILE_LIMIT))
+    parser.add_option('--test-scope-file', metavar='FILE',
+                      help='JSON record of which tests the profiles came from, as '
+                           'webkit-coverage writes it. A selective run\'s coverage is a lower '
+                           'bound -- adding tests can only turn a line from uncovered to '
+                           'covered -- so with a selective scope every total is written >=, the '
+                           'output directory and trace get a -selective infix, and '
+                           '--fail-under-lines fails because there is no exact number to gate '
+                           'on. Without this the report says full-suite. See the note below')
+    parser.add_option('-v', '--verbose', action='store_true', default=False, help='Verbose logging')
+
+    options, remaining = parser.parse_args(args)
+    if remaining:
+        parser.error('Unexpected arguments: {}'.format(' '.join(remaining)))
+    sources = [name for name, given in (('--coverage-dir', options.coverage_dir),
+                                        ('--profdata', options.profdata),
+                                        ('--suite', options.suite)) if given]
+    if len(sources) != 1:
+        parser.error('pass exactly one of --coverage-dir, --profdata or --suite (repeated), '
+                     'not {}'.format(' and '.join(sources) if sources else 'none of them'))
+    if not options.output_dir:
+        parser.error('--output-dir is required')
+    if options.coverage_dir and not os.path.isdir(options.coverage_dir):
+        parser.error('--coverage-dir {} is not a directory'.format(options.coverage_dir))
+    if options.profdata and not os.path.isfile(options.profdata):
+        parser.error('--profdata {} does not exist'.format(options.profdata))
+    # Both spellings of --build-directory, adjusted here rather than being allowed to become a
+    # doubled path: the port appends the configuration to whatever this is, so
+    # .../WebKitBuild-Coverage/Release resolves to .../WebKitBuild-Coverage/Release/Release,
+    # which exists nowhere and reports every product as not found. That is the shape every path
+    # in the documented recipes is written in.
+    options.build_directory_note = None
+    if options.build_directory:
+        build_root = normalize_build_root(options.build_directory, options.configuration)
+        options.build_directory_note = build_root.note
+        options.build_directory = build_root.root
+    # Parsed here, so that a malformed or unreadable scope file fails before a report is built
+    # rather than being silently downgraded to "full suite", which is the one reading that turns
+    # a lower bound into a number somebody quotes.
+    options.scope = CoverageScope.full_suite()
+    if options.test_scope_file:
+        if not os.path.isfile(options.test_scope_file):
+            parser.error('--test-scope-file {} does not exist'.format(options.test_scope_file))
+        try:
+            options.scope = CoverageScope.read(options.test_scope_file)
+        except (ValueError, OSError) as error:
+            parser.error('--test-scope-file {} could not be read: {}'.format(
+                options.test_scope_file, error))
+    # Checked here rather than where the profiles are indexed, so that a typo fails before
+    # anything has been read or written.
+    try:
+        parse_suite_specs(options.suite)
+    except SuiteSpecError as error:
+        parser.error(str(error))
+    if options.products is not None:
+        known = [product_name(entry) for entry in KNOWN_PRODUCTS]
+        unknown = [name for name in options.products.split(',') if name and name not in known]
+        if unknown:
+            parser.error('--products names {}, which is not one of {}'.format(
+                ', '.join(unknown), ', '.join(known)))
+    for metric, threshold in thresholds_from_options(options).items():
+        if not 0.0 <= threshold <= 100.0:
+            parser.error('{} is a percentage, so it must be between 0 and 100'.format(
+                option_name(metric)))
+    return options
+
+
+def summarize_absent_files(port, lcov_path, ignore_regexes, output_directory, sources=()):
+    """Work out and report the files the coverage data cannot describe at all.
+
+    Returns an AbsenceReport, or None if the build directory does not carry enough of a
+    record to answer the question -- in which case say so rather than implying the tree is
+    fully covered by what the report does show.
+    """
+    canonicalizer = PathCanonicalizer(port.webkit_base())
+    reported = parse_lcov_source_files(lcov_path, canonicalizer)
+    absence = find_absent_files(port.webkit_base(), port._build_path(), reported, ignore_regexes)
+    if not absence.compiled_file_count:
+        _log.warning('Found no compiler dependency files or unified-source bundles under %s, '
+                     'so the report cannot show which files this configuration never built. '
+                     'Percentages below are over an unknown fraction of the tree.',
+                     port._build_path())
+        return None
+    if sources:
+        absence = restrict_absence_to_scope(absence, port.webkit_base(), sources)
+
+    _log.info('%s', absence.denominator_sentence())
+    for _, label, files, lines in absence.reasons():
+        _log.info('    %6d files  %9d physical lines  %s', files, lines, label)
+
+    listing = os.path.join(output_directory, 'not-built.tsv')
+    with open(listing, 'w') as handle:
+        handle.write('path\treason\tdetail\tphysical_lines\n')
+        for absent in absence.files:
+            handle.write('{}\t{}\t{}\t{}\n'.format(
+                absent.path, absent.reason, absent.detail, absent.physical_lines))
+    _log.info('Wrote %s', listing)
+    return absence
+
+
+def restrict_absence_to_scope(absence, checkout_root, sources):
+    """An AbsenceReport over only the files under one of the --sources scopes.
+
+    find_absent_files() enumerates the whole checkout, which is right for a whole-tree report and
+    catastrophically wrong for a scoped one: every first-party file outside the scope is absent
+    from a scoped trace by construction, so an unrestricted report would present ~8,000 perfectly
+    healthy files as never compiled, and the caveat sentence that travels with the headline
+    percentage would be a lie about the whole tree rather than a fact about the scope.
+
+    Restricted here rather than in coverage_build_inventory, which is owned elsewhere. The cheaper
+    shape would be find_absent_files(checkout_root, build_directory, reported_paths,
+    third_party_regexes=(), scope_prefixes=()) -- with scope_prefixes filtering the universe
+    before anything is classified -- which would also save the classification and physical-line
+    count of the ~2,400 absent files outside the scope. This version pays for that work and throws
+    the result away: measured 17.1 s of the pipeline either way. Pair --sources with
+    --no-build-inventory for a fast loop.
+
+    The denominator is recomputed from the same universe find_absent_files() partitions, so that
+    reported + absent is exactly the number of first-party implementation files in the scope, and
+    not the number of trace records that happen to fall inside it.
+    """
+    from webkitpy.coverage_build_inventory import AbsenceReport, enumerate_source_files
+
+    restricted = AbsenceReport()
+    restricted.compiled_file_count = absence.compiled_file_count
+    for absent in absence.files:
+        if is_under_any(os.path.join(checkout_root, absent.path), sources):
+            restricted.add(absent)
+    in_scope = sum(1 for relative in enumerate_source_files(checkout_root)
+                   if is_under_any(os.path.join(checkout_root, relative), sources))
+    restricted.total_file_count = in_scope
+    restricted.reported_file_count = max(0, in_scope - restricted.absent_file_count)
+    return restricted
+
+
+def warn_about_objects_with_no_profile_data(objects, raw_profiles):
+    """Say so when a binary in the report cannot have contributed anything to the profile.
+
+    This has to be said out loud, because the report cannot say it. An instrumented binary that
+    writes no profile is reported at 0.00%, which is indistinguishable from code that is tested
+    by nothing -- and 0.00% over tens of thousands of lines reads as a test gap, so it is acted
+    on as one. WebGPU.framework spent a full run reported at 0.00% across 45,005 lines and
+    WebKitLegacy.framework at 0.13% across 39,327, and in both cases the answer was that
+    neither project defined ENABLE_LLVM_COVERAGE, so neither had a profile path baked in.
+    84,332 lines of instrumented code, described as untested, with nothing said about it.
+    """
+    findings = objects_with_no_profile_data(objects, raw_profiles)
+    if not findings:
+        return
+    _log.warning('%d of the %d binaries in this report can have contributed no profile data at '
+                 'all, so every line they contain is about to be reported as untested:',
+                 len(findings), len(objects))
+    for path, reason in findings:
+        _log.warning('    %s', path)
+        _log.warning('        %s', reason)
+    _log.warning('    Exclude them, or fix their configuration -- do not read their coverage.')
+
+
+def report_instrumentation_survey(objects, build_directory):
+    """Say so when a binary in the report is not instrumented, or cannot be checked.
+
+    Returns False when nothing in the report is instrumented at all, which is not a warning:
+    llvm-cov has no coverage mapping for an uninstrumented binary, so the report would be empty
+    rather than wrong, and the cause is always the same -- this is a tree that was not built
+    with --coverage. It is the easiest mistake to make on a first run, because
+    webkit-build-directory applies a last-built tiebreaker and will happily hand out a different
+    tree than the one the tests ran against.
+    """
+    survey = survey_instrumentation(objects)
+    if survey.uninstrumented and len(survey.uninstrumented) == len(objects):
+        _log.error('None of the %d binaries under %s is instrumented for coverage, so there is '
+                   'nothing to report on:', len(objects), build_directory)
+        for path, _ in survey.uninstrumented:
+            _log.error('    %s', path)
+        _log.error('Build with --coverage, or point --build-directory at the tree the tests ran '
+                   'against.')
+        return False
+    if survey.uninstrumented:
+        _log.warning('%d of the %d binaries in this report are not instrumented, so every file '
+                     'only they contain is absent from the report rather than reported at 0%%:',
+                     len(survey.uninstrumented), len(objects))
+        for path, reason in survey.uninstrumented:
+            _log.warning('    %s', path)
+            _log.warning('        %s', reason)
+        _log.warning('    Is %s the tree the tests ran against?', build_directory)
+    for path, reason in survey.unverifiable:
+        _log.info('Cannot check where %s writes its profile: %s', path, reason)
+    return True
+
+
+def warn_about_collected_profiles_with_no_object(objects, raw_profiles):
+    """Say so when this run collected profile data no binary in the report claims.
+
+    The inverse of warn_about_objects_with_no_profile_data(), and the direction that catches the
+    84,332-line bug rather than one instance of it. That bug had two halves: WebGPU and
+    WebKitLegacy baked no profile path (caught by the other guard, which asks each object whether
+    anything with its name was written), and INSTRUMENTED_PRODUCTS below did not list
+    WebKitLegacy at all (caught by nothing -- an object that is not in the report cannot be asked
+    a question about itself).
+
+    This asks the profiles instead. Every product that ran wrote profiles named after itself, so
+    a group of collected profiles that no binary in the report claims is a product whose data was
+    collected, merged, and then described by nothing: 302 files and 41 MB of instrumented product
+    code, reported as absent. That failure is currently prevented only by a hardcoded tuple
+    staying in step with what the build links, which is not a mechanism.
+    """
+    orphans = collected_profiles_with_no_object(objects, raw_profiles)
+    if not orphans:
+        return
+    unexplained, expected = partition_unclaimed_profiles(orphans, UNREPORTED_PROFILE_WRITERS)
+    if expected:
+        _log.info('%d of the %d raw profiles this run collected were written by binaries this '
+                  'report does not describe, which is by design: %s',
+                  sum(len(paths) for _, paths in expected), len(raw_profiles),
+                  ', '.join(group + '*' for group, _ in expected))
+    if not unexplained:
+        return
+    total = sum(len(paths) for _, paths in unexplained)
+    _log.warning('%d of the %d raw profiles this run collected were written by something no '
+                 'binary in this report claims to be, so their coverage is in the indexed '
+                 'profile and in none of the report:', total, len(raw_profiles))
+    for group, paths in unexplained:
+        megabytes = sum(os.path.getsize(path) for path in paths
+                        if os.path.exists(path)) / 1e6
+        _log.warning('    %s*: %d profiles, %.1f MB, for example %s', group, len(paths),
+                     megabytes, os.path.basename(paths[0]))
+    _log.warning('    Add the binary that writes each of those to --products/INSTRUMENTED_PRODUCTS '
+                 'or pass it with --object, or the code in it is reported as not existing. If it is '
+                 'a driver, service or test binary no report should describe, add its name to '
+                 'UNREPORTED_PROFILE_WRITERS instead.')
+
+
+def summarize_suites(source_root, suite_lcov_paths, combined_by_path):
+    """[(suite name, {path: (lines, covered)})], after checking the combined column is their union.
+
+    The combined column comes from a merged profile and each suite column from one profile, so
+    the report is asserting that those two things agree. Two real jsc runs over the same
+    binaries say they do -- 57,797 lines covered by one, 60,614 by the other, 66,408 by the
+    merge, and 0 disagreements over all 767,366 instrumented lines -- but llvm-cov's output is
+    profile-dependent in at least one respect, so this checks it every time rather than
+    trusting that measurement.
+
+    The per-line maps are dropped as soon as the check is done: they are 1.9 million entries
+    per suite on a full-suite run, and the columns only need two numbers per file.
+    """
+    suites_by_path = {}
+    for name, path in suite_lcov_paths:
+        # A canonicalizer per suite, with no build directory: the residue is the same set of
+        # paths for every suite, and reporting it once, from the combined trace, is enough.
+        parsed = parse_lcov(path, PathCanonicalizer(source_root), lines_only=True)
+        _log.info('Suite %s: %d files, %.1f MB of trace', name, len(parsed),
+                  os.path.getsize(path) / 1e6)
+        suites_by_path[name] = parsed
+
+    log_union_check(check_union_equals_combined(combined_by_path, suites_by_path),
+                    [name for name, _ in suite_lcov_paths])
+    return [(name, line_totals(suites_by_path[name])) for name, _ in suite_lcov_paths]
+
+
+def summary_banner_lines(scope, summary_text):
+    """The block that goes above llvm-cov's table in summary.txt. Empty for a full-suite run.
+
+    summary.txt is the file people grep, because it is 5 MB against a 366 MB report, so it is
+    also the file most likely to be read without its report. The block restates llvm-cov's own
+    TOTAL line with every percentage marked as the lower bound it is, and leaves the table
+    itself exactly as llvm-cov produced it.
+    """
+    if not scope.is_selective:
+        return []
+    lines = ['# ' + line for line in scope.banner_lines()]
+    total = next((line for line in reversed(summary_text.splitlines())
+                  if line.startswith('TOTAL')), None)
+    if total:
+        lines.append('# The TOTAL line below, restated as the lower bounds it is:')
+        lines.append('#   ' + scope.qualify_percentages(total).strip())
+    lines.append('#')
+    return lines
+
+
+def summary_total_lines(summary_text):
+    """llvm-cov's TOTAL line, with the rule above it, for echoing to the terminal.
+
+    Located, not sliced off the end. This used to be splitlines()[-3:], which is one arbitrary
+    file's row, the rule and TOTAL -- so every run printed whichever file llvm-cov happened to
+    sort last (measured: bmalloc/pas_stats.h, at 0 of 0 lines) directly above the totals, where
+    it reads as though it were part of them.
+    """
+    lines = summary_text.splitlines()
+    for index in range(len(lines) - 1, -1, -1):
+        if not lines[index].startswith('TOTAL'):
+            continue
+        rule = lines[index - 1].strip() if index else ''
+        return lines[index - 1:index + 1] if rule and set(rule) == {'-'} else [lines[index]]
+    # No TOTAL to find means llvm-cov printed something this function does not model. Show the
+    # tail rather than nothing, so whatever it was is at least visible.
+    return lines[-3:]
+
+
+def main(args):
+    options = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(levelname)s: %(message)s')
+
+    host = Host()
+    port = host.port_factory.get(options.platform, options)
+
+    if options.build_directory_note:
+        _log.info('%s', options.build_directory_note)
+
+    # The -selective infix on the output directory, applied before anything is written into it.
+    # An artifact is moved, mailed and attached to bugs, and then all it has to say what it is
+    # is its own name and the provenance record inside it. A directory called `report` that
+    # holds lower bounds is indistinguishable from one that holds exact numbers.
+    if options.scope.is_selective:
+        renamed = options.scope.directory(options.output_dir)
+        if renamed != options.output_dir:
+            _log.info('Selective run, so writing to %s rather than %s: a report of lower bounds '
+                      'must not be mistakable for a full-suite one after it has been moved.',
+                      renamed, options.output_dir)
+            options.output_dir = renamed
+    # The banner itself is not printed here: summary_lines() prints it from the provenance
+    # record, which is the copy that is also written into the artifacts, and saying it twice
+    # teaches a reader to skip it.
+
+    # Resolved and checked before any work: a --sources path that matches nothing does NOT make
+    # llvm-cov produce an empty report, and it does not complain either -- measured against the
+    # current Apple LLVM, it reports *everything*. So a typo, or a scope llvm-cov cannot see,
+    # costs a full run and then hands back a whole-tree artifact under a banner saying the
+    # report is scoped. See llvm_cov_sources below and verify_report_is_within_scope().
+    sources, missing_sources = resolve_source_scopes(options.sources, port.webkit_base())
+    if missing_sources:
+        for path in missing_sources:
+            _log.error('--sources %s does not exist', path)
+        _log.error('llvm-cov matches --sources against paths recorded in the coverage mapping, '
+                   'and reports the whole tree rather than failing when none of them match.')
+        return 1
+    if sources:
+        _log.info('Reporting only on %s, so every total below is that scope and not the project.',
+                  ', '.join(sources))
+
+    # The scope as the *checkout* spells it is not the scope the coverage mapping records. A
+    # framework that compiles against the build directory's staged headers records those paths,
+    # and PathCanonicalizer maps them back only when a trace is read -- long after llvm-cov has
+    # applied --sources. So llvm-cov needs both spellings, or the filter matches nothing and
+    # silently degrades to the whole tree. Measured: WebCore.framework's mapping holds 13,548
+    # files and no Source/WTF path at all.
+    llvm_cov_sources = list(sources)
+    for scope in sources:
+        for staged in staged_equivalents_for_scope(scope, port.webkit_base(),
+                                                   port._build_path()):
+            if staged not in llvm_cov_sources:
+                llvm_cov_sources.append(staged)
+                _log.info('Also passing %s to llvm-cov: it is where the build stages the '
+                          'headers of %s, and that is the path the coverage mapping records.',
+                          staged, scope)
+
+    try:
+        objects = instrumented_binary_paths(port, options.extra_objects,
+                                            options.include_test_support, options.products)
+    except RuntimeError as error:
+        _log.error('%s', error)
+        return 1
+    if not objects:
+        _log.error('Found no instrumented frameworks under %s.', port._build_path())
+        _log.error('Build with --coverage first, or pass --build-directory.')
+        return 1
+    for path in objects:
+        _log.info('Including %s', path)
+
+    os.makedirs(options.output_dir, exist_ok=True)
+
+    suites = []
+    unreadable_profiles = []
+    if options.suite:
+        try:
+            suites = resolve_suites(options.suite, options.output_dir)
+        except (SuiteSpecError, RuntimeError) as error:
+            _log.error('%s', error)
+            return 1
+        profile_path = merge_suite_profiles(
+            suites, os.path.join(options.output_dir, 'coverage.profdata'))
+        raw_profiles = [path for suite in suites for path in suite.raw_profiles]
+    elif options.profdata:
+        profile_path = options.profdata
+        raw_profiles = []
+        _log.info('Reporting from the already-indexed profile %s', profile_path)
+    else:
+        profile_path = os.path.join(options.output_dir, 'coverage.profdata')
+        try:
+            merge = merge_coverage_profiles(
+                options.coverage_dir, profile_path,
+                unreadable_limit=1.0 if options.allow_unreadable_profiles else
+                UNREADABLE_RAW_PROFILE_LIMIT)
+        except RuntimeError as error:
+            _log.error('%s', error)
+            _log.error('Pass --allow-unreadable-profiles to report from the readable remainder '
+                       'anyway.')
+            return 1
+        raw_profiles, unreadable_profiles = merge.merged, merge.unreadable
+        _log.info('Indexed %d raw profiles into %s', len(raw_profiles), profile_path)
+
+    if not report_instrumentation_survey(objects, port._build_path()):
+        return 1
+    warn_about_objects_with_no_profile_data(objects, raw_profiles)
+    warn_about_collected_profiles_with_no_object(objects, raw_profiles)
+
+    ignore_regexes = list(DEFAULT_IGNORE_REGEXES) + list(options.ignore_regexes)
+    if not options.include_third_party:
+        ignore_regexes += list(THIRD_PARTY_IGNORE_REGEXES)
+        copied = third_party_copied_header_ignore_regexes(port._build_path())
+        if copied:
+            # The regexes themselves, not a name derived from them: the two build systems
+            # produce different shapes -- /usr/local/include/ANGLE against /ANGLE/Headers/ --
+            # and taking the last path segment of the second one printed an empty string.
+            _log.info('Excluding %d third-party copied-header directories the build installed: '
+                      '%s', len(copied), ', '.join(copied))
+            ignore_regexes += copied
+
+    summary_path = os.path.join(options.output_dir, 'summary.txt')
+    # The infix on the trace too, and for the same reason as the directory: the trace is the one
+    # artifact that outlives everything else -- 54 MB gzipped against a 45 GB build tree, kept as
+    # a baseline forever -- so its filename has to say whether its numbers are exact.
+    lcov_path = os.path.join(options.output_dir, options.scope.filename(
+        'coverage.lcov.gz' if options.compress_lcov else 'coverage.lcov'))
+    html_dir = os.path.join(options.output_dir, 'html')
+    suite_lcov_paths = [
+        (suite.name, os.path.join(options.output_dir, options.scope.filename(
+            'coverage-{}.lcov.gz'.format(suite.name) if options.compress_lcov else
+            'coverage-{}.lcov'.format(suite.name))))
+        for suite in suites] if len(suites) > 1 else []
+
+    # Built now, before the trace exists, because the trace carries a comment holding most of it:
+    # a .lcov.gz that ends up on a bot as a baseline has to be able to say what it is a baseline
+    # for. The trace's own measurements are added afterwards and only reach the JSON record.
+    provenance = provenance_record(
+        port.webkit_base(), port._build_path(), port.name(), port.get_option('configuration'),
+        objects, profile_path, command_line=args, products=options.products,
+        suites=[(suite.name, suite.source) for suite in suites],
+        raw_profile_count=len(raw_profiles),
+        unreadable_raw_profile_count=len(unreadable_profiles),
+        ignore_filename_regexes=ignore_regexes,
+        sources_scope=sources,
+        include_third_party=options.include_third_party,
+        include_test_support=options.include_test_support,
+        scope=options.scope,
+        generator=os.path.basename(__file__))
+    for line in summary_lines(provenance):
+        _log.info('%s', line)
+
+    # These llvm-cov invocations are independent and each takes minutes over WebKit-sized
+    # binaries, so run them at once rather than one after another. They are separate
+    # processes; the threads here only wait on them. One more per suite, over the same objects
+    # with a different profile.
+    def make_summary():
+        return LLVMCov.report(objects, profile_path, ignore_regexes, options.path_equivalence,
+                              check_binary_ids=True, sources=llvm_cov_sources)
+
+    def make_lcov():
+        return LLVMCov.export_lcov(objects, profile_path, lcov_path, ignore_regexes,
+                                   options.path_equivalence, compress=options.compress_lcov,
+                                   header_line=trace_comment(provenance),
+                                   sources=llvm_cov_sources)
+
+    def make_html():
+        return LLVMCov.show_html(objects, profile_path, html_dir, ignore_regexes,
+                                 options.path_equivalence,
+                                 show_instantiations=options.show_instantiations,
+                                 sources=llvm_cov_sources)
+
+    def make_suite_lcov(suite_profile, output_path):
+        return lambda: LLVMCov.export_lcov(objects, suite_profile, output_path, ignore_regexes,
+                                           options.path_equivalence,
+                                           compress=options.compress_lcov,
+                                           header_line=trace_comment(provenance),
+                                           sources=llvm_cov_sources)
+
+    regions_path = os.path.join(options.output_dir, '.coverage-regions.json')
+
+    def make_regions():
+        return LLVMCov.export_regions_json(objects, profile_path, regions_path, ignore_regexes,
+                                           options.path_equivalence, sources=llvm_cov_sources)
+
+    work = {'summary': make_summary}
+    # The directory index and the line views are both built from the lcov trace, so it is
+    # needed even with --no-lcov.
+    work['lcov'] = make_lcov
+    if options.llvm_cov_html:
+        work['html'] = make_html
+    if options.html and options.source_views and options.regions:
+        work['regions'] = make_regions
+    for suite, (_, suite_lcov_path) in zip(suites, suite_lcov_paths):
+        work['lcov ' + suite.name] = make_suite_lcov(suite.profdata, suite_lcov_path)
+    if len(suites) == 1:
+        _log.info('One suite, so it needs no column of its own: the combined column is it.')
+
+    _log.info('Running %d llvm-cov invocations concurrently: %s',
+              len(work), ', '.join(sorted(work)))
+    with ThreadPoolExecutor(max_workers=len(work)) as pool:
+        futures = {name: pool.submit(function) for name, function in work.items()}
+        results = {name: future.result() for name, future in futures.items()}
+
+    for name, result in results.items():
+        if result.returncode and name == 'regions':
+            # Only the in-line highlighting depends on it, so the report goes ahead without.
+            _log.warning('llvm-cov %s failed, so the line views mark whole lines only: %s',
+                         name, result.stderr)
+        elif result.returncode:
+            _log.error('llvm-cov %s failed: %s', name, result.stderr)
+            return 1
+
+    # llvm-cov applied --sources, or it did not and said nothing. Checked rather than trusted,
+    # because the failure is silent and the artifact still looks right: a filter that matches no
+    # recorded path makes llvm-cov report the whole tree, and the scope banner above has already
+    # promised otherwise. Measured on this checkout before llvm_cov_sources existed:
+    # --products=WebCore --sources=Source/WTF gave 13,554 files and 1,453,739 lines, Xcode SDK
+    # headers included, where the same profile scoped correctly gives 322 files and 39,107.
+    #
+    # Cheap enough to always do: one SF: pass over the trace, seconds against the tens that
+    # parsing it fully takes. Fatal rather than a warning -- an artifact whose banner contradicts
+    # its contents is worse than no artifact, and every consumer of the trace believes the banner.
+    if sources:
+        canonicalizer = PathCanonicalizer(port.webkit_base(), build_directory=port._build_path())
+        reported = parse_lcov_source_files(lcov_path, canonicalizer)
+        outside = sorted(path for path in reported if not is_under_any(path, sources))
+        if outside:
+            _log.error('llvm-cov ignored --sources: %d of the %d files in the trace are outside '
+                       'the requested scope.', len(outside), len(reported))
+            for path in outside[:5]:
+                _log.error('    %s', path)
+            if len(outside) > 5:
+                _log.error('    ... and %d more', len(outside) - 5)
+            _log.error('llvm-cov reports everything, silently, when a --sources filter matches '
+                       'no path in the coverage mapping. Check that %s is a path the mapping '
+                       'records for these objects; a framework compiled against staged headers '
+                       'records the build directory path instead.', ', '.join(sources))
+            return 1
+
+    # A profile collected from different binaries than the ones being reported on still
+    # produces a complete-looking report: llvm-cov matches what it can, drops the rest, and
+    # says so only on stderr. The numbers are then quietly wrong, and it is easy to cause by
+    # simply rebuilding between running the tests and generating the report.
+    #
+    # The signal to use is llvm-cov's per-object "profile data may be out of date" warning.
+    # Do NOT use its "N functions have mismatched data" count: some mismatch is expected and
+    # harmless here, because WTF and bmalloc are statically linked into several frameworks, so
+    # one function name legitimately has a different structural hash per image while
+    # llvm-profdata merged those counters by name. A correct full report shows tens of
+    # thousands of those.
+    stale_objects = set()
+    mismatched = 0
+    for result in results.values():
+        for line in (result.stderr or '').splitlines():
+            match = re.search(r'warning: (.*): profile data may be out of date', line)
+            if match:
+                stale_objects.add(match.group(1))
+            count = re.search(r'(\d+) functions have mismatched data', line)
+            if count:
+                mismatched = max(mismatched, int(count.group(1)))
+
+    if mismatched:
+        _log.info('%d functions have mismatched data. Some of that is expected: WTF and bmalloc '
+                  'are linked into several frameworks, so the same function has a different hash '
+                  'in each.', mismatched)
+
+    if stale_objects:
+        _log.error('These binaries are newer than the profile, so the report would be wrong:')
+        for path in sorted(stale_objects):
+            _log.error('    %s', path)
+        _log.error('Re-run the tests against the current build, or pass --allow-profile-mismatch.')
+        if not options.allow_profile_mismatch:
+            return 1
+
+    with open(summary_path, 'w') as summary_file:
+        # llvm-cov's own table, with the scope written above it. Prepended rather than rewritten:
+        # every percentage in that table is a lower bound under selection and there are tens of
+        # thousands of them, so the honest thing is to restate the TOTAL line once at the top and
+        # leave llvm-cov's output byte-for-byte what llvm-cov produced.
+        for line in summary_banner_lines(options.scope, results['summary'].stdout):
+            summary_file.write(line + '\n')
+        summary_file.write(results['summary'].stdout)
+    for line in options.scope.banner_lines():
+        print(line)
+    for line in summary_total_lines(results['summary'].stdout):
+        print(options.scope.qualify_percentages(line))
+    _log.info('Wrote %s', summary_path)
+
+    # The trace, rewritten to name the paths the report shows. Done here, before its size is
+    # logged and before its measurements go into the provenance, so that everything downstream
+    # describes the file that will actually be on disk.
+    #
+    # summary.txt above is deliberately left byte-for-byte what llvm-cov produced; the trace is
+    # deliberately not. The difference is what each is for. summary.txt is llvm-cov's own report
+    # and is read as such. The trace is this tool's artifact: it outlives the report, it is what
+    # compare-coverage-reports consumes and what a CI system would ingest, and it disagreeing
+    # with the report it shipped beside is a defect rather than a curiosity.
+    trace_canonicalizer = PathCanonicalizer(port.webkit_base(),
+                                            build_directory=port._build_path())
+    for path in [lcov_path] + [path for _, path in suite_lcov_paths]:
+        rewrite = canonicalize_lcov(path, trace_canonicalizer)
+        if rewrite.rewritten or rewrite.merged:
+            _log.info('%s: rewrote %d staged path(s) and unioned %d file(s) that llvm-cov '
+                      'reported under two paths, %d records to %d', os.path.basename(path),
+                      rewrite.rewritten, rewrite.merged, rewrite.records_in, rewrite.records_out)
+
+    _log.info('Wrote %s (%.1f MB)', lcov_path, os.path.getsize(lcov_path) / 1e6)
+    for name, path in suite_lcov_paths:
+        _log.info('Wrote %s (%.1f MB), suite %s', path, os.path.getsize(path) / 1e6, name)
+
+    # Written even with --no-lcov, and written before anything that can fail below it: an
+    # artifact whose provenance is missing is one nobody can check, which is the state every
+    # other output of this tool used to be in.
+    _log.info('Wrote %s', write_provenance(
+        add_trace_measurements(provenance, lcov_path), options.output_dir))
+
+    # The third state. llvm-cov can tell a covered line from an instrumented-but-unexecuted
+    # one, but a file this configuration never compiled has no coverage mapping at all, so it
+    # is absent from the trace rather than present at 0%. On the measured macOS Release build
+    # that is 2,446 of 10,473 first-party implementation files and 764,144 physical lines, so
+    # without this the percentages above are quoted over 77% of the tree without saying so.
+    #
+    # It is the same in every suite's column, because every suite ran against the same
+    # binaries, so it is reported once and not per suite.
+    #
+    # These files are deliberately not given synthetic 0% rows: 134 of them produced no
+    # coverage mapping even though they were compiled, because there is nothing in them to
+    # count -- wtf/ASCIICType.cpp is a lookup table -- so a 0% row would invent a denominator.
+    absence = None
+    if options.build_inventory:
+        absence = summarize_absent_files(port, lcov_path, ignore_regexes, options.output_dir,
+                                         sources=sources)
+
+    thresholds = thresholds_from_options(options)
+    totals = None
+    combined_by_path = None
+    if options.html or thresholds or suite_lcov_paths:
+        # One parse of the combined trace, shared by the per-suite check, the gate and the
+        # HTML. Parsing a full-suite trace takes longer than rendering all 16,149 line views
+        # does, so doing it twice would be the most expensive thing in the report.
+        canonicalizer = PathCanonicalizer(port.webkit_base(),
+                                          build_directory=port._build_path())
+        combined_by_path = parse_lcov(lcov_path, canonicalizer, keep_function_names=False)
+        if not combined_by_path:
+            _log.error('%s contained no coverage records.', lcov_path)
+            return 1
+        canonicalizer.log_summary()
+        totals = project_totals(combined_by_path)
+
+    suite_line_totals = []
+    if suite_lcov_paths:
+        suite_line_totals = summarize_suites(port.webkit_base(), suite_lcov_paths,
+                                             combined_by_path)
+
+    regions = None
+    if combined_by_path and 'regions' in results and not results['regions'].returncode:
+        regions = uncovered_regions(
+            regions_path, PathCanonicalizer(port.webkit_base(), build_directory=port._build_path()),
+            covered_lines={path: coverage.lines for path, coverage in combined_by_path.items()})
+    if os.path.exists(regions_path):
+        os.unlink(regions_path)
+
+    if options.html and options.source_views:
+        # A per-directory index plus one line-by-line view per file, both rendered from the
+        # trace this run already has to parse. llvm-cov's own index lists every source file in
+        # one 8MB page, and its per-file pages are 909MB of the report.
+        report = write_report(lcov_path, options.output_dir, source_root=port.webkit_base(),
+                              absence=absence, build_directory=port._build_path(),
+                              index_link='html/index.html' if options.llvm_cov_html else None,
+                              coverage_by_path=combined_by_path,
+                              suite_line_totals=suite_line_totals, scope=options.scope,
+                              regions=regions)
+        _log.info('Wrote %d directory pages and %d line views (%.1f MB); start at %s',
+                  report.directory_pages, report.source_pages, report.source_bytes / 1e6,
+                  os.path.join(options.output_dir, 'index.html'))
+        if options.llvm_cov_html:
+            _log.info('Wrote %s', os.path.join(html_dir, 'index.html'))
+    elif options.html:
+        # The index without the line views. Every file is then listed without a link, which is
+        # what the index already does for a file whose source it cannot read -- so the tooltip
+        # says "the source could not be read", which is not the reason here. The alternative is
+        # linking to pages that do not exist, and 477 dead links in a shipped report is a bug this
+        # branch has already had once. write_directory_index() taking an unlinkable_reason=str to
+        # put in that tooltip is the change that would fix it.
+        pages = write_directory_index(
+            lcov_path, options.output_dir, source_root=port.webkit_base(), absence=absence,
+            build_directory=port._build_path(), coverage_by_path=combined_by_path,
+            unlinkable=set(combined_by_path), suite_line_totals=suite_line_totals,
+            index_link='html/index.html' if options.llvm_cov_html else None,
+            scope=options.scope)
+        _log.info('Wrote %d directory pages and no line views (--no-source-views); start at %s',
+                  pages, os.path.join(options.output_dir, 'index.html'))
+
+    if not options.lcov:
+        os.unlink(lcov_path)
+        for _, path in suite_lcov_paths:
+            os.unlink(path)
+
+    if not options.keep_raw_profiles:
+        for path in raw_profiles:
+            os.unlink(path)
+        _log.info('Deleted %d raw profiles', len(raw_profiles))
+        if unreadable_profiles:
+            # Kept deliberately: they are the only evidence of what went wrong, and they are
+            # not in the indexed profile, so nothing else records that they existed.
+            _log.info('Kept %d unreadable raw profiles', len(unreadable_profiles))
+
+    # Last, and only after everything has been written: a failed gate must leave the report
+    # behind, because the report is how somebody works out why it fired.
+    if thresholds:
+        return check_absolute_thresholds(thresholds, totals, scope=options.scope)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
