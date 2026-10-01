@@ -192,7 +192,11 @@ void Debugger::attach(JSGlobalObject* globalObject)
             if (isJSCellKind(kind)) {
                 auto* cell = static_cast<JSCell*>(heapCell);
                 if (auto* function = dynamicDowncast<JSFunction>(cell)) {
-                    if (function->scope()->realm() == globalObject && function->executable()->isFunctionExecutable() && !function->isHostOrBuiltinFunction())
+                    // Builtins are skipped unless the control flow profiler is on. They carry no URL, so this is the
+                    // only way the inspector protocol can name their sources.
+                    bool skipBuiltins = !m_vm.controlFlowProfiler();
+                    if (function->scope()->realm() == globalObject && function->executable()->isFunctionExecutable()
+                        && !(skipBuiltins && function->isHostOrBuiltinFunction()))
                         sourceProviders.add(uncheckedDowncast<FunctionExecutable>(function->executable())->source().provider());
                 }
 #if ENABLE(WEBASSEMBLY)

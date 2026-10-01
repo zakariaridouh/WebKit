@@ -2382,10 +2382,20 @@ USER_AGENT_SCRIPTS_FILES = \
 #
 USER_AGENT_SCRIPTS_FILES_PATTERNS = $(call to-pattern, $(USER_AGENT_SCRIPTS_FILES))
 
+# Coverage builds keep the scripts unminified so their coverage maps back to the source files. The flag
+# is recorded in a file so that switching it rebuilds them.
+ifeq ($(ENABLE_LLVM_COVERAGE),YES)
+    USER_AGENT_SCRIPTS_FLAGS = --no-minify
+endif
+
 all : $(USER_AGENT_SCRIPTS_FILES)
 
-$(USER_AGENT_SCRIPTS_FILES_PATTERNS) : $(JavaScriptCore_SCRIPTS_DIR)/make-js-file-arrays.py $(USER_AGENT_SCRIPTS)
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/make-js-file-arrays.py -n WebCore --fail-if-non-ascii $(USER_AGENT_SCRIPTS_FILES) $(USER_AGENT_SCRIPTS)
+.PHONY: force
+UserAgentScriptsFlags : $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py force
+	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py '$(USER_AGENT_SCRIPTS_FLAGS)' $@
+
+$(USER_AGENT_SCRIPTS_FILES_PATTERNS) : $(JavaScriptCore_SCRIPTS_DIR)/make-js-file-arrays.py $(USER_AGENT_SCRIPTS) UserAgentScriptsFlags
+	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/make-js-file-arrays.py -n WebCore --fail-if-non-ascii $(USER_AGENT_SCRIPTS_FLAGS) $(USER_AGENT_SCRIPTS_FILES) $(USER_AGENT_SCRIPTS)
 
 # --------
 

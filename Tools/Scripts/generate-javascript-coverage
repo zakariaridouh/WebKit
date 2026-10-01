@@ -1,0 +1,332 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2026 Apple Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+"""Which of the JavaScript builtins inside JavaScriptCore a test run executed.
+Runs jsc with the control-flow profiler over the given tests and maps the dumps to files and lines;
+see webkitpy/coverage_javascript.py and Tools/CodeCoverage/JavaScriptCoverage.md."""
+
+import json
+import logging
+import optparse
+import os
+import shutil
+import sys
+import tempfile
+from concurrent.futures import ThreadPoolExecutor
+
+from webkitpy.common.system.filesystem import FileSystem
+from webkitpy.common.webkit_finder import WebKitFinder
+from webkitpy.coverage_javascript import (
+    JSC_PROFILER_OPTIONS, BuiltinsCoverage, BuiltinsIndex, JavaScriptCoverageReport, JSCDriver,
+    expand_test_paths, find_generated_builtins, find_jsc, format_report)
+from webkitpy.coverage_scope import CoverageScope
+
+_log = logging.getLogger('generate-javascript-coverage')
+
+# Preference order, relative to the checkout: the coverage tree first, then plain builds.
+_BUILD_DIRECTORY_CANDIDATES = (
+    os.path.join('WebKitBuild', 'cmake-mac', 'Coverage'),
+    os.path.join('WebKitBuild-Coverage', 'Release'),
+    os.path.join('WebKitBuild', 'Release'),
+    os.path.join('WebKitBuild', 'cmake-mac', 'Release'),
+    os.path.join('WebKitBuild', 'Debug'),
+)
+
+_EPILOG = """
+WHAT THE NUMBERS MEAN
+
+Functions is the number that has a complete denominator. Every builtin the build embedded is in
+the index whether it ran or not, because the index comes from the generated table and not from
+the dump, so the count includes all of them. A builtin nothing called has NO basic blocks at
+all -- JSC generates a builtin's bytecode on first call, and the profiler registers its blocks
+during bytecode generation -- so zero blocks is the strongest possible statement that it never
+ran, not missing data.
+
+Lines is per basic block, over the statement lines of each builtin: the lines between the
+`function` keyword and the closing brace that are not blank, not comment-only and not
+punctuation-only. Braces are excluded for the reason Tools/CodeCoverage/README.md gives for the
+native pipeline -- a function ending in an explicit `return` never executes the bytecode at its
+closing brace, so counting `}` would report an uncovered line in every builtin that is fully
+exercised. A line is covered when a block that overlaps a non-whitespace character of it
+executed; a block that reaches only into the next line's indentation does not cover that line.
+
+Both are LOWER BOUNDS, and printed with >=. jsc is not the only thing that runs these builtins:
+Promise, the module loader and the iterator protocol are exercised far harder by the layout
+tests than by anything here, and a builtin this reports as never executed may only be one this
+subset never reached. Some of the builtins that the whole stress suite never runs are Web Inspector
+code that jsc cannot reach at all; see Tools/CodeCoverage/JavaScriptCoverage.md.
+
+WHEN A RUN IS NOT COUNTED
+
+jsc evaluates every file it is given into one global object, in order, and the driver is last.
+A test that calls quit() therefore ends the process before the driver runs, and that run
+contributes nothing -- it is counted and named under "runs produced no attributable dump"
+rather than silently dropped. A small share of the runs over JSTests/stress are lost this way. A
+test that throws does not have this problem: jsc reports the exception and carries on to the next
+file.
+
+--batch-size trades that risk for speed. With N tests per jsc process the fixed startup cost
+is amortised, and one quit() costs the whole batch instead of one file. The default is 1.
+"""
+
+
+class _PreformattedEpilog(optparse.IndentedHelpFormatter):
+    def format_epilog(self, epilog):
+        return epilog or ''
+
+
+def parse_args(args):
+    parser = optparse.OptionParser(
+        usage='%prog [options] [TEST_OR_DIRECTORY ...]', epilog=_EPILOG,
+        formatter=_PreformattedEpilog())
+    parser.add_option('--build-directory',
+                      help='Build directory holding jsc and its generated builtins table. '
+                           'Defaults to the first of {} that has both'.format(
+                               ', '.join(_BUILD_DIRECTORY_CANDIDATES)))
+    parser.add_option('--jsc', help='Path to the jsc binary, if not the build directory\'s')
+    parser.add_option('--generated-builtins',
+                      help='Path to the build\'s JSCBuiltins.cpp, if not the build '
+                           'directory\'s. This is where the offset-to-file mapping comes from, '
+                           'so it must be the one the jsc being run was built from')
+    parser.add_option('--jsc-option', action='append', dest='jsc_options', default=[],
+                      metavar='OPTION',
+                      help='An extra option to pass to every jsc process, e.g. '
+                           '--jsc-option=--useConcurrentJIT=false. Repeatable. Needed because this '
+                           'tool does not read the //@ runDefault() directives at the top of a '
+                           'JSTests file, so an option a test sets for itself is not set here '
+                           'and code behind it reads as untested')
+    parser.add_option('--jobs', type='int', default=max(1, (os.cpu_count() or 4) // 2),
+                      metavar='N', help='jsc processes to run at once (default: %default)')
+    parser.add_option('--batch-size', type='int', default=1, metavar='N',
+                      help='Test files per jsc process (default: %default). See the note below')
+    parser.add_option('--timeout', type='int', default=120, metavar='SECONDS',
+                      help='Kill a jsc process after this long (default: %default)')
+    parser.add_option('--dump', action='append', default=[], metavar='PATH',
+                      help='Read an already-captured jsc dump instead of running anything. A '
+                           'file, or a directory of them. Repeatable, and they accumulate the '
+                           'same way separate runs do')
+    parser.add_option('--save-dumps', metavar='DIR',
+                      help='Write each run\'s stderr into DIR, so a long run can be re-reported '
+                           'with --dump without running jsc again')
+    parser.add_option('--profile-dir', metavar='DIR',
+                      help='Where an instrumented jsc should write its .profraw files. Defaults '
+                           'to a temporary directory, never to the baked-in machine-global one')
+    parser.add_option('--json', metavar='PATH', help='Also write the report as JSON')
+    parser.add_option('--no-uncovered-lines', action='store_false', dest='uncovered_lines',
+                      default=True,
+                      help='Omit the per-builtin uncovered-line detail, leaving the summary and '
+                           'the never-executed list')
+    parser.add_option('-v', '--verbose', action='store_true', default=False,
+                      help='Verbose logging')
+    options, remaining = parser.parse_args(args)
+    if options.jobs < 1:
+        parser.error('--jobs must be at least 1')
+    if options.batch_size < 1:
+        parser.error('--batch-size must be at least 1')
+    return options, remaining
+
+
+def resolve_build_directory(options, checkout_root):
+    """The build directory, and the jsc and builtins table inside it.
+    Both must come from the same build, or offsets land in the wrong builtins."""
+    candidates = [options.build_directory] if options.build_directory else [
+        os.path.join(checkout_root, relative) for relative in _BUILD_DIRECTORY_CANDIDATES]
+    for candidate in candidates:
+        jsc = options.jsc or find_jsc(candidate)
+        builtins = options.generated_builtins or find_generated_builtins(candidate)
+        if jsc and builtins:
+            return candidate, jsc, builtins
+    return None, options.jsc, options.generated_builtins
+
+
+def warn_if_stale(jsc_path, generated_builtins):
+    try:
+        if os.path.getmtime(generated_builtins) > os.path.getmtime(jsc_path):
+            _log.warning('%s is newer than %s, so the offsets in the dump may belong to a '
+                         'different set of builtins than the ones this places',
+                         os.path.basename(generated_builtins), os.path.basename(jsc_path))
+    except OSError:
+        pass
+
+
+def batches(paths, size):
+    for start in range(0, len(paths), size):
+        yield paths[start:start + size]
+
+
+def read_dumps(paths):
+    """[(label, text)] from files and directories of saved jsc stderr."""
+    dumps = []
+    for path in paths:
+        if os.path.isdir(path):
+            for name in sorted(os.listdir(path)):
+                candidate = os.path.join(path, name)
+                if os.path.isfile(candidate):
+                    dumps.append((candidate, _read_text(candidate)))
+        else:
+            dumps.append((path, _read_text(path)))
+    return dumps
+
+
+def _read_text(path):
+    with open(path, 'r', encoding='utf-8', errors='replace') as handle:
+        return handle.read()
+
+
+def run_tests(driver, test_batches, driver_path, options, checkout_root):
+    """[(label, dump text)] for every batch, run at most options.jobs at a time.
+    Only the subprocesses are concurrent; the caller merges on one thread."""
+    results = []
+    total = len(test_batches)
+
+    def one(batch):
+        label = os.path.relpath(batch[0], checkout_root) if batch else '(jsc startup)'
+        if len(batch) > 1:
+            label += ' +{}'.format(len(batch) - 1)
+        returncode, stderr = driver.run(batch, driver_path, timeout=options.timeout)
+        return label, returncode, stderr
+
+    with ThreadPoolExecutor(max_workers=options.jobs) as pool:
+        for index, (label, returncode, stderr) in enumerate(pool.map(one, test_batches), 1):
+            if returncode is None:
+                _log.warning('%s timed out after %ds', label, options.timeout)
+            if options.save_dumps:
+                name = label.replace(os.sep, '_').replace(' ', '_') + '.dump'
+                with open(os.path.join(options.save_dumps, name), 'w') as handle:
+                    handle.write(stderr)
+            results.append((label, stderr))
+            if index % 250 == 0 or index == total:
+                _log.info('  %d/%d', index, total)
+    return results
+
+
+def main(args):
+    options, test_arguments = parse_args(args)
+    logging.basicConfig(level=logging.DEBUG if options.verbose else logging.INFO,
+                        format='%(message)s')
+
+    checkout_root = WebKitFinder(FileSystem()).webkit_base()
+    build_directory, jsc_path, generated_builtins = resolve_build_directory(options,
+                                                                           checkout_root)
+    if not generated_builtins:
+        _log.error('Found no generated JSCBuiltins.cpp. Looked in %s. Pass --build-directory '
+                   'or --generated-builtins.',
+                   ', '.join(_BUILD_DIRECTORY_CANDIDATES))
+        return 1
+    if not options.dump and not jsc_path:
+        _log.error('Found no jsc to run. Looked in %s. Pass --build-directory, --jsc, or '
+                   '--dump to report on an already-captured dump.',
+                   ', '.join(_BUILD_DIRECTORY_CANDIDATES))
+        return 1
+
+    try:
+        index = BuiltinsIndex.load(checkout_root, generated_builtins)
+    except (OSError, ValueError) as failure:
+        _log.error('Could not read the builtins table from %s: %s', generated_builtins, failure)
+        return 1
+    placed, verified, total = index.verification_summary()
+    _log.info('Indexed %d builtins from %s: %d placed in a .js file, %d with a verified line '
+              'mapping', total, os.path.relpath(generated_builtins, checkout_root), placed,
+              verified)
+    if not total:
+        _log.error('The builtins table is empty, so there is nothing to report on')
+        return 1
+
+    coverage = BuiltinsCoverage(index)
+    test_paths = expand_test_paths(test_arguments)
+    # Checked here because jsc exits before the driver on a missing path, which would surface as
+    # an attribution failure.
+    missing = [path for path in test_paths if not os.path.isfile(path)]
+    if missing:
+        _log.error('These test paths do not exist: %s', ', '.join(missing[:10]))
+        return 1
+    scope_argv = test_arguments or ['(jsc startup only)']
+
+    if options.dump:
+        if jsc_path:
+            warn_if_stale(jsc_path, generated_builtins)
+        dumps = read_dumps(options.dump)
+        _log.info('Reading %d saved dump(s)', len(dumps))
+        for label, text in dumps:
+            coverage.add_dump(text, label=label)
+        test_count = len(dumps)
+        scope_argv = list(options.dump)
+    else:
+        warn_if_stale(jsc_path, generated_builtins)
+        if options.save_dumps:
+            os.makedirs(options.save_dumps, exist_ok=True)
+        temporary = tempfile.mkdtemp(prefix='webkit-js-coverage-')
+        try:
+            profile_directory = options.profile_dir or os.path.join(temporary, 'profiles')
+            os.makedirs(profile_directory, exist_ok=True)
+            driver = JSCDriver(jsc_path,
+                               framework_path=build_directory or os.path.dirname(jsc_path),
+                               profile_directory=profile_directory,
+                               combined_source_length=index.combined_length,
+                               options=JSC_PROFILER_OPTIONS + tuple(options.jsc_options))
+            driver_path = os.path.join(temporary, 'webkit-js-coverage-driver.js')
+            with open(driver_path, 'w') as handle:
+                handle.write(driver.driver_source())
+
+            # An empty batch (no test paths) still runs the driver, measuring only VM startup.
+            test_batches = list(batches(test_paths, options.batch_size)) or [[]]
+            _log.info('Running %s over %d test file(s) in %d process(es), %d at a time',
+                      os.path.relpath(jsc_path, checkout_root), len(test_paths),
+                      len(test_batches), options.jobs)
+            _log.debug('Profiles from this run go to %s, not to the baked-in path',
+                       profile_directory)
+            results = run_tests(driver, test_batches, driver_path, options, checkout_root)
+        finally:
+            shutil.rmtree(temporary, ignore_errors=True)
+        for label, text in results:
+            coverage.add_dump(text, label=label or '(jsc startup)')
+        test_count = len(test_paths)
+
+    scope = CoverageScope.selective(scope_argv, tests_run=coverage.runs_attributed,
+                                   suite_name='jsc')
+    report = JavaScriptCoverageReport(coverage, jsc_path=jsc_path, test_count=test_count,
+                                      scope=scope)
+
+    for line in format_report(report, show_uncovered_lines=options.uncovered_lines):
+        print(line)
+    for line in scope.banner_lines():
+        print(line)
+
+    if options.json:
+        with open(options.json, 'w') as handle:
+            json.dump(report.to_json(), handle, indent=2, sort_keys=True)
+            handle.write('\n')
+        _log.info('Wrote %s', options.json)
+
+    if not coverage.runs_attributed:
+        _log.error('No run produced a dump that could be attributed to the builtins source, so '
+                   'every number above is zero for want of data rather than for want of '
+                   'coverage')
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
