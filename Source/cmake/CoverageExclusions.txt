@@ -1,0 +1,18 @@
+# Sources left uninstrumented by LLVM coverage, passed to Clang as -fprofile-list (WebKitCommon.cmake).
+#
+# Format is Clang's special case list: a [section], then <prefix>:<glob>=<category> lines.
+# Globs match each function's source location and are anchored at both ends. Ninja compiles with
+# build-relative paths, so "*/ThirdParty/*" would miss "Source/ThirdParty/foo.cpp": omit the slash.
+# An unrecognised prefix is silently ignored, so a typo fails open.
+
+[clang]
+source:*ThirdParty/*=skip
+# Headers copied out of Source/ThirdParty into the build directory lose "ThirdParty" from their path.
+source:*usr/local/include/webrtc/*=skip
+source:*usr/local/include/libwebrtc/*=skip
+
+# Same list for IR instrumentation (-fprofile-generate).
+[llvm]
+source:*ThirdParty/*=skip
+source:*usr/local/include/webrtc/*=skip
+source:*usr/local/include/libwebrtc/*=skip

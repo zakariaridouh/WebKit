@@ -155,6 +155,10 @@ def main(argv):
             depfile_excludes.append(arg[len("--ninja-depfile-exclude="):])
         elif arg.startswith("--emit-compile-stamp="):
             stamp_path = arg[len("--emit-compile-stamp="):]
+        elif arg.startswith("-fprofile-") or arg == "-fcoverage-mapping":
+            # Clang instrumentation flags reach swiftc link lines through CMAKE_<TYPE>_LINKER_FLAGS, and swiftc
+            # rejects them. Dropped, not forwarded as -Xcc: WebKitCommon.cmake names the profile runtime separately.
+            pass
         elif os.name == "nt" and arg.startswith("/") and len(arg) > 1:
             # Work around a bug in CMake: Its MSVC defaults
             # (Platform/Windows-MSVC.cmake) put raw linker switches like

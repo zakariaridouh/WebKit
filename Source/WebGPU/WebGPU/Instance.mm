@@ -38,6 +38,20 @@
 #import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 
+#if ENABLE(LLVM_PROFILE_GENERATION) && ENABLE(LLVM_COVERAGE)
+#error "LLVM_PROFILE_GENERATION and LLVM_COVERAGE both define __llvm_profile_filename. Enable only one."
+#endif
+
+#if ENABLE(LLVM_COVERAGE)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+#error "LLVM_COVERAGE has no iOS-device support; see Tools/CodeCoverage/iOSCoverage.md. The simulator is supported."
+#else
+// Defined in the framework, not the WGSL static library: that links into the framework and would
+// duplicate the definition.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/WebGPU_%8m%c.profraw";
+#endif
+#endif
+
 namespace WebGPU::Metal {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Instance);

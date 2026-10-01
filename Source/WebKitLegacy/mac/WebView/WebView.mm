@@ -407,6 +407,19 @@ SOFT_LINK_CLASS(AVKit, AVTouchBarPlaybackControlsProvider)
 SOFT_LINK_CLASS(AVKit, AVTouchBarScrubber)
 #endif
 
+#if ENABLE(LLVM_PROFILE_GENERATION) && ENABLE(LLVM_COVERAGE)
+#error "LLVM_PROFILE_GENERATION and LLVM_COVERAGE both define __llvm_profile_filename. Enable only one."
+#endif
+
+#if ENABLE(LLVM_COVERAGE)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+#error "LLVM_COVERAGE has no iOS-device support; see Tools/CodeCoverage/iOSCoverage.md. The simulator is supported."
+#else
+// WebKitLegacy is a separate image from WebKit.framework, so it needs its own definition.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/WebKitLegacy_%8m%c.profraw";
+#endif
+#endif
+
 #if !PLATFORM(IOS_FAMILY)
 
 @interface NSView (WebNSViewDetails)

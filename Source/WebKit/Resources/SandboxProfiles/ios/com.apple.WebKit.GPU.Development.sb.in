@@ -218,4 +218,9 @@
         (syscall-number
             SYS_mkdirat
             SYS_rmdir)))
+
+#if ENABLE(LLVM_COVERAGE)
+(allow file-write* (subpath "/private/tmp/WebKitCoverage"))
+#endif
+
 #endif // !ENABLE(DEVELOPMENT_SANDBOX_FALLBACK)

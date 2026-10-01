@@ -190,6 +190,7 @@ BEGIN {
        &setBaseProductDir
        &setConfiguration
        &setConfigurationProductDir
+       &setCoverageIsEnabled
        &setPathForRunningWebKitApp
        &setUpGuardMallocIfNeeded
        &setXcodeSDK
@@ -800,12 +801,12 @@ sub determineCoverageIsEnabled
 {
     return if defined $coverageIsEnabled;
     determineBaseProductDir();
+    $coverageIsEnabled = checkForArgumentAndRemoveFromARGV("--coverage") || readSanitizerConfiguration("Coverage");
+}
 
-    if (open Coverage, "$baseProductDir/Coverage") {
-        $coverageIsEnabled = <Coverage>;
-        close Coverage;
-        chomp $coverageIsEnabled;
-    }
+sub setCoverageIsEnabled($)
+{
+    ($coverageIsEnabled) = @_;
 }
 
 sub determineFuzzilliIsEnabled
@@ -1261,13 +1262,14 @@ sub cmakeCocoaTreeName
 }
 
 # The directory a Cocoa CMake build puts its products in, matching the binaryDir
-# of the presets in CMakePresets.json. A sanitizer or a forced optimization level
+# of the presets in CMakePresets.json. A sanitizer, coverage or a forced optimization level
 # gets a directory of its own, since the products are built with other flags.
 sub cmakeCocoaConfigurationName($)
 {
     my ($configurationName) = @_;
     $configurationName = "ASan" if asanIsEnabled();
     $configurationName = "TSan" if tsanIsEnabled();
+    $configurationName = "Coverage" if coverageIsEnabled();
     $configurationName .= "O" . forceOptimizationLevel() if defined forceOptimizationLevel();
     return $configurationName;
 }
@@ -1294,7 +1296,9 @@ sub determineConfigurationProductDir
     } elsif (usesPerConfigurationBuildDirectory()) {
         $configurationProductDir = "$baseProductDir";
     } elsif (isGtk() or isWPE() or isJSCOnly() or shouldBuildForCrossTarget() or inCrossTargetEnvironment()) {
-        $configurationProductDir = "$baseProductDir/$portName/$configuration";
+        # A coverage build's products are not interchangeable with a normal build's, so they get their own directory.
+        my $portConfiguration = coverageIsEnabled() ? "Coverage" : $configuration;
+        $configurationProductDir = "$baseProductDir/$portName/$portConfiguration";
     } elsif (isAppleCocoaWebKit() && isCMakeBuild()) {
         $configurationProductDir = File::Spec->catdir($baseProductDir, cmakeCocoaTreeName(), cmakeCocoaConfigurationName($configuration));
     } else {
@@ -1581,7 +1585,7 @@ sub XcodeOptions
     }
 
     # When this environment variable is set Tools/Scripts/check-for-weak-vtables-and-externals
-    # treats errors as non-fatal when it encounters missing symbols related to coverage.
+    # expects the profiling runtime's weak externals.
     appendToEnvironmentVariableList("WEBKIT_COVERAGE_BUILD", "1") if $coverageIsEnabled;
 
     die "Cannot enable both ASAN and TSAN at the same time\n" if $asanIsEnabled && $tsanIsEnabled;
@@ -1601,9 +1605,47 @@ sub XcodeOptionStringNoConfig
     return join " ", @baseProductDirOption;
 }
 
+my $explainedCoverageBuildSettings = 0;
+
 sub XcodeCoverageSupportOptions()
 {
-    return ("CLANG_COVERAGE_MAPPING=YES");
+    # CLANG_COVERAGE_MAPPING turns on the instrumentation. ENABLE_LLVM_COVERAGE is the feature define that
+    # compiles in the baked-in __llvm_profile_filename and the sandbox allowance, and selects the section rename.
+    my @options = ("CLANG_COVERAGE_MAPPING=YES", "ENABLE_LLVM_COVERAGE=YES");
+
+    # Applied, not probed: a nested sandbox-exec can succeed in a shell while Xcode's script phases still fail.
+    # Keep in step with MANDATORY_BUILD_SETTINGS in Tools/Scripts/webkitpy/coverage_requirements.py.
+    my $sandboxingWasSpecified = (grep { /^ENABLE_USER_SCRIPT_SANDBOXING=/ } @ARGV)
+        || defined $ENV{"ENABLE_USER_SCRIPT_SANDBOXING"};
+    push @options, "ENABLE_USER_SCRIPT_SANDBOXING=NO" unless $sandboxingWasSpecified;
+
+    return @options if $explainedCoverageBuildSettings;
+    $explainedCoverageBuildSettings = 1;
+
+    if ($sandboxingWasSpecified) {
+        print STDERR "Coverage build: honoring the ENABLE_USER_SCRIPT_SANDBOXING you passed. A coverage build\n" .
+                     "would otherwise set it to NO, because Xcode wraps every script phase in sandbox-exec\n" .
+                     "and a process already inside a sandbox cannot apply another one.\n";
+    } else {
+        print STDERR "Coverage build: adding ENABLE_USER_SCRIPT_SANDBOXING=NO. Xcode wraps every script\n" .
+                     "phase in sandbox-exec, and a process that is already inside a sandbox cannot apply\n" .
+                     "another one, so inside an agent or CI sandbox every script phase fails with\n" .
+                     "\"sandbox-exec: sandbox_apply: Operation not permitted\". It does not affect the\n" .
+                     "output binaries. Pass ENABLE_USER_SCRIPT_SANDBOXING=YES to keep them sandboxed.\n";
+    }
+
+    # Not set for you: it is not coverage-specific, and it disables a security sandbox.
+    unless (defined $ENV{"SWIFTC_DISABLE_SANDBOX"} || (grep { /^SWIFTC_DISABLE_SANDBOX=/ } @ARGV)) {
+        print STDERR "Coverage build: not adding SWIFTC_DISABLE_SANDBOX=YES, which is a separate setting for\n" .
+                     "the same restriction. Without it swift-frontend cannot load the _SwiftifyImport macro\n" .
+                     "plugin; Swift reports that as a warning, silently drops the safe Span overloads, and\n" .
+                     "the build then fails with ten \"cannot convert value of type 'Span<T>' to expected\n" .
+                     "argument type 'UnsafePointer<T>'\" errors in Source/WebGPU/WebGPU/CommandEncoder.swift.\n" .
+                     "That is a Swift toolchain problem and not a coverage problem. Pass SWIFTC_DISABLE_SANDBOX=YES\n" .
+                     "by hand if you need it -- it disables a security sandbox, so it is your call.\n";
+    }
+
+    return @options;
 }
 
 sub XcodeExportCompileCommandsOptions()
@@ -3101,6 +3143,8 @@ sub generateBuildSystemFromCMakeProject
     push @args, "-DENABLE_SANITIZERS=undefined" if ubsanIsEnabled();
     push @args, "-DENABLE_SANITIZERS=fuzzer" if libFuzzerIsEnabled();
     push @args, "-DGENERATE_DSYM=ON" if generateDsym();
+
+    push @args, "-DENABLE_COVERAGE=ON" if coverageIsEnabled();
 
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 

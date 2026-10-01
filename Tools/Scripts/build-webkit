@@ -148,7 +148,7 @@ Usage: $programName [options] [options to pass to build system]
   --visionos-simulator              Use "xrsimulator" (visionOS only) 
   --watchos-device                  Use "watchos.internal" SDK if installed, else "watchos" SDK (watchOS only)
   --watchos-simulator               Use "watchsimulator" (watchOS only)
-  --coverage                        Enable code coverage support (Mac only)
+  --coverage                        Enable LLVM source-based code coverage (Xcode and CMake builds; Source/ThirdParty is left uninstrumented on CMake)
   --analyze                         Enable static anaylsis (Apple platforms only)
   --lto-mode=<mode>                 Set Link Time Optimization mode (full, thin, or none) (LLVM only)
   --cross-target=<target_machine>   Use the cross-toolchain-helper to build WebKit for the specified machine (Linux platforms only)
@@ -217,6 +217,9 @@ if ($showHelp) {
 }
 
 $ENV{'VERBOSE'} = 1 if $verbose;
+
+# Tell webkitdirs, so that everything gated on coverageIsEnabled() agrees, including WEBKIT_COVERAGE_BUILD.
+setCoverageIsEnabled(1) if $coverageSupport;
 
 if ($useCCache == 1) {
     $ENV{'WK_USE_CCACHE'} = "YES";
@@ -397,7 +400,6 @@ if (isWin() || isPlayStation() || (isJSCOnly() && isWindows())) {
     exit 0 if isGenerateProjectOnly();
 
     my @local_options = @options;
-    push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
     push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
     push @local_options, "WK_LTO_MODE=$ltoMode" if ($ltoMode ne "default");
     push @local_options, XcodeExportCompileCommandsOptions() if $exportCompileCommands;

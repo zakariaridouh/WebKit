@@ -347,6 +347,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND NOT "${LOWERCASE_CMAKE_HOST_SY
     add_link_options("$<$<CONFIG:Debug>:LINKER:--no-keep-memory>")
 endif ()
 
+# set-webkit-configuration --lto-mode=none arrives as the string "none", which is truthy: treat it as no LTO.
+if (LTO_MODE STREQUAL "none")
+    set(LTO_MODE "")
+endif ()
+
 if (LTO_MODE AND COMPILER_IS_CLANG AND NOT MSVC)
     set(CMAKE_C_FLAGS "-flto=${LTO_MODE} ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-flto=${LTO_MODE} ${CMAKE_CXX_FLAGS}")
@@ -378,6 +383,9 @@ if (COMPILER_IS_CLANG)
 endif ()
 
 option(USE_PCH_CODEGEN "Emit the inline functions a prefix header defines once into a per-target PCH object file" ON)
+
+# Reported because it is cached: an existing build directory keeps the value it was first configured with.
+message(STATUS "Prefix header codegen (USE_PCH_CODEGEN): ${USE_PCH_CODEGEN}")
 
 if (COMPILER_IS_GCC_OR_CLANG)
     # Careful: this needs to be above where ENABLED_COMPILER_SANITIZERS is set.

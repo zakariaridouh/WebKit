@@ -436,6 +436,8 @@ set(LLIntSettingsExtractor_DEPENDENCIES
     WTF_CopyHeaders
     bmalloc_CopyHeaders
 )
+# Build-time generator: nobody collects its profile.
+set(LLIntSettingsExtractor_SKIP_COVERAGE_PROFILE_PATH ON)
 # Only used for local analysis; skip the normal post-link steps.
 set_property(TARGET LLIntSettingsExtractor PROPERTY SKIP_CODESIGN YES)
 set_property(TARGET LLIntSettingsExtractor PROPERTY SKIP_DSYM YES)
@@ -466,6 +468,7 @@ set(LLIntOffsetsExtractor_DEPENDENCIES
     WTF_CopyHeaders
     bmalloc_CopyHeaders
 )
+set(LLIntOffsetsExtractor_SKIP_COVERAGE_PROFILE_PATH ON)
 # Only used for local analysis; skip the normal post-link steps.
 set_property(TARGET LLIntOffsetsExtractor PROPERTY SKIP_CODESIGN YES)
 set_property(TARGET LLIntOffsetsExtractor PROPERTY SKIP_DSYM YES)

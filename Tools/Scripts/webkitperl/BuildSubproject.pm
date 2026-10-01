@@ -184,18 +184,25 @@ if (isCMakeBuild()) {
     exit exitStatus(0);
 }
 
-if (isAppleCocoaWebKit()) {
-    my @options = XcodeOptions();
-    # FIXME: additionalSupportOptions is unused. Coverage and static analysis options are broken.
-    # https://webkit.org/b/259562
-    my @additionalSupportOptions = ();
-    push @additionalSupportOptions, XcodeCoverageSupportOptions() if $coverageSupport;
-    push @additionalSupportOptions, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
-    push @additionalSupportOptions, XcodeExportCompileCommandsOptions() if $exportCompileCommands;
+my @xcodeBuildSettings = ();
 
-    push @options, ($forceCLoop ? "ENABLE_JIT=ENABLE_JIT=0" : "ENABLE_JIT=ENABLE_JIT");
-    push @options, ($forceCLoop ? "ENABLE_C_LOOP=ENABLE_C_LOOP" : "ENABLE_C_LOOP=ENABLE_C_LOOP=0");
-    push @options, ($ftlJIT ? "ENABLE_FTL_JIT=ENABLE_FTL_JIT" : "ENABLE_FTL_JIT=ENABLE_FTL_JIT=0");
+if (isAppleCocoaWebKit()) {
+    # Before XcodeOptions(), which exports WEBKIT_COVERAGE_BUILD.
+    setCoverageIsEnabled(1) if $coverageSupport;
+
+    # Called for its side effects (exports WEBKIT_COVERAGE_BUILD, consumes webkitdirs arguments from @ARGV).
+    # Makefile.shared computes the xcodebuild flags itself.
+    XcodeOptions();
+
+    # xcodebuild build settings, forwarded through Makefile.shared's ARGS by buildUpToProject.
+    push @xcodeBuildSettings, XcodeCoverageSupportOptions() if $coverageSupport;
+    push @xcodeBuildSettings, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
+    # No --export-compile-commands entry: Makefile.shared reads EXPORT_COMPILE_COMMANDS from the environment,
+    # and XcodeExportCompileCommandsOptions() contains spaces that would word-split in $(ARGS).
+
+    push @xcodeBuildSettings, ($forceCLoop ? "ENABLE_JIT=ENABLE_JIT=0" : "ENABLE_JIT=ENABLE_JIT");
+    push @xcodeBuildSettings, ($forceCLoop ? "ENABLE_C_LOOP=ENABLE_C_LOOP" : "ENABLE_C_LOOP=ENABLE_C_LOOP=0");
+    push @xcodeBuildSettings, ($ftlJIT ? "ENABLE_FTL_JIT=ENABLE_FTL_JIT" : "ENABLE_FTL_JIT=ENABLE_FTL_JIT=0");
 
     sub option($$$)
     {
@@ -207,7 +214,7 @@ if (isAppleCocoaWebKit()) {
     foreach (@features) {
         if ($_->{javascript}) {
             my $option = option($_->{define}, ${$_->{value}}, $_->{default});
-            push @options, $option unless $option eq "";
+            push @xcodeBuildSettings, $option unless $option eq "";
         }
     }
 }
@@ -250,6 +257,7 @@ sub buildUpToProject
         }
 
         my $command = "make SCHEME=\"$schemeName\" " . (lc configuration()) . " GCC_PREPROCESSOR_ADDITIONS=\"@compilerFlags\" @extraCommands";
+        $command .= " ARGS=\"@xcodeBuildSettings\"" if @xcodeBuildSettings;
 
         print "\n";
         print "building ", $projectName, "\n";

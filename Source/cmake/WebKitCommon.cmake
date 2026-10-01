@@ -9,7 +9,7 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     # Preset values are not replayed on auto-reconfigure; if CMake's "compiler
     # changed" path wipes the cache, these silently revert. Stamp them outside
     # the cache and refuse to proceed if any go missing.
-    set(WEBKIT_IDENTITY_VARS CMAKE_BUILD_TYPE PORT DEVELOPER_MODE ENABLE_SANITIZERS WEBKIT_SDK_NAME CMAKE_OSX_SYSROOT)
+    set(WEBKIT_IDENTITY_VARS CMAKE_BUILD_TYPE PORT DEVELOPER_MODE ENABLE_SANITIZERS ENABLE_COVERAGE WEBKIT_SDK_NAME CMAKE_OSX_SYSROOT)
     set(_config_stamp "${CMAKE_BINARY_DIR}/.webkit-config-stamp")
     if (EXISTS "${_config_stamp}")
         file(STRINGS "${_config_stamp}" _stamp_lines)
@@ -441,6 +441,140 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         string(PREPEND CMAKE_MODULE_LINKER_FLAGS "-fprofile-use=${PGO_PROFILE_PATH} ")
 
         message(STATUS "PGO profile use enabled with: ${PGO_PROFILE_PATH}")
+    endif ()
+
+    # -------------------------------------------------------------------------
+    # LLVM source-based code coverage support
+    # -------------------------------------------------------------------------
+    # The flags are global rather than per-target: PCH reuse needs the producing and consuming
+    # targets to compile with equal flags. Source/ThirdParty is excluded by path (-fprofile-list).
+    if (ENABLE_COVERAGE AND NOT COMPILER_IS_CLANG)
+        message(FATAL_ERROR "ENABLE_COVERAGE requires Clang.")
+    endif ()
+
+    if (ENABLE_COVERAGE AND MSVC)
+        message(FATAL_ERROR
+            "ENABLE_COVERAGE is not implemented for the MSVC-compatible clang-cl driver, "
+            "which spells these flags differently and has no libclang_rt.profile here.")
+    endif ()
+
+    if (ENABLE_COVERAGE AND ENABLE_SANITIZERS)
+        message(FATAL_ERROR
+            "ENABLE_COVERAGE cannot be combined with ENABLE_SANITIZERS=${ENABLE_SANITIZERS}. "
+            "Configure a separate build directory for each.")
+    endif ()
+
+    if (ENABLE_COVERAGE)
+        # CMAKE_CURRENT_LIST_DIR, not CMAKE_SOURCE_DIR: partial builds include this file from other roots.
+        set(COVERAGE_EXCLUSIONS_FILE "${CMAKE_CURRENT_LIST_DIR}/CoverageExclusions.txt"
+            CACHE FILEPATH "Clang -fprofile-list file naming the sources to leave uninstrumented")
+        if (NOT EXISTS "${COVERAGE_EXCLUSIONS_FILE}")
+            message(FATAL_ERROR "COVERAGE_EXCLUSIONS_FILE does not exist: ${COVERAGE_EXCLUSIONS_FILE}")
+        endif ()
+
+        # No =<path>: where profiles land is decided at run time (LLVM_PROFILE_FILE or the baked-in default).
+        set(COVERAGE_COMPILE_FLAGS "-fprofile-instr-generate -fcoverage-mapping")
+
+        cmake_push_check_state()
+        set(CMAKE_REQUIRED_FLAGS "${COVERAGE_COMPILE_FLAGS}")
+        set(CMAKE_REQUIRED_LINK_OPTIONS "-fprofile-instr-generate")
+        check_cxx_source_compiles("int main() { return 0; }" HAVE_CLANG_COVERAGE_RUNTIME)
+        cmake_pop_check_state()
+
+        if (NOT HAVE_CLANG_COVERAGE_RUNTIME)
+            message(FATAL_ERROR
+                "ENABLE_COVERAGE requires the Clang profile runtime (libclang_rt.profile).\n"
+                "Install it or disable coverage with: -DENABLE_COVERAGE=OFF")
+        endif ()
+
+        # Probe with the real exclusions file: Clang rejects a malformed list, so this checks the flag and
+        # that the file parses. A mistyped "source:" prefix is silently ignored.
+        cmake_push_check_state()
+        set(CMAKE_REQUIRED_FLAGS "${COVERAGE_COMPILE_FLAGS} -fprofile-list=${COVERAGE_EXCLUSIONS_FILE}")
+        set(CMAKE_REQUIRED_LINK_OPTIONS "-fprofile-instr-generate")
+        check_cxx_source_compiles("int main() { return 0; }" HAVE_CLANG_PROFILE_LIST)
+        cmake_pop_check_state()
+
+        if (HAVE_CLANG_PROFILE_LIST)
+            string(APPEND COVERAGE_COMPILE_FLAGS " -fprofile-list=${COVERAGE_EXCLUSIONS_FILE}")
+        else ()
+            message(WARNING
+                "This Clang does not accept -fprofile-list=${COVERAGE_EXCLUSIONS_FILE}, so "
+                "Source/ThirdParty will be instrumented as well. Expect a much larger build "
+                "and much slower tests.")
+        endif ()
+
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COVERAGE_COMPILE_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_COMPILE_FLAGS}")
+        # Apple ports also enable OBJC/OBJCXX, so .m/.mm sources need the flags too.
+        set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} ${COVERAGE_COMPILE_FLAGS}")
+        set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} ${COVERAGE_COMPILE_FLAGS}")
+
+        # -fprofile-instr-generate at link time is what pulls in libclang_rt.profile.
+        set(COVERAGE_LINK_FLAGS "-fprofile-instr-generate")
+
+        # Continuous mode ("%c") mmaps the counters, bitmap and data sections, so each must start on a
+        # 16 KB page boundary (4000 is hex) or the profiling runtime refuses to start. Mach-O only.
+        # LINKER: because swiftc rejects a literal -Wl, and WebKit, WebGPU and TestWebKitAPI link with
+        # swiftc. SHELL: because add_link_options() would de-duplicate the repeated tokens.
+        if (APPLE)
+            add_link_options(
+                "LINKER:SHELL:-rename_section __DATA __llvm_prf_cnts __MMAP_DATA __llvm_prf_cnts"
+                "LINKER:SHELL:-sectalign __MMAP_DATA __llvm_prf_cnts 4000"
+                "LINKER:SHELL:-sectalign __DATA __llvm_prf_bits 4000"
+                "LINKER:SHELL:-sectalign __DATA __llvm_prf_data 4000")
+        endif ()
+
+        # ENABLE_LLVM_COVERAGE defines __llvm_profile_filename once per framework. WPE links JavaScriptCore
+        # and WebCore into one image, so demote the duplicate the way the PGO path above does.
+        if (ENABLE_LLVM_COVERAGE AND LD_SUPPORTS_ALLOW_MULTIPLE_DEFINITION)
+            string(PREPEND COVERAGE_LINK_FLAGS "-Wl,--allow-multiple-definition ")
+        endif ()
+
+        string(PREPEND CMAKE_EXE_LINKER_FLAGS "${COVERAGE_LINK_FLAGS} ")
+        string(PREPEND CMAKE_SHARED_LINKER_FLAGS "${COVERAGE_LINK_FLAGS} ")
+        string(PREPEND CMAKE_MODULE_LINKER_FLAGS "${COVERAGE_LINK_FLAGS} ")
+
+        # swiftc links the Swift targets, so CMAKE_<TYPE>_LINKER_FLAGS never reaches them. Name the
+        # profile runtime archive for their link lines explicitly.
+        set(_coverage_profile_runtime "")
+        foreach (_candidate IN ITEMS
+                 libclang_rt.profile_osx.a
+                 libclang_rt.profile-${CMAKE_SYSTEM_PROCESSOR}.a
+                 libclang_rt.profile.a)
+            execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=${_candidate}
+                OUTPUT_VARIABLE _candidate_path OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+            if (_candidate_path AND EXISTS "${_candidate_path}")
+                set(_coverage_profile_runtime "${_candidate_path}")
+                break ()
+            endif ()
+        endforeach ()
+
+        if (_coverage_profile_runtime)
+            add_link_options("$<$<LINK_LANGUAGE:Swift>:-Xlinker>"
+                             "$<$<LINK_LANGUAGE:Swift>:${_coverage_profile_runtime}>")
+        else ()
+            message(WARNING
+                "Could not locate libclang_rt.profile for ${CMAKE_CXX_COMPILER}. Targets "
+                "linked by swiftc will fail with undefined __llvm_profile_* symbols.")
+        endif ()
+        unset(_candidate)
+        unset(_candidate_path)
+        unset(_coverage_profile_runtime)
+
+        # Reconfigure when the exclusions change. This does not rebuild objects, and ccache cannot
+        # cache compiles carrying -fprofile-list.
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${COVERAGE_EXCLUSIONS_FILE}")
+
+        message(STATUS "LLVM source-based code coverage enabled.")
+        message(STATUS "  Uninstrumented sources: ${COVERAGE_EXCLUSIONS_FILE}")
+        if (ENABLE_LLVM_COVERAGE)
+            message(STATUS "  Profile output: /private/tmp/WebKitCoverage/<Framework>_%8m%c.profraw")
+        else ()
+            message(STATUS "  Profile output: clang's default.profraw")
+        endif ()
+        message(STATUS "  Override at runtime with: LLVM_PROFILE_FILE=/your/path/%p_%m.profraw")
+        message(STATUS "  Turn the collected profiles into a report with Tools/Scripts/generate-coverage-report")
     endif ()
 
     # -----------------------------------------------------------------------------

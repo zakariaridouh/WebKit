@@ -53,6 +53,19 @@ if (getcwd() =~ m{/CMakeFiles/}) {
 
 # Real compilation
 my $bundlePolicy = $ENV{WK_UNIFIED_SOURCES_BUNDLE_POLICY};
+
+# A coverage build pins the policy to Bundle: the policy changes the coverage metadata, so choosing
+# per invocation would mix granularities across objects. WK_UNIFIED_SOURCES_BUNDLE_POLICY still overrides.
+if (!defined($bundlePolicy) && open(my $stamp, '<', '.webkit-config-stamp')) {
+    while (my $line = <$stamp>) {
+        if ($line =~ /^ENABLE_COVERAGE=(?:ON|TRUE|YES|1)\s*$/) {
+            $bundlePolicy = "Bundle";
+            last;
+        }
+    }
+    close($stamp);
+}
+
 if (!defined($bundlePolicy)) {
     my $dryRun = `$ninja -n @ARGV 2>&1`;
     my ($totalCommands) = $dryRun =~ m{/(\d+)\]};

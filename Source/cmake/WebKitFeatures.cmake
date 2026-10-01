@@ -225,6 +225,7 @@ macro(WEBKIT_OPTION_BEGIN)
     WEBKIT_OPTION_DEFINE(ENABLE_CONTENT_EXTENSIONS "Toggle Content Extensions support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CONTENT_FILTERING "Toggle content filtering support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CONTEXT_MENUS "Toggle Context Menu support" PRIVATE ON)
+    WEBKIT_OPTION_DEFINE(ENABLE_COVERAGE "Instrument the build for LLVM source-based code coverage" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CSS_TAP_HIGHLIGHT_COLOR "Toggle CSS -webkit-tap-highlight-color support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CURSOR_VISIBILITY "Toggle cursor visibility support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_C_LOOP "Enable CLoop interpreter" PRIVATE ${ENABLE_C_LOOP_DEFAULT})
@@ -253,6 +254,7 @@ macro(WEBKIT_OPTION_BEGIN)
     WEBKIT_OPTION_DEFINE(ENABLE_LAYOUT_TESTS "Toggle layout test support (DumpRenderTree/WebkitTestRunner)" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_LEGACY_CUSTOM_PROTOCOL_MANAGER "Toggle legacy protocol manager support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_LEGACY_ENCRYPTED_MEDIA "Toggle Legacy EME V2 support" PRIVATE OFF)
+    WEBKIT_OPTION_DEFINE(ENABLE_LLVM_COVERAGE "Bake the per-framework coverage profile output path into the binaries" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_LLVM_PROFILE_GENERATION "Include LLVM's instrumentation to generate profiles for PGO" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_MALLOC_HEAP_BREAKDOWN "Whether to enable malloc heap breakdown." PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_MAC_GESTURE_EVENTS "Toggle macOS gesture events support" PRIVATE OFF)
@@ -352,6 +354,10 @@ macro(WEBKIT_OPTION_BEGIN)
     WEBKIT_OPTION_DEFINE(USE_WOFF2 "Toggle support for WOFF2 Web Fonts through libwoff2" PRIVATE ON)
 
     WEBKIT_OPTION_CONFLICT(ENABLE_JIT ENABLE_C_LOOP)
+    # Coverage and PGO instrumentation both want to own __llvm_profile_filename.
+    WEBKIT_OPTION_CONFLICT(ENABLE_COVERAGE ENABLE_LLVM_PROFILE_GENERATION)
+    WEBKIT_OPTION_CONFLICT(ENABLE_COVERAGE USE_PGO_PROFILE)
+    WEBKIT_OPTION_CONFLICT(ENABLE_LLVM_COVERAGE ENABLE_LLVM_PROFILE_GENERATION)
     WEBKIT_OPTION_CONFLICT(ENABLE_LLVM_PROFILE_GENERATION USE_PGO_PROFILE)
     WEBKIT_OPTION_CONFLICT(ENABLE_SAMPLING_PROFILER ENABLE_C_LOOP)
     WEBKIT_OPTION_CONFLICT(ENABLE_WEBASSEMBLY ENABLE_C_LOOP)
@@ -362,6 +368,8 @@ macro(WEBKIT_OPTION_BEGIN)
     WEBKIT_OPTION_DEPEND(ENABLE_ENCRYPTED_MEDIA ENABLE_VIDEO)
     WEBKIT_OPTION_DEPEND(ENABLE_LEGACY_ENCRYPTED_MEDIA ENABLE_VIDEO)
     WEBKIT_OPTION_DEPEND(ENABLE_DFG_JIT ENABLE_JIT)
+    # Without ENABLE_COVERAGE, ENABLE_LLVM_COVERAGE is dead weight: turn off a stale cached value.
+    WEBKIT_OPTION_DEPEND(ENABLE_LLVM_COVERAGE ENABLE_COVERAGE)
     WEBKIT_OPTION_DEPEND(ENABLE_FTL_JIT ENABLE_DFG_JIT)
     WEBKIT_OPTION_DEPEND(ENABLE_WEBASSEMBLY_BBQJIT ENABLE_FTL_JIT)
     WEBKIT_OPTION_DEPEND(ENABLE_WEBASSEMBLY_OMGJIT ENABLE_FTL_JIT)
@@ -515,10 +523,29 @@ macro(WEBKIT_OPTION_END)
         message(STATUS "Disabling ENABLE_LAYOUT_TESTS since DEVELOPER_MODE is disabled.")
     endif ()
 
+    # ENABLE_COVERAGE implies ENABLE_LLVM_COVERAGE on macOS and simulators. FORCE so a stale cached
+    # value cannot leave an instrumented build without a profile path. Before FEATURE_DEFINES is computed.
+    if (ENABLE_COVERAGE AND NOT ENABLE_LLVM_COVERAGE AND (WEBKIT_SDK_IS_MACOS OR WEBKIT_SDK_IS_SIMULATOR))
+        set(ENABLE_LLVM_COVERAGE ON CACHE BOOL
+            "${_WEBKIT_AVAILABLE_OPTIONS_DESCRIPTION_ENABLE_LLVM_COVERAGE}" FORCE)
+        message(STATUS "Enabling ENABLE_LLVM_COVERAGE since ENABLE_COVERAGE is enabled.")
+    endif ()
+
     # Run through every possible depends to make sure we have disabled anything
     # that could cause an unnecessary conflict before processing conflicts.
     _WEBKIT_OPTION_ENFORCE_ALL_DEPENDS()
     _WEBKIT_OPTION_ENFORCE_ALL_CONFLICTS()
+
+    # Refuse a device SDK: the baked /private/tmp path is not writable there. After the ALL_DEPENDS
+    # pass, so this tests the value the build will use.
+    if (ENABLE_LLVM_COVERAGE AND WEBKIT_SDK_IS_IOS_FAMILY AND NOT WEBKIT_SDK_IS_SIMULATOR)
+        message(FATAL_ERROR
+            "ENABLE_LLVM_COVERAGE bakes /private/tmp/WebKitCoverage into every target, and that "
+            "path is not writable on a device and is not collected from one. See "
+            "Tools/CodeCoverage/iOSCoverage.md. Use a simulator SDK, or configure with "
+            "-DENABLE_COVERAGE=ON -DENABLE_LLVM_COVERAGE=OFF and set LLVM_PROFILE_FILE at run "
+            "time.")
+    endif ()
 
     foreach (_name ${_WEBKIT_AVAILABLE_OPTIONS})
         if (${_name})

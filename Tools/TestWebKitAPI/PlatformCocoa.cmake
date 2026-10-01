@@ -881,6 +881,10 @@ unset(EXECUTABLE_NAME)
 unset(PRODUCT_NAME)
 unset(PRODUCT_BUNDLE_IDENTIFIER)
 
+# A bare add_library() does not reach WEBKIT_LIBRARY's call. This loads into a WebContent process, where a
+# default.profraw write is denied.
+WEBKIT_BAKE_COVERAGE_PROFILE_PATH(TestWebKitAPIWebProcessPlugIn)
+
 set_target_properties(TestWebKitAPIWebProcessPlugIn PROPERTIES
     BUNDLE TRUE
     BUNDLE_EXTENSION wkbundle

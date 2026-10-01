@@ -39,12 +39,26 @@
 #import <WebCore/WebCoreThreadSystemInterface.h>
 #endif
 
+#if ENABLE(LLVM_PROFILE_GENERATION) && ENABLE(LLVM_COVERAGE)
+#error "LLVM_PROFILE_GENERATION and LLVM_COVERAGE both define __llvm_profile_filename. Enable only one."
+#endif
+
 #if ENABLE(LLVM_PROFILE_GENERATION)
 #if PLATFORM(IOS_FAMILY)
 #import <wtf/LLVMProfilingUtils.h>
 extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/WebKit_%m_pid%p%c.profraw";
 #else
 extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/WebKit_%m_pid%p%c.profraw";
+#endif
+#elif ENABLE(LLVM_COVERAGE)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)
+#error "LLVM_COVERAGE has no iOS-device support; see Tools/CodeCoverage/iOSCoverage.md. The simulator is supported."
+#else
+// Simulators share /private/tmp with the host, so they use the macOS directory. %c is continuous mode,
+// so profiles survive the SIGKILL used to stop web processes. %8m pools writes into eight files per
+// module. The pool size is baked into every framework and must match at each site: here, InitializeThreading.cpp,
+// ScriptController.cpp, WebGPU/Instance.mm, WebKitLegacy/WebView.mm, CommonBase.xcconfig and WebKitMacros.cmake.
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitCoverage/WebKit_%8m%c.profraw";
 #endif
 #endif
 

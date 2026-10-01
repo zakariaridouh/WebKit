@@ -1526,6 +1526,10 @@
 (allow file-write* (subpath "/private/tmp/WebKitPGO"))
 #endif
 
+#if ENABLE(LLVM_COVERAGE)
+(allow file-write* (subpath "/private/tmp/WebKitCoverage"))
+#endif
+
 #if __has_include(<WebKitAdditions/com.apple.WebKit.GPUProcess.sb.in>)
 #include <WebKitAdditions/com.apple.WebKit.GPUProcess.sb.in>
 #endif
