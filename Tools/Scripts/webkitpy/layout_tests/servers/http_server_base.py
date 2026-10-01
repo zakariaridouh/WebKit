@@ -31,7 +31,9 @@
 import errno
 import json
 import logging
+import shutil
 import socket
+import subprocess
 import sys
 import tempfile
 import time
@@ -212,7 +214,7 @@ class HttpServerBase(object):
 
         for mapping in self._mappings:
             if mapping.get('udp'):
-                if not self._is_udp_port_listening(mapping['port']):
+                if not self._is_udp_port_listening(mapping['port'], owner_pid=self._pid):
                     return False
             elif not self._is_running_on_port(mapping['port']):
                 return False
@@ -233,37 +235,173 @@ class HttpServerBase(object):
             s.close()
         return True
 
-    @staticmethod
-    def _is_udp_port_listening(port):
-        # No UDP equivalent of TCP connect(): the server holds the port bound, so a bind() to its address
-        # (127.0.0.1) failing with EADDRINUSE means "listening".
+    @classmethod
+    def _is_udp_port_listening(cls, port, owner_pid=None):
+        """Whether a UDP port is held, and -- given owner_pid -- held by the server we started.
+
+        There is no UDP equivalent of TCP connect(), so the only signal available is that a
+        bind() to the server's address fails with EADDRINUSE. On its own that says "somebody
+        has this port", which is not the question: an orphaned server left behind by a killed
+        run holds it too, and answering True for that made a start where our own server never
+        bound look like a success, and ran the whole suite against the orphan.
+
+        owner_pid closes that. The process actually holding a QUIC port is a descendant of the
+        server manager we spawned, so the holder is accepted when it is that pid or below it.
+        Anything unreadable -- no lsof, no ps, a holder owned by another user -- is accepted
+        too. That direction is deliberate: this is polled for 20 s and a wrong False ends the
+        run with "Failed to start", so guessing "not ours" from a missing nicety would break
+        working runs, while the case this exists for is already refused before the spawn by
+        _check_that_all_ports_are_available().
+        """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             s.bind(('127.0.0.1', port))
         except OSError as e:
-            if e.errno == errno.EADDRINUSE:
+            if e.errno != errno.EADDRINUSE:
+                raise
+            if owner_pid is None:
                 return True
-            raise
+            holders = cls.processes_holding_port(port, is_udp=True)
+            if not holders:
+                return True
+            parents = cls._parent_pids()
+            if any(cls._is_pid_or_descendant(pid, owner_pid, parents) is not False
+                   for pid, _ in holders):
+                return True
+            _log.debug('UDP port %d is held by %s, none of which belongs to pid %s' % (
+                port, ', '.join('%s (pid %s)' % (command, pid) for pid, command in holders),
+                owner_pid))
+            return False
         finally:
             s.close()
         return False
 
+    @staticmethod
+    def _parent_pids():
+        """{pid: parent pid} for every process, or None when that cannot be read.
+
+        One ps for the whole table rather than one per generation: a QUIC listener is a
+        grandchild of the manager, and walking with a process spawn per level multiplies the
+        ways this can fail on a path whose answer is only advisory.
+        """
+        try:
+            completed = subprocess.run(['/bin/ps', '-A', '-o', 'pid=,ppid='],
+                                       capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if completed.returncode:
+            return None
+        parents = {}
+        for line in completed.stdout.splitlines():
+            fields = line.split()
+            if len(fields) != 2:
+                continue
+            try:
+                parents[int(fields[0])] = int(fields[1])
+            except ValueError:
+                continue
+        return parents or None
+
+    @classmethod
+    def _is_pid_or_descendant(cls, pid, ancestor_pid, parents=None):
+        """True, False, or None when the ancestry cannot be read.
+
+        None rather than False for "cannot tell", so a caller can tell "this belongs to
+        somebody else" from "the process table was unavailable" and default whichever way is
+        safe for it.
+        """
+        try:
+            current = int(pid)
+            ancestor = int(ancestor_pid)
+        except (TypeError, ValueError):
+            return None
+        if current == ancestor:
+            return True
+        parents = cls._parent_pids() if parents is None else parents
+        if parents is None:
+            return None
+        seen = set()
+        while current > 1 and current not in seen:
+            seen.add(current)
+            current = parents.get(current)
+            if current is None:
+                return False
+            if current == ancestor:
+                return True
+        return False
+
     def _check_that_all_ports_are_available(self):
         for mapping in self._mappings:
-            s = socket.socket()
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             port = mapping['port']
+            is_udp = bool(mapping.get('udp'))
+            # A UDP mapping has to be probed with a UDP socket. A TCP bind to the same number
+            # succeeds while a UDP server holds it, so this check passed, the new server failed
+            # to bind, and _is_server_running_on_all_ports() then saw the *orphan* still holding
+            # the port and called the start a success -- a whole run against somebody else's
+            # server. SO_REUSEADDR is set for both: it is needed on TCP so a socket in TIME_WAIT
+            # is not read as a live server, and measured to make no difference on UDP here,
+            # where a duplicate unicast bind is EADDRINUSE with or without it.
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM if is_udp else socket.SOCK_STREAM)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
-                s.bind(('localhost', port))
+                s.bind(('127.0.0.1' if is_udp else 'localhost', port))
             except IOError as e:
                 if e.errno in (errno.EALREADY, errno.EADDRINUSE):
-                    raise ServerError('Port %d is already in use.' % port)
+                    raise ServerError(self.port_in_use_message(port, is_udp=is_udp))
                 elif sys.platform.startswith('win') and e.errno in (errno.WSAEACCES,):  # pylint: disable=E1101
-                    raise ServerError('Port %d is already in use.' % port)
+                    raise ServerError(self.port_in_use_message(port, is_udp=is_udp))
                 else:
                     raise
             finally:
                 s.close()
+
+    @staticmethod
+    def processes_holding_port(port, is_udp=False):
+        """[(pid, command name)] for the processes bound to a port, or [] if that cannot be told.
+
+        An orphaned server from a killed run is the overwhelmingly likely reason for a layout
+        test port to be taken, and naming it is the difference between a one-line remedy and a
+        search. Deliberately cannot fail: lsof is a nicety, the port is unavailable either way,
+        and this runs on the path that is already reporting an error.
+        """
+        lsof = shutil.which('lsof')
+        if not lsof:
+            return []
+        try:
+            # -F pc is lsof's machine-readable form: one 'p<pid>' line then one 'c<command>'
+            # line per process, which avoids parsing a column layout that varies by platform.
+            output = subprocess.run([lsof, '-nP', '-F', 'pc',
+                                     '-i{}:{}'.format('UDP' if is_udp else 'TCP', port)],
+                                    capture_output=True, text=True, timeout=30).stdout
+        except (OSError, subprocess.SubprocessError):
+            return []
+        holders = []
+        pid = None
+        for line in output.splitlines():
+            if line.startswith('p'):
+                pid = line[1:]
+            elif line.startswith('c') and pid:
+                holders.append((pid, line[1:]))
+                pid = None
+        return holders
+
+    @classmethod
+    def port_in_use_message(cls, port, is_udp=False):
+        """Why a layout test port is unavailable, who has it, and the command that frees it."""
+        protocol = 'UDP' if is_udp else 'TCP'
+        holders = cls.processes_holding_port(port, is_udp=is_udp)
+        message = '{} port {} is already in use.'.format(protocol, port)
+        if holders:
+            message += ' Held by {}. Run `kill -9 {}` to reclaim it.'.format(
+                ', '.join('{} (pid {})'.format(command, pid) for pid, command in holders),
+                ' '.join(pid for pid, _ in holders))
+        else:
+            message += (' `lsof -nP -i{}:{}` did not name a holder, so it may belong to another '
+                        'user.'.format(protocol, port))
+        message += (' A layout-test run that was killed rather than stopped leaves its servers '
+                    'behind; `pkill -9 -f \'layout-test-results/httpd.conf\'` and '
+                    '`pkill -9 -f pywebsocket3` clear the HTTP and WebSocket ones.')
+        return message
 
 
 def is_http_server_running():
