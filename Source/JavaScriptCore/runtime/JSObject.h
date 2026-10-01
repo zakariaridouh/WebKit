@@ -927,7 +927,11 @@ public:
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     template<typename CellType, SubspaceAccess>
-    static CompleteSubspace* subspaceFor(VM&);
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
+        return &vm.heap.cellSpace;
+    }
 
     static size_t allocationSize(Checked<size_t> inlineCapacity)
     {

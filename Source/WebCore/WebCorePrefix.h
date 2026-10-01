@@ -376,6 +376,7 @@
 #include <JavaScriptCore/JSCTimeZone.h>
 #include <JavaScriptCore/JSCast.h>
 #include <JavaScriptCore/JSCell.h>
+#include <JavaScriptCore/JSCellInlines.h>
 #include <JavaScriptCore/JSDateMath.h>
 #include <JavaScriptCore/JSDestructibleObject.h>
 #include <JavaScriptCore/JSDestructibleObjectHeapCellType.h>

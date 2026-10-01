@@ -171,13 +171,6 @@ inline T JSObject::getAs(JSGlobalObject* globalObject, PropertyNameType property
     return uncheckedDowncast<std::remove_pointer_t<T>>(value);
 }
 
-template<typename CellType, SubspaceAccess>
-CompleteSubspace* JSFinalObject::subspaceFor(VM& vm)
-{
-    static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
-    return &vm.cellSpace();
-}
-
 // https://tc39.es/ecma262/#sec-createlistfromarraylike
 template <typename Functor> // A functor should have a type like: (JSValue) -> bool
 void forEachInArrayLike(JSGlobalObject* globalObject, JSObject* arrayLikeObject, Functor functor)
