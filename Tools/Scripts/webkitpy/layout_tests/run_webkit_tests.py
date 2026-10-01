@@ -38,6 +38,8 @@ from webkitpy.common.host import Host
 from webkitpy.common.interrupt_debugging import log_stack_trace_on_signal
 from webkitpy.layout_tests.controllers.manager import Manager
 from webkitpy.layout_tests.models.test_run_results import INTERRUPTED_EXIT_STATUS
+from webkitpy.llvm_profile_utils import (COVERAGE_PROFILE_DIRECTORY, collect_coverage_profiles,
+                                         prepare_coverage_profile_directory)
 from webkitpy.port import configuration_options, platform_options
 from webkitpy.layout_tests.views import buildbot_results
 from webkitpy.layout_tests.views import printing
@@ -177,6 +179,14 @@ def parse_args(args):
             help="Ignore image differences less than this percentage (some "
                 "ports may ignore this option)", type="float"),
         optparse.make_option("--results-directory", help="Location of test results"),
+        optparse.make_option("--coverage", action="store_true", default=False,
+            help="Collect LLVM source-based coverage profiles from this run. Requires a build made "
+                 "with build-webkit --coverage. Use Tools/Scripts/generate-coverage-report to turn "
+                 "the collected profiles into a report"),
+        optparse.make_option("--coverage-dir",
+            help="Directory to collect coverage profiles into (default: coverage/ under the results "
+                 "directory). Successive runs accumulate, so a layout-test run and an API-test run "
+                 "can share one directory and produce a single report"),
         optparse.make_option("--build-directory",
             help="Path to the directory under which build files are kept (should not include configuration)"),
         optparse.make_option("--add-platform-exceptions", action="store_true", default=False,
@@ -493,6 +503,54 @@ def _set_up_derived_options(port, options):
 
     options.slow_time_out_ms = str(5 * int(options.time_out_ms))
 
+    if options.coverage:
+        # Deliberately no coverage multiplier on the timeout. The per-test budget is an
+        # input to the expectations, not a property of the run, so scaling it changes what
+        # the harness calls a regression:
+        #
+        #   - A bare [ Timeout ] expectation means "does not finish inside the budget". Give
+        #     such a test more budget and it finishes, reports whatever it was really doing,
+        #     and its expectation goes unmet -- a manufactured regression. A full instrumented
+        #     run at 10x did exactly that to three tests, which finished in 115s, 229s and
+        #     273s against a 300s budget and were reported as text failures. The same three
+        #     time out as expected at the standard 30s, instrumented or not.
+        #   - LayoutTests/resources/testharnessreport.js arms testharness's own timeout at
+        #     testRunner.timeout * 0.9 for wptserve tests, so the budget decides how much of
+        #     such a test runs before it gives up and dumps. Scaling the budget therefore
+        #     changes the *output* of a timing-out wptserve test, and its committed baseline
+        #     was generated at the standard budget.
+        #
+        # The multiplier was also not needed. Instrumentation costs 1.15x at the median and
+        # 1.35x at p90, against a budget that is 7.5x the instrumented p99 (30s vs 4.0s); of
+        # 95,936 tests only 18 exceeded the standard budget, and 13 of those have a Timeout
+        # expectation that covers it. Driver launch, which instrumentation does slow down
+        # noticeably, is charged outside the deadline -- Driver.run_test() samples
+        # test_begin_time after start(). What the 10x did buy was cost: 157 tests sat waiting
+        # out 0.9x or 1.0x of the inflated budget and burned 66,765 of the run's 94,130
+        # driver-seconds, about 125 of its 232 minutes at 8 drivers.
+        #
+        # A coverage run that genuinely wants a longer budget should say so with
+        # --time-out-ms and accept that Timeout expectations no longer apply.
+        _log.info('Coverage run: using the standard %s ms test timeout (%s ms for slow tests). '
+                  'Timeout expectations and wptserve baselines are calibrated against it, so '
+                  '--coverage does not scale it; pass --time-out-ms to override.'
+                  % (options.time_out_ms, options.slow_time_out_ms))
+
+    if options.coverage and not options.coverage_dir:
+        options.coverage_dir = port.host.filesystem.join(port.results_directory(), 'coverage')
+
+    if options.coverage_dir and not options.coverage:
+        raise RuntimeError('--coverage-dir was passed but --coverage was not')
+
+    if options.coverage:
+        # Checked now rather than when the profiles are collected, which is in a finally block
+        # after the run. A mistyped or unwritable --coverage-dir used to be discovered there,
+        # which cost the whole run twice over: the layout suite takes hours, and the exception
+        # left the finally block and replaced the run's result, so main() reported 254 and
+        # printed a traceback for a run whose tests had all passed. Creating the directory here
+        # turns both of those into an immediate error.
+        _verify_coverage_directory_is_writable(port.host.filesystem, options.coverage_dir)
+
     if port.port_name == "mac" and options.use_gpu_process and options.remote_layer_tree:
         host = Host()
         host.initialize_scm()
@@ -590,6 +648,25 @@ def _set_up_derived_options(port, options):
         options.verbose = True
 
 
+def _verify_coverage_directory_is_writable(filesystem, coverage_dir):
+    """Create --coverage-dir and prove a file can be written into it, or raise RuntimeError.
+
+    Proven by writing, not by asking: os.access() and a parent-directory check both answer a
+    different question than "will shutil.move() into here work at the end of the run", and this
+    is the one place where being wrong costs a whole test run.
+    """
+    probe = filesystem.join(coverage_dir, '.webkit-coverage-writable')
+    try:
+        filesystem.maybe_make_directory(coverage_dir)
+        filesystem.write_binary_file(probe, b'')
+        filesystem.remove(probe)
+    except (OSError, IOError) as error:
+        raise RuntimeError(
+            '--coverage-dir {} cannot be written to: {}. The profiles this run collects are '
+            'moved there when it finishes, so this is being reported now rather than after the '
+            'run.'.format(coverage_dir, error))
+
+
 def run(port, options, args, logging_stream):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG if options.debug_rwt_logging else logging.INFO)
@@ -615,7 +692,38 @@ def run(port, options, args, logging_stream):
         manager = Manager(port, options, printer)
         printer.print_config(port.results_directory())
 
-        run_details = manager.run(args)
+        if options.coverage:
+            # The profile path is baked into the instrumented frameworks, so this directory is
+            # shared by every coverage run on the machine and resetting it is not confined to
+            # this run's results directory. Say so, rather than silently discarding profiles a
+            # concurrent or abandoned run has not collected yet.
+            _log.info('Coverage: resetting %s and collecting profiles into %s afterwards. Any '
+                      'uncollected profiles already in that directory will be discarded.'
+                      % (COVERAGE_PROFILE_DIRECTORY, options.coverage_dir))
+            prepare_coverage_profile_directory()
+
+        try:
+            run_details = manager.run(args)
+        finally:
+            # Collect even when the run failed or was interrupted: continuous-mode
+            # profiles are complete as of the moment the process died, so a crashed or
+            # timed-out run still has usable coverage data.
+            #
+            # And never let the collection replace the run's outcome. An exception raised in a
+            # finally block discards whatever the try block produced -- run_details for a
+            # successful run, or the KeyboardInterrupt from a Ctrl-C -- so a failure to move the
+            # profiles used to turn a passing run into exit 254 with a traceback, and the tests'
+            # own results were reported by nobody. The profiles are the less important of the
+            # two, and they are still on disk, so say where they are and let the run stand.
+            if options.coverage:
+                try:
+                    collect_coverage_profiles(options.coverage_dir)
+                except (OSError, IOError) as error:
+                    _log.error('Could not collect coverage profiles into %s: %s',
+                               options.coverage_dir, error)
+                    _log.error('This run\'s profiles are still in %s. Move them somewhere '
+                               'before the next coverage run, which clears that directory.',
+                               COVERAGE_PROFILE_DIRECTORY)
         _log.debug("Testing completed, Exit status: %d" % run_details.exit_code)
         return run_details
     finally:

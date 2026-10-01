@@ -1456,3 +1456,46 @@ class MainTest(unittest.TestCase):
             self.assertEqual(res, run_webkit_tests.EXCEPTIONAL_EXIT_STATUS)
         finally:
             run_webkit_tests.run = orig_run_fn
+
+
+class CoverageDerivedOptionsTest(unittest.TestCase):
+    """--coverage must not change the per-test timeout.
+
+    The budget is an input to the expectations: a bare [ Timeout ] expectation means "does not
+    finish inside the budget", and LayoutTests/resources/testharnessreport.js arms testharness's
+    own timeout at testRunner.timeout * 0.9. Scaling the budget therefore decides both which
+    tests are allowed to finish and what a timing-out wptserve test prints, so a coverage run
+    would be comparing against baselines calibrated for a different budget."""
+
+    def derived_options(self, extra_args):
+        host = MockHost()
+        options = parse_args(extra_args)[0]
+        port = host.port_factory.get('test', options)
+        with OutputCapture(level=logging.INFO) as captured:
+            run_webkit_tests._set_up_derived_options(port, options)
+        return port, options, captured.root.log.getvalue()
+
+    def test_coverage_leaves_the_timeout_at_the_port_default(self):
+        port, options, _ = self.derived_options(['--coverage'])
+        self.assertEqual(options.time_out_ms, str(port.default_timeout_ms()))
+        self.assertEqual(options.slow_time_out_ms, str(5 * port.default_timeout_ms()))
+
+    def test_coverage_derives_the_same_timeouts_as_a_plain_run(self):
+        _, with_coverage, _ = self.derived_options(['--coverage'])
+        _, without_coverage, _ = self.derived_options([])
+        self.assertEqual(with_coverage.time_out_ms, without_coverage.time_out_ms)
+        self.assertEqual(with_coverage.slow_time_out_ms, without_coverage.slow_time_out_ms)
+
+    def test_an_explicit_timeout_still_wins_under_coverage(self):
+        _, options, _ = self.derived_options(['--coverage', '--time-out-ms', '12345'])
+        self.assertEqual(options.time_out_ms, '12345')
+        self.assertEqual(options.slow_time_out_ms, '61725')
+
+    def test_coverage_says_which_timeout_is_in_force(self):
+        _, options, log = self.derived_options(['--coverage'])
+        self.assertIn('Coverage run: using the standard %s ms test timeout' % options.time_out_ms, log)
+        self.assertIn('--time-out-ms', log)
+
+    def test_a_plain_run_says_nothing_about_coverage(self):
+        _, _, log = self.derived_options([])
+        self.assertNotIn('Coverage run', log)

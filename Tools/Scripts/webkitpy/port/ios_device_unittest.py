@@ -202,3 +202,13 @@ class IOSDeviceTest(ios_testcase.IOSTest):
         self.assertEqual(configuration['platform'], port.host.platform.os_name)
         self.assertEqual(configuration['style'], 'release')
         self.assertEqual(configuration['version_name'], 'iOS {}'.format(port.device_version()))
+
+    def test_coverage_is_refused(self):
+        # Refused up front rather than after the run. The profile path is baked into the
+        # frameworks and points at /private/tmp/WebKitCoverage, which a device does not have, so
+        # accepting --coverage here buys a full-length run and an empty report. The message has
+        # to name the alternative, because the simulator does work.
+        reason = self.make_port().coverage_unsupported_reason()
+        self.assertIn('ios-device', reason)
+        self.assertIn('ios-simulator', reason)
+        self.assertIn('/private/tmp/WebKitCoverage', reason)

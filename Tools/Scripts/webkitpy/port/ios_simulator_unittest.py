@@ -20,6 +20,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from unittest import mock
+
 from webkitcorepy import Version
 
 from webkitpy.port.ios_simulator import IOSSimulatorPort
@@ -169,3 +171,21 @@ class IOSSimulatorTest(ios_testcase.IOSTest):
         self.assertEqual(configuration['platform'], 'ios')
         self.assertEqual(configuration['style'], 'release')
         self.assertEqual(configuration['version_name'], 'iOS {}'.format(port.device_version()))
+
+    def test_coverage_is_supported(self):
+        # The measured result this whole path depends on: /private/tmp inside a CoreSimulator
+        # runtime is the host's /private/tmp, so the baked profile path resolves to the directory
+        # the harness already collects from and nothing has to be translated. If this ever starts
+        # returning a reason, run-webkit-tests --coverage stops working for the simulator.
+        self.assertIsNone(self.make_port().coverage_unsupported_reason())
+
+    def test_collect_stray_coverage_profiles_is_empty_for_a_correct_build(self):
+        # The fallback exists for a build whose profile path is TMPDIR-relative, which puts the
+        # profiles inside the simulator. With no such profiles it must collect nothing and create
+        # nothing -- it is called on every simulator run that collected nothing at all, including
+        # runs of a tree that was simply not instrumented.
+        port = self.make_port()
+        with mock.patch('webkitpy.port.embedded_simulator.simulator_data_paths',
+                        return_value=[]) as data_paths:
+            self.assertEqual(port.collect_stray_coverage_profiles('/does/not/exist'), [])
+        self.assertTrue(data_paths.called)
