@@ -40,6 +40,7 @@ from webkitcorepy import string_utils
 
 from webkitpy.common.system import path
 from webkitpy.common.system.profiler import ProfilerFactory
+from webkitpy.coverage_profile_environment import current_profile_environment
 
 
 _log = logging.getLogger(__name__)
@@ -504,6 +505,15 @@ class Driver(object):
 
         if self._profiler:
             environment = self._profiler.adjusted_environment(environment)
+
+        # Per-test coverage attribution, when a run is collecting it: LLVM_PROFILE_FILE for this
+        # process and __XPC_LLVM_PROFILE_FILE for the WebContent, GPU and Networking services
+        # libxpc launches, exactly as the DYLD and ASAN variables above are paired. Empty for
+        # every other run. It has to be applied here, and last, because the profile runtime reads
+        # the variable once at process start and setup_environ_for_server() copies only a fixed
+        # allow-list out of os.environ -- so the value cannot be exported by the worker that
+        # knows which test is next. See webkitpy/coverage_attribution.py.
+        environment.update(current_profile_environment())
         return environment
 
     def _setup_environ_for_test(self):
