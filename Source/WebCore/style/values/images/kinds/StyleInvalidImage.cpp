@@ -49,11 +49,6 @@ void InvalidImage::load(CachedResourceLoader&, const ResourceLoaderOptions&)
 {
 }
 
-RefPtr<WebCore::Image> InvalidImage::image(const RenderElement*, const FloatSize&, const GraphicsContext&, bool) const
-{
-    return &WebCore::Image::nullImage();
-}
-
 ImageDrawResult InvalidImage::draw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect&, const FloatRect&, ImagePaintingOptions, bool) const
 {
     return ImageDrawResult::DidNothing;

@@ -283,22 +283,22 @@ ImageDrawResult Image::drawNinePieceUsingImpl(GraphicsContext& context, const Sc
     return result;
 }
 
+FloatRect Image::mapSourceToSize(const FloatRect& source, ConcreteObjectSize concreteObjectSize, const FloatSize& size)
+{
+    auto box = concreteObjectSize.size() * concreteObjectSize.zoom();
+    if (box.isEmpty())
+        return { { }, size };
+
+    auto mapX = [&](float x) { return narrowPrecisionToFloat(static_cast<double>(x) * size.width() / box.width()); };
+    auto mapY = [&](float y) { return narrowPrecisionToFloat(static_cast<double>(y) * size.height() / box.height()); };
+    auto minX = mapX(source.x());
+    auto minY = mapY(source.y());
+    return { minX, minY, mapX(source.maxX()) - minX, mapY(source.maxY()) - minY };
+}
+
 ImageDrawResult Image::drawResolved(GraphicsContext& context, const RenderElement& renderer, WebCore::Image& image, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options) const
 {
-    auto imageSource = source;
-    if (!image.drawsSVGImage()) {
-        auto imageSize = image.size(options.orientation());
-        auto box = concreteObjectSize.size() * concreteObjectSize.zoom();
-        if (box.isEmpty())
-            imageSource = { { }, imageSize };
-        else {
-            auto mapX = [&](auto x) { return narrowPrecisionToFloat(static_cast<double>(x) * imageSize.width() / box.width()); };
-            auto mapY = [&](auto y) { return narrowPrecisionToFloat(static_cast<double>(y) * imageSize.height() / box.height()); };
-            auto minX = mapX(source.x());
-            auto minY = mapY(source.y());
-            imageSource = { minX, minY, mapX(source.maxX()) - minX, mapY(source.maxY()) - minY };
-        }
-    }
+    auto imageSource = image.drawsSVGImage() ? source : mapSourceToSize(source, concreteObjectSize, image.size(options.orientation()));
 
     auto imageConcreteObjectSize = concreteObjectSizeToDrawAt(image, renderer, concreteObjectSize);
     auto extras = drawingExtrasForRenderer(renderer);

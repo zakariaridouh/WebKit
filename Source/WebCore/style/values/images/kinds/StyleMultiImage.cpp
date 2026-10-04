@@ -191,13 +191,6 @@ bool MultiImage::hasClient(RenderElement& renderer) const
     return protect(m_selectedImage)->hasClient(renderer);
 }
 
-RefPtr<WebCore::Image> MultiImage::image(const RenderElement* renderer, const FloatSize& size, const GraphicsContext& destinationContext, bool isForFirstLine) const
-{
-    if (!m_selectedImage)
-        return nullptr;
-    return protect(m_selectedImage)->image(renderer, size, destinationContext, isForFirstLine);
-}
-
 ImageDrawResult MultiImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, bool isForFirstLine) const
 {
     if (!m_selectedImage)
