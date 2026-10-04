@@ -1112,7 +1112,10 @@ http/tests/ssl/curl/certificate-and-authentication.html [ Failure ]
 
 # Needs site isolation drawing implementation
 http/tests/site-isolation [ Skip ]
-http/wpt/site-isolation/intersection-observer [ Skip ]
+http/wpt/site-isolation [ Skip ]
+http/wpt/site-isolation/navigation-api/navigate-cross-site-swap-loads-once-no-site-isolation.sub.html [ Pass ]
+http/wpt/site-isolation/navigation-api/navigate-cross-site-swap-while-loading-no-navigateerror-no-site-isolation.sub.html [ Pass ]
+http/wpt/site-isolation/navigation-api/preventdefault-cancels-cross-site-swap-navigate-no-site-isolation.sub.html [ Pass ]
 
 # Requires Site Isolation (SiteIsolationEnabled, a WebKit2-only feature), which
 # the Windows port does not yet support (see the http/tests/site-isolation skip
@@ -4783,9 +4786,6 @@ fast/webcodecs/audio-data-close-during-gc-crash.html [ Skip ] # Timeout
 
 # Crashes
 http/tests/cookies/document-cookie-during-iframe-parsing.html [ Skip ] # Crash
-http/wpt/site-isolation/overlapping-navigations-and-traversals/cross-document-traversal-cross-document-traversal.html [ Skip ] # Crash
-http/wpt/site-isolation/overlapping-navigations-and-traversals/cross-document-traversal-same-document-traversal.html [ Skip ] # Crash
-http/wpt/site-isolation/the-history-interface/001.html [ Skip ] # Crash
 
 # Gardening: new unexpected failures on Win-Tests-EWS (316766@main).
 fast/canvas/offscreen-canvas-measureText-unrealized-font-crash.html [ Failure ]
@@ -4892,10 +4892,6 @@ transforms/3d/general/preserve-3d-plane-across-camera-plane.html [ ImageOnlyFail
 fast/css/corner-shorthands.html [ Skip ] # Crash
 http/tests/web-locks/web-lock-in-third-party-serviceworker.html [ Skip ] # Crash
 http/tests/web-locks/web-lock-in-third-party-sharedworker.html [ Skip ] # Crash
-http/wpt/site-isolation/navigation-api/preventdefault-cancels-cross-site-swap-subframe.sub.html [ Skip ] # Crash, in 28 of the 29 runs
-http/wpt/site-isolation/navigation-api/preventdefault-cancels-cross-site-swap.sub.html [ Skip ] # Crash, in 27 of the 29 runs
-http/wpt/site-isolation/navigation-api/preventdefault-reentrant-navigation.sub.html [ Skip ] # Crash, in 26 of the 29 runs
-http/wpt/site-isolation/overlapping-navigations-and-traversals/cross-document-traversal-cross-document-nav.html [ Skip ] # Crash
 imported/w3c/web-platform-tests/css/css-borders/corner-shape/corner-block-start-computed.html [ Skip ] # Crash
 imported/w3c/web-platform-tests/css/css-borders/corner-shape/corner-block-start-valid.html [ Skip ] # Crash
 imported/w3c/web-platform-tests/css/css-borders/corner-shape/corner-computed.html [ Skip ] # Crash
@@ -4928,7 +4924,6 @@ css3/filters/backdrop/backdrop-filter-fractional-translation-edge.html [ ImageOn
 # Site Isolation tests that crash the GPU process; the crash is reported against the next test
 http/tests/web-locks/web-lock-in-third-party-serviceworker-site-isolation.html [ Skip ]
 http/tests/web-locks/web-lock-in-third-party-sharedworker-site-isolation.html [ Skip ]
-http/wpt/site-isolation/history-traversal/history-traversal-navigate-parent-while-child-loading.html [ Skip ]
 
 # Flaky
 imported/w3c/web-platform-tests/largest-contentful-paint/image-not-fully-visible.html [ Pass Failure ]
