@@ -120,9 +120,10 @@ public:
     virtual void resetAnimation() { }
 
     // Drawing
-    ImageDrawResult draw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { }, bool isForFirstLine = false) const;
-    ImageDrawResult drawTiled(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions = { }, bool isForFirstLine = false) const;
-    ImageDrawResult drawNinePiece(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const NinePieceGeometry&, ImagePaintingOptions = { }) const;
+    virtual ImageDrawResult draw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { }, bool isForFirstLine = false) const = 0;
+    virtual ImageDrawResult drawAsPattern(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions, bool isForFirstLine) const = 0;
+    virtual ImageDrawResult drawTiled(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions = { }, bool isForFirstLine = false) const;
+    virtual ImageDrawResult drawNinePiece(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const NinePieceGeometry&, ImagePaintingOptions = { }) const;
 
     // Drawing options
     virtual DecodingMode decodingModeForImageDraw(const RenderBoxModelObject&, const PaintInfo&) const { return DecodingMode::Synchronous; }
@@ -163,6 +164,16 @@ protected:
         : m_type { type }
     {
     }
+
+    ImageDrawResult drawResolved(GraphicsContext&, const RenderElement&, WebCore::Image&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions) const;
+    ImageDrawResult drawResolvedAsPattern(GraphicsContext&, const RenderElement&, WebCore::Image&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions) const;
+    ImageDrawResult drawResolvedTiled(GraphicsContext&, const RenderElement&, WebCore::Image&, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions) const;
+    ImageDrawResult drawResolvedNinePiece(GraphicsContext&, const RenderElement&, WebCore::Image&, ConcreteObjectSize, const NinePieceGeometry&, ImagePaintingOptions) const;
+    using ResolveImage = RefPtr<WebCore::Image>(const FloatSize&, const GraphicsContext& destinationContext);
+    ImageDrawResult drawResolving(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions, const ScopedLambda<ResolveImage>&) const;
+    ImageDrawResult drawAsPatternResolving(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions, const ScopedLambda<ResolveImage>&) const;
+    ImageDrawResult drawTiledResolving(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions, const ScopedLambda<ResolveImage>&) const;
+    ImageDrawResult drawNinePieceResolving(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const NinePieceGeometry&, ImagePaintingOptions, const ScopedLambda<ResolveImage>&) const;
 
     using DestinationPaint = ImageDrawResult(GraphicsContext&);
     using TiledDraw = ImageDrawResult(GraphicsContext&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source);

@@ -198,6 +198,34 @@ RefPtr<WebCore::Image> MultiImage::image(const RenderElement* renderer, const Fl
     return protect(m_selectedImage)->image(renderer, size, destinationContext, isForFirstLine);
 }
 
+ImageDrawResult MultiImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    if (!m_selectedImage)
+        return ImageDrawResult::DidNothing;
+    return protect(m_selectedImage)->draw(context, renderer, concreteObjectSize, destination, source, options, isForFirstLine);
+}
+
+ImageDrawResult MultiImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    if (!m_selectedImage)
+        return ImageDrawResult::DidNothing;
+    return protect(m_selectedImage)->drawAsPattern(context, renderer, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options, isForFirstLine);
+}
+
+ImageDrawResult MultiImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    if (!m_selectedImage)
+        return ImageDrawResult::DidNothing;
+    return protect(m_selectedImage)->drawTiled(context, renderer, concreteObjectSize, destination, phase, tileSize, spacing, options, isForFirstLine);
+}
+
+ImageDrawResult MultiImage::drawNinePiece(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options) const
+{
+    if (!m_selectedImage)
+        return ImageDrawResult::DidNothing;
+    return protect(m_selectedImage)->drawNinePiece(context, renderer, concreteObjectSize, geometry, options);
+}
+
 bool MultiImage::currentFrameIsComplete(const RenderElement* renderer) const
 {
     return m_selectedImage && protect(m_selectedImage)->currentFrameIsComplete(renderer);

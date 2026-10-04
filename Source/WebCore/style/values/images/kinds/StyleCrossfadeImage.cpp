@@ -204,6 +204,34 @@ RefPtr<WebCore::Image> CrossfadeImage::image(const RenderElement* renderer, cons
     return CrossfadeGeneratedImage::create(*protectedFromImage, *protectedToImage, m_progress.value.value, fixedSize(*renderer), WTF::move(fromExtras), WTF::move(toExtras), inputOptions);
 }
 
+ImageDrawResult CrossfadeImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    return drawResolving(context, renderer, concreteObjectSize, destination, source, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
+        return image(&renderer, size, destinationContext, isForFirstLine);
+    });
+}
+
+ImageDrawResult CrossfadeImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    return drawAsPatternResolving(context, renderer, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
+        return image(&renderer, size, destinationContext, isForFirstLine);
+    });
+}
+
+ImageDrawResult CrossfadeImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    return drawTiledResolving(context, renderer, concreteObjectSize, destination, phase, tileSize, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
+        return image(&renderer, size, destinationContext, isForFirstLine);
+    });
+}
+
+ImageDrawResult CrossfadeImage::drawNinePiece(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options) const
+{
+    return drawNinePieceResolving(context, renderer, concreteObjectSize, geometry, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
+        return image(&renderer, size, destinationContext, false);
+    });
+}
+
 bool CrossfadeImage::currentFrameIsComplete(const RenderElement* renderer) const
 {
     if (m_from && !protect(m_from)->currentFrameIsComplete(renderer))

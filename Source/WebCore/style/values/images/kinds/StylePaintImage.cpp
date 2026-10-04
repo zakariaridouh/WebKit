@@ -116,6 +116,34 @@ RefPtr<WebCore::Image> PaintImage::image(const RenderElement* renderer, const Fl
     return CustomPaintImage::create(*registration, size, *renderer, arguments);
 }
 
+ImageDrawResult PaintImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    return drawResolving(context, renderer, concreteObjectSize, destination, source, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
+        return image(&renderer, size, destinationContext, isForFirstLine);
+    });
+}
+
+ImageDrawResult PaintImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    return drawAsPatternResolving(context, renderer, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
+        return image(&renderer, size, destinationContext, isForFirstLine);
+    });
+}
+
+ImageDrawResult PaintImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+{
+    return drawTiledResolving(context, renderer, concreteObjectSize, destination, phase, tileSize, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
+        return image(&renderer, size, destinationContext, isForFirstLine);
+    });
+}
+
+ImageDrawResult PaintImage::drawNinePiece(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options) const
+{
+    return drawNinePieceResolving(context, renderer, concreteObjectSize, geometry, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
+        return image(&renderer, size, destinationContext, false);
+    });
+}
+
 bool PaintImage::knownToBeOpaque(const RenderElement&) const
 {
     return false;
