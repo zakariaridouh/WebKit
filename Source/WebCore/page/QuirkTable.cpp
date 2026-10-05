@@ -435,6 +435,8 @@ static constexpr Quirk fullTable[] = {
         .behaviors = {
             // maps.google.com rdar://152194074
             mayNeedToIgnoreContentObservation.when(elementMatchesSelector(onSuggestionsLabel)),
+            // maps.google.com rdar://185857498
+            needsGoogleMapsMagnificationWheelDeltaScalingQuirk,
             // maps.google.com rdar://67358928
             needsGoogleMapsScrollingQuirk,
             // maps.google.com https://bugs.webkit.org/show_bug.cgi?id=214945

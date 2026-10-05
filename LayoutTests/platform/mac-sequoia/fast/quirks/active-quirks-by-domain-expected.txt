@@ -99,9 +99,11 @@ https://www.google.co.jp/search
     NeedsAnchorToBeMouseFocusableQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://www.google.com/maps/
+    NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk
     ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://maps.google.com/maps/
+    NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk
     ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://docs.google.com/

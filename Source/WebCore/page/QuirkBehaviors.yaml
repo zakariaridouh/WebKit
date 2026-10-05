@@ -200,6 +200,10 @@ NeedsGMailOverflowScrollQuirk:
 NeedsGoogleMapsEmbedManipulationSurfaceQuirk:
   available: mac
 
+# maps.google.com rdar://185857498
+NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk:
+  available: mac
+
 # maps.google.com rdar://67358928
 NeedsGoogleMapsScrollingQuirk:
   available: iOSFamily

@@ -100,10 +100,12 @@ https://www.google.co.jp/search
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://www.google.com/maps/
     MayNeedToIgnoreContentObservation
+    NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk
     ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://maps.google.com/maps/
     MayNeedToIgnoreContentObservation
+    NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk
     ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://docs.google.com/
