@@ -1032,6 +1032,9 @@ imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-e
 # Cross-Origin-Embedder-Policy: credentialless is not supported.
 imported/w3c/web-platform-tests/html/cross-origin-embedder-policy/credentialless
 
+# Document-Isolation-Policy is not implemented.
+webkit.org/b/325516 imported/w3c/web-platform-tests/html/document-isolation-policy [ Skip ]
+
 # Times out.
 webkit.org/b/214155 imported/w3c/web-platform-tests/html/cross-origin-embedder-policy/blob.https.html [ Skip ]
 
