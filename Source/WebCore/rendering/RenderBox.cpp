@@ -100,6 +100,7 @@
 #include "ScrollbarTheme.h"
 #include "ScrollbarsController.h"
 #include "Settings.h"
+#include "StyleBackgroundImageSizing.h"
 #include "StyleBoxShadow.h"
 #include "StyleComputedStyle+GettersInlines.h"
 #include "StyleComputedStyle+InitialInlines.h"
@@ -2267,7 +2268,11 @@ void RenderBox::imageChanged(WrappedImagePtr image, const IntRect*)
     bool isNonEmpty;
     RefPtr styleImage = Style::findLayerUsedImage(style().backgroundLayers(), image, isNonEmpty);
     if (styleImage && isNonEmpty) {
-        incrementVisuallyNonEmptyPixelCountIfNeeded(flooredIntSize(styleImage->imageSize(this, style().usedZoom())));
+        incrementVisuallyNonEmptyPixelCountIfNeeded(flooredIntSize(calculateImageIntrinsicDimensions(*styleImage, Style::BackgroundImageSizing {
+            borderBoxRect().size(),
+            ObjectSizeNegotiation::SpecifiedSize::none(),
+            ObjectSizeNegotiation::SizingConstraint::None,
+        }, ScaleByUsedZoom::Yes)));
         if (auto styleable = Styleable::fromRenderer(*this))
             protect(document())->didLoadImage(protect(styleable->element).get(), protect(styleImage->cachedImage()));
     }
