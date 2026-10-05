@@ -840,12 +840,7 @@ void JSPromise::resolveWithInternalMicrotaskForAsyncAwait(JSGlobalObject* global
             }
         }
         if (error) [[unlikely]] {
-            std::array<JSValue, maxMicrotaskArguments> arguments { {
-                jsUndefined(),
-                error,
-                context,
-            } };
-            runInternalMicrotask(globalObject, vm, task, static_cast<uint8_t>(JSPromise::Status::Rejected), arguments);
+            runInternalMicrotask(globalObject, vm, task, static_cast<uint8_t>(JSPromise::Status::Rejected), jsUndefined(), error, context);
             return;
         }
 

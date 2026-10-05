@@ -36,7 +36,7 @@ class JSAsyncGenerator;
 class JSModuleRecord;
 class ThrowScope;
 
-void runInternalMicrotask(JSGlobalObject*, VM&, InternalMicrotask, uint8_t, std::span<const JSValue, maxMicrotaskArguments>, MicrotaskCallCache* = nullptr);
+void runInternalMicrotask(JSGlobalObject*, VM&, InternalMicrotask, uint8_t payload, JSValue argument0, JSValue argument1, JSValue argument2, MicrotaskCallCache* = nullptr);
 
 void asyncModuleResolveEvaluation(JSGlobalObject*, VM&, ThrowScope&, JSModuleRecord*, JSValue result);
 
