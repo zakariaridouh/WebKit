@@ -110,6 +110,11 @@ void SelectFallbackButtonElement::updateText(HTMLOptionElement* selectedOption, 
         selectElement->didUpdateActiveOption(optionIndex);
     };
 
+    if (selectElement->buttonElement()) {
+        applyText(selectElement->buttonLabelText({ }));
+        return;
+    }
+
     if (selectElement->multiple()) {
         size_t count = selectedOptionCount(selectElement);
         if (count != 1) {
@@ -145,6 +150,13 @@ std::optional<Style::UnadjustedStyle> SelectFallbackButtonElement::resolveCustom
     auto elementStyle = resolveStyle(resolutionContext);
     CheckedRef style = *elementStyle.style;
 
+    Ref selectElement = this->selectElement();
+
+    if (hostStyle->usedAppearance() == StyleAppearance::Base && selectElement->buttonElement()) {
+        style->setDisplay(Style::DisplayType::None);
+        return elementStyle;
+    }
+
     auto hostTextAlign = hostStyle->textAlign();
     if (hostTextAlign == Style::TextAlign::Start)
         style->setTextAlign(hostStyle->writingMode().isBidiLTR() ? Style::TextAlign::Left : Style::TextAlign::Right);
@@ -154,7 +166,6 @@ std::optional<Style::UnadjustedStyle> SelectFallbackButtonElement::resolveCustom
         style->setTextAlign(hostTextAlign);
 
     // Apply direction and unicodeBidi from the selected option for proper bidirectional text rendering.
-    Ref selectElement = this->selectElement();
     for (auto& item : selectElement->listItems()) {
         RefPtr option = dynamicDowncast<HTMLOptionElement>(item.get());
         if (!option || !option->selected())

@@ -44,6 +44,7 @@ namespace WebCore {
 class HTMLOptionsCollection;
 class HTMLSelectedContentElement;
 class MouseEvent;
+class SelectFallbackButtonElement;
 class SelectPopoverElement;
 class ShadowRoot;
 
@@ -114,6 +115,7 @@ public:
     Ref<HTMLCollection> selectedOptions();
 
     void optionElementChildrenChanged();
+    void buttonElementChildrenChanged();
     void updateButtonText(HTMLOptionElement* = nullptr, int optionIndex = -1);
     void invalidateButtonText();
 
@@ -218,6 +220,8 @@ public:
     WEBCORE_EXPORT bool optionsAreRenderedWithBaseAppearance() const;
     Element* NODELETE optionContainer() const;
     SelectPopoverElement* NODELETE pickerPopoverElement() const;
+    Element* NODELETE buttonElement() const;
+    String buttonLabelText(StringView selectedContentText) const;
     void openPickerForUserInteraction(std::optional<bool> focusVisible = std::nullopt);
     void hidePickerPopoverElement();
     void clearPickerOpeningMouseLocation() { m_pickerOpeningMouseLocation = { }; }
@@ -373,6 +377,7 @@ private:
 
     WeakPtr<HTMLSlotElement, WeakPtrImplWithEventTargetData> m_buttonSlot;
     WeakPtr<HTMLSlotElement, WeakPtrImplWithEventTargetData> m_listBoxSlot;
+    WeakPtr<SelectFallbackButtonElement, WeakPtrImplWithEventTargetData> m_fallbackButton;
     WeakPtr<SelectPopoverElement, WeakPtrImplWithEventTargetData> m_popover;
 
 #if !PLATFORM(IOS_FAMILY)
