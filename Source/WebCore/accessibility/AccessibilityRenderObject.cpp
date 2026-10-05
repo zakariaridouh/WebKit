@@ -1260,11 +1260,14 @@ bool AccessibilityRenderObject::computeIsIgnored() const
             if (image->borderBoxHeight() <= 1 || image->borderBoxWidth() <= 1)
                 return true;
 
-            // check whether rendered image was stretched from one-dimensional file image
-            if (image->cachedImage()) {
-                float zoom = image->view().pageZoomFactor();
-                LayoutSize imageSize = CachedImage::clampForZoom(RenderImage::imageSizeAsRendered(*protect(image->cachedImage()), protect(image), zoom), zoom);
-                return imageSize.height() <= 1 || imageSize.width() <= 1;
+            if (RefPtr cachedImage = image->cachedImage()) {
+                // check whether the image has loaded
+                if (!cachedImage->hasImage())
+                    return true;
+
+                // check whether rendered image was stretched from one-dimensional file image
+                auto naturalDimensions = cachedImage->naturalDimensions();
+                return naturalDimensions.width && naturalDimensions.height && (*naturalDimensions.width <= 1 || *naturalDimensions.height <= 1);
             }
         }
         return false;
