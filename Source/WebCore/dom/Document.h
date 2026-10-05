@@ -1450,7 +1450,8 @@ public:
 
     bool isContextThread() const final;
     WEBCORE_EXPORT bool isSecureContext() const final;
-    bool NODELETE crossOriginIsolated() const final;
+    bool crossOriginIsolated() const final;
+    bool NODELETE isInCrossOriginIsolatedAgentCluster() const;
     bool NODELETE originAgentCluster() const;
     String agentClusterID() const final;
     bool isJSExecutionForbidden() const final { return false; }

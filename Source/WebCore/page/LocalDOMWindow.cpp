@@ -2055,7 +2055,7 @@ bool LocalDOMWindow::isSecureContext() const
 
 bool LocalDOMWindow::crossOriginIsolated() const
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     return document && document->crossOriginIsolated();
 }
 

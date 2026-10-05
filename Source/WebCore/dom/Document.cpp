@@ -8673,9 +8673,14 @@ bool Document::isSecureContext() const
     return isDocumentSecure(*this);
 }
 
-bool Document::crossOriginIsolated() const
+bool Document::isInCrossOriginIsolatedAgentCluster() const
 {
     return crossOriginOpenerPolicy().value == CrossOriginOpenerPolicyValue::SameOriginPlusCOEP;
+}
+
+bool Document::crossOriginIsolated() const
+{
+    return isInCrossOriginIsolatedAgentCluster() && PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::CrossOriginIsolated, *this, PermissionsPolicy::ShouldReportViolation::No);
 }
 
 String Document::agentClusterID() const
@@ -8687,7 +8692,7 @@ String Document::agentClusterID() const
         auto opaqueID = data.opaqueOriginIdentifier();
         return makeString(browsingContextGroupIdentifier, "-opaque-"_s, opaqueID ? opaqueID->toString() : String { });
     }
-    if (crossOriginIsolated())
+    if (isInCrossOriginIsolatedAgentCluster())
         return makeString(browsingContextGroupIdentifier, "-coi-"_s, data.toString());
     if (m_isOriginKeyed == OriginKeyed::Yes)
         return makeString(browsingContextGroupIdentifier, "-oac-"_s, data.toString());
@@ -8699,7 +8704,7 @@ bool Document::originAgentCluster() const
 {
     if (securityOrigin().isOpaque())
         return true;
-    if (crossOriginIsolated())
+    if (isInCrossOriginIsolatedAgentCluster())
         return true;
     return m_isOriginKeyed == OriginKeyed::Yes;
 }

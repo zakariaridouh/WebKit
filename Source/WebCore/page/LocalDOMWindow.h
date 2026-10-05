@@ -283,7 +283,7 @@ public:
     // Secure Contexts
     bool isSecureContext() const;
 
-    bool NODELETE crossOriginIsolated() const;
+    bool crossOriginIsolated() const;
     bool NODELETE originAgentCluster() const;
 
     // Events

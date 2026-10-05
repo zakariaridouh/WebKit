@@ -6923,6 +6923,7 @@ struct WebCore::OwnerPermissionsPolicyData {
     StorageAccess,
     LocalNetwork,
     LoopbackNetwork,
+    CrossOriginIsolated,
     Invalid
 };
 
