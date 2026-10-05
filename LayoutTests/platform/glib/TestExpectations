@@ -4697,6 +4697,7 @@ webkit.org/b/98927 fast/dom/DeviceOrientation/ [ Skip ]
 http/tests/digital-credentials/ [ Skip ]
 http/wpt/identity/ [ Skip ]
 imported/w3c/web-platform-tests/digital-credentials/ [ Skip ]
+ipc/digital-credentials-chooser-frame-check.html [ Skip ]
 
 # We don't yet support EXIF-based resolution.
 webkit.org/b/217821 imported/w3c/web-platform-tests/density-size-correction/ [ Skip ]
