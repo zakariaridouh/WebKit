@@ -231,13 +231,13 @@ Ref<DeprecatedCSSOMValue> CachedImage::computedStyleDeprecatedCSSOMValue(CSSValu
     return createDeprecatedCSSOMValue(pool, style, owner, m_url);
 }
 
-bool CachedImage::canRender(const RenderElement* renderer, float multiplier) const
+bool CachedImage::canRender(const RenderElement* renderer) const
 {
     if (isRenderSVGResource(renderer))
         return true;
     if (!m_cachedImage)
         return false;
-    return protect(m_cachedImage)->canRender(multiplier);
+    return protect(m_cachedImage)->canRender();
 }
 
 bool CachedImage::isPending() const

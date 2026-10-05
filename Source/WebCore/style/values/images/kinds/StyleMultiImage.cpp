@@ -105,9 +105,9 @@ WrappedImagePtr MultiImage::data() const
     return protect(m_selectedImage)->data();
 }
 
-bool MultiImage::canRender(const RenderElement* renderer, float multiplier) const
+bool MultiImage::canRender(const RenderElement* renderer) const
 {
-    return m_selectedImage && protect(m_selectedImage)->canRender(renderer, multiplier);
+    return m_selectedImage && protect(m_selectedImage)->canRender(renderer);
 }
 
 bool MultiImage::isLoaded(const RenderElement* renderer) const

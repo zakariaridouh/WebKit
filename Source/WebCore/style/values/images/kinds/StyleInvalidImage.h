@@ -42,7 +42,7 @@ public:
 
     bool operator==(const Image&) const final { return false; }
     bool equals(const InvalidImage&) const { return false; }
-    bool canRender(const RenderElement*, float) const final { return false; }
+    bool canRender(const RenderElement*) const final { return false; }
 
     static constexpr bool isFixedSize = true;
 

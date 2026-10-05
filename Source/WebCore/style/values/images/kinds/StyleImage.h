@@ -101,7 +101,7 @@ public:
     virtual const Image* selectedImage() const { return this; }
 
     // Rendering.
-    virtual bool canRender(const RenderElement*, float /*multiplier*/) const { return true; }
+    virtual bool canRender(const RenderElement*) const { return true; }
     virtual void setContainerSizeForRenderer(const RenderElement&, const FloatSize&) { }
     virtual ImageDrawingExtras drawingExtrasForRenderer(const RenderElement&) const { return { }; }
     virtual bool knownToBeOpaque(const RenderElement&) const = 0;

@@ -64,7 +64,7 @@ protected:
 private:
     WrappedImagePtr data() const final;
 
-    bool canRender(const RenderElement*, float multiplier) const final;
+    bool canRender(const RenderElement*) const final;
     bool isPending() const final { return m_isPending; }
     void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
     bool isLoaded(const RenderElement*) const final;

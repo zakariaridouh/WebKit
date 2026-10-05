@@ -171,7 +171,7 @@ template<typename Layers> void BackgroundPainter::paintFillLayersImpl(const Colo
         // and pass it down.
         if (layer.clipOccludesNextLayers()
             && layer.hasOpaqueImage(m_renderer)
-            && layer.image().tryStyleImage()->canRender(&m_renderer, m_renderer.style().usedZoom())
+            && layer.image().tryStyleImage()->canRender(&m_renderer)
             && layer.hasRepeatXY()
             && layer.blendMode() == BlendMode::Normal
             && !boxShadowShouldBeAppliedToBackground(m_renderer, rect.location(), bleedAvoidance, { }))
@@ -252,7 +252,7 @@ template<typename Layer> void BackgroundPainter::paintFillLayerImpl(const Color&
 
     Color bgColor = color;
     RefPtr bgImage = layer.layer.image().tryStyleImage();
-    bool shouldPaintBackgroundImage = bgImage && bgImage->canRender(&m_renderer, style.usedZoom());
+    bool shouldPaintBackgroundImage = bgImage && bgImage->canRender(&m_renderer);
 
     if (context.detectingContentfulPaint()) {
         if (!context.contentfulPaintDetected() && shouldPaintBackgroundImage && bgImage->cachedImage()) {
@@ -1160,7 +1160,7 @@ bool BackgroundPainter::boxShadowShouldBeAppliedToBackground(const RenderBoxMode
         if (!inlineBox->nextInlineBoxLineLeftward() && !inlineBox->nextInlineBoxLineRightward())
             return true;
         auto& renderer = inlineBox->renderer();
-        bool hasFillImage = image && image->canRender(&renderer, renderer.style().usedZoom());
+        bool hasFillImage = image && image->canRender(&renderer);
         return !hasFillImage && !renderer.style().border().hasBorderRadius();
     };
 

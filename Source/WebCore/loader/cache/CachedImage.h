@@ -57,7 +57,7 @@ public:
     static std::pair<WeakPtr<BitmapImage>, float> brokenImage(float deviceScaleFactor); // Returns an image and the image's resolution scale factor.
     bool NODELETE willPaintBrokenImage() const;
 
-    bool canRender(float multiplier) const { return !errorOccurred() && !clampedImageSize(ImageOrientation::Orientation::FromImage, multiplier).isEmpty(); }
+    bool canRender() const { return !errorOccurred() && m_image && !protect(m_image)->isNull(); }
 
     void setAllowsOrientationOverride(bool b) { m_allowsOrientationOverride = b; }
     bool allowsOrientationOverride() const { return m_allowsOrientationOverride; }
