@@ -229,11 +229,6 @@ void Image::computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHe
     intrinsicHeight = intrinsicRatio.height();
 }
 
-FloatSize Image::sourceSize(ImageOrientation orientation) const
-{
-    return size(orientation);
-}
-
 void Image::startAnimationAsynchronously()
 {
     if (!m_animationStartTimer)

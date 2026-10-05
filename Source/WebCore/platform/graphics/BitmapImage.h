@@ -78,7 +78,6 @@ public:
     // Image Metadata
     String uti() const final { return m_source->uti(); }
     FloatSize size(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const final { return m_source->size(orientation); }
-    FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const { return m_source->sourceSize(orientation); }
     FloatSize density() const { return m_source->density(); }
     ColorSpace colorSpace() final { return m_source->colorSpace(); }
     bool hasHDRContent() const final { return m_source->hasHDRContent(); }
