@@ -379,6 +379,7 @@ public:
     void sendMemoryPressureEvent(bool isCritical);
 #endif
     void textCheckerStateChanged();
+    static void notifyProcessPoolsTextCheckerStateChanged();
 
 #if ENABLE(GPU_PROCESS)
     void gpuProcessDidFinishLaunching(ProcessID);
