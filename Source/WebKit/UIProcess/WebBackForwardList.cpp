@@ -1183,5 +1183,19 @@ WebKit::WebBackForwardListItem* itemAtIndexInBackForwardListItemVector(const Vec
     return items[index].ptr();
 }
 
+size_t frameStateChildCount(const WebKit::FrameState& frameState)
+{
+    return frameState.children.size();
+}
+
+WebKit::FrameState* frameStateChildAtIndex(const WebKit::FrameState& frameState, size_t index)
+{
+    return frameState.children[index].ptr();
+}
+
+unsigned maxFrameStateDepthForMessageCheck()
+{
+    return WebCore::Page::maxFrameDepth;
+}
 
 #endif // ENABLE(BACK_FORWARD_LIST_SWIFT)

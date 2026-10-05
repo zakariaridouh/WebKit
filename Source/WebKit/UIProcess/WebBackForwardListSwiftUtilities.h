@@ -86,5 +86,10 @@ void appendToBackForwardStateItems(Vector<WebKit::BackForwardListItemState>& ite
 Ref<WebKit::WebBackForwardListItem> createItemFromState(const WebKit::BackForwardListItemState&, WebKit::WebPageProxyIdentifier pageIdentifier);
 Vector<Ref<WebKit::WebBackForwardListItem>> createItemsFromState(const WebKit::BackForwardListState&, WebKit::WebPageProxyIdentifier pageIdentifier);
 WebKit::WebBackForwardListItem* itemAtIndexInBackForwardListItemVector(const Vector<Ref<WebKit::WebBackForwardListItem>>& items, size_t index);
+size_t frameStateChildCount(const WebKit::FrameState&);
+WebKit::FrameState* frameStateChildAtIndex(const WebKit::FrameState&, size_t index);
+
+// WebCore::Page is not visible to Swift.
+unsigned maxFrameStateDepthForMessageCheck();
 
 #endif // ENABLE(BACK_FORWARD_LIST_SWIFT)

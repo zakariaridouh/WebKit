@@ -1036,7 +1036,13 @@ final class WebBackForwardList {
         return frameState
     }
 
-    private func messageCheckItemURLs(frameState: WebKit.RefFrameState, process: WebKit.RefWebProcessProxy) throws(InvalidMessage) {
+    private func messageCheckItemURLs(
+        frameState: WebKit.RefFrameState,
+        process: WebKit.RefWebProcessProxy,
+        depth: UInt32 = 0
+    ) throws(InvalidMessage) {
+        try messageCheck { depth < maxFrameStateDepthForMessageCheck() }
+
         // 'nil' works around rdar://162310543
         // Safety: it's OK to pass a null pointer to these two functions; in fact it's the default
         let itemURL = unsafe WTF.URL(frameState.ptr().urlString, nil)
@@ -1060,6 +1066,13 @@ final class WebBackForwardList {
             }
         }
         #endif
+
+        let childCount = frameStateChildCount(frameState.ptr())
+        for i in 0..<childCount {
+            // swift-format-ignore: NeverForceUnwrap
+            let child = frameStateChildAtIndex(frameState.ptr(), i)!
+            try messageCheckItemURLs(frameState: WebKit.RefFrameState(child), process: process, depth: depth + 1)
+        }
     }
 
     @used
