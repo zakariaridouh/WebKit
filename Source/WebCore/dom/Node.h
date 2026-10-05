@@ -103,6 +103,7 @@ using MutationObserverOptions = OptionSet<MutationObserverOptionType>;
 using MutationRecordDeliveryOptions = OptionSet<MutationObserverOptionType>;
 
 enum class IsMutationBySetInnerHTML : uint8_t { No, Yes };
+enum class CloneSubtree : bool { No, Yes };
 
 using NodeOrString = Variant<Ref<Node>, String>;
 
@@ -180,8 +181,8 @@ public:
     };
     virtual Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) const = 0;
     virtual SerializedNode serializeNode(CloningOperation) const = 0;
-    Ref<Node> cloneNode(bool deep) const;
-    WEBCORE_EXPORT ExceptionOr<Ref<Node>> cloneNodeForBindings(bool deep) const;
+    Ref<Node> cloneNode(CloneSubtree) const;
+    WEBCORE_EXPORT ExceptionOr<Ref<Node>> cloneNodeForBindings(bool subtree) const;
 
     virtual const AtomString& NODELETE localName() const;
     virtual const AtomString& NODELETE namespaceURI() const;

@@ -677,7 +677,7 @@ void HTMLOptionElement::cloneIntoSelectedContent(HTMLSelectedContentElement& sel
 
     NodeVector newChildren;
     for (RefPtr child = firstChild(); child; child = child->nextSibling())
-        newChildren.append(child->cloneNode(/* deep */ true));
+        newChildren.append(child->cloneNode(CloneSubtree::Yes));
     selectedContent.replaceChildrenWithoutValidityCheck(WTF::move(newChildren));
 }
 
@@ -685,7 +685,7 @@ Ref<HTMLOptionElement> HTMLOptionElement::cloneForSelectedContent()
 {
     ASSERT(document().settings().htmlEnhancedSelectMultipleSelectedContentEnabled());
 
-    Ref clone = downcast<HTMLOptionElement>(cloneNode(/* deep */ true));
+    Ref clone = downcast<HTMLOptionElement>(cloneNode(CloneSubtree::Yes));
     clone->m_selectedContentSource = *this;
     clone->m_isSelected = selected();
     return clone;

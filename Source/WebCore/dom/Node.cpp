@@ -801,18 +801,18 @@ ExceptionOr<void> Node::normalize()
     return { };
 }
 
-Ref<Node> Node::cloneNode(bool deep) const
+Ref<Node> Node::cloneNode(CloneSubtree subtree) const
 {
     ASSERT(!isShadowRoot());
     RefPtr registry = CustomElementRegistry::registryForNodeOrTreeScope(*this, treeScope());
-    return cloneNodeInternal(protect(document()), deep ? CloningOperation::Everything : CloningOperation::SelfOnly, registry.get());
+    return cloneNodeInternal(protect(document()), subtree == CloneSubtree::Yes ? CloningOperation::Everything : CloningOperation::SelfOnly, registry.get());
 }
 
-ExceptionOr<Ref<Node>> Node::cloneNodeForBindings(bool deep) const
+ExceptionOr<Ref<Node>> Node::cloneNodeForBindings(bool subtree) const
 {
     if (isShadowRoot()) [[unlikely]]
         return Exception { ExceptionCode::NotSupportedError };
-    return cloneNode(deep);
+    return cloneNode(subtree ? CloneSubtree::Yes : CloneSubtree::No);
 }
 
 const AtomString& Node::prefix() const

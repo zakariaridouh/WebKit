@@ -1319,7 +1319,7 @@ void CompositeEditCommand::cloneParagraphUnderNewElement(const Position& start, 
     if (outerNode->isRootEditableElement()) {
         lastNode = blockElement;
     } else {
-        lastNode = outerNode->cloneNode(isRenderedTable(outerNode.get()));
+        lastNode = outerNode->cloneNode(isRenderedTable(outerNode.get()) ? CloneSubtree::Yes : CloneSubtree::No);
         appendNode(*lastNode, *blockElement);
     }
 
@@ -1334,7 +1334,7 @@ void CompositeEditCommand::cloneParagraphUnderNewElement(const Position& start, 
 
         for (size_t i = ancestors.size(); i != 0; --i) {
             auto item = std::exchange(ancestors[i - 1], nullptr);
-            auto child = item->cloneNode(isRenderedTable(item.get()));
+            auto child = item->cloneNode(isRenderedTable(item.get()) ? CloneSubtree::Yes : CloneSubtree::No);
             appendNode(child.copyRef(), downcast<Element>(*lastNode));
             lastNode = WTF::move(child);
         }
@@ -1363,7 +1363,7 @@ void CompositeEditCommand::cloneParagraphUnderNewElement(const Position& start, 
                 lastNode = lastNode->parentNode();
             }
 
-            auto clonedNode = node->cloneNode(true);
+            auto clonedNode = node->cloneNode(CloneSubtree::Yes);
             insertNodeAfter(clonedNode.copyRef(), *lastNode);
             lastNode = WTF::move(clonedNode);
             if (node == end.deprecatedNode() || end.deprecatedNode()->isDescendantOf(*node))
