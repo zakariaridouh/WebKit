@@ -558,6 +558,43 @@ TEST_F(GraphicsContextGLCocoaTest, CopyImageAndMutateDrawingBuffer)
     EXPECT_TRUE(nativeImagePixelsIs(Color::blue, *displayImage, FloatPoint(5, 5)));
 }
 
+// Verify that the internal readbacks are not affected by content setting glReadBuffer(GL_NONE)
+// on the emulated default framebuffer in WebGL2, for either buffer. GraphicsContextGLANGLE::copyNativeImage()
+// is the GL readback path, which GraphicsContextGLCocoa overrides with a surface copy.
+TEST_F(GraphicsContextGLCocoaTest, CopyNativeImageWithReadBufferNoneWebGL2)
+{
+    using GL = GraphicsContextGL;
+    GraphicsContextGLAttributes attributes;
+    attributes.isWebGL2 = true;
+    attributes.alpha = true;
+    auto gl = TestedGraphicsContextGLCocoa::create(WTF::move(attributes));
+    ASSERT_NE(gl, nullptr);
+    gl->reshape(10, 10);
+    gl->clearColor(0.f, 1.f, 0.f, 1.f);
+    gl->clear(GL::COLOR_BUFFER_BIT);
+
+    gl->bindFramebuffer(GL::FRAMEBUFFER, 0);
+    gl->readBuffer(GL::NONE);
+    EXPECT_TRUE(gl->getErrors().isEmpty());
+
+    for (auto buffer : { GL::SurfaceBuffer::DrawingBuffer, GL::SurfaceBuffer::DisplayBuffer }) {
+        if (buffer == GL::SurfaceBuffer::DisplayBuffer)
+            gl->prepareForDisplay();
+        SCOPED_TRACE(buffer == GL::SurfaceBuffer::DrawingBuffer ? "drawing buffer" : "display buffer");
+        RefPtr image = gl->copyNativeImage(buffer);
+        ASSERT_NE(image, nullptr);
+        EXPECT_EQ(image->size(), IntSize(10, 10));
+        EXPECT_TRUE(nativeImagePixelsIs(Color::green, *image, FloatPoint(5, 5)));
+        EXPECT_TRUE(gl->getErrors().isEmpty());
+
+        RefPtr readbackImage = gl->GraphicsContextGLANGLE::copyNativeImage(buffer);
+        ASSERT_NE(readbackImage, nullptr);
+        EXPECT_EQ(readbackImage->size(), IntSize(10, 10));
+        EXPECT_TRUE(nativeImagePixelsIs(Color::green, *readbackImage, FloatPoint(5, 5)));
+        EXPECT_TRUE(gl->getErrors().isEmpty());
+    }
+}
+
 TEST_P(AnyContextAttributeTest, DisplayBuffersAreRecycled)
 {
     auto context = createTestContext({ 20, 20 });
