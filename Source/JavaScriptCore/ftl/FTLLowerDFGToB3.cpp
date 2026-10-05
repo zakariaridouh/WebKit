@@ -22733,19 +22733,20 @@ IGNORE_CLANG_WARNINGS_END
         LBasicBlock wordTailCompare = m_out.newBlock();
         LBasicBlock trueCase = m_out.newBlock();
         LBasicBlock falseCase = m_out.newBlock();
+        LBasicBlock ropeCase = m_out.newBlock();
         LBasicBlock slowCase = m_out.newBlock();
         LBasicBlock continuation = m_out.newBlock();
 
         if (leftAtom)
             m_out.jump(leftReadyCase);
         else
-            m_out.branch(isRopeString(leftJSString, leftJSStringEdge), rarely(slowCase), usually(leftReadyCase));
+            m_out.branch(isRopeString(leftJSString, leftJSStringEdge), rarely(ropeCase), usually(leftReadyCase));
 
         LBasicBlock lastNext = m_out.appendTo(leftReadyCase, rightReadyCase);
         if (rightAtom)
             m_out.jump(rightReadyCase);
         else
-            m_out.branch(isRopeString(rightJSString, rightJSStringEdge), rarely(slowCase), usually(rightReadyCase));
+            m_out.branch(isRopeString(rightJSString, rightJSStringEdge), rarely(ropeCase), usually(rightReadyCase));
 
         m_out.appendTo(rightReadyCase, notTriviallyUnequalCase);
         LValue left = leftAtom ? nullptr : m_out.loadPtr(leftJSString, m_heaps.JSString_value);
@@ -22856,10 +22857,35 @@ IGNORE_CLANG_WARNINGS_END
         ValueFromBlock trueResult = m_out.anchor(m_out.booleanTrue);
         m_out.jump(continuation);
 
-        m_out.appendTo(falseCase, slowCase);
+        m_out.appendTo(falseCase, ropeCase);
 
         ValueFromBlock falseResult = m_out.anchor(m_out.booleanFalse);
         m_out.jump(continuation);
+
+        m_out.appendTo(ropeCase, slowCase);
+
+        auto loadLength = [&](LValue jsString, Edge edge) {
+            LBasicBlock ropePath = m_out.newBlock();
+            LBasicBlock nonRopePath = m_out.newBlock();
+            LBasicBlock lengthLoaded = m_out.newBlock();
+
+            m_out.branch(isRopeString(jsString, edge), unsure(ropePath), unsure(nonRopePath));
+
+            m_out.appendTo(ropePath, nonRopePath);
+            ValueFromBlock ropeLength = m_out.anchor(m_out.load32NonNegative(jsString, m_heaps.JSRopeString_length));
+            m_out.jump(lengthLoaded);
+
+            m_out.appendTo(nonRopePath, lengthLoaded);
+            ValueFromBlock nonRopeLength = m_out.anchor(m_out.load32NonNegative(m_out.loadPtr(jsString, m_heaps.JSString_value), m_heaps.StringImpl_length));
+            m_out.jump(lengthLoaded);
+
+            m_out.appendTo(lengthLoaded, slowCase);
+            return m_out.phi(Int32, ropeLength, nonRopeLength);
+        };
+
+        LValue leftRopeCaseLength = loadLength(leftJSString, leftJSStringEdge);
+        LValue rightRopeCaseLength = loadLength(rightJSString, rightJSStringEdge);
+        m_out.branch(m_out.notEqual(leftRopeCaseLength, rightRopeCaseLength), usually(falseCase), rarely(slowCase));
 
         m_out.appendTo(slowCase, continuation);
 

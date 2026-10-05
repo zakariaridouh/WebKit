@@ -7341,6 +7341,7 @@ void SpeculativeJIT::compileStringEquality(
     JumpList trueCase;
     JumpList falseCase;
     JumpList slowCase;
+    JumpList ropeCase;
 
     trueCase.append(fastTrue);
     falseCase.append(fastFalse);
@@ -7349,7 +7350,7 @@ void SpeculativeJIT::compileStringEquality(
         if (atom)
             return;
         loadPtr(Address(jsStringGPR, JSString::offsetOfValue()), implGPR);
-        slowCase.append(branchIfRopeStringImpl(implGPR));
+        ropeCase.append(branchIfRopeStringImpl(implGPR));
     };
 
     auto resolveDataPtr = [&](bool atom, const String& constStr, GPRReg implGPR) {
@@ -7455,6 +7456,7 @@ void SpeculativeJIT::compileStringEquality(
     Jump done = jump();
 
     falseCase.link(this);
+    Label falseResult = label();
     moveFalseTo(leftTempGPR);
 
     done.link(this);
@@ -7462,7 +7464,22 @@ void SpeculativeJIT::compileStringEquality(
     Vector<SilentRegisterSavePlan> savePlans;
     silentSpillAllRegistersImpl(false, savePlans, leftTempGPR);
     Label doneOperationCall = label();
-    addSlowPathGeneratorLambda([=, this, savePlans = WTF::move(savePlans), slowCase = WTF::move(slowCase)]() mutable {
+    addSlowPathGeneratorLambda([=, this, savePlans = WTF::move(savePlans), slowCase = WTF::move(slowCase), ropeCase = WTF::move(ropeCase)]() mutable {
+        auto loadLength = [&](GPRReg jsStringGPR, GPRReg resultGPR) {
+            loadPtr(Address(jsStringGPR, JSString::offsetOfValue()), resultGPR);
+            Jump isRope = branchIfRopeStringImpl(resultGPR);
+            load32(Address(resultGPR, StringImpl::lengthMemoryOffset()), resultGPR);
+            Jump lengthLoaded = jump();
+            isRope.link(this);
+            load32(Address(jsStringGPR, JSRopeString::offsetOfLength()), resultGPR);
+            lengthLoaded.link(this);
+        };
+
+        ropeCase.link(this);
+        loadLength(leftGPR, leftTempGPR);
+        loadLength(rightGPR, rightTempGPR);
+        branch32(NotEqual, leftTempGPR, rightTempGPR).linkTo(falseResult, this);
+
         slowCase.link(this);
         silentSpill(savePlans);
         setupArguments<decltype(operationCompareStringEq)>(LinkableConstant::globalObject(*this, node), leftGPR, rightGPR);
