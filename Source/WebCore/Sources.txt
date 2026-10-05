@@ -2789,7 +2789,6 @@ platform/graphics/MediaSampleConverter.cpp
 platform/graphics/MediaSourcePrivate.cpp
 platform/graphics/Model.cpp
 platform/graphics/ModelContext.cpp
-platform/graphics/NamedImageGeneratedImage.cpp
 platform/graphics/NativeImage.cpp
 platform/graphics/NativeImageSource.cpp
 platform/graphics/NullImageBufferBackend.cpp

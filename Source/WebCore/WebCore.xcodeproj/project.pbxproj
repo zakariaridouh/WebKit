@@ -1285,7 +1285,6 @@
 		314877E31FAA8FE900C05759 /* OffscreenCanvas.h in Headers */ = {isa = PBXBuildFile; fileRef = 314877E11FAA8FE900C05759 /* OffscreenCanvas.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		314877E61FAAB02500C05759 /* JSOffscreenCanvas.h in Headers */ = {isa = PBXBuildFile; fileRef = 314877E41FAAB02200C05759 /* JSOffscreenCanvas.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		314BE3A11B30F6B700141982 /* CSSNamedImageValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 314BE3A01B30F6B700141982 /* CSSNamedImageValue.h */; };
-		314BE3A71B3103FB00141982 /* NamedImageGeneratedImage.h in Headers */ = {isa = PBXBuildFile; fileRef = 314BE3A51B3103FB00141982 /* NamedImageGeneratedImage.h */; };
 		314DDE592C6AB3F7000524AF /* CSSGridLineValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 314DDE582C6AB3E2000524AF /* CSSGridLineValue.h */; };
 		314F169F2640BC4100663ECE /* WebXROpaqueFramebuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 314F169D2640B67E00663ECE /* WebXROpaqueFramebuffer.h */; };
 		3169B7DA2C63091700024DBA /* CSSTokenizerInputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = BC7C5E8F2BE2A8FB00AE645C /* CSSTokenizerInputStream.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -10830,8 +10829,6 @@
 		314877E51FAAB02400C05759 /* JSOffscreenCanvas.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSOffscreenCanvas.cpp; sourceTree = "<group>"; };
 		314BE3A01B30F6B700141982 /* CSSNamedImageValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSSNamedImageValue.h; sourceTree = "<group>"; };
 		314BE3A21B30F6D100141982 /* CSSNamedImageValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CSSNamedImageValue.cpp; sourceTree = "<group>"; };
-		314BE3A41B3103FB00141982 /* NamedImageGeneratedImage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NamedImageGeneratedImage.cpp; sourceTree = "<group>"; };
-		314BE3A51B3103FB00141982 /* NamedImageGeneratedImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NamedImageGeneratedImage.h; sourceTree = "<group>"; };
 		314DDE582C6AB3E2000524AF /* CSSGridLineValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSGridLineValue.h; sourceTree = "<group>"; };
 		314DDE5A2C6AB3FD000524AF /* CSSGridLineValue.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CSSGridLineValue.cpp; sourceTree = "<group>"; };
 		314F169B2640B67E00663ECE /* WebXROpaqueFramebuffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebXROpaqueFramebuffer.cpp; sourceTree = "<group>"; };
@@ -37453,8 +37450,6 @@
 				2DC8D39725F2FE9400CFCBAB /* Model.h */,
 				5266C7E72D115B5F000C4997 /* ModelContext.cpp */,
 				5266C7E62D115B5F000C4997 /* ModelContext.h */,
-				314BE3A41B3103FB00141982 /* NamedImageGeneratedImage.cpp */,
-				314BE3A51B3103FB00141982 /* NamedImageGeneratedImage.h */,
 				7252396B254CADC200F5FB15 /* NativeImage.cpp */,
 				55A336F61D8209F40022C4C7 /* NativeImage.h */,
 				72854E612B6987B400E0181A /* NativeImageSource.cpp */,
@@ -48273,7 +48268,6 @@
 				CDFB9A5C2E6F7C8C00AA1CD5 /* MutationObserverOptions.h in Headers */,
 				D6E276B014637455001D280A /* MutationObserverRegistration.h in Headers */,
 				C6F08FBD1430FE8F00685849 /* MutationRecord.h in Headers */,
-				314BE3A71B3103FB00141982 /* NamedImageGeneratedImage.h in Headers */,
 				A81872230977D3C0005826D9 /* NamedNodeMap.h in Headers */,
 				A818721E0977D3C0005826D9 /* NameNodeList.h in Headers */,
 				3227A93128BD744C00BC2697 /* Namespace.h in Headers */,
