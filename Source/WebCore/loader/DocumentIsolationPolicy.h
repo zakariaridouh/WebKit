@@ -1,6 +1,5 @@
-
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,25 +25,18 @@
 
 #pragma once
 
-#include <WebCore/CrossOriginEmbedderPolicy.h>
-#include <WebCore/DocumentIsolationPolicy.h>
-#include <WebCore/ResourceRequest.h>
-#include <WebCore/SecurityOrigin.h>
-
 namespace WebCore {
 
-struct RetrieveRecordsOptions {
-    RetrieveRecordsOptions isolatedCopy() const & { return { request.isolatedCopy(), crossOriginEmbedderPolicy.isolatedCopy(), documentIsolationPolicy, sourceOrigin->isolatedCopy(), ignoreSearch, ignoreMethod, ignoreVary, shouldProvideResponse }; }
-    RetrieveRecordsOptions isolatedCopy() && { return { WTF::move(request).isolatedCopy(), WTF::move(crossOriginEmbedderPolicy).isolatedCopy(), documentIsolationPolicy, sourceOrigin->isolatedCopy(), ignoreSearch, ignoreMethod, ignoreVary, shouldProvideResponse }; }
+class ResourceResponse;
+class ScriptExecutionContext;
 
-    ResourceRequest request;
-    CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;
-    DocumentIsolationPolicy documentIsolationPolicy { DocumentIsolationPolicy::None };
-    const Ref<SecurityOrigin> sourceOrigin;
-    bool ignoreSearch { false };
-    bool ignoreMethod { false };
-    bool ignoreVary { false };
-    bool shouldProvideResponse { true };
+// https://wicg.github.io/document-isolation-policy/#dip-value
+enum class DocumentIsolationPolicy : bool {
+    None,
+    IsolateAndRequireCORP
 };
+
+// https://wicg.github.io/document-isolation-policy/#obtain-dip
+DocumentIsolationPolicy obtainDocumentIsolationPolicy(const ResourceResponse&, const ScriptExecutionContext&);
 
 } // namespace WebCore

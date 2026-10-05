@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,30 +24,28 @@
  */
 
 #include "config.h"
-#include "PolicyContainer.h"
+#include "DocumentIsolationPolicy.h"
 
+#include "HTTPHeaderNames.h"
+#include "RFC8941.h"
 #include "ResourceResponse.h"
+#include "ScriptExecutionContext.h"
+#include "Settings.h"
 
 namespace WebCore {
 
-PolicyContainer PolicyContainer::isolatedCopy() const &
+DocumentIsolationPolicy obtainDocumentIsolationPolicy(const ResourceResponse& response, const ScriptExecutionContext& context)
 {
-    return { contentSecurityPolicyResponseHeaders.isolatedCopy(), crossOriginEmbedderPolicy.isolatedCopy(), crossOriginOpenerPolicy.isolatedCopy(), documentIsolationPolicy, referrerPolicy, ipAddressSpace };
-}
+    if (!context.settingsValues().documentIsolationPolicyEnabled || !context.settingsValues().siteIsolationEnabled || !context.isSecureContext())
+        return DocumentIsolationPolicy::None;
 
-PolicyContainer PolicyContainer::isolatedCopy() &&
-{
-    return { WTF::move(contentSecurityPolicyResponseHeaders).isolatedCopy(), WTF::move(crossOriginEmbedderPolicy).isolatedCopy(), WTF::move(crossOriginOpenerPolicy).isolatedCopy(), documentIsolationPolicy, referrerPolicy, ipAddressSpace };
-}
+    auto parsedItem = RFC8941::parseItemStructuredFieldValue(response.httpHeaderField(HTTPHeaderName::DocumentIsolationPolicy));
+    if (!parsedItem)
+        return DocumentIsolationPolicy::None;
 
-void addPolicyContainerHeaders(ResourceResponse& response, const PolicyContainer& policyContainer)
-{
-    policyContainer.contentSecurityPolicyResponseHeaders.addPolicyHeadersTo(response);
-    policyContainer.crossOriginOpenerPolicy.addPolicyHeadersTo(response);
-    policyContainer.crossOriginEmbedderPolicy.addPolicyHeadersTo(response);
-    if (policyContainer.documentIsolationPolicy == DocumentIsolationPolicy::IsolateAndRequireCORP)
-        response.setHTTPHeaderField(HTTPHeaderName::DocumentIsolationPolicy, "isolate-and-require-corp"_s);
-    response.setHTTPHeaderField(HTTPHeaderName::ReferrerPolicy, referrerPolicyToString(policyContainer.referrerPolicy));
+    // FIXME: Support isolate-and-credentialless.
+    auto* token = std::get_if<RFC8941::Token>(&parsedItem->first);
+    return token && token->string() == "isolate-and-require-corp"_s ? DocumentIsolationPolicy::IsolateAndRequireCORP : DocumentIsolationPolicy::None;
 }
 
 } // namespace WebCore

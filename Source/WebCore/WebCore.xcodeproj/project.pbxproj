@@ -3675,6 +3675,7 @@
 		898785F5122E1EAC003AABDA /* JSFileReaderSync.h in Headers */ = {isa = PBXBuildFile; fileRef = 898785F3122E1EAC003AABDA /* JSFileReaderSync.h */; };
 		8A00EECA2A680146006A53A2 /* EXTDepthClamp.h in Headers */ = {isa = PBXBuildFile; fileRef = 8A00EEC72A680139006A53A2 /* EXTDepthClamp.h */; };
 		8A054533283CF17F00F498E7 /* EXTTextureNorm16.h in Headers */ = {isa = PBXBuildFile; fileRef = 8A054532283CF13F00F498E7 /* EXTTextureNorm16.h */; };
+		93805C4C92255AEF9B0A3A00 /* DocumentIsolationPolicy.h in Headers */ = {isa = PBXBuildFile; fileRef = 16E98E14E40D8CBC19A8FAA2 /* DocumentIsolationPolicy.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		8A12E35D11FA33280025836A /* DocumentLoadTiming.h in Headers */ = {isa = PBXBuildFile; fileRef = 8A12E35C11FA33280025836A /* DocumentLoadTiming.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		8A1330F02981C67500A47DCB /* WebGLClipCullDistance.h in Headers */ = {isa = PBXBuildFile; fileRef = 8A1330EF2981C5E200A47DCB /* WebGLClipCullDistance.h */; };
 		8A14769A2A7284540019051E /* EXTRenderSnorm.h in Headers */ = {isa = PBXBuildFile; fileRef = 8A1476982A7284460019051E /* EXTRenderSnorm.h */; };
@@ -16205,6 +16206,8 @@
 		8A054530283CF13E00F498E7 /* EXTTextureNorm16.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = EXTTextureNorm16.idl; sourceTree = "<group>"; };
 		8A054531283CF13F00F498E7 /* EXTTextureNorm16.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EXTTextureNorm16.cpp; sourceTree = "<group>"; };
 		8A054532283CF13F00F498E7 /* EXTTextureNorm16.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EXTTextureNorm16.h; sourceTree = "<group>"; };
+		8871529BE9A3AE70F9C49748 /* DocumentIsolationPolicy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DocumentIsolationPolicy.cpp; sourceTree = "<group>"; };
+		16E98E14E40D8CBC19A8FAA2 /* DocumentIsolationPolicy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DocumentIsolationPolicy.h; sourceTree = "<group>"; };
 		8A12E35C11FA33280025836A /* DocumentLoadTiming.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DocumentLoadTiming.h; sourceTree = "<group>"; };
 		8A1330ED2981C5E100A47DCB /* WebGLClipCullDistance.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = WebGLClipCullDistance.idl; sourceTree = "<group>"; };
 		8A1330EE2981C5E200A47DCB /* WebGLClipCullDistance.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebGLClipCullDistance.cpp; sourceTree = "<group>"; };
@@ -39317,6 +39320,8 @@
 				5C5D2383227A063A000B9BDA /* CustomHeaderFields.h */,
 				E4F38D1C2626F144007B1064 /* DefaultResourceLoadPriority.cpp */,
 				E4F38D192626F13B007B1064 /* DefaultResourceLoadPriority.h */,
+				8871529BE9A3AE70F9C49748 /* DocumentIsolationPolicy.cpp */,
+				16E98E14E40D8CBC19A8FAA2 /* DocumentIsolationPolicy.h */,
 				93E227DB0AF589AD00D48324 /* DocumentLoader.cpp */,
 				656D371E0ADBA5DE00A4554D /* DocumentLoader.h */,
 				8A12E35C11FA33280025836A /* DocumentLoadTiming.h */,
@@ -45879,6 +45884,7 @@
 				CD92F5182261038200F87BB3 /* DocumentFullscreen.h in Headers */,
 				CA9A7F732EBA5F3D008241C7 /* DocumentImmersive.h in Headers */,
 				CDEFDA0B27122638005559A7 /* DocumentInlines.h in Headers */,
+				93805C4C92255AEF9B0A3A00 /* DocumentIsolationPolicy.h in Headers */,
 				656D37360ADBA5DE00A4554D /* DocumentLoader.h in Headers */,
 				8A12E35D11FA33280025836A /* DocumentLoadTiming.h in Headers */,
 				ED2BA83C09A24B91006C0AC4 /* DocumentMarker.h in Headers */,
