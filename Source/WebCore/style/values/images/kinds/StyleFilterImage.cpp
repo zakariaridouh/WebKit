@@ -128,71 +128,81 @@ void FilterImage::load(CachedResourceLoader& cachedResourceLoader, const Resourc
     m_inputImageIsReady = true;
 }
 
-RefPtr<WebCore::Image> FilterImage::image(const RenderElement* renderElement, const FloatSize& size, const GraphicsContext& destinationContext, bool isForFirstLine) const
+RefPtr<WebCore::Image> FilterImage::resolvedImage(const RenderElement& renderElement, const FloatSize& size, const GraphicsContext& destinationContext, bool isForFirstLine) const
 {
-    CheckedPtr renderer = renderElement;
-    if (!renderer)
-        return &WebCore::Image::nullImage();
+    CheckedRef renderer = renderElement;
 
     if (size.isEmpty())
         return nullptr;
 
     RefPtr styleImage = m_image;
-    if (!styleImage || !styleImage->canDrawAtSize(*renderer, size))
-        return &WebCore::Image::nullImage();
+    if (!styleImage || !styleImage->canDrawAtSize(renderer, size))
+        return nullptr;
 
     auto preferredFilterRenderingModes = protect(renderer->page())->preferredFilterRenderingModes(destinationContext);
     auto sourceImageRect = FloatRect { { }, size };
 
     auto renderingOptions(protect(renderer->settings())->showDebugBorders() ? std::make_optional(FilterRenderingOption::ShowDebugOverlay) : std::nullopt);
-    auto cssFilter = CSSFilterRenderer::create(const_cast<RenderElement&>(*renderer), m_filter, {
+    auto cssFilter = CSSFilterRenderer::create(const_cast<RenderElement&>(renderer.get()), m_filter, {
             .referenceBox = sourceImageRect,
             .filterRegion = sourceImageRect,
             .scale = { 1, 1 },
         }, preferredFilterRenderingModes, renderingOptions, NullGraphicsContext());
     if (!cssFilter)
-        return &WebCore::Image::nullImage();
+        return nullptr;
 
     cssFilter->setFilterRegion(sourceImageRect);
 
     auto sourceImage = ImageBuffer::create(size, destinationContext.renderingMode(), RenderingPurpose::DOM, 1, ColorSpace::SRGB(), PixelFormat::BGRA8, renderer->hostWindow());
     if (!sourceImage)
-        return &WebCore::Image::nullImage();
+        return nullptr;
 
     auto filteredImage = sourceImage->filteredNativeImage(*cssFilter, [&](GraphicsContext& context) {
-        styleImage->draw(context, *renderer, ConcreteObjectSize::fixed(size), sourceImageRect, sourceImageRect, { }, isForFirstLine);
+        styleImage->draw(context, renderer, ConcreteObjectSize::fixed(size), sourceImageRect, sourceImageRect, { }, isForFirstLine);
     });
     if (!filteredImage)
-        return &WebCore::Image::nullImage();
+        return nullptr;
+
     return BitmapImage::create(WTF::move(filteredImage));
 }
 
 ImageDrawResult FilterImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, bool isForFirstLine) const
 {
-    return drawResolving(context, renderer, concreteObjectSize, destination, source, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
+    if (isPending())
+        return ImageDrawResult::DidNothing;
+
+    RefPtr image = resolvedImage(renderer, flooredIntSize(destination.size()), context, isForFirstLine);
+    if (!image)
+        return ImageDrawResult::DidNothing;
+
+    return drawResolved(context, renderer, *image, concreteObjectSize, destination, source, options);
 }
 
 ImageDrawResult FilterImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
 {
-    return drawAsPatternResolving(context, renderer, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
+    RefPtr image = resolvedImage(renderer, concreteObjectSize.size() * concreteObjectSize.zoom(), context, isForFirstLine);
+    if (!image || context.paintingDisabled())
+        return ImageDrawResult::DidNothing;
+
+    return drawResolvedAsPattern(context, renderer, *image, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options);
 }
 
 ImageDrawResult FilterImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
 {
-    return drawTiledResolving(context, renderer, concreteObjectSize, destination, phase, tileSize, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
+    RefPtr image = resolvedImage(renderer, tileSize, context, isForFirstLine);
+    if (!image || context.paintingDisabled())
+        return ImageDrawResult::DidNothing;
+
+    return drawResolvedTiled(context, renderer, *image, concreteObjectSize, destination, phase, tileSize, spacing, options);
 }
 
 ImageDrawResult FilterImage::drawNinePiece(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options) const
 {
-    return drawNinePieceResolving(context, renderer, concreteObjectSize, geometry, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, false);
-    });
+    RefPtr image = resolvedImage(renderer, concreteObjectSize.size() * concreteObjectSize.zoom(), context, false);
+    if (!image || context.paintingDisabled())
+        return ImageDrawResult::DidNothing;
+
+    return drawResolvedNinePiece(context, renderer, *image, concreteObjectSize, geometry, options);
 }
 
 bool FilterImage::knownToBeOpaque(const RenderElement&) const
