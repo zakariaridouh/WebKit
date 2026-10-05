@@ -2605,7 +2605,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/GainMap.h
     platform/graphics/GCGLExtension.h
     platform/graphics/GCGLSpan.h
-    platform/graphics/GeneratedImage.h
     platform/graphics/GeometryUtilities.h
     platform/graphics/Glyph.h
     platform/graphics/GlyphBuffer.h

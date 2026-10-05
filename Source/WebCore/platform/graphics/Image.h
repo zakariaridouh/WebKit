@@ -70,7 +70,6 @@ public:
     WEBCORE_EXPORT static bool supportsType(const String&);
 
     virtual bool isBitmapImage() const { return false; }
-    virtual bool isGeneratedImage() const { return false; }
     virtual bool NODELETE isSVGImage() const { return false; }
     virtual bool isPDFDocumentImage() const { return false; }
 
