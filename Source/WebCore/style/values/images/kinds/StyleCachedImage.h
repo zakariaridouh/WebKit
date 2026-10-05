@@ -83,7 +83,6 @@ public:
     bool hasClient(RenderElement&) const final;
     bool hasImage() const final;
     bool hasDecodedImage() const final;
-    RefPtr<WebCore::Image> image(const RenderElement*, const FloatSize&, const GraphicsContext& destinationContext, bool isForFirstLine) const;
     ImageDrawResult draw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions, bool isForFirstLine) const final;
     ImageDrawResult drawAsPattern(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions, bool isForFirstLine) const final;
     ImageDrawResult drawTiled(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions, bool isForFirstLine) const final;
@@ -105,18 +104,26 @@ public:
     URL url() const final;
 
 private:
-    Ref<WebCore::Image> decodedImage() const;
-
     CachedImage(URL&&, Ref<CSSImageValue>&&, float);
     CachedImage(URL&&, Ref<CSSImageValue>&&, float, OptionSet<SVGReferencingMode>);
 
+    RefPtr<WebCore::Image> resolvedImage() const;
     Vector<CSS::ParamFunction> urlLinkParameters(const CSSParserContext&, StringView fragment) const;
 
+    struct ReferencedSVGResource {
+        SingleThreadWeakPtr<RenderSVGResourceContainer> resource;
+        SingleThreadWeakPtr<LegacyRenderSVGResourceContainer> legacyResource;
+
+        explicit operator bool() const { return resource || legacyResource; }
+    };
+    ReferencedSVGResource referencedSVGResource(const RenderElement&) const;
     LegacyRenderSVGResourceContainer* uncheckedRenderSVGResource(TreeScope&, const AtomString& fragment) const;
     LegacyRenderSVGResourceContainer* uncheckedRenderSVGResource(const RenderElement*) const;
     LegacyRenderSVGResourceContainer* legacyRenderSVGResource(const RenderElement*) const;
     RenderSVGResourceContainer* renderSVGResource(const RenderElement*) const;
     bool isRenderSVGResource(const RenderElement*) const;
+    ImageDrawResult drawSVGResource(GraphicsContext&, const ReferencedSVGResource&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions) const;
+    ImageDrawResult drawSVGResourceAsPattern(GraphicsContext&, const ReferencedSVGResource&, const FloatSize&, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions) const;
 
     URL m_url;
     const Ref<CSSImageValue> m_cssValue;

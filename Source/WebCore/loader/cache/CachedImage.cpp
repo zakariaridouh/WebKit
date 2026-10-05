@@ -748,4 +748,26 @@ bool CachedImage::isVisibleInViewport(const Document& document) const
     return false;
 }
 
+String CachedImage::accessibilityDescription() const
+{
+    return m_image ? protect(m_image)->accessibilityDescription() : String();
+}
+
+bool CachedImage::isAnimated() const
+{
+    return m_image ? protect(m_image)->isAnimated() : false;
+}
+
+void CachedImage::stopAnimation()
+{
+    if (m_image)
+        protect(m_image)->stopAnimation();
+}
+
+void CachedImage::resetAnimation()
+{
+    if (m_image)
+        protect(m_image)->resetAnimation();
+}
+
 } // namespace WebCore

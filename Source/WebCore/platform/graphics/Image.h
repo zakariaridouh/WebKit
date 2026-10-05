@@ -72,7 +72,6 @@ public:
     virtual bool isBitmapImage() const { return false; }
     virtual bool isGeneratedImage() const { return false; }
     virtual bool NODELETE isSVGImage() const { return false; }
-    virtual bool isSVGResourceImage() const { return false; }
     virtual bool isPDFDocumentImage() const { return false; }
 
     virtual void subresourcesAreFinished(Document*, CompletionHandler<void()>&&);

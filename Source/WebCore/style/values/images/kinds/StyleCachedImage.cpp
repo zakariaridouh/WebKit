@@ -29,7 +29,10 @@
 #include "CachedImage.h"
 #include "ContainerNodeInlines.h"
 #include "DeprecatedCSSOMPrimitiveValue.h"
+#include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include "ImageQualityController.h"
+#include "LegacyRenderSVGResourceMasker.h"
 #include "ReferencedSVGResources.h"
 #include "RenderElement.h"
 #include "RenderImage.h"
@@ -38,7 +41,6 @@
 #include "RenderView.h"
 #include "SVGImage.h"
 #include "SVGMaskElement.h"
-#include "SVGResourceImage.h"
 #include "SVGSVGElement.h"
 #include "SVGURIReference.h"
 #include "StyleComputedStyle+GettersInlines.h"
@@ -129,9 +131,9 @@ URL CachedImage::url() const
 
 LegacyRenderSVGResourceContainer* CachedImage::uncheckedRenderSVGResource(TreeScope& treeScope, const AtomString& fragment) const
 {
-    auto renderSVGResource = ReferencedSVGResources::referencedRenderResource(treeScope, fragment);
-    m_isRenderSVGResource = renderSVGResource != nullptr;
-    return renderSVGResource;
+    CheckedPtr renderSVGResource = ReferencedSVGResources::referencedRenderResource(treeScope, fragment);
+    m_isRenderSVGResource = !!renderSVGResource;
+    return renderSVGResource.unsafeGet();
 }
 
 LegacyRenderSVGResourceContainer* CachedImage::uncheckedRenderSVGResource(const RenderElement* renderer) const
@@ -330,15 +332,9 @@ bool CachedImage::hasDecodedImage() const
     return m_cachedImage && !m_cachedImage->errorOccurred() && m_cachedImage->hasImage();
 }
 
-RefPtr<WebCore::Image> CachedImage::image(const RenderElement* renderer, const FloatSize&, const GraphicsContext&, bool) const
+RefPtr<WebCore::Image> CachedImage::resolvedImage() const
 {
     ASSERT(!m_isPending);
-
-    if (CheckedPtr renderSVGResource = this->renderSVGResource(renderer))
-        return SVGResourceImage::create(*renderSVGResource, m_url);
-
-    if (auto renderSVGResource = this->legacyRenderSVGResource(renderer))
-        return SVGResourceImage::create(*renderSVGResource, m_url);
 
     if (!m_cachedImage)
         return nullptr;
@@ -346,32 +342,110 @@ RefPtr<WebCore::Image> CachedImage::image(const RenderElement* renderer, const F
     return protect(m_cachedImage)->image();
 }
 
-ImageDrawResult CachedImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, bool isForFirstLine) const
+CachedImage::ReferencedSVGResource CachedImage::referencedSVGResource(const RenderElement& renderer) const
 {
-    return drawResolving(context, renderer, concreteObjectSize, destination, source, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
+    if (CheckedPtr resource = renderSVGResource(&renderer))
+        return { resource.get(), nullptr };
+
+    return { nullptr, legacyRenderSVGResource(&renderer) };
 }
 
-ImageDrawResult CachedImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+ImageDrawResult CachedImage::drawSVGResource(GraphicsContext& context, const ReferencedSVGResource& referenced, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options) const
 {
-    return drawAsPatternResolving(context, renderer, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
+    if (CheckedPtr masker = dynamicDowncast<RenderSVGResourceMasker>(referenced.resource.get())) {
+        if (masker->drawContentIntoContext(context, destination, source, options))
+            return ImageDrawResult::DidDraw;
+    }
+
+    if (CheckedPtr masker = dynamicDowncast<LegacyRenderSVGResourceMasker>(referenced.legacyResource.get())) {
+        if (masker->drawContentIntoContext(context, destination, source, options))
+            return ImageDrawResult::DidDraw;
+    }
+
+    return ImageDrawResult::DidNothing;
 }
 
-ImageDrawResult CachedImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+ImageDrawResult CachedImage::drawSVGResourceAsPattern(GraphicsContext& context, const ReferencedSVGResource& referenced, const FloatSize& size, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options) const
 {
-    return drawTiledResolving(context, renderer, concreteObjectSize, destination, phase, tileSize, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
+    RefPtr imageBuffer = context.createImageBuffer(size);
+    if (!imageBuffer)
+        return ImageDrawResult::DidNothing;
+
+    auto imageRect = FloatRect { { }, size };
+    auto result = drawSVGResource(imageBuffer->context(), referenced, imageRect, imageRect, options);
+
+    context.drawPattern(*imageBuffer, destination, tile, patternTransform, phase, spacing, options);
+    return result;
+}
+
+ImageDrawResult CachedImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, bool) const
+{
+    if (isPending())
+        return ImageDrawResult::DidNothing;
+
+    if (auto referenced = referencedSVGResource(renderer))
+        return drawSVGResource(context, referenced, destination, source, options);
+
+    RefPtr image = resolvedImage();
+    if (!image || image->isNull())
+        return ImageDrawResult::DidNothing;
+
+    return drawResolved(context, renderer, *image, concreteObjectSize, destination, source, options);
+}
+
+ImageDrawResult CachedImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool) const
+{
+    if (context.paintingDisabled())
+        return ImageDrawResult::DidNothing;
+
+    if (auto referenced = referencedSVGResource(renderer))
+        return drawSVGResourceAsPattern(context, referenced, concreteObjectSize.size() * concreteObjectSize.zoom(), destination, tile, patternTransform, phase, spacing, options);
+
+    RefPtr image = resolvedImage();
+    if (!image)
+        return ImageDrawResult::DidNothing;
+
+    return drawResolvedAsPattern(context, renderer, *image, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options);
+}
+
+ImageDrawResult CachedImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool) const
+{
+    if (context.paintingDisabled())
+        return ImageDrawResult::DidNothing;
+
+    if (auto referenced = referencedSVGResource(renderer)) {
+        return drawTiledUsing(context, NaturalDimensions::none(), [&](GraphicsContext& context, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source) {
+            return drawSVGResource(context, referenced, destination, source, options);
+        }, [&](GraphicsContext& context, ConcreteObjectSize tileConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing) {
+            return drawSVGResourceAsPattern(context, referenced, tileConcreteObjectSize.size(), destination, tile, patternTransform, phase, spacing, options);
+        }, ConcreteObjectSize::fixed(tileSize), destination, phase, tileSize, spacing, options);
+    }
+
+    RefPtr image = resolvedImage();
+    if (!image)
+        return ImageDrawResult::DidNothing;
+
+    return drawResolvedTiled(context, renderer, *image, concreteObjectSize, destination, phase, tileSize, spacing, options);
 }
 
 ImageDrawResult CachedImage::drawNinePiece(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options) const
 {
-    return drawNinePieceResolving(context, renderer, concreteObjectSize, geometry, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, false);
-    });
+    if (context.paintingDisabled())
+        return ImageDrawResult::DidNothing;
+
+    if (auto referenced = referencedSVGResource(renderer)) {
+        return drawNinePieceUsing(context, [&](GraphicsContext& context, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source) {
+            return drawSVGResource(context, referenced, destination, source, options);
+        }, [&](GraphicsContext& context, ConcreteObjectSize pieceConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing) {
+            return drawSVGResourceAsPattern(context, referenced, pieceConcreteObjectSize.size(), destination, tile, patternTransform, phase, spacing, { options.compositeOperator(), options.interpolationQuality() });
+        }, ConcreteObjectSize::fixed(concreteObjectSize.size() * concreteObjectSize.zoom()), geometry);
+    }
+
+    RefPtr image = resolvedImage();
+    if (!image)
+        return ImageDrawResult::DidNothing;
+
+    return drawResolvedNinePiece(context, renderer, *image, concreteObjectSize, geometry, options);
 }
 
 bool CachedImage::currentFrameIsComplete(const RenderElement*) const
@@ -412,30 +486,24 @@ bool CachedImage::drawsSVGImage() const
 
 WTF::String CachedImage::accessibilityDescription() const
 {
-    return decodedImage()->accessibilityDescription();
+    return m_cachedImage ? protect(m_cachedImage)->accessibilityDescription() : WTF::String();
 }
 
 bool CachedImage::isAnimated() const
 {
-    return decodedImage()->isAnimated();
+    return m_cachedImage ? protect(m_cachedImage)->isAnimated() : false;
 }
 
 void CachedImage::stopAnimation()
 {
-    decodedImage()->stopAnimation();
+    if (m_cachedImage)
+        protect(m_cachedImage)->stopAnimation();
 }
 
 void CachedImage::resetAnimation()
 {
-    decodedImage()->resetAnimation();
-}
-
-Ref<WebCore::Image> CachedImage::decodedImage() const
-{
-    RefPtr image = m_cachedImage ? protect(m_cachedImage)->image() : nullptr;
-    if (!image)
-        return WebCore::Image::nullImage();
-    return image.releaseNonNull();
+    if (m_cachedImage)
+        protect(m_cachedImage)->resetAnimation();
 }
 
 DecodingMode CachedImage::decodingModeForImageDraw(const RenderBoxModelObject& renderer, const PaintInfo& paintInfo) const

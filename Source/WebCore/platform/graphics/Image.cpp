@@ -285,8 +285,6 @@ TextStream& operator<<(TextStream& ts, const Image& image)
         ts << "bitmap image"_s;
     else if (image.isSVGImage())
         ts << "svg image"_s;
-    else if (image.isSVGResourceImage())
-        ts << "svg resource image"_s;
     else if (image.isPDFDocumentImage())
         ts << "pdf image"_s;
 

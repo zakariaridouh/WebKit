@@ -95,7 +95,13 @@ public:
     bool canSkipRevalidation(const CachedResourceLoader&, const CachedResourceRequest&) const;
 
     bool isVisibleInViewport(const Document&) const;
+
     bool allowsAnimation(const Image&) const;
+    bool isAnimated() const;
+    void stopAnimation();
+    void resetAnimation();
+
+    String accessibilityDescription() const;
 
 private:
     void clear();
