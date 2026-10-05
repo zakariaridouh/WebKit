@@ -287,12 +287,6 @@ LayoutSize CachedImage::clampForZoom(FloatSize size, float multiplier)
     return imageSize;
 }
 
-void CachedImage::computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
-{
-    if (RefPtr image = m_image)
-        image->computeIntrinsicDimensions(intrinsicWidth, intrinsicHeight, intrinsicRatio);
-}
-
 NaturalDimensions CachedImage::naturalDimensions(ImageOrientation orientation) const
 {
     if (RefPtr image = m_image)

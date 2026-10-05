@@ -39,24 +39,13 @@ SVGImageIntrinsicSizing resolveSVGImageIntrinsicSizing(CachedImage& cachedImage,
 
     // Raster (non-SVG) sources: the intrinsic size *is* the ratio.
     if (!image || !image->isSVGImage()) {
-        FloatSize size = cachedImage.clampedImageSize(ImageOrientation::Orientation::FromImage, usedZoom);
+        auto naturalDimensions = cachedImage.naturalDimensions();
+        auto size = naturalDimensions.width && naturalDimensions.height ? FloatSize { *naturalDimensions.width, *naturalDimensions.height } : FloatSize { };
+        size.scale(usedZoom);
         return { size, size, size.isEmpty() ? HasRatio::No : HasRatio::Yes };
     }
 
-    float intrinsicWidth = 0;
-    float intrinsicHeight = 0;
-    FloatSize ratio;
-    cachedImage.computeIntrinsicDimensions(intrinsicWidth, intrinsicHeight, ratio);
-
-    NaturalDimensions naturalDimensions;
-    if (intrinsicWidth > 0)
-        naturalDimensions.width = intrinsicWidth;
-    if (intrinsicHeight > 0)
-        naturalDimensions.height = intrinsicHeight;
-    if (naturalDimensions.width && naturalDimensions.height)
-        naturalDimensions.aspectRatio = FloatSize { intrinsicWidth, intrinsicHeight };
-    else if (!ratio.isEmpty())
-        naturalDimensions.aspectRatio = ratio;
+    auto naturalDimensions = image->naturalDimensions();
 
     auto concreteObjectSize = SVGImageElementSizing { }.resolve(naturalDimensions);
 
