@@ -1998,7 +1998,6 @@
 		494BDBDF2E16156A0079E324 /* FindRevealAlgorithms.h in Headers */ = {isa = PBXBuildFile; fileRef = 494BDBDC2E16156A0079E324 /* FindRevealAlgorithms.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		494E0BBD296CB7CC005F9FDC /* StyleAppearance.h in Headers */ = {isa = PBXBuildFile; fileRef = 722728112947A18A0048DD2E /* StyleAppearance.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		4958F02F2FC90418008AF649 /* CSSColorImageValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 4958F02D2FC903F3008AF649 /* CSSColorImageValue.h */; };
-		4958F0322FC90458008AF649 /* ColorImageGeneratedImage.h in Headers */ = {isa = PBXBuildFile; fileRef = 4958F0302FC9044F008AF649 /* ColorImageGeneratedImage.h */; };
 		4958F0352FC9049C008AF649 /* StyleColorImage.h in Headers */ = {isa = PBXBuildFile; fileRef = 4958F0332FC90497008AF649 /* StyleColorImage.h */; };
 		4958FE612FCABBA4008AF649 /* CSSLightDarkImageValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 4958FE5F2FCABB9F008AF649 /* CSSLightDarkImageValue.h */; };
 		4969B0F313D0B33F00DF3521 /* HitTestingTransformState.h in Headers */ = {isa = PBXBuildFile; fileRef = 4969B0F113D0B33F00DF3521 /* HitTestingTransformState.h */; };
@@ -12452,8 +12451,6 @@
 		4958782012A57DDF007238AC /* PlatformCALayerCocoa.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PlatformCALayerCocoa.mm; sourceTree = "<group>"; };
 		4958F02D2FC903F3008AF649 /* CSSColorImageValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSColorImageValue.h; sourceTree = "<group>"; };
 		4958F02E2FC903F3008AF649 /* CSSColorImageValue.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CSSColorImageValue.cpp; sourceTree = "<group>"; };
-		4958F0302FC9044F008AF649 /* ColorImageGeneratedImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ColorImageGeneratedImage.h; sourceTree = "<group>"; };
-		4958F0312FC9044F008AF649 /* ColorImageGeneratedImage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ColorImageGeneratedImage.cpp; sourceTree = "<group>"; };
 		4958F0332FC90497008AF649 /* StyleColorImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StyleColorImage.h; sourceTree = "<group>"; };
 		4958F0342FC90497008AF649 /* StyleColorImage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StyleColorImage.cpp; sourceTree = "<group>"; };
 		4958FE5F2FCABB9F008AF649 /* CSSLightDarkImageValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSLightDarkImageValue.h; sourceTree = "<group>"; };
@@ -37163,8 +37160,6 @@
 				7C514E0224AF80580050710F /* ColorConversion.cpp */,
 				7C514E0024AF80580050710F /* ColorConversion.h */,
 				3103B7DE1DB01556008BB890 /* ColorHash.h */,
-				4958F0312FC9044F008AF649 /* ColorImageGeneratedImage.cpp */,
-				4958F0302FC9044F008AF649 /* ColorImageGeneratedImage.h */,
 				BCDC642427517B040038FB39 /* ColorInterpolation.cpp */,
 				BCDC642527517B040038FB39 /* ColorInterpolation.h */,
 				32E268FC285FC8F7004660BB /* ColorInterpolationMethod.cpp */,
@@ -45249,7 +45244,6 @@
 				7CAC6AF0247F411000E61D59 /* ColorComponents.h in Headers */,
 				7C514E0324AF805E0050710F /* ColorConversion.h in Headers */,
 				3103B7DF1DB01567008BB890 /* ColorHash.h in Headers */,
-				4958F0322FC90458008AF649 /* ColorImageGeneratedImage.h in Headers */,
 				F55B3DB41251F12D003EF269 /* ColorInputType.h in Headers */,
 				BC3A00C82754496D0047C0E5 /* ColorInterpolation.h in Headers */,
 				BC2EE8EA2765943A0077768B /* ColorInterpolationMethod.h in Headers */,

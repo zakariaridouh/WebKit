@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2026 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +28,9 @@
 #include "StyleColorImage.h"
 
 #include "CSSColorImageValue.h"
-#include "ColorImageGeneratedImage.h"
 #include "DeprecatedCSSOMValue.h"
+#include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include "RenderElement.h"
 #include "StyleColorResolver.h"
 
@@ -73,54 +75,53 @@ void ColorImage::load(CachedResourceLoader&, const ResourceLoaderOptions&)
 {
 }
 
-RefPtr<WebCore::Image> ColorImage::image(const RenderElement* renderer, const FloatSize& size, const GraphicsContext&, bool) const
+ImageDrawResult ColorImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect&, ImagePaintingOptions options, bool) const
 {
-    if (!renderer)
-        return &WebCore::Image::nullImage();
-
+    auto size = concreteObjectSize.size() * concreteObjectSize.zoom();
     if (size.isEmpty())
-        return nullptr;
+        return ImageDrawResult::DidNothing;
 
-    auto color = ColorResolver { renderer->style() }.colorResolvingCurrentColor(m_color);
-    return ColorImageGeneratedImage::create(color, size);
+    WebCore::Image::fillWithSolidColor(context, destination, resolvedColor(renderer), options.compositeOperator());
+    return ImageDrawResult::DidDraw;
 }
 
-ImageDrawResult ColorImage::draw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, bool isForFirstLine) const
+ImageDrawResult ColorImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool) const
 {
-    return drawResolving(context, renderer, concreteObjectSize, destination, source, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
-}
+    auto size = concreteObjectSize.size() * concreteObjectSize.zoom();
+    if (size.isEmpty() || context.paintingDisabled())
+        return ImageDrawResult::DidNothing;
 
-ImageDrawResult ColorImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
-{
-    return drawAsPatternResolving(context, renderer, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
-}
+    auto color = resolvedColor(renderer);
 
-ImageDrawResult ColorImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
-{
-    return drawTiledResolving(context, renderer, concreteObjectSize, destination, phase, tileSize, spacing, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, isForFirstLine);
-    });
-}
+    if (spacing.isZero()) {
+        WebCore::Image::fillWithSolidColor(context, destination, color, options.compositeOperator());
+        return ImageDrawResult::DidDraw;
+    }
 
-ImageDrawResult ColorImage::drawNinePiece(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options) const
-{
-    return drawNinePieceResolving(context, renderer, concreteObjectSize, geometry, options, [&](const FloatSize& size, const GraphicsContext& destinationContext) {
-        return image(&renderer, size, destinationContext, false);
-    });
+    // FIXME: Add support to GraphicsContext for drawing patterns without requiring an ImageBuffer or NativeImage, using a callback or recorded DisplayList instead.
+    RefPtr imageBuffer = context.createAlignedImageBuffer(size);
+    if (!imageBuffer)
+        return ImageDrawResult::DidNothing;
+
+    imageBuffer->context().fillRect(FloatRect { { }, size }, color);
+    context.drawPattern(*imageBuffer, destination, tile, patternTransform, phase, spacing, options);
+
+    return ImageDrawResult::DidDraw;
 }
 
 bool ColorImage::knownToBeOpaque(const RenderElement& renderer) const
 {
-    return ColorResolver { renderer.style() }.colorResolvingCurrentColor(m_color).isOpaque();
+    return resolvedColor(renderer).isOpaque();
 }
 
 FloatSize ColorImage::fixedSize(const RenderElement&) const
 {
     return { };
+}
+
+WebCore::Color ColorImage::resolvedColor(const RenderElement& renderer) const
+{
+    return ColorResolver { renderer.style() }.colorResolvingCurrentColor(m_color);
 }
 
 } // namespace Style
