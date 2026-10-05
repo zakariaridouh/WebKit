@@ -1094,7 +1094,11 @@ template<> struct PropertyExtractorAdaptor<CSSPropertyMaskBorder> {
 template<> struct PropertyExtractorAdaptor<CSSPropertyOverscrollBehavior> {
     template<typename F> decltype(auto) computedValue(ExtractorState& state, NOESCAPE const F& functor) const
     {
-        return functor(std::max(state.style.overscrollBehaviorX(), state.style.overscrollBehaviorY()));
+        auto overscrollBehaviorX = state.style.overscrollBehaviorX();
+        auto overscrollBehaviorY = state.style.overscrollBehaviorY();
+        if (overscrollBehaviorX == overscrollBehaviorY)
+            return functor(overscrollBehaviorX);
+        return functor(SpaceSeparatedTuple { overscrollBehaviorX, overscrollBehaviorY });
     }
 };
 
