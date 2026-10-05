@@ -1,5 +1,3 @@
-WebCoreSupport/SocketStreamHandleImplCFNet.cpp
-[ iOS ] mac/Plugins/WebPluginController.mm
 mac/WebView/WebFrame.mm
 mac/WebView/WebFrameView.mm
 mac/WebView/WebHTMLRepresentation.mm

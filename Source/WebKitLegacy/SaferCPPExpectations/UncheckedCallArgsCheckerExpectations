@@ -1,6 +1,3 @@
-Storage/InProcessIDBServer.cpp
-Storage/StorageSyncManager.cpp
-WebCoreSupport/SocketStreamHandleImpl.cpp
 mac/WebView/WebDeviceOrientationProviderMock.mm
 mac/WebView/WebFrame.mm
 [ Mac ] mac/WebView/WebFullScreenController.mm

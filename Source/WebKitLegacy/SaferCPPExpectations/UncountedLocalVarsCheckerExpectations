@@ -1,6 +1,3 @@
-[ iOS ] ios/WebView/WebPDFViewPlaceholder.mm
-[ iOS ] mac/History/WebBackForwardList.mm
-[ iOS ] mac/Plugins/WebPluginController.mm
 [ iOS ] mac/WebView/WebFrame.mm
 [ iOS ] mac/WebView/WebFrameView.mm
 [ iOS ] mac/WebView/WebHTMLView.mm
