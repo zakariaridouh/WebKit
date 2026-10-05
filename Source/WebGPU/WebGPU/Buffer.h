@@ -43,7 +43,6 @@
 #import <wtf/RangeSet.h>
 #import <wtf/Ref.h>
 #import <wtf/SwiftBridging.h>
-#import <wtf/SwiftCXXThunk.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/WeakPtr.h>
 
@@ -77,7 +76,7 @@ public:
     ~Buffer();
 
     void destroy();
-    std::span<uint8_t> getMappedRange(size_t offset, size_t) HAS_SWIFTCXX_THUNK;
+    std::span<uint8_t> getMappedRange(size_t offset, size_t);
     void bufferCopy(std::span<const uint8_t>, size_t offset);
     void mapAsync(WGPUMapMode, size_t offset, size_t, CompletionHandler<void(WGPUMapAsyncStatus)>&& callback);
     void unmap();
