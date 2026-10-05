@@ -661,6 +661,7 @@
 				cocoa/MiniTURNServer.mm,
 				cocoa/PDFTestHelpers.swift,
 				cocoa/SafeBrowsingTestUtilities.swift,
+				cocoa/SiteIsolationTestUtilities.swift,
 				cocoa/StdLibExtras.swift,
 				"cocoa/SwiftUI+Extras.swift",
 				cocoa/TestCocoaImageAndCocoaColor.mm,
