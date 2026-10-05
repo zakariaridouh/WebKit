@@ -27,6 +27,7 @@
 
 #include <JavaScriptCore/Debugger.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -37,7 +38,7 @@ class FrameDebugger final : public JSC::Debugger {
     WTF_MAKE_TZONE_ALLOCATED(FrameDebugger);
 public:
     FrameDebugger(LocalFrame&);
-    ~FrameDebugger() override = default;
+    ~FrameDebugger() override;
 
     void recompileAllJSFunctions() override;
 
@@ -53,12 +54,14 @@ private:
     void didPause(JSC::JSGlobalObject*) final;
     void didContinue(JSC::JSGlobalObject*) final;
     void runEventLoopWhilePaused() final;
+    bool isPauseBlockedByAnotherDebugger() const final;
     bool isContentScript(JSC::JSGlobalObject*) const final;
     URL sourceURLBase(JSC::JSGlobalObject*) const final;
     void reportException(JSC::JSGlobalObject*, JSC::Exception*) const final;
 
     void runEventLoopWhilePausedInternal();
 
+    void setJavaScriptPausedInAllPages(bool);
     void setJavaScriptPaused(LocalFrame&, bool paused);
 
     bool platformShouldContinueRunningEventLoopWhilePaused();
