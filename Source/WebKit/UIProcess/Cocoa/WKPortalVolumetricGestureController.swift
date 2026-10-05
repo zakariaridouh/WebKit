@@ -26,6 +26,7 @@
 import Foundation
 @_weakLinked import SwiftUI
 @_weakLinked @_spi(RealityKit) import RealityKit
+@_weakLinked import _RealityKit_SwiftUI
 import WebKit_Internal
 
 // The gesture must be targeted to the entity; attached to the view instead it never fires.
