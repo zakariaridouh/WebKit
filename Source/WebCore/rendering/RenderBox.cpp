@@ -2289,11 +2289,11 @@ void RenderBox::imageChanged(WrappedImagePtr image, const IntRect*)
 
 void RenderBox::incrementVisuallyNonEmptyPixelCountIfNeeded(const IntSize& size)
 {
-    if (didContibuteToVisuallyNonEmptyPixelCount())
+    if (didContributeToVisuallyNonEmptyPixelCount())
         return;
 
     protect(view())->frameView().incrementVisuallyNonEmptyPixelCount(size);
-    setDidContibuteToVisuallyNonEmptyPixelCount();
+    setDidContributeToVisuallyNonEmptyPixelCount();
 }
 
 template<typename Layers>
