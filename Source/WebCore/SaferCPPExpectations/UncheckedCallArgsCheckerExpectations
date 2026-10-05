@@ -60,12 +60,6 @@ dom/ViewTransition.cpp
 html/CachedHTMLCollection.h
 html/CachedHTMLCollectionInlines.h
 html/CollectionTraversalInlines.h
-html/canvas/CanvasRenderingContext2D.cpp
-html/canvas/CanvasRenderingContext2DBase.cpp
-html/canvas/OffscreenCanvasRenderingContext2D.cpp
-html/parser/HTMLDocumentParser.cpp
-html/parser/HTMLParserScheduler.cpp
-html/parser/HTMLScriptRunner.cpp
 layout/floats/FloatingContext.cpp
 layout/floats/PlacedFloats.cpp
 layout/formattingContexts/FormattingGeometry.cpp

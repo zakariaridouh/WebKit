@@ -149,23 +149,23 @@ bool CanvasRenderingContext::taintsOrigin(const CanvasPattern* pattern)
 
 bool CanvasRenderingContext::taintsOrigin(const CanvasBase* sourceCanvas)
 {
-    return sourceCanvas && !isOriginClean(*sourceCanvas, *protect(m_canvas)->securityOrigin());
+    return sourceCanvas && !isOriginClean(*sourceCanvas, *protect(protect(m_canvas)->securityOrigin()));
 }
 
 bool CanvasRenderingContext::taintsOrigin(const HTMLImageElement* element)
 {
-    return element && !isOriginClean(*element, *protect(m_canvas)->securityOrigin());
+    return element && !isOriginClean(*element, *protect(protect(m_canvas)->securityOrigin()));
 }
 
 bool CanvasRenderingContext::taintsOrigin(const SVGImageElement* element)
 {
-    return element && !isOriginClean(*element, *protect(m_canvas)->securityOrigin());
+    return element && !isOriginClean(*element, *protect(protect(m_canvas)->securityOrigin()));
 }
 
 bool CanvasRenderingContext::taintsOrigin(const HTMLVideoElement* video)
 {
 #if ENABLE(VIDEO)
-    return video && !isOriginClean(*video, *protect(m_canvas)->securityOrigin());
+    return video && !isOriginClean(*video, *protect(protect(m_canvas)->securityOrigin()));
 #else
     UNUSED_PARAM(video);
     return false;
@@ -174,12 +174,12 @@ bool CanvasRenderingContext::taintsOrigin(const HTMLVideoElement* video)
 
 bool CanvasRenderingContext::taintsOrigin(const ImageBitmap* imageBitmap)
 {
-    return imageBitmap && !isOriginClean(*imageBitmap, *protect(m_canvas)->securityOrigin());
+    return imageBitmap && !isOriginClean(*imageBitmap, *protect(protect(m_canvas)->securityOrigin()));
 }
 
 bool CanvasRenderingContext::taintsOrigin(const URL& url)
 {
-    return !url.protocolIsData() && !protect(m_canvas)->securityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
+    return !url.protocolIsData() && !protect(protect(m_canvas)->securityOrigin())->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
 }
 
 void CanvasRenderingContext::checkOrigin(const URL& url)

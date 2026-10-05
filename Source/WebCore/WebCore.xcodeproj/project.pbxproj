@@ -23114,6 +23114,7 @@
 		E44613910CD6331000FADA75 /* HTMLAudioElement.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = HTMLAudioElement.idl; sourceTree = "<group>"; };
 		E44613920CD6331000FADA75 /* HTMLMediaElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HTMLMediaElement.cpp; sourceTree = "<group>"; };
 		E44613930CD6331000FADA75 /* HTMLMediaElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HTMLMediaElement.h; sourceTree = "<group>"; };
+		AEC347E506010625AEC1ECA0 /* HTMLMediaElementCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = HTMLMediaElementCocoa.mm; sourceTree = "<group>"; };
 		E44613940CD6331000FADA75 /* HTMLMediaElement.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = HTMLMediaElement.idl; sourceTree = "<group>"; };
 		E44613950CD6331000FADA75 /* HTMLSourceElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HTMLSourceElement.cpp; sourceTree = "<group>"; };
 		E44613960CD6331000FADA75 /* HTMLSourceElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HTMLSourceElement.h; sourceTree = "<group>"; };
@@ -33874,6 +33875,7 @@
 				E44613920CD6331000FADA75 /* HTMLMediaElement.cpp */,
 				E44613930CD6331000FADA75 /* HTMLMediaElement.h */,
 				E44613940CD6331000FADA75 /* HTMLMediaElement.idl */,
+				AEC347E506010625AEC1ECA0 /* HTMLMediaElementCocoa.mm */,
 				CD5209E51B0BD9E10077184E /* HTMLMediaElementEnums.h */,
 				CD24B8692982DCCA000A53FE /* HTMLMediaElementIdentifier.h */,
 				A8EA79EC0A1916DF00A8EF5F /* HTMLMenuElement.cpp */,

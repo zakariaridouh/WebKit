@@ -490,7 +490,7 @@ auto CanvasRenderingContext2DBase::FontProxy::operator=(const FontProxy& other) 
     if (realized())
         protect(m_font.fontSelector())->unregisterForInvalidationCallbacks(*this);
 
-    m_font = other.m_font;
+    m_font = CheckedRef { other.m_font };
 
     if (realized())
         protect(m_font.fontSelector())->registerForInvalidationCallbacks(*this);
@@ -557,7 +557,7 @@ void CanvasRenderingContext2DBase::realizeSaves()
     if (m_unrealizedSaveCount) {
         static NeverDestroyed<String> consoleMessage(MAKE_STATIC_STRING_IMPL("CanvasRenderingContext2D.save() has been called without a matching restore() too many times. Ignoring save()."));
 
-        protect(canvasBase())->scriptExecutionContext()->addConsoleMessage(MessageSource::Rendering, MessageLevel::Error, consoleMessage);
+        protect(protect(canvasBase())->scriptExecutionContext())->addConsoleMessage(MessageSource::Rendering, MessageLevel::Error, consoleMessage);
     }
 }
 
@@ -2465,7 +2465,7 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(H
     if (!naturalDimensions.width.value_or(0) || !naturalDimensions.height.value_or(0))
         return nullptr;
 
-    bool originClean = isOriginClean(imageElement, *protect(canvasBase())->securityOrigin());
+    bool originClean = isOriginClean(imageElement, *protect(protect(canvasBase())->securityOrigin()));
     return createPattern(*image, concreteObjectSizeForPattern(*image), originClean, repeatX, repeatY);
 }
 
@@ -2488,7 +2488,7 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(S
     if (!naturalDimensions.width.value_or(0) || !naturalDimensions.height.value_or(0))
         return nullptr;
 
-    bool originClean = isOriginClean(imageElement, *protect(canvasBase())->securityOrigin());
+    bool originClean = isOriginClean(imageElement, *protect(protect(canvasBase())->securityOrigin()));
     return createPattern(*image, concreteObjectSizeForPattern(*image), originClean, repeatX, repeatY);
 }
 
@@ -2693,7 +2693,7 @@ AffineTransform CanvasRenderingContext2DBase::baseTransform() const
     if (auto* paintContext = dynamicDowncast<PaintRenderingContext2D>(*this)) [[unlikely]]
         return paintContext->baseTransform();
     ASSERT(m_hasCreatedImageBuffer);
-    return buffer()->baseTransform();
+    return protect(buffer())->baseTransform();
 }
 
 void CanvasRenderingContext2DBase::prepareForDisplay()
@@ -3504,7 +3504,7 @@ void CanvasRenderingContext2DBase::setLetterSpacing(const String& letterSpacing)
     tokenRange.consumeWhitespace();
 
     auto parserContext = CSSParserContext { HTMLStandardMode };
-    auto parserState = CSS::PropertyParserState { .context = parserContext, .pool = protect(canvasBase())->scriptExecutionContext()->cssValuePool() };
+    auto parserState = CSS::PropertyParserState { .context = parserContext, .pool = protect(protect(canvasBase())->scriptExecutionContext())->cssValuePool() };
 
     auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, parserState);
     if (!parsedValue)
@@ -3532,7 +3532,7 @@ void CanvasRenderingContext2DBase::setWordSpacing(const String& wordSpacing)
     tokenRange.consumeWhitespace();
 
     auto parserContext = CSSParserContext { HTMLStandardMode };
-    auto parserState = CSS::PropertyParserState { .context = parserContext, .pool = protect(canvasBase())->scriptExecutionContext()->cssValuePool() };
+    auto parserState = CSS::PropertyParserState { .context = parserContext, .pool = protect(protect(canvasBase())->scriptExecutionContext())->cssValuePool() };
 
     auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, parserState);
     if (!parsedValue)

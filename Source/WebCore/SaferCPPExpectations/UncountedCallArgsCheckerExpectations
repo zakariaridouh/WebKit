@@ -65,12 +65,6 @@ dom/ViewTransition.cpp
 html/CachedHTMLCollection.h
 html/CachedHTMLCollectionInlines.h
 html/CollectionTraversalInlines.h
-html/canvas/CanvasFilterContextSwitcher.cpp
-html/canvas/CanvasRenderingContext.cpp
-html/canvas/CanvasRenderingContext2D.cpp
-html/canvas/CanvasRenderingContext2DBase.cpp
-html/canvas/CanvasStyle.cpp
-html/canvas/OffscreenCanvasRenderingContext2D.cpp
 page/IntersectionObserver.cpp
 [ macOS ] rendering/AttachmentLayout.mm
 rendering/BackgroundPainter.cpp

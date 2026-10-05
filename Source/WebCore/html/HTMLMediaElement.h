@@ -854,6 +854,10 @@ private:
 
     void createMediaPlayer();
 
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    void updatePlayerVideoFullscreenLayer(MediaPlayer&);
+#endif
+
     bool supportsFocus() const override;
     bool rendererIsNeeded(const Style::ComputedStyle&) override;
     bool childShouldCreateRenderer(const Node&) const override;

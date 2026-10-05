@@ -6586,7 +6586,7 @@ void HTMLMediaElement::mediaEngineWasUpdated()
     if (RefPtr player = m_player) {
         player->setVideoFullscreenFrame(m_videoFullscreenFrame);
         player->setVideoFullscreenGravity(m_videoFullscreenGravity);
-        player->setVideoFullscreenLayer(m_videoFullscreenLayer.get());
+        updatePlayerVideoFullscreenLayer(*player);
     }
 #endif
 
