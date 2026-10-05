@@ -1910,9 +1910,6 @@ webkit.org/b/282827 media/media-video-videorange-offscreen.html [ Failure ]
 webkit.org/b/305743 media/media-source/media-managedmse-video-with-poster.html [ ImageOnlyFailure Timeout Pass ]
 webkit.org/b/305743 media/media-source/media-managedmse-audible-setrate.html [ Crash Failure Timeout Pass ]
 
-webkit.org/b/283624 media/media-source/media-source-rvfc-paused.html [ Timeout ]
-webkit.org/b/283624 media/media-source/media-source-rvfc-paused-offscreen.html [ Timeout ]
-
 # GStreamer (< 1.24) doesn't set the track's id to the container's value.
 webkit.org/b/265919 media/track/media-audio-track.html [ Failure ]
 webkit.org/b/265919 media/track/media-source-audio-track.html [ Failure ]
@@ -5341,7 +5338,7 @@ webkit.org/b/324147 imported/w3c/web-platform-tests/dom/nodes/moveBefore/focus-p
 webkit.org/b/225407 imported/w3c/web-platform-tests/css/css-animations/nested-scale-animations.html [ ImageOnlyFailure Pass ]
 
 webkit.org/b/315615 media/media-vp8-hiddenframes.html [ ImageOnlyFailure Pass ]
-webkit.org/b/323781 [ x86_64 ] webrtc/concurrentVideoPlayback2.html [ Failure Pass Timeout ]
+webkit.org/b/323781 webrtc/concurrentVideoPlayback2.html [ Failure Pass Timeout ]
 webkit.org/b/318887 [ Release ] media/video-seek-pause.html [ Pass Failure ]
 webkit.org/b/313034 [ Release ] http/tests/resourceLoadStatistics/user-interaction-reported-after-website-data-removal.html [ Pass Failure ]
 webkit.org/b/305514 imported/w3c/web-platform-tests/fullscreen/rendering/fullscreen-root-block-scroll.html [ Failure Pass ]
@@ -5404,6 +5401,10 @@ webkit.org/b/316265 [ x86_64 ] imported/w3c/web-platform-tests/IndexedDB/get-dat
 webkit.org/b/325932 [ Debug ] http/wpt/mediastream/mediastreamtrackprocessor-mediastreamtrackhandle.html [ Failure Pass ]
 
 webkit.org/b/325933 [ Release ] imported/w3c/web-platform-tests/content-security-policy/frame-ancestors/frame-ancestors-none-block.html [ Failure Pass ]
+
+webkit.org/b/326355 [ arm64 ] fast/block/absolute-position-change-width-with-inline-container.html [ Pass Timeout ]
+
+webkit.org/b/326358 media/W3C/audio/currentSrc/currentSrc_nonempty_after_adding_source_child.html [ Pass Failure ]
 
 # End: Common failures between GTK and WPE.
 
