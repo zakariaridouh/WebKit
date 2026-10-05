@@ -359,7 +359,7 @@ ImageDrawResult Image::drawResolvedNinePiece(GraphicsContext& context, const Ren
     }, concreteObjectSizeToDrawAt(image, renderer, concreteObjectSize), pieceGeometry);
 }
 
-ImageDrawResult Image::drawResolving(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, const ScopedLambda<ResolveImage>& resolve) const
+ImageDrawResult Image::drawResolving(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options, NOESCAPE const ScopedLambda<ResolveImage>& resolve) const
 {
     if (isPending())
         return ImageDrawResult::DidNothing;
@@ -371,7 +371,7 @@ ImageDrawResult Image::drawResolving(GraphicsContext& context, const RenderEleme
     return drawResolved(context, renderer, *image, concreteObjectSize, destination, source, options);
 }
 
-ImageDrawResult Image::drawAsPatternResolving(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, const ScopedLambda<ResolveImage>& resolve) const
+ImageDrawResult Image::drawAsPatternResolving(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, NOESCAPE const ScopedLambda<ResolveImage>& resolve) const
 {
     RefPtr image = resolve(concreteObjectSize.size() * concreteObjectSize.zoom(), context);
     if (!image || context.paintingDisabled())
@@ -380,7 +380,7 @@ ImageDrawResult Image::drawAsPatternResolving(GraphicsContext& context, const Re
     return drawResolvedAsPattern(context, renderer, *image, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options);
 }
 
-ImageDrawResult Image::drawTiledResolving(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, const ScopedLambda<ResolveImage>& resolve) const
+ImageDrawResult Image::drawTiledResolving(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, NOESCAPE const ScopedLambda<ResolveImage>& resolve) const
 {
     RefPtr image = resolve(tileSize, context);
     if (!image || context.paintingDisabled())
@@ -389,7 +389,7 @@ ImageDrawResult Image::drawTiledResolving(GraphicsContext& context, const Render
     return drawResolvedTiled(context, renderer, *image, concreteObjectSize, destination, phase, tileSize, spacing, options);
 }
 
-ImageDrawResult Image::drawNinePieceResolving(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options, const ScopedLambda<ResolveImage>& resolve) const
+ImageDrawResult Image::drawNinePieceResolving(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options, NOESCAPE const ScopedLambda<ResolveImage>& resolve) const
 {
     RefPtr image = resolve(concreteObjectSize.size() * concreteObjectSize.zoom(), context);
     if (!image || context.paintingDisabled())
