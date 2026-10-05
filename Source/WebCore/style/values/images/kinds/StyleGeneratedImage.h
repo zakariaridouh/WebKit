@@ -25,9 +25,7 @@
 #pragma once
 
 #include <WebCore/FloatSize.h>
-#include <WebCore/FloatSizeHash.h>
 #include <WebCore/StyleImage.h>
-#include <wtf/HashMap.h>
 #include <wtf/WeakHashCountedSet.h>
 
 namespace WebCore {
@@ -35,7 +33,6 @@ namespace WebCore {
 class CSSValue;
 class CachedImage;
 class CachedResourceLoader;
-class GeneratedImage;
 class RenderElement;
 struct ResourceLoaderOptions;
 
@@ -66,15 +63,9 @@ protected:
     // All generated images must be able to compute their fixed size.
     virtual FloatSize fixedSize(const RenderElement&) const = 0;
 
-    class CachedGeneratedImage;
-    WebCore::GeneratedImage* cachedImageForSize(FloatSize);
-    void saveCachedImageForSize(FloatSize, WebCore::GeneratedImage&);
-    void evictCachedGeneratedImage(FloatSize);
-
     FloatSize m_containerSize;
     bool m_fixedSize;
     SingleThreadWeakHashCountedSet<RenderElement> m_clients;
-    HashMap<FloatSize, std::unique_ptr<CachedGeneratedImage>> m_images;
 };
 
 } // namespace Style

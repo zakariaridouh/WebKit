@@ -2614,7 +2614,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/Gradient.h
     platform/graphics/GradientColorStop.h
     platform/graphics/GradientColorStops.h
-    platform/graphics/GradientImage.h
     platform/graphics/GraphicsContext.h
     platform/graphics/GraphicsContextGL.h
     platform/graphics/GraphicsContextGLActiveInfo.h

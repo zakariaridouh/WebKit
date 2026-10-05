@@ -283,8 +283,6 @@ TextStream& operator<<(TextStream& ts, const Image& image)
 
     if (image.isBitmapImage())
         ts << "bitmap image"_s;
-    else if (image.isGradientImage())
-        ts << "gradient image"_s;
     else if (image.isSVGImage())
         ts << "svg image"_s;
     else if (image.isSVGResourceImage())

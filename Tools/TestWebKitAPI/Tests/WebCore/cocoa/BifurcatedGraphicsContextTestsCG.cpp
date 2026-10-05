@@ -28,14 +28,16 @@
 #if USE(CG)
 
 #include <WebCore/BifurcatedGraphicsContext.h>
+#include <WebCore/BitmapImage.h>
 #include <WebCore/ColorSpace.h>
 #include <WebCore/DisplayList.h>
 #include <WebCore/DisplayListItems.h>
 #include <WebCore/DisplayListRecorderImpl.h>
 #include <WebCore/FontCascade.h>
 #include <WebCore/FontSelector.h>
-#include <WebCore/GradientImage.h>
 #include <WebCore/GraphicsContextCG.h>
+#include <WebCore/ImageBuffer.h>
+#include <WebCore/NativeImage.h>
 #include <WebCore/TextRun.h>
 #include <numbers>
 
@@ -114,7 +116,22 @@ TEST(BifurcatedGraphicsContextTests, Text)
     runTest(secondaryContext.takeDisplayList());
 }
 
-TEST(BifurcatedGraphicsContextTests, DrawGradientImage)
+static RefPtr<BitmapImage> createRedImage()
+{
+    auto imageBuffer = ImageBuffer::create({ 1, 1 }, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, ColorSpace::SRGB(), PixelFormat::BGRA8);
+    if (!imageBuffer)
+        return nullptr;
+
+    imageBuffer->context().fillRect(FloatRect { 0, 0, 1, 1 }, Color::red);
+
+    RefPtr nativeImage = imageBuffer->copyNativeImage();
+    if (!nativeImage)
+        return nullptr;
+
+    return BitmapImage::create(nativeImage.releaseNonNull());
+}
+
+TEST(BifurcatedGraphicsContextTests, DrawPattern)
 {
     auto colorSpace = ColorSpace::SRGB();
     RetainPtr primaryCGContext = adoptCF(CGBitmapContextCreate(nullptr, contextWidth, contextHeight, 8, 4 * contextWidth, colorSpace.platformColorSpace(), kCGImageAlphaPremultipliedLast));
@@ -124,12 +141,44 @@ TEST(BifurcatedGraphicsContextTests, DrawGradientImage)
     GraphicsContextCG secondaryContext(secondaryCGContext.get());
     BifurcatedGraphicsContext ctx(primaryContext, secondaryContext);
 
-    auto gradient = Gradient::create(Gradient::LinearData { { 0, 0 }, { 1, 1 } }, { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied });
-    gradient->addColorStop({ 0, Color::red });
+    auto redImage = createRedImage();
+    ASSERT_TRUE(redImage);
 
-    auto gradientImage = GradientImage::create(gradient, FloatSize { 1, 1 });
+    // Tiling reaches a context as a pattern.
+    RefPtr nativeImage = redImage->currentNativeImage(WebCore::ConcreteObjectSize::fixed(FloatSize { 1, 1 }));
+    ASSERT_TRUE(nativeImage);
 
-    ctx.drawImage(gradientImage.get(), ConcreteObjectSize::fixed(gradientImage->size()), FloatRect { 0, 0, 100, 100 }, FloatRect { 0, 0, 1, 1 });
+    ctx.drawPattern(*nativeImage, FloatRect { 0, 0, 100, 100 }, FloatRect { 0, 0, 1, 1 }, AffineTransform { }, FloatPoint { }, FloatSize { });
+
+    // The primary context should be red.
+    CGContextFlush(primaryCGContext.get());
+    uint8_t* primaryData = static_cast<uint8_t*>(CGBitmapContextGetData(primaryCGContext.get()));
+    EXPECT_EQ(primaryData[0], 255);
+    EXPECT_EQ(primaryData[1], 0);
+    EXPECT_EQ(primaryData[2], 0);
+
+    // The secondary context should be red.
+    CGContextFlush(secondaryCGContext.get());
+    uint8_t* secondaryData = static_cast<uint8_t*>(CGBitmapContextGetData(secondaryCGContext.get()));
+    EXPECT_EQ(secondaryData[0], 255);
+    EXPECT_EQ(secondaryData[1], 0);
+    EXPECT_EQ(secondaryData[2], 0);
+}
+
+TEST(BifurcatedGraphicsContextTests, DrawImage)
+{
+    auto colorSpace = ColorSpace::SRGB();
+    RetainPtr primaryCGContext = adoptCF(CGBitmapContextCreate(nullptr, contextWidth, contextHeight, 8, 4 * contextWidth, colorSpace.platformColorSpace(), kCGImageAlphaPremultipliedLast));
+    RetainPtr secondaryCGContext = adoptCF(CGBitmapContextCreate(nullptr, contextWidth, contextHeight, 8, 4 * contextWidth, colorSpace.platformColorSpace(), kCGImageAlphaPremultipliedLast));
+
+    GraphicsContextCG primaryContext(primaryCGContext.get());
+    GraphicsContextCG secondaryContext(secondaryCGContext.get());
+    BifurcatedGraphicsContext ctx(primaryContext, secondaryContext);
+
+    auto redImage = createRedImage();
+    ASSERT_TRUE(redImage);
+
+    ctx.drawImage(*redImage, WebCore::ConcreteObjectSize::fixed(FloatSize { 1, 1 }), FloatRect { 0, 0, 100, 100 }, FloatRect { 0, 0, 1, 1 });
 
     // The primary context should be red.
     CGContextFlush(primaryCGContext.get());
