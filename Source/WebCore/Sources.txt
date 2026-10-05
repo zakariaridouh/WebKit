@@ -1666,7 +1666,6 @@ html/CanvasNoiseInjection.cpp
 html/CheckboxInputType.cpp @header:RenderStyleGetters @cost:6
 html/ColorInputType.cpp @header:RenderStyleGetters @cost:9
 html/CustomPaintCanvas.cpp
-html/CustomPaintImage.cpp @header:RenderStyleGetters @cost:6
 html/DOMFormData.cpp
 html/DOMTokenList.cpp
 html/DOMURL.cpp
