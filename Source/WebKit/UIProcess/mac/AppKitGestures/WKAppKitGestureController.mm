@@ -1982,7 +1982,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
         .gestureScale = static_cast<float>(magnification),
         .gestureRotation = 0,
         .timestamp = MonotonicTime::fromRawSeconds(GetCurrentEventTime()),
-        .allowsNativeZoom = static_cast<bool>([self magnificationGestureRecognizerCanZoom])
+        .allowsNativeZoom = static_cast<bool>([self magnificationGestureRecognizerCanZoom]),
+        .inputSource = WebKit::WebEventInputSource::Automation,
     };
     auto webEvent = WebKit::NativeWebGestureEvent::create(init, webView.getAutoreleased());
 
@@ -2035,7 +2036,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
         .locationInWindow = [self gestureCentroidInWindowForGesture:gesture],
         .gestureScale = 0,
         .gestureRotation = static_cast<float>([self currentRotation:gesture.rotationInDegrees atPhase:phase]),
-        .timestamp = MonotonicTime::fromRawSeconds(GetCurrentEventTime())
+        .timestamp = MonotonicTime::fromRawSeconds(GetCurrentEventTime()),
+        .inputSource = WebKit::WebEventInputSource::Automation,
     };
     if (auto webEvent = WebKit::NativeWebGestureEvent::create(init, webView.getAutoreleased()))
         [webView _protectedPage]->handleGestureEvent(*webEvent);
