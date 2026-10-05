@@ -138,13 +138,6 @@ bool RenderImageResource::currentFrameIsComplete() const
     return protect(m_styleImage)->currentFrameIsComplete(m_renderer.get());
 }
 
-LayoutSize RenderImageResource::imageSize(float multiplier, CachedImage::SizeType type) const
-{
-    if (!m_styleImage)
-        return { };
-    return LayoutSize(protect(m_styleImage)->imageSize(m_renderer.get(), multiplier, type));
-}
-
 bool RenderImageResource::hasDecodedImage() const
 {
     return m_styleImage && protect(m_styleImage)->hasDecodedImage();

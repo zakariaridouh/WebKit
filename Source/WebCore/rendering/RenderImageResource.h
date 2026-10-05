@@ -62,14 +62,12 @@ public:
     bool hasDecodedImage() const;
 
     NaturalDimensions naturalDimensions() const;
-    inline LayoutSize imageSize(float multiplier) const { return imageSize(multiplier, CachedImage::UsedSize); }
     LayoutSize intrinsicSize(float multiplier) const;
     std::optional<FloatSize> usedImageSize(FloatSize containerSize) const;
 
     WrappedImagePtr imagePtr() const { return m_styleImage ? m_styleImage->data() : nullptr; }
 
 private:
-    LayoutSize imageSize(float multiplier, CachedImage::SizeType) const;
     float density() const;
 
     SingleThreadWeakPtr<RenderElement> m_renderer;

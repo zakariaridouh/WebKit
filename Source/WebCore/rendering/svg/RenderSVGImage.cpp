@@ -295,10 +295,11 @@ void RenderSVGImage::repaintOrMarkForLayout(const IntRect* rect)
     m_bufferedForeground = nullptr;
 
     FloatRect repaintRect = borderBoxRectEquivalent();
-    if (rect) {
+    if (RefPtr styleImage = imageResource().styleImage(); styleImage && rect) {
         // The image changed rect is in source image coordinates (pre-zooming),
         // so map from the bounds of the image to the contentsBox.
-        repaintRect.intersect(enclosingIntRect(mapRect(*rect, FloatRect(FloatPoint(), imageResource().imageSize(1.0f)), repaintRect)));
+        auto imageRenderingSize = svgImageRenderingSize(*styleImage, *this, FloatSize { imageContainerSize() });
+        repaintRect.intersect(enclosingIntRect(mapRect(*rect, FloatRect(FloatPoint(), imageRenderingSize), repaintRect)));
     }
 
     repaintRectangle(enclosingLayoutRect(repaintRect));
