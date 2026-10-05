@@ -2611,6 +2611,7 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
 
     m_pendingNavigationID = loadParameters.navigationID;
     m_internals->pendingWebsitePolicies = WTF::move(loadParameters.websitePolicies);
+    m_pendingUnpartitionedStorageSite = WTF::move(loadParameters.unpartitionedStorageSite);
 
     m_sandboxExtensionTracker.beginLoad(WTF::move(loadParameters.sandboxExtensionHandle));
 
@@ -2659,6 +2660,7 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
         userGestureIndicator.emplace(IsProcessingUserGesture::Yes);
 
     localFrame->loader().load(WTF::move(frameLoadRequest), WTF::move(loadParameters.requester));
+    m_pendingUnpartitionedStorageSite = std::nullopt;
 
     ASSERT(!m_pendingNavigationID);
     ASSERT(!m_internals->pendingWebsitePolicies);
@@ -8894,6 +8896,9 @@ Ref<DocumentLoader> WebPage::createDocumentLoader(LocalFrame& frame, ResourceReq
             m_allowsContentJavaScriptFromMostRecentNavigation = m_internals->pendingWebsitePolicies->allowsContentJavaScript;
             WebsitePoliciesData::applyToDocumentLoader(*std::exchange(m_internals->pendingWebsitePolicies, std::nullopt), documentLoader);
         }
+
+        if (!frame.isMainFrame())
+            documentLoader->setUnpartitionedStorageSite(std::exchange(m_pendingUnpartitionedStorageSite, std::nullopt));
     }
 
     return documentLoader;

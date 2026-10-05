@@ -376,6 +376,7 @@ Tests/WebKit/WKWebView/WKWebExtensionAPIStorage.mm @nonARC
 Tests/WebKit/WKWebView/WKWebExtensionAPIRuntime.mm @nonARC
 Tests/WebKit/WKWebView/WKWebExtensionAPISidebar.mm @nonARC
 Tests/WebKit/WKWebView/WKWebExtensionAPITabs.mm @nonARC
+Tests/WebKit/WKWebView/WKWebExtensionUnpartitionedStorage.mm @nonARC
 Tests/WebKit/WKWebView/WKWebViewAlwaysShowsScroller.mm @nonARC
 Tests/WebKit/WKWebView/WKWebViewCandidateTests.mm @nonARC
 Tests/WebKit/WKWebView/WKWebViewCloseAllMediaPresentations.mm @nonARC
