@@ -89,12 +89,7 @@ public:
 
     // Size / scale.
     virtual FloatSize imageSize(const RenderElement*, float multiplier, WebCore::CachedImage::SizeType = WebCore::CachedImage::UsedSize) const = 0;
-    virtual void computeIntrinsicDimensions(const RenderElement*, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) = 0;
-    virtual bool imageHasRelativeWidth() const = 0;
-    virtual bool imageHasRelativeHeight() const = 0;
     virtual float imageScaleFactor() const { return 1; }
-    virtual bool imageHasNaturalDimensions() const { return true; }
-    virtual bool imageHasNaturalAspectRatio() const { return true; }
     virtual NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const = 0;
 
     // Platform Image.

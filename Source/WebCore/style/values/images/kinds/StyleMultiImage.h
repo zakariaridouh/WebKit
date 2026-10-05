@@ -71,9 +71,6 @@ private:
     bool errorOccurred() const final;
     bool hasDecodedImage() const final;
     FloatSize imageSize(const RenderElement*, float multiplier, WebCore::CachedImage::SizeType = WebCore::CachedImage::UsedSize) const final;
-    bool imageHasRelativeWidth() const final;
-    bool imageHasRelativeHeight() const final;
-    void computeIntrinsicDimensions(const RenderElement*, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) final;
     NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const final;
     void setContainerSizeForRenderer(const RenderElement&, const FloatSize&) override;
     ImageDrawingExtras drawingExtrasForRenderer(const RenderElement&) const override;

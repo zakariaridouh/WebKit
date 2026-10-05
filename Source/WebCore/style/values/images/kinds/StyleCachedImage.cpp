@@ -271,44 +271,6 @@ FloatSize CachedImage::imageSize(const RenderElement* renderer, float multiplier
     return WebCore::CachedImage::clampForZoom(RenderImage::imageSizeAsRendered(*protect(m_cachedImage), renderer, multiplier, sizeType, density), multiplier) / m_scaleFactor;
 }
 
-bool CachedImage::imageHasRelativeWidth() const
-{
-    if (!m_cachedImage)
-        return false;
-    return protect(m_cachedImage)->imageHasRelativeWidth();
-}
-
-bool CachedImage::imageHasRelativeHeight() const
-{
-    if (!m_cachedImage)
-        return false;
-    return protect(m_cachedImage)->imageHasRelativeHeight();
-}
-
-bool CachedImage::imageHasNaturalAspectRatio() const
-{
-    if (!m_cachedImage)
-        return false;
-    return m_cachedImage->imageHasNaturalAspectRatio();
-}
-
-void CachedImage::computeIntrinsicDimensions(const RenderElement* renderer, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
-{
-    // In case of an SVG resource, we should return the container size.
-    if (isRenderSVGResource(renderer)) {
-        FloatSize size = floorSizeToDevicePixels(LayoutSize(m_containerSize), renderer ? protect(renderer->document())->deviceScaleFactor() : 1);
-        intrinsicWidth = size.width();
-        intrinsicHeight = size.height();
-        intrinsicRatio = size;
-        return;
-    }
-
-    if (!m_cachedImage)
-        return;
-
-    protect(m_cachedImage)->computeIntrinsicDimensions(intrinsicWidth, intrinsicHeight, intrinsicRatio);
-}
-
 NaturalDimensions CachedImage::naturalDimensions(const RenderElement& renderer, const ImageSizingContext&) const
 {
     if (isRenderSVGResource(&renderer))

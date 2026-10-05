@@ -62,10 +62,6 @@ public:
     void setAllowsOrientationOverride(bool b) { m_allowsOrientationOverride = b; }
     bool allowsOrientationOverride() const { return m_allowsOrientationOverride; }
 
-    bool imageHasNaturalAspectRatio() const { return m_image && protect(m_image)->hasNaturalAspectRatio(); }
-    bool imageHasRelativeWidth() const { return m_image && protect(m_image)->hasRelativeWidth(); }
-    bool imageHasRelativeHeight() const { return m_image && protect(m_image)->hasRelativeHeight(); }
-
     void updateBuffer(const FragmentedSharedBuffer&) override;
     void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) override;
 

@@ -96,13 +96,9 @@ public:
     WEBCORE_EXPORT static Image& nullImage();
     bool isNull() const { return size().isEmpty(); }
 
-    virtual bool hasIntrinsicWidth() const { return true; }
-    virtual bool hasIntrinsicHeight() const { return true; }
-    // FIXME: hasRelativeWidth/Height should be deduplicated with hasIntrinsicWidth/Height.
     virtual bool hasRelativeWidth() const { return false; }
     virtual bool hasRelativeHeight() const { return false; }
     virtual void computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio);
-    virtual bool hasNaturalAspectRatio() const { return true; }
 
     virtual FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const = 0;
     virtual FloatSize sourceSize(ImageOrientation = ImageOrientation::Orientation::FromImage) const;

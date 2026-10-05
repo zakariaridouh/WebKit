@@ -60,11 +60,6 @@ public:
 
     bool renderingTaintsOrigin() const final;
 
-    bool hasIntrinsicWidth() const final;
-    bool hasIntrinsicHeight() const final;
-    bool hasRelativeWidth() const final;
-    bool hasRelativeHeight() const final;
-
     void startAnimation() final;
     void stopAnimation() final;
     void resetAnimation() final;
@@ -87,7 +82,6 @@ private:
     void setContainerSize(const FloatSize&);
     IntSize containerSize() const;
     void computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) final;
-    bool hasNaturalAspectRatio() const final;
     NaturalDimensions unorientedNaturalDimensions() const final;
 
     void reportApproximateMemoryCost() const;

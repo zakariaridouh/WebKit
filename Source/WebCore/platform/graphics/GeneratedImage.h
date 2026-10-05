@@ -32,8 +32,6 @@ namespace WebCore {
 
 class GeneratedImage : public Image {
 public:
-    bool hasIntrinsicWidth() const override { return false; }
-    bool hasIntrinsicHeight() const override { return false; }
     bool hasRelativeWidth() const override { return true; }
     bool hasRelativeHeight() const override { return true; }
     void computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) override;

@@ -130,15 +130,6 @@ FloatSize GeneratedImage::imageSize(const RenderElement* renderer, float multipl
     return { width, height };
 }
 
-void GeneratedImage::computeIntrinsicDimensions(const RenderElement* renderer, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
-{
-    // At a zoom level of 1 the image is guaranteed to have a device pixel size.
-    FloatSize size = floorSizeToDevicePixels(LayoutSize(this->imageSize(renderer, 1)), renderer ? protect(renderer->document())->deviceScaleFactor() : 1);
-    intrinsicWidth = size.width();
-    intrinsicHeight = size.height();
-    intrinsicRatio = size;
-}
-
 NaturalDimensions GeneratedImage::naturalDimensions(const RenderElement&, const ImageSizingContext&) const
 {
     return NaturalDimensions::none();

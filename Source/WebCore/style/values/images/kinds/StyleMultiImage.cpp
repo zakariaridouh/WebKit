@@ -132,23 +132,6 @@ FloatSize MultiImage::imageSize(const RenderElement* renderer, float multiplier,
     return protect(m_selectedImage)->imageSize(renderer, multiplier, sizeType);
 }
 
-bool MultiImage::imageHasRelativeWidth() const
-{
-    return m_selectedImage && protect(m_selectedImage)->imageHasRelativeWidth();
-}
-
-bool MultiImage::imageHasRelativeHeight() const
-{
-    return m_selectedImage && protect(m_selectedImage)->imageHasRelativeHeight();
-}
-
-void MultiImage::computeIntrinsicDimensions(const RenderElement* element, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
-{
-    if (!m_selectedImage)
-        return;
-    protect(m_selectedImage)->computeIntrinsicDimensions(element, intrinsicWidth, intrinsicHeight, intrinsicRatio);
-}
-
 NaturalDimensions MultiImage::naturalDimensions(const RenderElement& renderer, const ImageSizingContext& context) const
 {
     if (!m_selectedImage)

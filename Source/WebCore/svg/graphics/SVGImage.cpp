@@ -467,38 +467,6 @@ LocalFrameView* SVGImage::frameView() const
     return localMainFrame->view();
 }
 
-bool SVGImage::hasIntrinsicWidth() const
-{
-    RefPtr rootElement = this->rootElement();
-    return rootElement && rootElement->hasIntrinsicWidth();
-}
-
-bool SVGImage::hasIntrinsicHeight() const
-{
-    RefPtr rootElement = this->rootElement();
-    return rootElement && rootElement->hasIntrinsicHeight();
-}
-
-bool SVGImage::hasRelativeWidth() const
-{
-    // FIXME: Delete this function and replace all the calls to it with !hasIntrinsicWidth().
-    return false;
-}
-
-bool SVGImage::hasRelativeHeight() const
-{
-    // FIXME: Delete this function and replace all the calls to it with !hasIntrinsicHeight().
-    return false;
-}
-
-bool SVGImage::hasNaturalAspectRatio() const
-{
-    RefPtr rootElement = this->rootElement();
-    if (!rootElement)
-        return false;
-    return rootElement->hasIntrinsicDimensions();
-}
-
 void SVGImage::computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
 {
     RefPtr rootElement = this->rootElement();
