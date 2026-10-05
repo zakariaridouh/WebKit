@@ -49,6 +49,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/select-innerHTML-selected-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/select-innerHTML-selected-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/select-innerHTML-selected.html
+/LayoutTests/imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/select-insertion-inherited-style.html
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/select-listbox-selected-hscroll-expected-mismatch.html
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/select-listbox-selected-hscroll.html
 /LayoutTests/imported/w3c/web-platform-tests/html/semantics/forms/the-select-element/select-listbox-touch.optional.html
