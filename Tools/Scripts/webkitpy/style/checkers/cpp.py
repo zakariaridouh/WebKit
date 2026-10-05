@@ -1510,6 +1510,36 @@ def regex_for_lambdas_and_blocks(line, line_number, file_state, error):
 regex_for_lambdas_and_blocks.__last_error = None
 
 
+def check_lambda_parameter_list(clean_lines, line_number, file_state, error):
+    """Looks for lambdas with an empty parameter list or a space before their parameter list.
+
+    Args:
+      clean_lines: A CleansedLines instance containing the file.
+      line_number: The number of the line to check.
+      file_state: A _FileState instance which maintains information about
+                  the state of things in the file.
+      error: The function to call with any errors found.
+    """
+
+    if file_state.is_c_or_objective_c():
+        return
+
+    line = clean_lines.elided[line_number]
+
+    # Skips subscripts, operator[], delete[] and Objective-C messages.
+    lambda_start = (r'(?:^|[^\w\])\s]|\breturn)\s*\[(?!\s*[\w.]+\s+\w+\s*\])(?:[^\[\]:]|::)*\]'
+                    r'(?:<[^<>]*(?:<[^<>]*>[^<>]*)*>)?')
+    empty_parameter_list = r'\(\s*\)(?=\s*(?:\{|->|(?:mutable|constexpr|consteval|static|noexcept|ALWAYS_INLINE_LAMBDA)\b))'
+
+    if search(lambda_start + r'\s*' + empty_parameter_list, line):
+        error(line_number, 'readability/lambda_parens', 4,
+              'Omit () for a lambda without parameters.')
+
+    if search(lambda_start + r'\s+(?!' + empty_parameter_list + r')\(', line):
+        error(line_number, 'whitespace/parens', 4,
+              'Extra space before ( in lambda.')
+
+
 def check_for_non_standard_constructs(clean_lines, line_number,
                                       class_state, error):
     r"""Logs an error if we see certain non-ANSI constructs ignored by gcc-2.
@@ -4422,6 +4452,7 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
     check_braces(clean_lines, line_number, file_state, error)
     check_exit_statement_simplifications(clean_lines, line_number, error)
     check_spacing(file_extension, clean_lines, line_number, file_state, error)
+    check_lambda_parameter_list(clean_lines, line_number, file_state, error)
     check_member_initialization_list(clean_lines, line_number, error)
     check_check(clean_lines, line_number, error)
     check_for_comparisons_to_zero(clean_lines, line_number, error)
@@ -5685,6 +5716,7 @@ class CppChecker(object):
         'readability/fn_size',
         'readability/function',
         'readability/inheritance',
+        'readability/lambda_parens',
         'readability/multiline_comment',
         'readability/multiline_string',
         'readability/parameter_name',

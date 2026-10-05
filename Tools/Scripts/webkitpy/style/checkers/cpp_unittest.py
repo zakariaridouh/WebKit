@@ -2284,7 +2284,7 @@ class CppStyleTest(CppStyleTestBase):
             '}\n',
             '')
         self.assert_multi_line_lint(
-            '[]() {\n'
+            '[](int x) {\n'
             '}\n',
             '')
         self.assert_multi_line_lint(
@@ -2429,13 +2429,48 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('define FOO [[return]];', 'Extra space before [.  [whitespace/brackets] [5]')
 
     def test_cpp_lambda_functions(self):
-        self.assert_lint('        [&] (Type argument) {', '')
+        self.assert_lint('        [&](Type argument) {', '')
         self.assert_lint('        [] {', '')
         self.assert_lint('        [foo call:@[ bar, baz ]] completionHandler:^{', '', 'foo.mm')
-        self.assert_lint('        [ =] (Type argument) {', 'Extra space in capture list.  [whitespace/brackets] [4]')
+        self.assert_lint('        [ =](Type argument) {', 'Extra space in capture list.  [whitespace/brackets] [4]')
         self.assert_lint('        [var, var_ref&] {', '')
         self.assert_lint('        [var , var_ref&] {', 'Extra space in capture list.  [whitespace/brackets] [4]')
         self.assert_lint('        [var,var_ref&] {', 'Missing space after ,  [whitespace/comma] [3]')
+
+    def test_cpp_lambda_parameter_list(self):
+        omit_parentheses = 'Omit () for a lambda without parameters.  [readability/lambda_parens] [4]'
+        extra_space = 'Extra space before ( in lambda.  [whitespace/parens] [4]'
+        self.assert_lint('    callOnMainThread([] {', '')
+        self.assert_lint('    callOnMainThread([]() {', omit_parentheses)
+        self.assert_lint('    callOnMainThread([] () {', omit_parentheses)
+        self.assert_lint('    callOnMainThread([weakThis = WeakPtr { *this }, url = WTF::move(url)]() {', omit_parentheses)
+        self.assert_lint('    return [weakThis = WeakPtr { *this }]() {', omit_parentheses)
+        self.assert_lint('    auto task = [this] mutable {', '')
+        self.assert_lint('    auto task = [this]() mutable {', omit_parentheses)
+        self.assert_lint('    auto isValid = [&] -> bool {', '')
+        self.assert_lint('    auto isValid = [&]() -> bool {', omit_parentheses)
+        self.assert_lint('    auto isValid = [&]() noexcept {', omit_parentheses)
+        self.assert_lint('    auto next = [&]() ALWAYS_INLINE_LAMBDA {', omit_parentheses)
+        self.assert_lint('    auto next = [&]() WTF_REQUIRES_LOCK(m_lock) {', '')
+        self.assert_lint('    auto next = [&] () WTF_REQUIRES_LOCK(m_lock) {', extra_space)
+        self.assert_lint('    forEach([](auto& item) {', '')
+        self.assert_lint('    forEach([] (auto& item) {', extra_space)
+        self.assert_lint('    forEach([&] (auto& item) mutable {', extra_space)
+        self.assert_lint('    return [protectedThis = Ref { *this }] (auto&& result) {', extra_space)
+        self.assert_lint('    visit([&]<typename T>() {', omit_parentheses)
+        self.assert_lint('    visit([&]<typename T, typename U = Vector<T>>() {', omit_parentheses)
+        self.assert_lint('    visit([&]<typename T>(T& value) {', '')
+        self.assert_lint('    visit([&]<typename T> (T& value) {', extra_space)
+        self.assert_lint('    run([]() {', omit_parentheses, 'foo.mm')
+        self.assert_lint('    run([] (int value) {', extra_space, 'foo.mm')
+        self.assert_lint('    function([] () { }, [] (int value) { });', [omit_parentheses, extra_space])
+        self.assert_lint('    // [] () { }', '')
+        self.assert_lint('    m_handlers[index] (event);', '')
+        self.assert_lint('    m_factories[type]()->create();', '')
+        self.assert_lint('    return m_items.operator[] (index);', '')
+        self.assert_lint('    [self completionHandler] (YES);', '', 'foo.mm')
+        self.assert_lint('    [self handlerForKey:key] (YES);', '', 'foo.mm')
+        self.assert_lint('    [self completionHandler]();', '', 'foo.mm')
 
     def test_objective_c_block(self):
         self.assert_lint('        ^(var, var_ref) {', '', 'foo.mm')
@@ -7394,7 +7429,7 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assert_lint('auto foo = protectedFoo()->bar();', '')
         self.assert_lint('postTask([foo = protectedFoo()] {', '')
         self.assert_lint('postTask([foo = protectedFoo(), bar] {', '')
-        self.assert_lint('postTask([foo = protectedFoo(), bar]() {', '')
+        self.assert_lint('postTask([foo = protectedFoo(), bar]() {', 'Omit () for a lambda without parameters.  [readability/lambda_parens] [4]')
         self.assert_lint('postTask([foo = protectedFoo(), bar](ScriptExecutionContext& context) {', '')
         self.assert_lint('postTask([foo = bar().protectedFoo(), bar](ScriptExecutionContext& context) {', '')
         self.assert_lint('bool ancestorsRevealed = revealClosedDetailsAndHiddenUntilFoundAncestors(simpleRange->protectedStartContainer());', '')
@@ -7403,7 +7438,7 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assert_lint('auto foo = checkedFoo()->bar();', '')
         self.assert_lint('postTask([foo = checkedFoo()] {', '')
         self.assert_lint('postTask([foo = checkedFoo(), bar] {', '')
-        self.assert_lint('postTask([foo = checkedFoo(), bar]() {', '')
+        self.assert_lint('postTask([foo = checkedFoo(), bar]() {', 'Omit () for a lambda without parameters.  [readability/lambda_parens] [4]')
         self.assert_lint('postTask([foo = checkedFoo(), bar](ScriptExecutionContext& context) {', '')
         self.assert_lint('postTask([foo = bar().checkedFoo(), bar](ScriptExecutionContext& context) {', '')
 
