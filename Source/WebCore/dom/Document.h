@@ -825,7 +825,7 @@ public:
     bool isEventLoopGroupStoppedPermanently() const final;
     GraphicsClient* graphicsClient() final;
 
-    inline const SettingsValues& settingsValues() const final; // Defined in DocumentSettingsValues.h.
+    inline const SettingsValues& NODELETE settingsValues() const final; // Defined in DocumentSettingsValues.h.
 
     const NetworkLoadPolicy& networkLoadPolicy() const final;
 
