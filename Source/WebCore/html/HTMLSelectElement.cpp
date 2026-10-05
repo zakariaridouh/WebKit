@@ -124,6 +124,12 @@ static bool NODELETE isFirstElementChildButton(const Node& child)
     return is<HTMLButtonElement>(child) && !child.previousElementSibling();
 }
 
+// The options in a selectedcontent element are clones, not options of its select.
+static bool NODELETE canHoldOptionClones(const Node& node)
+{
+    return is<HTMLSelectedContentElement>(node) && node.document().settings().htmlEnhancedSelectMultipleSelectedContentEnabled();
+}
+
 class SelectSlotAssignment final : public NamedSlotAssignment {
 private:
     void hostChildElementDidChange(const Element&, ShadowRoot&) final;
@@ -256,7 +262,7 @@ HTMLSelectElement* HTMLSelectElement::findOwnerSelect(ContainerNode* startNode, 
             return nullptr;
         return findOwnerSelect(startNode->parentNode(), ExcludeOptGroup::Yes);
     }
-    if (isAnyOf<HTMLDataListElement, HTMLHRElement, HTMLOptionElement>(*startNode))
+    if (isAnyOf<HTMLDataListElement, HTMLHRElement, HTMLOptionElement>(*startNode) || canHoldOptionClones(*startNode))
         return nullptr;
     return findOwnerSelect(startNode->parentNode(), excludeOptGroup);
 }
@@ -997,6 +1003,14 @@ void HTMLSelectElement::removingSteps(RemovalType removalType, ContainerNode& ol
         protect(document())->removeElementWithPendingUserAgentShadowTreeUpdate(*this);
 }
 
+void HTMLSelectElement::finishParsingChildren()
+{
+    HTMLFormControlElement::finishParsingChildren();
+
+    if (m_multiple && isConnected())
+        cloneOptionsIntoSelectedContent();
+}
+
 void HTMLSelectElement::optionElementChildrenChanged()
 {
     setOptionsChangedOnRenderer();
@@ -1525,7 +1539,7 @@ void HTMLSelectElement::recalcListItems(bool updateSelectedStates, AllowStyleInv
                         optGroupIt.traverseNextSkippingChildren();
                         continue;
                     }
-                    if (isAnyOf<HTMLOptGroupElement, HTMLDataListElement, HTMLSelectElement, HTMLHRElement>(optGroupDescendant)) {
+                    if (isAnyOf<HTMLOptGroupElement, HTMLDataListElement, HTMLSelectElement, HTMLHRElement>(optGroupDescendant) || canHoldOptionClones(optGroupDescendant)) {
                         optGroupIt.traverseNextSkippingChildren();
                         continue;
                     }
@@ -1539,7 +1553,7 @@ void HTMLSelectElement::recalcListItems(bool updateSelectedStates, AllowStyleInv
                 it.traverseNextSkippingChildren();
                 continue;
             }
-            if (isAnyOf<HTMLDataListElement, HTMLSelectElement>(descendant)) {
+            if (isAnyOf<HTMLDataListElement, HTMLSelectElement>(descendant) || canHoldOptionClones(descendant)) {
                 it.traverseNextSkippingChildren();
                 continue;
             }
@@ -1788,6 +1802,8 @@ void HTMLSelectElement::parseMultipleAttribute(const AtomString& value)
             invalidateButtonText();
             updateSelectedContentIfEnabled();
         }
+        if (m_multiple)
+            cloneOptionsIntoSelectedContent();
     }
 }
 
@@ -2669,20 +2685,20 @@ void HTMLSelectElement::updateSelectedContent(HTMLOptionElement* selectedOption)
     ASSERT(document().settings().htmlEnhancedSelectEnabled());
     ASSERT(!document().settings().mutationEventsEnabled());
 
-    if (m_multiple || !m_selectedContentDescendantCount)
+    if (!m_selectedContentDescendantCount || !updatesSelectedContent())
         return;
+
+    if (m_multiple) {
+        for (Ref selectedContent : selectedContentElements())
+            selectedContent->updateClonedOptionSelectedStates();
+        return;
+    }
 
     RefPtr selectedOptionRef = selectedOption;
     if (!selectedOptionRef)
         selectedOptionRef = firstSelectedOption();
 
-    Vector<Ref<HTMLSelectedContentElement>> selectedContentElements;
-    for (Ref selectedContent : descendantsOfType<HTMLSelectedContentElement>(*const_cast<HTMLSelectElement*>(this))) {
-        if (!selectedContent->isDisabled())
-            selectedContentElements.append(selectedContent);
-    }
-
-    for (Ref selectedContent : selectedContentElements) {
+    for (Ref selectedContent : selectedContentElements()) {
         if (!selectedOptionRef)
             selectedContent->removeChildren();
         else
@@ -2698,10 +2714,57 @@ void HTMLSelectElement::updateSelectedContent(HTMLSelectedContentElement& select
     if (selectedContent.isDisabled())
         return;
 
+    if (m_multiple && updatesSelectedContent()) {
+        cloneOptionsIntoSelectedContent(selectedContent);
+        return;
+    }
+
     if (RefPtr selectedOption = firstSelectedOption())
         selectedOption->cloneIntoSelectedContent(selectedContent);
     else
         selectedContent.removeChildren();
+}
+
+bool HTMLSelectElement::updatesSelectedContent() const
+{
+    return !m_multiple || document().settings().htmlEnhancedSelectMultipleSelectedContentEnabled();
+}
+
+Vector<Ref<HTMLSelectedContentElement>> HTMLSelectElement::selectedContentElements() const
+{
+    Vector<Ref<HTMLSelectedContentElement>> result;
+    for (Ref selectedContent : descendantsOfType<HTMLSelectedContentElement>(*const_cast<HTMLSelectElement*>(this))) {
+        if (!selectedContent->isDisabled())
+            result.append(selectedContent);
+    }
+    return result;
+}
+
+void HTMLSelectElement::cloneOptionsIntoSelectedContent() const
+{
+    ASSERT(ScriptDisallowedScope::InMainThread::isScriptAllowed());
+
+    if (!m_multiple || !m_selectedContentDescendantCount || !updatesSelectedContent())
+        return;
+
+    for (Ref selectedContent : selectedContentElements())
+        cloneOptionsIntoSelectedContent(selectedContent);
+}
+
+void HTMLSelectElement::cloneOptionsIntoSelectedContent(HTMLSelectedContentElement& selectedContent) const
+{
+    ASSERT(document().settings().htmlEnhancedSelectMultipleSelectedContentEnabled());
+
+    Vector<Ref<HTMLOptionElement>> options;
+    for (auto& item : listItems()) {
+        if (RefPtr option = dynamicDowncast<HTMLOptionElement>(item.get()))
+            options.append(option.releaseNonNull());
+    }
+
+    NodeVector clones;
+    for (auto& option : options)
+        clones.append(option->cloneForSelectedContent());
+    selectedContent.replaceChildrenWithoutValidityCheck(WTF::move(clones));
 }
 
 RefPtr<HTMLOptionElement> HTMLSelectElement::selectedOptionForSelectedContent() const
@@ -2721,7 +2784,7 @@ void HTMLSelectElement::resetSelectedness(HTMLOptionElement* oldSelectedOption)
 
 void HTMLSelectElement::queueSelectedContentUpdate()
 {
-    if (m_hasQueuedSelectedContentUpdate || m_multiple || !m_selectedContentDescendantCount)
+    if (m_hasQueuedSelectedContentUpdate || !m_selectedContentDescendantCount || !updatesSelectedContent())
         return;
 
     m_hasQueuedSelectedContentUpdate = true;
@@ -2731,7 +2794,10 @@ void HTMLSelectElement::queueSelectedContentUpdate()
         if (!select)
             return;
         select->m_hasQueuedSelectedContentUpdate = false;
-        select->updateSelectedContentIfEnabled();
+        if (select->m_multiple)
+            select->cloneOptionsIntoSelectedContent();
+        else
+            select->updateSelectedContentIfEnabled();
     });
 }
 

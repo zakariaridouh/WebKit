@@ -65,6 +65,8 @@ public:
     static Ref<HTMLSelectElement> create(Document&);
     ~HTMLSelectElement();
 
+    void finishParsingChildren() final;
+
     enum class ExcludeOptGroup : bool { No, Yes };
     enum class OptionScrollMode : uint8_t { Nearest, AlignTop, AlignBottom };
     static HTMLSelectElement* NODELETE findOwnerSelect(ContainerNode*, ExcludeOptGroup);
@@ -206,6 +208,7 @@ public:
     void queueSelectedContentUpdate();
     RefPtr<HTMLOptionElement> selectedOptionForSelectedContent() const;
     void resetSelectedness(HTMLOptionElement* oldSelectedOption);
+    bool updatesSelectedContent() const;
 
     void NODELETE registerSelectedContentElement();
     void NODELETE unregisterSelectedContentElement();
@@ -303,6 +306,9 @@ private:
     void menuListDefaultEventHandler(Event&);
     void baseAppearanceListBoxDefaultEventHandler(Event&);
     void updateSelectedContentIfEnabled(HTMLOptionElement* = nullptr) const;
+    Vector<Ref<HTMLSelectedContentElement>> selectedContentElements() const;
+    void cloneOptionsIntoSelectedContent() const;
+    void cloneOptionsIntoSelectedContent(HTMLSelectedContentElement&) const;
     RefPtr<HTMLOptionElement> firstSelectedOption() const;
     void setSizeAndMultiple(unsigned size, bool multiple);
     enum class PickerCloseReason : bool { Appearance, PickerSupport };
