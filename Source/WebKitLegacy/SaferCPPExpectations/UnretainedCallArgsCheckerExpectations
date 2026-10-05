@@ -1,9 +1,2 @@
 [ iOS ] mac/WebInspector/WebNodeHighlight.mm
-[ iOS ] mac/WebView/WebDelegateImplementationCaching.mm
-mac/WebView/WebFeature.m
-mac/WebView/WebFrame.mm
-[ iOS ] mac/WebView/WebFrameView.mm
-mac/WebView/WebHTMLView.mm
-[ iOS ] mac/WebView/WebIndicateLayer.mm
-mac/WebView/WebPreferences.mm
-mac/WebView/WebView.mm
+[ iOS ] mac/WebView/WebHTMLView.mm

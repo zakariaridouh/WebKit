@@ -1,6 +1,2 @@
 mac/Plugins/WebPluginController.mm
-mac/WebView/WebDeviceOrientationProviderMock.mm
-mac/WebView/WebFormDelegate.m
 [ Mac ] mac/WebView/WebHTMLView.mm
-[ Mac ] mac/WebView/WebVideoFullscreenController.mm
-mac/WebView/WebView.mm
