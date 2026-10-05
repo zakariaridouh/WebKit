@@ -455,10 +455,7 @@ specified on the command-line:
 
     @util.LogEntryExit
     def get_opensource_dir(self):
-        return os.path.dirname(     # Remove "Tools"
-            os.path.dirname(        # Remove "Scripts"
-                os.path.dirname(        # Remove script name
-                    self.get_generate_xcfilelists_script_path())))
+        return os.path.join(self._get_root_parent_dir(), "OpenSource")
 
     # Return the path to the directory containing supporting build scripts.
 

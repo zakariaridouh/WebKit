@@ -166,9 +166,8 @@ class BaseGenerator(object):
 
         # TODO: sublaunch_args will contain the path to the script to
         # sublaunch. There might be a problem if there's a space in that path.
-        env = os.environ.copy()
-        env["WK_SUBLAUNCH_SCRIPT_PARAMETERS"] = " ".join(sublaunch_args)
-        util.subprocess_run(xcode_parameters, env=env)
+        util.subprocess_run(xcode_parameters,
+            env={"WK_SUBLAUNCH_SCRIPT_PARAMETERS": " ".join(sublaunch_args)})
 
     # Generate the .xcfilelist content. Save the results internally as sets of
     # new lines to be added to the .xcfilelist files. These new lines can be
