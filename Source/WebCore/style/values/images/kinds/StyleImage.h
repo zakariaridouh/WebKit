@@ -165,11 +165,6 @@ protected:
     ImageDrawResult drawResolvedAsPattern(GraphicsContext&, const RenderElement&, WebCore::Image&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions) const;
     ImageDrawResult drawResolvedTiled(GraphicsContext&, const RenderElement&, WebCore::Image&, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions) const;
     ImageDrawResult drawResolvedNinePiece(GraphicsContext&, const RenderElement&, WebCore::Image&, ConcreteObjectSize, const NinePieceGeometry&, ImagePaintingOptions) const;
-    using ResolveImage = RefPtr<WebCore::Image>(const FloatSize&, const GraphicsContext& destinationContext);
-    ImageDrawResult drawResolving(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions, NOESCAPE const ScopedLambda<ResolveImage>&) const;
-    ImageDrawResult drawAsPatternResolving(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions, NOESCAPE const ScopedLambda<ResolveImage>&) const;
-    ImageDrawResult drawTiledResolving(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions, NOESCAPE const ScopedLambda<ResolveImage>&) const;
-    ImageDrawResult drawNinePieceResolving(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const NinePieceGeometry&, ImagePaintingOptions, NOESCAPE const ScopedLambda<ResolveImage>&) const;
 
     using DestinationPaint = ImageDrawResult(GraphicsContext&);
     using TiledDraw = ImageDrawResult(GraphicsContext&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source);
