@@ -162,6 +162,20 @@ TEST(URLMatchTest, PathStartsWithIsAnchored)
     EXPECT_FALSE(matchesURL(match, "https://docs.google.com/a/spreadsheets/d/abc"_s));
 }
 
+TEST(URLMatchTest, PathStartsWithComponentRespectsComponentBoundaries)
+{
+    auto match = URLMatch::anyTopLevelDomain("google"_s).when(pathStartsWithComponent("maps"_s));
+
+    EXPECT_TRUE(matchesURL(match, "https://www.google.com/maps"_s));
+    EXPECT_TRUE(matchesURL(match, "https://www.google.com/maps/"_s));
+    EXPECT_TRUE(matchesURL(match, "https://www.google.com/maps/@37.33,-122.01,15z"_s));
+    EXPECT_TRUE(matchesURL(match, "https://www.google.com/Maps?q=cupertino"_s));
+
+    EXPECT_FALSE(matchesURL(match, "https://www.google.com/"_s));
+    EXPECT_FALSE(matchesURL(match, "https://www.google.com/mapsearch"_s));
+    EXPECT_FALSE(matchesURL(match, "https://www.google.com/a/maps/"_s));
+}
+
 TEST(URLMatchTest, PathIsMatchesTheWholePath)
 {
     auto match = URLMatch::host("shopee.sg"_s).when(pathIs("/payment/account-linking/landing"_s));

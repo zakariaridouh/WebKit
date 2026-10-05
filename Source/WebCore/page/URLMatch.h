@@ -147,6 +147,10 @@ struct PathStartsWith {
     ASCIILiteral prefix;
 };
 
+struct PathStartsWithComponent {
+    ASCIILiteral prefix;
+};
+
 struct PathIs {
     ASCIILiteral path;
 };
@@ -185,6 +189,13 @@ constexpr PathContains pathContains(ASCIILiteral substring)
 }
 
 constexpr PathStartsWith pathStartsWith(ASCIILiteral prefix)
+{
+    return { prefix };
+}
+
+// Matches leading path components, so "maps" covers "/maps" and "/maps/place" but
+// not "/mapsearch". The leading and trailing slashes are implied.
+constexpr PathStartsWithComponent pathStartsWithComponent(ASCIILiteral prefix)
 {
     return { prefix };
 }
@@ -301,6 +312,7 @@ private:
     enum class PathComparison : uint8_t {
         PathContains,
         PathStartsWith,
+        PathStartsWithComponent,
         PathIs,
         PathOrFragmentContains,
         LastPathComponentIs,
@@ -336,6 +348,14 @@ private:
     static constexpr void applyRefinement(RefinementSet& set, URLRefinement::PathStartsWith refinement)
     {
         setPathPattern(set, PathComparison::PathStartsWith, refinement.prefix);
+    }
+
+    static constexpr void applyRefinement(RefinementSet& set, URLRefinement::PathStartsWithComponent refinement)
+    {
+        RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(refinement.prefix.length());
+        RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(refinement.prefix[0] != '/');
+        RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(refinement.prefix[refinement.prefix.length() - 1] != '/');
+        setPathPattern(set, PathComparison::PathStartsWithComponent, refinement.prefix);
     }
 
     static constexpr void applyRefinement(RefinementSet& set, URLRefinement::PathIs refinement)

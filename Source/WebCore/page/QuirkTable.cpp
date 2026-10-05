@@ -431,7 +431,7 @@ static constexpr Quirk fullTable[] = {
     { .match = URLMatch::anyTopLevelDomain("google"_s).when(pathIs("/search"_s)),
         .behaviors = { needsAnchorToBeMouseFocusableQuirk.when(elementMatchesSelector(onExpandablePanel)) } },
 
-    { .match = URLMatch::anyTopLevelDomain("google"_s).when(pathStartsWith("/maps/"_s)),
+    { .match = URLMatch::anyTopLevelDomain("google"_s).when(pathStartsWithComponent("maps"_s)),
         .behaviors = {
             // maps.google.com rdar://152194074
             mayNeedToIgnoreContentObservation.when(elementMatchesSelector(onSuggestionsLabel)),

@@ -64,7 +64,12 @@ const urls = [
     "https://www.google.com/search/howsearchworks",
     // anyTopLevelDomain, so the ccTLD results pages match too.
     "https://www.google.co.jp/search",
+    // pathStartsWithComponent("maps"), so the bare path that Maps first serves matches, as do
+    // deeper paths, but a longer first path component does not.
+    "https://www.google.com/maps",
     "https://www.google.com/maps/",
+    "https://www.google.com/maps/@37.33,-122.01,15z",
+    "https://www.google.com/mapsearch",
     "https://maps.google.com/maps/",
     "https://docs.google.com/",
     "https://translate.google.com/",

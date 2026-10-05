@@ -110,12 +110,26 @@ https://www.google.com/search/howsearchworks
 https://www.google.co.jp/search
     MaybeBypassBackForwardCache
     NeedsAnchorToBeMouseFocusableQuirk
+https://www.google.com/maps
+    MayNeedToIgnoreContentObservation
+    MaybeBypassBackForwardCache
+    NeedsGoogleMapsScrollingQuirk
+    ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
+    ShouldDispatchSimulatedMouseEventsQuirk
 https://www.google.com/maps/
     MayNeedToIgnoreContentObservation
     MaybeBypassBackForwardCache
     NeedsGoogleMapsScrollingQuirk
     ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
     ShouldDispatchSimulatedMouseEventsQuirk
+https://www.google.com/maps/@37.33,-122.01,15z
+    MayNeedToIgnoreContentObservation
+    MaybeBypassBackForwardCache
+    NeedsGoogleMapsScrollingQuirk
+    ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
+    ShouldDispatchSimulatedMouseEventsQuirk
+https://www.google.com/mapsearch
+    MaybeBypassBackForwardCache
 https://maps.google.com/maps/
     MayNeedToIgnoreContentObservation
     MaybeBypassBackForwardCache

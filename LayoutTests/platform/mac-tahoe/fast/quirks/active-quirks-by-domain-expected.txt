@@ -98,9 +98,19 @@ https://www.google.com/search/howsearchworks
 https://www.google.co.jp/search
     NeedsAnchorToBeMouseFocusableQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
+https://www.google.com/maps
+    NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk
+    ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
+    ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://www.google.com/maps/
     NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk
     ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
+    ShouldBypassBackForwardCacheWhenElementMatchesQuirk
+https://www.google.com/maps/@37.33,-122.01,15z
+    NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk
+    ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
+    ShouldBypassBackForwardCacheWhenElementMatchesQuirk
+https://www.google.com/mapsearch
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://maps.google.com/maps/
     NeedsGoogleMapsMagnificationWheelDeltaScalingQuirk

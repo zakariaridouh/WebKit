@@ -84,6 +84,15 @@ bool URLMatch::RefinementSet::matchesPathPattern(const URL& url) const
         return url.path().contains(pathPattern);
     case PathComparison::PathStartsWith:
         return startsWithLettersIgnoringASCIICase(url.path(), pathPattern);
+    case PathComparison::PathStartsWithComponent: {
+        auto path = url.path();
+        if (!path.startsWith('/'))
+            return false;
+        auto components = path.substring(1);
+        if (!startsWithLettersIgnoringASCIICase(components, pathPattern))
+            return false;
+        return components.length() == pathPattern.length() || components[pathPattern.length()] == '/';
+    }
     case PathComparison::PathIs:
         return url.path() == pathPattern;
     case PathComparison::PathOrFragmentContains:

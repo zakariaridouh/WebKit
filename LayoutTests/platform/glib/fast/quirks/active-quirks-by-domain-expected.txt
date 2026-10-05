@@ -101,10 +101,20 @@ https://www.google.com/search/howsearchworks
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://www.google.co.jp/search
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
+https://www.google.com/maps
+    ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
+    ShouldBypassBackForwardCacheWhenElementMatchesQuirk
+    ShouldDispatchSimulatedMouseEventsQuirk
 https://www.google.com/maps/
     ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
     ShouldDispatchSimulatedMouseEventsQuirk
+https://www.google.com/maps/@37.33,-122.01,15z
+    ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
+    ShouldBypassBackForwardCacheWhenElementMatchesQuirk
+    ShouldDispatchSimulatedMouseEventsQuirk
+https://www.google.com/mapsearch
+    ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://maps.google.com/maps/
     ShouldAvoidResizingWhenInputViewBoundsChangeQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
