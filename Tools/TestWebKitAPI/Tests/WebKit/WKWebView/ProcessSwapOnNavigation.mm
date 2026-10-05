@@ -8466,6 +8466,78 @@ TEST(ProcessSwap, UseWebProcessCacheForCOOPSwapToSameOriginWithSiteIsolation)
     runUseWebProcessCacheForCOOPSwapToSameOriginTest(UseSiteIsolation::Yes);
 }
 
+static void runUseWebProcessCacheForCOOPSwapFromCrossSitePageTest(UseSiteIsolation useSiteIsolation)
+{
+    using namespace TestWebKitAPI;
+
+    HTTPServer server({
+        { "/source.html"_s, { "source"_s } },
+        { "/coop.html"_s, { { { "Content-Type"_s, "text/html"_s }, { "Cross-Origin-Opener-Policy"_s, "same-origin"_s } }, "coop"_s } },
+    }, HTTPServer::Protocol::Https);
+
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    RetainPtr processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+    auto webViewConfiguration = webViewConfigurationWithCOOPEnabled(processPool.get(), useSiteIsolation);
+    RetainPtr navigationDelegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+
+    pid_t coopPID = 0;
+    @autoreleasepool {
+        RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+        [webView setNavigationDelegate:navigationDelegate.get()];
+
+        done = false;
+        [webView loadRequest:server.requestWithLocalhost("/source.html"_s)];
+        Util::run(&done);
+        auto sourcePID = [webView _webProcessIdentifier];
+
+        __block pid_t provisionalPID = 0;
+        navigationDelegate->didStartProvisionalNavigationHandler = ^{
+            provisionalPID = [webView _provisionalWebProcessIdentifier];
+        };
+
+        done = false;
+        [webView loadRequest:server.request("/coop.html"_s)];
+        Util::run(&done);
+        navigationDelegate->didStartProvisionalNavigationHandler = nil;
+        coopPID = [webView _webProcessIdentifier];
+        EXPECT_NE(sourcePID, coopPID);
+        EXPECT_EQ(provisionalPID, coopPID);
+    }
+
+    waitForAllProcessesToEnterProcessCache(processPool.get());
+
+    RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    [webView setNavigationDelegate:navigationDelegate.get()];
+
+    done = false;
+    [webView loadRequest:server.requestWithLocalhost("/source.html"_s)];
+    Util::run(&done);
+
+    __block pid_t provisionalPID = 0;
+    navigationDelegate->didStartProvisionalNavigationHandler = ^{
+        provisionalPID = [webView _provisionalWebProcessIdentifier];
+    };
+
+    done = false;
+    [webView loadRequest:server.request("/coop.html"_s)];
+    Util::run(&done);
+    navigationDelegate->didStartProvisionalNavigationHandler = nil;
+    EXPECT_NE(0, provisionalPID);
+    EXPECT_NE(coopPID, provisionalPID);
+    EXPECT_EQ(coopPID, [webView _webProcessIdentifier]);
+    EXPECT_WK_STREQ([webView _committedURL].absoluteString, server.request("/coop.html"_s).URL.absoluteString);
+}
+
+TEST(ProcessSwap, UseWebProcessCacheForCOOPSwapFromCrossSitePage)
+{
+    runUseWebProcessCacheForCOOPSwapFromCrossSitePageTest(UseSiteIsolation::No);
+}
+
+TEST(ProcessSwap, UseWebProcessCacheForCOOPSwapFromCrossSitePageWithSiteIsolation)
+{
+    runUseWebProcessCacheForCOOPSwapFromCrossSitePageTest(UseSiteIsolation::Yes);
+}
+
 static void runDoNotUseWebProcessCacheForCOOPSwapAfterCommittingOtherOriginTest(UseSiteIsolation useSiteIsolation)
 {
     using namespace TestWebKitAPI;
