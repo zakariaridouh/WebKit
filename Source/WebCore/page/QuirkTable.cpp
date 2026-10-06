@@ -883,6 +883,8 @@ static constexpr Quirk fullTable[] = {
             needsUserAgentStringOverrideQuirk(QuirkParameters::fromUserAgent(safari18_6UserAgent)),
             // FIXME(rdar://148759791): Remove this once TikTok removes the outdated error message.
             needsChromeCompatibilityUserAgentQuirk(QuirkParameters::fromChromeCompatibilityVersion("136"_s)),
+            // tiktok.com rdar://problem/183445905
+            needsTikTokCaptchaSliderTouchActionQuirk.when(elementMatchesSelector(onTikTokCaptchaDragWrapper)),
         } },
 
     // trix-editor.org rdar://28242210

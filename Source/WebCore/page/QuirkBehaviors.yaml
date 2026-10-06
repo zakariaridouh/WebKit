@@ -300,6 +300,10 @@ NeedsSupportsProgressMonitoringQuirk:
 
 NeedsSuppressPostLayoutBoundaryEventsQuirk:
 
+# tiktok.com rdar://problem/183445905
+NeedsTikTokCaptchaSliderTouchActionQuirk:
+  conditions: [ElementSelector]
+
 NeedsTikTokCommentsOverflowingContentQuirk:
   conditions: [ElementSelector]
   implementation: custom
