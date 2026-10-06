@@ -429,6 +429,22 @@ static void set_tile_info(AV1_COMMON *const cm,
   av1_calculate_tile_rows(seq_params, mi_params->mi_rows, tiles);
 }
 
+static inline void init_frame_info(FRAME_INFO *frame_info,
+                                   const AV1_COMMON *const cm) {
+  const CommonModeInfoParams *const mi_params = &cm->mi_params;
+  const SequenceHeader *const seq_params = cm->seq_params;
+  frame_info->frame_width = cm->width;
+  frame_info->frame_height = cm->height;
+  frame_info->mi_cols = mi_params->mi_cols;
+  frame_info->mi_rows = mi_params->mi_rows;
+  frame_info->mb_cols = mi_params->mb_cols;
+  frame_info->mb_rows = mi_params->mb_rows;
+  frame_info->num_mbs = mi_params->MBs;
+  frame_info->bit_depth = seq_params->bit_depth;
+  frame_info->subsampling_x = seq_params->subsampling_x;
+  frame_info->subsampling_y = seq_params->subsampling_y;
+}
+
 void av1_update_frame_size(AV1_COMP *cpi) {
   AV1_COMMON *const cm = &cpi->common;
   MACROBLOCKD *const xd = &cpi->td.mb.e_mbd;
@@ -446,6 +462,7 @@ void av1_update_frame_size(AV1_COMP *cpi) {
                                    cpi->ppi->number_spatial_layers));
 
   set_tile_info(cm, &cpi->oxcf.tile_cfg);
+  init_frame_info(&cpi->frame_info, cm);
 }
 
 static inline int does_level_match(int width, int height, double fps,
@@ -979,9 +996,13 @@ void av1_change_config(struct AV1_COMP *cpi, const AV1EncoderConfig *oxcf,
   }
 
   if (x->upsample_pred == NULL) {
+    // The buffer 'upsampled_pred' is used to store the output of horizontal
+    // filtering in aom_(highbd_)upsampled_pred() function. As the length of the
+    // interpolation filter used is SUBPEL_TAPS a buffer size of (MAX_SB_SIZE +
+    // SUBPEL_TAPS) * MAX_SB_SIZE is allocated.
     CHECK_MEM_ERROR(
         cm, x->upsample_pred,
-        aom_memalign(16, (1 + is_highbitdepth) * ((MAX_SB_SIZE + 16) + 16) *
+        aom_memalign(16, (1 + is_highbitdepth) * (MAX_SB_SIZE + SUBPEL_TAPS) *
                              MAX_SB_SIZE * sizeof(*x->upsample_pred)));
     x->e_mbd.tmp_upsample_pred = x->upsample_pred;
   }
@@ -1091,22 +1112,6 @@ void av1_change_config(struct AV1_COMP *cpi, const AV1EncoderConfig *oxcf,
 #else
   cpi->alloc_pyramid = oxcf->tool_cfg.enable_global_motion;
 #endif  // CONFIG_REALTIME_ONLY
-}
-
-static inline void init_frame_info(FRAME_INFO *frame_info,
-                                   const AV1_COMMON *const cm) {
-  const CommonModeInfoParams *const mi_params = &cm->mi_params;
-  const SequenceHeader *const seq_params = cm->seq_params;
-  frame_info->frame_width = cm->width;
-  frame_info->frame_height = cm->height;
-  frame_info->mi_cols = mi_params->mi_cols;
-  frame_info->mi_rows = mi_params->mi_rows;
-  frame_info->mb_cols = mi_params->mb_cols;
-  frame_info->mb_rows = mi_params->mb_rows;
-  frame_info->num_mbs = mi_params->MBs;
-  frame_info->bit_depth = seq_params->bit_depth;
-  frame_info->subsampling_x = seq_params->subsampling_x;
-  frame_info->subsampling_y = seq_params->subsampling_y;
 }
 
 static inline void init_frame_index_set(FRAME_INDEX_SET *frame_index_set) {
@@ -1616,7 +1621,9 @@ AV1_COMP *av1_create_compressor(AV1_PRIMARY *ppi, const AV1EncoderConfig *oxcf,
   cpi->consec_zero_mv_alloc_size = consec_zero_mv_alloc_size;
 
   cpi->mb_weber_stats = NULL;
+  cpi->mb_weber_stats_alloc_size = 0;
   cpi->mb_delta_q = NULL;
+  cpi->mb_delta_q_alloc_size = 0;
   cpi->palette_pixel_num = 0;
   cpi->scaled_last_source_available = 0;
 

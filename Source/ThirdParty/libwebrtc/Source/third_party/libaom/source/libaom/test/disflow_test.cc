@@ -9,6 +9,7 @@
  * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
  */
 
+#include "aom_dsp/flow_estimation/corner_match.h"
 #include "aom_dsp/flow_estimation/disflow.h"
 
 #include "gtest/gtest.h"
@@ -128,5 +129,83 @@ INSTANTIATE_TEST_SUITE_P(NEON, ComputeFlowTest,
 INSTANTIATE_TEST_SUITE_P(SVE, ComputeFlowTest,
                          ::testing::Values(aom_compute_flow_at_point_sve));
 #endif
+
+#if CONFIG_AV1_ENCODER && !CONFIG_REALTIME_ONLY
+TEST(DisflowTest, NarrowDimensions) {
+  YV12_BUFFER_CONFIG src = {};
+  YV12_BUFFER_CONFIG ref = {};
+
+  constexpr int kWidth = 17;
+  constexpr int kHeight = 1;
+  ASSERT_EQ(aom_alloc_frame_buffer(&src, kWidth, kHeight, 1, 1, 0,
+                                   AOM_BORDER_IN_PIXELS, 0, true, 0),
+            0);
+  ASSERT_EQ(aom_alloc_frame_buffer(&ref, kWidth, kHeight, 1, 1, 0,
+                                   AOM_BORDER_IN_PIXELS, 0, true, 0),
+            0);
+
+  MotionModel motion_models[1];
+  bool mem_alloc_failed = false;
+  bool ret = av1_compute_global_motion_disflow(
+      TRANSLATION, &src, &ref, 8, 0, motion_models, 1, &mem_alloc_failed);
+  EXPECT_FALSE(ret);
+  EXPECT_FALSE(mem_alloc_failed);
+
+  aom_free_frame_buffer(&src);
+  aom_free_frame_buffer(&ref);
+}
+
+TEST(DisflowTest, MismatchedDimensions) {
+  YV12_BUFFER_CONFIG src = {};
+  YV12_BUFFER_CONFIG ref = {};
+
+  ASSERT_EQ(aom_alloc_frame_buffer(&src, 128, 96, 1, 1, 0, AOM_BORDER_IN_PIXELS,
+                                   0, true, 0),
+            0);
+  ASSERT_EQ(aom_alloc_frame_buffer(&ref, 320, 240, 1, 1, 0,
+                                   AOM_BORDER_IN_PIXELS, 0, true, 0),
+            0);
+
+  MotionModel motion_models[1];
+  bool mem_alloc_failed = false;
+  bool ret = av1_compute_global_motion_disflow(
+      TRANSLATION, &src, &ref, 8, 0, motion_models, 1, &mem_alloc_failed);
+  EXPECT_FALSE(ret);
+  EXPECT_FALSE(mem_alloc_failed);
+
+  aom_free_frame_buffer(&src);
+  aom_free_frame_buffer(&ref);
+}
+
+TEST(DisflowTest, MismatchedStrides) {
+  YV12_BUFFER_CONFIG src = {};
+  YV12_BUFFER_CONFIG ref = {};
+
+  constexpr int kWidth = 165;
+  constexpr int kHeight = 513;
+  ASSERT_EQ(aom_alloc_frame_buffer(&src, kWidth, kHeight, 1, 1, 0,
+                                   AOM_BORDER_IN_PIXELS, 0, true, 0),
+            0);
+  ASSERT_EQ(
+      aom_alloc_frame_buffer(&ref, kWidth, kHeight, 1, 1, 0, 96, 0, true, 0),
+      0);
+  EXPECT_NE(src.y_stride, ref.y_stride);
+
+  MotionModel motion_models[1];
+  bool mem_alloc_failed = false;
+  bool ret = av1_compute_global_motion_disflow(
+      TRANSLATION, &src, &ref, 8, 0, motion_models, 1, &mem_alloc_failed);
+  EXPECT_FALSE(ret);
+  EXPECT_FALSE(mem_alloc_failed);
+
+  ret = av1_compute_global_motion_feature_match(
+      TRANSLATION, &src, &ref, 8, 0, motion_models, 1, &mem_alloc_failed);
+  EXPECT_FALSE(ret);
+  EXPECT_FALSE(mem_alloc_failed);
+
+  aom_free_frame_buffer(&src);
+  aom_free_frame_buffer(&ref);
+}
+#endif  // CONFIG_AV1_ENCODER && !CONFIG_REALTIME_ONLY
 
 }  // namespace

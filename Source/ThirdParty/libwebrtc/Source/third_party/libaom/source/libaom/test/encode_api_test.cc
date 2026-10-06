@@ -254,6 +254,60 @@ TEST(EncodeAPI, InvalidSvcParams) {
   EXPECT_EQ(aom_codec_destroy(&enc), AOM_CODEC_OK);
 }
 
+// Bug: 538651949.
+TEST(EncodeAPI, SvcFixBypass) {
+  aom_codec_ctx_t enc;
+  aom_codec_enc_cfg_t cfg;
+  aom_codec_iface_t *iface = aom_codec_av1_cx();
+  aom_svc_layer_id_t layer_id = { 3, 0 };
+  aom_svc_params_t svc_params = {};
+
+  EXPECT_EQ(aom_codec_enc_config_default(iface, &cfg, kUsage), AOM_CODEC_OK);
+  cfg.g_w = 320;
+  cfg.g_h = 240;
+  cfg.g_threads = 1;
+  cfg.g_lag_in_frames = 0;
+
+  ASSERT_EQ(aom_codec_enc_init(&enc, iface, &cfg, 0), AOM_CODEC_OK);
+
+  // Set number of spatial layers to 4 via control SET_NUMBER_SPATIAL_LAYERS.
+  EXPECT_EQ(aom_codec_control(&enc, AOME_SET_NUMBER_SPATIAL_LAYERS, 4),
+            AOM_CODEC_OK);
+
+  // Set the active spatial layer id to 3. This is expected to fail since
+  // cpi->svc.number_spatial_layers is still 1 (default).
+  EXPECT_EQ(aom_codec_control(&enc, AV1E_SET_SVC_LAYER_ID, &layer_id),
+            AOM_CODEC_INVALID_PARAM);
+
+  // Set SVC params to 2x2 layer config, via AV1E_SET_SVC_PARAMS. This sets
+  // all svc layer parameters, allocates for the layer context, and sets use_svc
+  // = 1.
+  svc_params.number_spatial_layers = 2;
+  svc_params.number_temporal_layers = 2;
+  for (int i = 0; i < AOM_MAX_LAYERS; i++) {
+    svc_params.max_quantizers[i] = 52;
+    svc_params.min_quantizers[i] = 10;
+    svc_params.layer_target_bitrate[i] = 100;
+  }
+  svc_params.scaling_factor_num[0] = 1;
+  svc_params.scaling_factor_den[0] = 2;
+  svc_params.scaling_factor_num[1] = 1;
+  svc_params.scaling_factor_den[1] = 1;
+  svc_params.framerate_factor[0] = 2;
+  svc_params.framerate_factor[1] = 1;
+
+  EXPECT_EQ(aom_codec_control(&enc, AV1E_SET_SVC_PARAMS, &svc_params),
+            AOM_CODEC_OK);
+
+  // Now try setting number of spatial layers to 3 using the control
+  // SET_NUMBER_SPATIAL_LAYERS. This is expected to fail because SVC was
+  // configured via AV1E_SET_SVC_PARAMS, so use_svc = 1.
+  EXPECT_EQ(aom_codec_control(&enc, AOME_SET_NUMBER_SPATIAL_LAYERS, 3),
+            AOM_CODEC_INVALID_PARAM);
+
+  EXPECT_EQ(aom_codec_destroy(&enc), AOM_CODEC_OK);
+}
+
 TEST(EncodeAPI, InvalidControlId) {
   aom_codec_iface_t *iface = aom_codec_av1_cx();
   aom_codec_ctx_t enc;
@@ -2629,5 +2683,115 @@ TEST(EncodeAPI, Buganizer503810640V2) {
   aom_img_free(raw);
   ASSERT_EQ(aom_codec_destroy(&codec), AOM_CODEC_OK);
 }
+
+#if !CONFIG_REALTIME_ONLY
+TEST(EncodeAPI, Buganizer558434716) {
+  aom_codec_iface_t *iface = aom_codec_av1_cx();
+  aom_codec_enc_cfg_t cfg;
+  ASSERT_EQ(aom_codec_enc_config_default(iface, &cfg, AOM_USAGE_GOOD_QUALITY),
+            AOM_CODEC_OK);
+
+  cfg.g_w = 128;
+  cfg.g_h = 96;
+  cfg.g_forced_max_frame_width = 1920;
+  cfg.g_forced_max_frame_height = 1080;
+  cfg.g_pass = AOM_RC_ONE_PASS;
+  cfg.g_lag_in_frames = 0;
+  cfg.g_threads = 1;
+
+  aom_codec_ctx_t enc;
+  ASSERT_EQ(aom_codec_enc_init(&enc, iface, &cfg, 0), AOM_CODEC_OK);
+
+  aom_image_t *img_small = aom_img_alloc(nullptr, AOM_IMG_FMT_I420, 128, 96, 1);
+  ASSERT_NE(img_small, nullptr);
+  FillImage(img_small, 128);
+
+  aom_image_t *img_large =
+      aom_img_alloc(nullptr, AOM_IMG_FMT_I420, 320, 240, 1);
+  ASSERT_NE(img_large, nullptr);
+  FillImage(img_large, 128);
+
+  // Frame 0 at 128x96
+  ASSERT_EQ(aom_codec_encode(&enc, img_small, 0, 1, 0), AOM_CODEC_OK);
+
+  // Switch to larger resolution
+  cfg.g_w = 320;
+  cfg.g_h = 240;
+  ASSERT_EQ(aom_codec_enc_config_set(&enc, &cfg), AOM_CODEC_OK);
+
+  // Frame 1 at 320x240
+  ASSERT_EQ(aom_codec_encode(&enc, img_large, 1, 1, AOM_EFLAG_FORCE_KF),
+            AOM_CODEC_OK);
+
+  // Switch back to smaller resolution
+  cfg.g_w = 128;
+  cfg.g_h = 96;
+  ASSERT_EQ(aom_codec_enc_config_set(&enc, &cfg), AOM_CODEC_OK);
+
+  // Frame 2 at 128x96 (keyframe)
+  ASSERT_EQ(aom_codec_encode(&enc, img_small, 2, 1, AOM_EFLAG_FORCE_KF),
+            AOM_CODEC_OK);
+
+  // Frames 3+ at 128x96 (interframes referencing frame 2)
+  for (int i = 3; i < 8; ++i) {
+    ASSERT_EQ(aom_codec_encode(&enc, img_small, i, 1, 0), AOM_CODEC_OK);
+  }
+
+  aom_img_free(img_small);
+  aom_img_free(img_large);
+  ASSERT_EQ(aom_codec_destroy(&enc), AOM_CODEC_OK);
+}
+
+TEST(EncodeAPI, PerceptualAIDynamicResolutionChange) {
+  aom_codec_iface_t *iface = aom_codec_av1_cx();
+  aom_codec_enc_cfg_t cfg;
+  ASSERT_EQ(aom_codec_enc_config_default(iface, &cfg, AOM_USAGE_ALL_INTRA),
+            AOM_CODEC_OK);
+
+  cfg.g_w = 17;
+  cfg.g_h = 1;
+  cfg.g_forced_max_frame_width = 320;
+  cfg.g_forced_max_frame_height = 240;
+  cfg.g_pass = AOM_RC_ONE_PASS;
+  cfg.g_lag_in_frames = 0;
+  cfg.g_threads = 1;
+
+  aom_codec_ctx_t enc;
+  ASSERT_EQ(aom_codec_enc_init(&enc, iface, &cfg, 0), AOM_CODEC_OK);
+  ASSERT_EQ(aom_codec_control(&enc, AV1E_SET_DELTAQ_MODE, 3), AOM_CODEC_OK);
+
+  aom_image_t *img_small = aom_img_alloc(nullptr, AOM_IMG_FMT_I420, 17, 1, 1);
+  ASSERT_NE(img_small, nullptr);
+  FillImage(img_small, 128);
+
+  aom_image_t *img_large =
+      aom_img_alloc(nullptr, AOM_IMG_FMT_I420, 320, 240, 1);
+  ASSERT_NE(img_large, nullptr);
+  FillImage(img_large, 128);
+
+  // Frame 0 at 17x1
+  ASSERT_EQ(aom_codec_encode(&enc, img_small, 0, 1, 0), AOM_CODEC_OK);
+
+  // Switch to larger resolution
+  cfg.g_w = 320;
+  cfg.g_h = 240;
+  ASSERT_EQ(aom_codec_enc_config_set(&enc, &cfg), AOM_CODEC_OK);
+
+  // Frame 1 at 320x240
+  ASSERT_EQ(aom_codec_encode(&enc, img_large, 1, 1, 0), AOM_CODEC_OK);
+
+  // Switch back to 17x1
+  cfg.g_w = 17;
+  cfg.g_h = 1;
+  ASSERT_EQ(aom_codec_enc_config_set(&enc, &cfg), AOM_CODEC_OK);
+
+  // Frame 2 at 17x1
+  ASSERT_EQ(aom_codec_encode(&enc, img_small, 2, 1, 0), AOM_CODEC_OK);
+
+  aom_img_free(img_small);
+  aom_img_free(img_large);
+  ASSERT_EQ(aom_codec_destroy(&enc), AOM_CODEC_OK);
+}
+#endif  // !CONFIG_REALTIME_ONLY
 
 }  // namespace

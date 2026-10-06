@@ -243,32 +243,6 @@ bool RequiresEncoderReset(const VideoCodec& prev_send_codec,
   return false;
 }
 
-// Limit allocation across TLs in bitrate allocation according to number of TLs
-// in EncoderInfo.
-VideoBitrateAllocation UpdateAllocationFromEncoderInfo(
-    const VideoBitrateAllocation& allocation,
-    const VideoEncoder::EncoderInfo& encoder_info) {
-  if (allocation.get_sum_bps() == 0) {
-    return allocation;
-  }
-  VideoBitrateAllocation new_allocation;
-  for (size_t si = 0; si < kMaxSpatialLayers; ++si) {
-    if (encoder_info.fps_allocation[si].size() == 1 &&
-        allocation.IsSpatialLayerUsed(si)) {
-      // One TL is signalled to be used by the encoder. Do not distribute
-      // bitrate allocation across TLs (use sum at ti:0).
-      new_allocation.SetBitrate(si, 0, allocation.GetSpatialLayerSum(si));
-    } else {
-      for (size_t ti = 0; ti < kMaxTemporalStreams; ++ti) {
-        if (allocation.HasBitrate(si, ti))
-          new_allocation.SetBitrate(si, ti, allocation.GetBitrate(si, ti));
-      }
-    }
-  }
-  new_allocation.set_bw_limited(allocation.is_bw_limited());
-  return new_allocation;
-}
-
 // Converts a VideoBitrateAllocation that contains allocated bitrate per layer,
 // and an EncoderInfo that contains information about the actual encoder
 // structure used by a codec. Stream structures can be Ksvc, Full SVC, Simulcast
@@ -1337,7 +1311,7 @@ void VideoStreamEncoder::ReconfigureEncoder() {
   worker_queue_->PostTask(SafeTask(
       task_safety_.flag(),
       [this, alignment,
-       encoder_resolutions = std::move(encoder_resolutions)]() {
+       encoder_resolutions = std::move(encoder_resolutions)]() mutable {
         RTC_DCHECK_RUN_ON(worker_queue_);
         if (alignment != video_source_sink_controller_.resolution_alignment() ||
             encoder_resolutions !=
@@ -1838,19 +1812,6 @@ void VideoStreamEncoder::SetEncoderRates(
           send_codec_, rate_settings.rate_control, encoder_->GetEncoderInfo()));
     }
   }
-  if ((allocation_cb_type_ ==
-       BitrateAllocationCallbackType::kVideoBitrateAllocation) ||
-      (encoder_config_.content_type ==
-           VideoEncoderConfig::ContentType::kScreen &&
-       allocation_cb_type_ == BitrateAllocationCallbackType::
-                                  kVideoBitrateAllocationWhenScreenSharing)) {
-    sink_->OnBitrateAllocationUpdated(
-        // Update allocation according to info from encoder. An encoder may
-        // choose to not use all layers due to for example HW.
-        UpdateAllocationFromEncoderInfo(
-            rate_settings.rate_control.target_bitrate,
-            encoder_->GetEncoderInfo()));
-  }
 }
 
 void VideoStreamEncoder::MaybePrepareVideoFrame(const VideoFrame& video_frame,
@@ -2247,10 +2208,20 @@ void VideoStreamEncoder::SendKeyFrame(
   }
 
   if (!layers.empty()) {
-    RTC_DCHECK_EQ(layers.size(), next_frame_types_.size());
-    for (size_t i = 0; i < layers.size() && i < next_frame_types_.size(); i++) {
-      if (layers[i] == VideoFrameType::kVideoFrameKey) {
-        next_frame_types_[i] = VideoFrameType::kVideoFrameKey;
+    // In single-stream or SVC configurations (`next_frame_types_.size() == 1`),
+    // the number of RTP SSRCs in `layers` can exceed the number of encoded
+    // streams. Any keyframe requested on any SSRC layer must trigger a keyframe
+    // on that single encoded stream.
+    if (next_frame_types_.size() == 1) {
+      if (absl::c_linear_search(layers, VideoFrameType::kVideoFrameKey)) {
+        next_frame_types_[0] = VideoFrameType::kVideoFrameKey;
+      }
+    } else {
+      for (size_t i = 0;
+           i < layers.size() && i < next_frame_types_.size(); i++) {
+        if (layers[i] == VideoFrameType::kVideoFrameKey) {
+          next_frame_types_[i] = VideoFrameType::kVideoFrameKey;
+        }
       }
     }
   } else {
@@ -2619,7 +2590,8 @@ void VideoStreamEncoder::OnVideoSourceRestrictionsUpdated(
   }
 
   worker_queue_->PostTask(SafeTask(
-      task_safety_.flag(), [this, restrictions = std::move(restrictions)]() {
+      task_safety_.flag(),
+      [this, restrictions = std::move(restrictions)]() mutable {
         RTC_DCHECK_RUN_ON(worker_queue_);
         video_source_sink_controller_.SetRestrictions(std::move(restrictions));
         video_source_sink_controller_.PushSourceSinkSettings();

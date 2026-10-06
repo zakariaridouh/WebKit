@@ -77,6 +77,8 @@ static void NODELETE prepareConfiguration(webrtc::PeerConnectionInterface::RTCCo
 {
     configuration.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
     configuration.crypto_options.srtp.enable_gcm_crypto_suites = true;
+    // FIXME: We should turn that flag to true.
+    configuration.set_stats_timestamp_with_environment_clock(false);
 }
 
 RefPtr<LibWebRTCMediaEndpoint> LibWebRTCMediaEndpoint::create(RTCPeerConnection& peerConnection, LibWebRTCProvider& client, Document& document, webrtc::PeerConnectionInterface::RTCConfiguration&& configuration, bool shouldEnableServiceClass)

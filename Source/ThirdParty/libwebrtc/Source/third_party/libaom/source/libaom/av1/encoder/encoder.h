@@ -621,7 +621,7 @@ typedef struct {
    */
   int max_consec_drop_ms;
   /*!
-   * Force to allow the usage of maximum q in vbr mode.
+   * Force the use of maximum q in vbr mode.
    */
   int force_max_q;
 } RateControlCfg;
@@ -3586,6 +3586,12 @@ typedef struct AV1_COMP {
   WeberStats *mb_weber_stats;
 
   /*!
+   * Allocated memory size (number of elements) for |mb_weber_stats| (and
+   * |prep_rate_estimates|, |ext_rate_distribution|).
+   */
+  int mb_weber_stats_alloc_size;
+
+  /*!
    * Buffer to store rate cost estimates for each macro block (8x8) in the
    * preprocessing stage used in allintra mode.
    */
@@ -3616,6 +3622,11 @@ typedef struct AV1_COMP {
    * Buffer to store delta-q values for delta-q mode 4.
    */
   int *mb_delta_q;
+
+  /*!
+   * Allocated memory size (number of elements) for |mb_delta_q|.
+   */
+  int mb_delta_q_alloc_size;
 
   /*!
    * Flag to indicate that current frame is dropped.

@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -34,7 +35,6 @@
 #include "call/payload_type.h"
 #include "media/base/codec.h"
 #include "media/base/media_constants.h"
-#include "media/base/media_engine.h"
 #include "media/base/rid_description.h"
 #include "media/base/stream_params.h"
 #include "p2p/base/ice_credentials_iterator.h"
@@ -65,23 +65,15 @@ RtpExtension RtpExtensionFromCapability(
                       capability.preferred_encrypt);
 }
 
-RtpHeaderExtensions RtpHeaderExtensionsFromCapabilities(
-    const std::vector<RtpHeaderExtensionCapability>& capabilities) {
+RtpHeaderExtensions UnstoppedRtpHeaderExtensionsFromCapabilities(
+    std::span<const RtpHeaderExtensionCapability> capabilities) {
   RtpHeaderExtensions exts;
   for (const auto& capability : capabilities) {
-    exts.push_back(RtpExtensionFromCapability(capability));
+    if (capability.direction != RtpTransceiverDirection::kStopped) {
+      exts.push_back(RtpExtensionFromCapability(capability));
+    }
   }
   return exts;
-}
-
-std::vector<RtpHeaderExtensionCapability>
-UnstoppedRtpHeaderExtensionCapabilities(
-    std::vector<RtpHeaderExtensionCapability> capabilities) {
-  std::erase_if(
-      capabilities, [](const RtpHeaderExtensionCapability& capability) {
-        return capability.direction == RtpTransceiverDirection::kStopped;
-      });
-  return capabilities;
 }
 
 bool IsCapabilityPresent(const RtpHeaderExtensionCapability& capability,
@@ -429,7 +421,7 @@ void MergeRtpHdrExts(const RtpHeaderExtensions& reference_extensions,
                      PayloadTypeSuggester& suggester,
                      absl::string_view mid,
                      RtpTransceiverIdDomain id_domain) {
-  for (auto reference_extension : reference_extensions) {
+  for (const auto& reference_extension : reference_extensions) {
     if (!RtpExtension::FindHeaderExtensionByUriAndEncryption(
             *offered_extensions, reference_extension.uri,
             reference_extension.encrypt)) {
@@ -449,15 +441,16 @@ void MergeRtpHdrExts(const RtpHeaderExtensions& reference_extensions,
       } else {
         auto suggested_id = suggester.SuggestRtpHeaderExtensionId(
             mid, reference_extension, id_domain);
+        RtpExtension extension = reference_extension;
         if (suggested_id.ok()) {
-          reference_extension.id = suggested_id.value();
+          extension.id = suggested_id.value();
         } else {
           RTC_LOG(LS_ERROR)
               << "Failed to suggest RTP header extension ID for "
               << reference_extension.uri << ", error " << suggested_id.error();
         }
-        all_encountered_extensions->push_back(reference_extension);
-        offered_extensions->push_back(reference_extension);
+        all_encountered_extensions->push_back(extension);
+        offered_extensions->push_back(std::move(extension));
       }
     }
   }
@@ -736,8 +729,6 @@ bool AcceptOfferWithRfc8888(const FieldTrialsView& field_trials) {
 
 MediaSessionDescriptionFactory::MediaSessionDescriptionFactory(
     const Environment& env,
-    const MediaEngineInterface* media_engine,
-    bool rtx_enabled,
     UniqueRandomIdGenerator* ssrc_generator,
     const TransportDescriptionFactory* transport_desc_factory,
     SctpTransportFactoryInterface* sctp_factory,
@@ -1001,16 +992,20 @@ MediaSessionDescriptionFactory::CreateAnswerOrError(
       current_content = &current_description->contents()[msection_index];
     }
     // Don't offer the transport-cc header extension if "ack ccfb" is in use.
-    auto header_extensions_in = media_description_options.header_extensions;
+    RtpHeaderExtensions header_extensions;
     if (has_ack_ccfb) {
+      auto header_extensions_in = media_description_options.header_extensions;
       for (auto& option : header_extensions_in) {
         if (option.uri == RtpExtension::kTransportSequenceNumberUri) {
           option.direction = RtpTransceiverDirection::kStopped;
         }
       }
+      header_extensions =
+          UnstoppedRtpHeaderExtensionsFromCapabilities(header_extensions_in);
+    } else {
+      header_extensions = UnstoppedRtpHeaderExtensionsFromCapabilities(
+          media_description_options.header_extensions);
     }
-    RtpHeaderExtensions header_extensions = RtpHeaderExtensionsFromCapabilities(
-        UnstoppedRtpHeaderExtensionCapabilities(header_extensions_in));
     RTCError error;
     switch (media_description_options.type) {
       case MediaType::AUDIO:

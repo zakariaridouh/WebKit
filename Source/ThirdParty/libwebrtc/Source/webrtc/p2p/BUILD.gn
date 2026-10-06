@@ -573,6 +573,7 @@ rtc_library("port") {
     "../rtc_base:span_helpers",
     "../rtc_base:stringutils",
     "../rtc_base:weak_ptr",
+    "../rtc_base/containers:flat_map",
     "../rtc_base/network:received_packet",
     "../rtc_base/network:sent_packet",
     "../rtc_base/system:rtc_export",
@@ -792,6 +793,7 @@ rtc_library("transport_description") {
   deps = [
     ":p2p_constants",
     "../api:rtc_error",
+    "../rtc_base:checks",
     "../rtc_base:logging",
     "../rtc_base:ssl",
     "../rtc_base:stringutils",

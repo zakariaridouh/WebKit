@@ -12,7 +12,6 @@
 
 #include <limits.h>
 
-#include "libyuv/basic_types.h"
 #include "libyuv/convert.h"  // For I420Copy
 #include "libyuv/cpu_id.h"
 #include "libyuv/planar_functions.h"
@@ -96,17 +95,21 @@ int I420ToI010(const uint8_t* src_y,
   if (height < 0) {
     height = -height;
     halfheight = (height + 1) >> 1;
-    src_y = src_y + (ptrdiff_t)(height - 1) * src_stride_y;
+    if (src_y) {
+      src_y = src_y + (ptrdiff_t)(height - 1) * src_stride_y;
+      src_stride_y = -src_stride_y;
+    }
     src_u = src_u + (ptrdiff_t)(halfheight - 1) * src_stride_u;
     src_v = src_v + (ptrdiff_t)(halfheight - 1) * src_stride_v;
-    src_stride_y = -src_stride_y;
     src_stride_u = -src_stride_u;
     src_stride_v = -src_stride_v;
   }
 
   // Convert Y plane.
-  Convert8To16Plane(src_y, src_stride_y, dst_y, dst_stride_y, 1024, width,
-                    height);
+  if (dst_y) {
+    Convert8To16Plane(src_y, src_stride_y, dst_y, dst_stride_y, 1024, width,
+                      height);
+  }
   // Convert UV planes.
   Convert8To16Plane(src_u, src_stride_u, dst_u, dst_stride_u, 1024, halfwidth,
                     halfheight);
@@ -141,17 +144,21 @@ int I420ToI012(const uint8_t* src_y,
   if (height < 0) {
     height = -height;
     halfheight = (height + 1) >> 1;
-    src_y = src_y + (ptrdiff_t)(height - 1) * src_stride_y;
+    if (src_y) {
+      src_y = src_y + (ptrdiff_t)(height - 1) * src_stride_y;
+      src_stride_y = -src_stride_y;
+    }
     src_u = src_u + (ptrdiff_t)(halfheight - 1) * src_stride_u;
     src_v = src_v + (ptrdiff_t)(halfheight - 1) * src_stride_v;
-    src_stride_y = -src_stride_y;
     src_stride_u = -src_stride_u;
     src_stride_v = -src_stride_v;
   }
 
   // Convert Y plane.
-  Convert8To16Plane(src_y, src_stride_y, dst_y, dst_stride_y, 4096, width,
-                    height);
+  if (dst_y) {
+    Convert8To16Plane(src_y, src_stride_y, dst_y, dst_stride_y, 4096, width,
+                      height);
+  }
   // Convert UV planes.
   Convert8To16Plane(src_u, src_stride_u, dst_u, dst_stride_u, 4096, halfwidth,
                     halfheight);
@@ -805,6 +812,43 @@ int ConvertFromI420(const uint8_t* y,
                      dst_sample_stride ? dst_sample_stride : width, dst_vu,
                      dst_sample_stride ? dst_sample_stride : width, width,
                      height);
+      break;
+    }
+    case FOURCC_NV16: {
+      int dst_y_stride = dst_sample_stride ? dst_sample_stride : width;
+      int dst_uv_stride = dst_sample_stride ? dst_sample_stride : width;
+      uint8_t* dst_uv = dst_sample + (ptrdiff_t)dst_y_stride * height;
+      int halfwidth = (width + 1) / 2;
+      int halfheight = (height + 1) / 2;
+      CopyPlane(y, y_stride, dst_sample, dst_y_stride, width, height);
+      MergeUVPlane(u, u_stride, v, v_stride, dst_uv, dst_uv_stride * 2,
+                   halfwidth, halfheight);
+      if (height > 1) {
+        MergeUVPlane(u, u_stride, v, v_stride, dst_uv + dst_uv_stride,
+                     dst_uv_stride * 2, halfwidth, height / 2);
+      }
+      r = 0;
+      break;
+    }
+    case FOURCC_NV24: {
+      int dst_y_stride = dst_sample_stride ? dst_sample_stride : width;
+      int dst_uv_stride = dst_sample_stride ? dst_sample_stride * 2 : width * 2;
+      uint8_t* dst_uv = dst_sample + (ptrdiff_t)dst_y_stride * height;
+      align_buffer_64(temp_u, (size_t)width * height);
+      align_buffer_64(temp_v, (size_t)width * height);
+      if (!temp_u || !temp_v) {
+        free_aligned_buffer_64(temp_u);
+        free_aligned_buffer_64(temp_v);
+        return 1;
+      }
+      r = I420ToI444(y, y_stride, u, u_stride, v, v_stride, dst_sample,
+                     dst_y_stride, temp_u, width, temp_v, width, width, height);
+      if (r == 0) {
+        MergeUVPlane(temp_u, width, temp_v, width, dst_uv, dst_uv_stride, width,
+                     height);
+      }
+      free_aligned_buffer_64(temp_u);
+      free_aligned_buffer_64(temp_v);
       break;
     }
     // Triplanar formats
