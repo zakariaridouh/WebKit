@@ -138,22 +138,22 @@ private:
     Vector<String> types(Document&, AddFilesType) const;
     Vector<Ref<File>> filesFromPasteboardAndItemList(ScriptExecutionContext*) const;
 
-    String m_originIdentifier;
     StoreMode m_storeMode;
+    String m_originIdentifier;
     const std::unique_ptr<Pasteboard> m_pasteboard;
     const std::unique_ptr<DataTransferItemList> m_itemList;
 
     mutable RefPtr<FileList> m_fileList;
 
 #if ENABLE(DRAG_SUPPORT)
-    Type m_type;
     String m_dropEffect;
     String m_effectAllowed;
-    bool m_shouldUpdateDragImage;
-    IntPoint m_dragLocation;
     CachedResourceHandle<CachedImage> m_dragImage;
     RefPtr<Element> m_dragImageElement;
     RefPtr<DragImageLoader> m_dragImageLoader;
+    IntPoint m_dragLocation;
+    Type m_type;
+    bool m_shouldUpdateDragImage;
 #endif
 };
 

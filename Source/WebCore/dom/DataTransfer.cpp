@@ -93,9 +93,9 @@ DataTransfer::DataTransfer(StoreMode mode, std::unique_ptr<Pasteboard> pasteboar
     : m_storeMode(mode)
     , m_pasteboard(WTF::move(pasteboard))
 #if ENABLE(DRAG_SUPPORT)
-    , m_type(type)
     , m_dropEffect("uninitialized"_s)
     , m_effectAllowed(WTF::move(effectAllowed))
+    , m_type(type)
     , m_shouldUpdateDragImage(false)
 #endif
 {
