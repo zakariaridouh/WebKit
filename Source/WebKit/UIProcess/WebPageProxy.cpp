@@ -20436,6 +20436,33 @@ void WebPageProxy::reportMixedContentViolation(FrameIdentifier frameID, bool blo
     addConsoleMessage(frameID, MessageSource::Security, MessageLevel::Warning, message);
 }
 
+#if HAVE(IOSURFACE)
+
+void WebPageProxy::completeDisplayOnlyImage(RemoteSnapshotIdentifier imageIdentifier, FrameIdentifier rootFrameIdentifier, float scale, const ColorSpace& colorSpace, CompletionHandler<void(bool)>&& completionHandler)
+{
+    // Started now, so that a rendering that arrives after its process has gone or has left this page,
+    // or after this page has moved to another drawing area, finds nothing to fill and is dropped.
+    RefPtr gpuProcess = GPUProcessProxy::singletonIfCreated();
+    RefPtr drawingArea = dynamicDowncast<RemoteLayerTreeDrawingAreaProxy>(this->drawingArea());
+    if (!gpuProcess || !drawingArea || !drawingArea->startDisplayOnlyImage(imageIdentifier)) {
+        completionHandler(false);
+        return;
+    }
+
+    gpuProcess->sinkCompletedSnapshotToIOSurface(imageIdentifier, scale, colorSpace, rootFrameIdentifier, [weakDrawingArea = WeakPtr { *drawingArea }, imageIdentifier, completionHandler = WTF::move(completionHandler)](std::optional<ImageBufferBackendHandle>&& handle) mutable {
+        RefPtr drawingArea = weakDrawingArea.get();
+        completionHandler(handle && drawingArea && drawingArea->completeDisplayOnlyImage(imageIdentifier, WTF::move(*handle)));
+    });
+}
+
+void WebPageProxy::releaseDisplayOnlyImage(RemoteSnapshotIdentifier imageIdentifier)
+{
+    if (RefPtr drawingArea = dynamicDowncast<RemoteLayerTreeDrawingAreaProxy>(this->drawingArea()))
+        drawingArea->releaseDisplayOnlyImage(imageIdentifier);
+}
+
+#endif
+
 Vector<Ref<WebProcessProxy>> WebPageProxy::activeRemoteFrameProcesses() const
 {
     Vector<Ref<WebProcessProxy>> processes;

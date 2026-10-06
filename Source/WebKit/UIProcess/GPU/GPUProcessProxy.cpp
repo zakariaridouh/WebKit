@@ -1031,6 +1031,15 @@ bool GPUProcessProxy::waitForSnapshot(RemoteSnapshotIdentifier identifier, Secon
     return sendSync(Messages::GPUProcess::WaitForSnapshot(identifier), 0, timeout, IPC::SendSyncOption::MaintainOrderingWithAsyncMessages).succeeded();
 }
 
+#if HAVE(IOSURFACE)
+
+void GPUProcessProxy::sinkCompletedSnapshotToIOSurface(RemoteSnapshotIdentifier identifier, float scale, const WebCore::ColorSpace& colorSpace, WebCore::FrameIdentifier rootFrameIdentifier, CompletionHandler<void(std::optional<ImageBufferBackendHandle>&&)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::GPUProcess::SinkCompletedSnapshotToIOSurface(identifier, scale, colorSpace, rootFrameIdentifier), WTF::move(completionHandler));
+}
+
+#endif
+
 } // namespace WebKit
 
 #endif // ENABLE(GPU_PROCESS)

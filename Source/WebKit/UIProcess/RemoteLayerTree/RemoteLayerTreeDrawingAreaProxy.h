@@ -115,6 +115,10 @@ public:
     // checked may set them.
     void setLayerContentsFromAnotherProcess(WebCore::PlatformLayerIdentifier, RemoteLayerBackingStoreProperties&&);
 
+    bool startDisplayOnlyImage(RemoteSnapshotIdentifier);
+    bool completeDisplayOnlyImage(RemoteSnapshotIdentifier, ImageBufferBackendHandle&&);
+    void releaseDisplayOnlyImage(RemoteSnapshotIdentifier);
+
     virtual ~RemoteLayerTreeDrawingAreaProxy();
 
     void ref() const final { RefCounted::ref(); }

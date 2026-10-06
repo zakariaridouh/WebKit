@@ -115,6 +115,7 @@ class FrameDamageHistory;
 class FrameSelection;
 class Geolocation;
 class GraphicsLayer;
+class GraphicsContext;
 class GraphicsLayerFactory;
 class HTMLAttachmentElement;
 class HTMLFrameOwnerElement;
@@ -491,6 +492,12 @@ public:
     // nullopt means frames from another process can no longer be applied to a layer directly.
     virtual void offscreenCanvasPlaceholderLayerChanged(PlaceholderRenderingContextIdentifier, std::optional<PlatformLayerIdentifier>) { }
 #endif
+
+    // Frames hosted elsewhere that are painted into the context record themselves into the same
+    // rendering. Resolves, once every frame has recorded, to an image whose pixels this process
+    // never sees, which only the compositor can display. Null when this page cannot record outside
+    // this process.
+    WEBCORE_EXPORT virtual RefPtr<NativePromise<Ref<NativeImage>, void>> createDisplayOnlyImage(FrameIdentifier, const FloatSize&, float scale, const ColorSpace&, NOESCAPE const Function<void(GraphicsContext&)>& paint);
 
 #if ENABLE(WEBGL)
     WEBCORE_EXPORT virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const;

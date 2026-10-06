@@ -332,6 +332,8 @@ private:
     virtual Ref<PlatformCAAnimation> createPlatformCAAnimation(PlatformCAAnimation::AnimationType, const String& keyPath);
 
     virtual void setLayerContentsToImageBuffer(PlatformCALayer&, ImageBuffer*) { }
+    // Overridden for images whose pixels are not in this process, which have no platform image.
+    virtual void setLayerContentsToNativeImage(PlatformCALayer&, NativeImage&);
 
     PlatformCALayer* primaryLayer() const { return m_structuralLayer.get() ? m_structuralLayer.get() : m_layer.get(); }
     PlatformCALayer* NODELETE hostLayerForSublayers() const;

@@ -102,10 +102,14 @@ header: <WebCore/ProcessQualified.h>
     WebCore::ProcessIdentifier processIdentifier();
 };
 
-[Alias=class ProcessQualified<WTF::UUID>, CustomHeader] alias WebCore::ScriptExecutionContextIdentifier {
+[Alias=class ProcessQualified<WTF::UUID>, AdditionalEncoder=StreamConnectionEncoder, CustomHeader] alias WebCore::ScriptExecutionContextIdentifier {
     WTF::UUID object();
     WebCore::ProcessIdentifier processIdentifier();
 };
+
+header: "RemoteSnapshotIdentifier.h"
+# A ProcessQualified<WTF::UUID>, whose coder is declared as ScriptExecutionContextIdentifier.
+using WebKit::RemoteSnapshotIdentifier = WebCore::ScriptExecutionContextIdentifier;
 
 [Alias=class WebCore::ProcessQualified<TransactionIdentifier>, CustomHeader] alias WebKit::TransactionID {
     WebKit::TransactionIdentifier object();

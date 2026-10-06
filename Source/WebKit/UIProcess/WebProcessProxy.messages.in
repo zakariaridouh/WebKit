@@ -140,4 +140,9 @@ messages -> WebProcessProxy WantsDispatchMessage {
     OffscreenCanvasPlaceholderDestroyed(WebCore::PlaceholderRenderingContextIdentifier identifier)
     CommitOffscreenCanvasPlaceholderFrame(WebCore::RemotePlaceholderRenderingContextIdentifier identifier, struct WebCore::ImageBufferTransferHandle transferHandle, std::optional<WebKit::ImageBufferBackendHandle> layerContentsHandle, bool originClean, bool opaque) -> (bool placeholderMayExist)
 #endif
+
+#if HAVE(IOSURFACE)
+    [EnabledBy=RemoteSnapshottingEnabled] CompleteDisplayOnlyImage(WebCore::PageIdentifier pageID, WebKit::RemoteSnapshotIdentifier imageIdentifier, WebCore::FrameIdentifier rootFrameIdentifier, float scale, WebCore::ColorSpace colorSpace) -> (bool success)
+    [EnabledBy=RemoteSnapshottingEnabled] ReleaseDisplayOnlyImage(WebCore::PageIdentifier pageID, WebKit::RemoteSnapshotIdentifier imageIdentifier)
+#endif
 }

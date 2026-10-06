@@ -167,6 +167,7 @@ public:
     void setContents(CFTypeRef) override;
     void setDelegatedContents(const WebCore::PlatformCALayerDelegatedContents&) override;
     void setRemoteDelegatedContents(const PlatformCALayerRemoteDelegatedContents&);
+    void setDisplayOnlyImage(RemoteSnapshotIdentifier);
     void setContentsRect(const WebCore::FloatRect&) override;
 
     void setMinificationFilter(WebCore::PlatformCALayer::FilterType) override;

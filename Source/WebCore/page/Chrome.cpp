@@ -69,6 +69,7 @@
 #include "WindowFeatures.h"
 #include "WorkerClient.h"
 #include <JavaScriptCore/VM.h>
+#include <wtf/NativePromise.h>
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
@@ -549,6 +550,11 @@ RefPtr<PlaceholderRenderingContextSource> Chrome::createPlaceholderRenderingCont
     return m_client->createPlaceholderRenderingContextSource(identifier);
 }
 #endif
+
+RefPtr<NativePromise<Ref<NativeImage>, void>> Chrome::createDisplayOnlyImage(FrameIdentifier rootFrameIdentifier, const FloatSize& size, float scale, const ColorSpace& colorSpace, NOESCAPE const Function<void(GraphicsContext&)>& paint)
+{
+    return m_client->createDisplayOnlyImage(rootFrameIdentifier, size, scale, colorSpace, paint);
+}
 
 std::unique_ptr<WorkerClient> Chrome::createWorkerClient(SerialFunctionDispatcher& dispatcher)
 {

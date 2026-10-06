@@ -3216,17 +3216,18 @@ void GraphicsLayerCA::updateContentsImage()
         Ref contentsLayer = *m_contentsLayer;
         contentsLayer->setMinificationFilter(PlatformCALayer::FilterType::Trilinear);
 
-        if (RefPtr pendingContentsImage = std::exchange(m_pendingContentsImage, nullptr))
-            contentsLayer->setContents(pendingContentsImage->platformImage().get());
+        RefPtr pendingContentsImage = std::exchange(m_pendingContentsImage, nullptr);
+        if (pendingContentsImage)
+            setLayerContentsToNativeImage(contentsLayer, *pendingContentsImage);
         else
             setLayerContentsToImageBuffer(contentsLayer, m_pendingContentsImageBuffer.get());
 
         if (m_layerClones) {
             for (auto& layer : m_layerClones->contentsLayerClones.values()) {
-                if (m_pendingContentsImageBuffer)
-                    setLayerContentsToImageBuffer(layer, m_pendingContentsImageBuffer.get());
+                if (pendingContentsImage)
+                    setLayerContentsToNativeImage(layer, *pendingContentsImage);
                 else
-                    layer->setContents(protect(contentsLayer->contents()));
+                    setLayerContentsToImageBuffer(layer, m_pendingContentsImageBuffer.get());
             }
         }
 
@@ -3238,6 +3239,11 @@ void GraphicsLayerCA::updateContentsImage()
         // m_contentsLayer will be removed via updateSublayerList.
         m_contentsLayer = nullptr;
     }
+}
+
+void GraphicsLayerCA::setLayerContentsToNativeImage(PlatformCALayer& layer, NativeImage& image)
+{
+    layer.setContents(image.platformImage().get());
 }
 
 void GraphicsLayerCA::updateContentsPlatformLayer()

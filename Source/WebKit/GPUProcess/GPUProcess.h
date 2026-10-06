@@ -29,7 +29,9 @@
 
 #include "AuxiliaryProcess.h"
 #include "GPUProcessPreferences.h"
+#include "ImageBufferBackendHandle.h"
 #include "RemoteSerializedImageBufferIdentifier.h"
+#include <WebCore/ColorSpace.h>
 #include <WebCore/ImageBufferTransferIdentifier.h>
 #include "RemoteSnapshotIdentifier.h"
 #include "SandboxExtension.h"
@@ -282,7 +284,10 @@ private:
 #if PLATFORM(COCOA)
     void sinkCompletedSnapshotToPDF(RemoteSnapshotIdentifier, WebCore::FrameIdentifier, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&&);
 #endif
-    void sinkCompletedSnapshotToBitmap(WebKit::RemoteSnapshotIdentifier, WebCore::FrameIdentifier, CompletionHandler<void(std::optional<WebCore::ShareableBitmap::Handle>&&)>&&);
+    void sinkCompletedSnapshotToBitmap(RemoteSnapshotIdentifier, WebCore::FrameIdentifier, CompletionHandler<void(std::optional<WebCore::ShareableBitmap::Handle>&&)>&&);
+#if HAVE(IOSURFACE)
+    void sinkCompletedSnapshotToIOSurface(RemoteSnapshotIdentifier, float scale, const WebCore::ColorSpace&, WebCore::FrameIdentifier, CompletionHandler<void(std::optional<ImageBufferBackendHandle>&&)>&&);
+#endif
     void releaseSnapshot(RemoteSnapshotIdentifier);
     void snapshotFrameWillBeDrawnByProcess(RemoteSnapshotIdentifier, WebCore::FrameIdentifier, WebCore::ProcessIdentifier);
     void waitForSnapshot(RemoteSnapshotIdentifier, CompletionHandler<void()>&&);
@@ -291,6 +296,7 @@ private:
     // Takes the snapshot once it is complete, or passes null if it failed.
     void takeSnapshotWhenComplete(RemoteSnapshotIdentifier, WebCore::FrameIdentifier rootFrameIdentifier, CompletionHandler<void(RefPtr<RemoteSnapshot>&&)>&&);
     void abandonSnapshotFramesOwnedBy(WebCore::ProcessIdentifier);
+    void removeSnapshotsForProcess(WebCore::ProcessIdentifier);
 
 #if USE(OS_STATE)
     RetainPtr<NSDictionary> additionalStateForDiagnosticReport() const final;

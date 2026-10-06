@@ -29,6 +29,7 @@
 #import "AuxiliaryProcessProxy.h"
 #import "LayerProperties.h"
 #import "Logging.h"
+#import "RemoteLayerBackingStore.h"
 #import "RemoteLayerTreeCommitBundle.h"
 #import "RemoteLayerTreeDrawingAreaProxy.h"
 #import "RemoteLayerTreePropertyApplier.h"
@@ -231,6 +232,9 @@ bool RemoteLayerTreeHost::updateLayerTree(const IPC::Connection& connection, con
 
         RemoteLayerTreePropertyApplier::applyProperties(*node, this, properties, m_nodes);
 
+        if (properties.changedProperties.contains(LayerChange::DisplayOnlyImageChanged))
+            applyDisplayOnlyImage(*node, processIdentifier, properties.displayOnlyImage);
+
         if (m_isDebugLayerTreeHost) {
             RetainPtr layer = node->layer();
             if (properties.changedProperties.contains(LayerChange::BorderWidthChanged))
@@ -271,6 +275,51 @@ void RemoteLayerTreeHost::asyncSetLayerContents(PlatformLayerIdentifier layerID,
         return;
 
     node->applyBackingStore(this, properties);
+}
+
+bool RemoteLayerTreeHost::startDisplayOnlyImage(RemoteSnapshotIdentifier image)
+{
+    return m_displayOnlyImages.add(image, nullptr).isNewEntry;
+}
+
+bool RemoteLayerTreeHost::completeDisplayOnlyImage(RemoteSnapshotIdentifier image, ImageBufferBackendHandle&& handle)
+{
+    auto iterator = m_displayOnlyImages.find(image);
+    if (iterator == m_displayOnlyImages.end())
+        return false;
+    auto contents = RemoteLayerBackingStoreProperties::layerContentsBufferFromBackendHandle(WTF::move(handle), true);
+    if (!contents.buffer)
+        return false;
+    iterator->value = WTF::move(contents.buffer);
+    return true;
+}
+
+void RemoteLayerTreeHost::releaseDisplayOnlyImage(RemoteSnapshotIdentifier image)
+{
+    m_displayOnlyImages.remove(image);
+}
+
+void RemoteLayerTreeHost::removeDisplayOnlyImagesForProcess(WebCore::ProcessIdentifier processIdentifier)
+{
+    // Only the minting process can release or display one, so nothing else would drop them.
+    m_displayOnlyImages.removeIf([&](auto& entry) {
+        return entry.key.processIdentifier() == processIdentifier;
+    });
+}
+
+void RemoteLayerTreeHost::applyDisplayOnlyImage(RemoteLayerTreeNode& node, WebCore::ProcessIdentifier sender, Markable<RemoteSnapshotIdentifier> image)
+{
+    // Only the process that minted an image may display it, and only on its own layers. Both
+    // identifiers are chosen by the sender, so both are checked against it.
+    RetainPtr<id> contents;
+    if (image && image->processIdentifier() == sender && node.layerID().processIdentifier() == sender)
+        contents = m_displayOnlyImages.get(*image);
+
+    RetainPtr layer = node.layer();
+    if (contents)
+        [layer setContents:contents.get()];
+    else
+        [layer _web_clearContents];
 }
 
 RemoteLayerTreeNode* RemoteLayerTreeHost::nodeForID(std::optional<PlatformLayerIdentifier> layerID) const

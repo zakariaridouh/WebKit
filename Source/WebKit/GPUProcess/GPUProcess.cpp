@@ -157,6 +157,7 @@ void GPUProcess::removeGPUConnectionToWebProcess(GPUConnectionToWebProcess& conn
 
     removeTransferredImageBuffersForProcess(connection.webProcessIdentifier());
     abandonSnapshotFramesOwnedBy(connection.webProcessIdentifier());
+    removeSnapshotsForProcess(connection.webProcessIdentifier());
 
     recomputeNowPlayingOwner();
 
@@ -757,6 +758,27 @@ void GPUProcess::sinkCompletedSnapshotToBitmap(RemoteSnapshotIdentifier identifi
     });
 }
 
+#if HAVE(IOSURFACE)
+
+void GPUProcess::sinkCompletedSnapshotToIOSurface(RemoteSnapshotIdentifier identifier, float scale, const ColorSpace& colorSpace, FrameIdentifier rootFrameIdentifier, CompletionHandler<void(std::optional<ImageBufferBackendHandle>&&)>&& completionHandler)
+{
+    takeSnapshotWhenComplete(identifier, rootFrameIdentifier, [identifier, scale, colorSpace, rootFrameIdentifier, completionHandler = WTF::move(completionHandler)](RefPtr<RemoteSnapshot>&& snapshot) mutable {
+        if (!snapshot) {
+            completionHandler({ });
+            return;
+        }
+        // The surface outlives this call in the UI process, so charge it to the process that asked for it.
+        RefPtr connection = GPUProcess::singleton().webProcessConnection(identifier.processIdentifier());
+        if (!connection) {
+            completionHandler({ });
+            return;
+        }
+        completionHandler(snapshot->drawToIOSurface(snapshot->size(), scale, colorSpace, rootFrameIdentifier, connection->webProcessIdentity()));
+    });
+}
+
+#endif
+
 void GPUProcess::releaseSnapshot(RemoteSnapshotIdentifier identifier)
 {
     // Currently it's not possible to know if a snapshot exists, hence no ASSERT.
@@ -782,6 +804,23 @@ void GPUProcess::waitForSnapshot(RemoteSnapshotIdentifier identifier, Completion
     snapshot->whenComplete([completionHandler = WTF::move(completionHandler)](bool) mutable {
         completionHandler();
     });
+}
+
+void GPUProcess::removeSnapshotsForProcess(WebCore::ProcessIdentifier processIdentifier)
+{
+    // Only the minting process can ask for a snapshot to be drawn.
+    Vector<Ref<RemoteSnapshot>> snapshots;
+    {
+        Locker locker(m_globalResourceLocker);
+        m_snapshots.removeIf([&](auto& entry) {
+            if (entry.key.processIdentifier() != processIdentifier)
+                return false;
+            snapshots.append(entry.value);
+            return true;
+        });
+    }
+    for (Ref snapshot : snapshots)
+        snapshot->fail();
 }
 
 #if ENABLE(MEDIA_STREAM)

@@ -35,6 +35,7 @@
 #include "APIObject.h"
 #include "APISecurityOrigin.h"
 #include "APIString.h"
+#include "DisplayOnlyImageProxy.h"
 #include "DrawingArea.h"
 #include "FindController.h"
 #include "FrameInfoData.h"
@@ -137,6 +138,7 @@
 #include <WebCore/ViewportConfiguration.h>
 #include <WebCore/WindowFeatures.h>
 #include <wtf/JSONValues.h>
+#include <wtf/NativePromise.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
@@ -1243,6 +1245,17 @@ void WebChromeClient::offscreenCanvasPlaceholderLayerChanged(WebCore::Placeholde
 {
     if (RefPtr page = m_page.get())
         page->send(Messages::WebPageProxy::SetOffscreenCanvasPlaceholderLayer(identifier, layerID));
+}
+#endif
+
+#if HAVE(IOSURFACE)
+RefPtr<NativePromise<Ref<WebCore::NativeImage>, void>> WebChromeClient::createDisplayOnlyImage(WebCore::FrameIdentifier rootFrameIdentifier, const WebCore::FloatSize& size, float scale, const WebCore::ColorSpace& colorSpace, NOESCAPE const Function<void(WebCore::GraphicsContext&)>& paint)
+{
+    RefPtr page = m_page.get();
+    // Only layers composited in the UI process can display the result.
+    if (!page || !page->corePage()->settings().remoteSnapshottingEnabled() || !isUsingUISideCompositing())
+        return nullptr;
+    return DisplayOnlyImageProxy::create(*page, rootFrameIdentifier, size, scale, colorSpace, paint);
 }
 #endif
 #endif

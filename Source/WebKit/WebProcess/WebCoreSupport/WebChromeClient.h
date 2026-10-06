@@ -293,6 +293,9 @@ private:
     RefPtr<WebCore::PlaceholderRenderingContextSource> createPlaceholderRenderingContextSource(const WebCore::RemotePlaceholderRenderingContextIdentifier&) final;
     void offscreenCanvasPlaceholderLayerChanged(WebCore::PlaceholderRenderingContextIdentifier, std::optional<WebCore::PlatformLayerIdentifier>) final;
 #endif
+#if HAVE(IOSURFACE)
+    RefPtr<NativePromise<Ref<WebCore::NativeImage>, void>> createDisplayOnlyImage(WebCore::FrameIdentifier, const WebCore::FloatSize&, float scale, const WebCore::ColorSpace&, NOESCAPE const Function<void(WebCore::GraphicsContext&)>& paint) final;
+#endif
 #endif
     std::unique_ptr<WebCore::WorkerClient> createWorkerClient(SerialFunctionDispatcher&) final;
 

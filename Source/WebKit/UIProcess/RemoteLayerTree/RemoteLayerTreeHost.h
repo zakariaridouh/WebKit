@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include "ImageBufferBackendHandle.h"
 #include "PlaybackSessionContextIdentifier.h"
 #include "RemoteLayerTreeNode.h"
 #include "RemoteLayerTreeTransaction.h"
+#include "RemoteSnapshotIdentifier.h"
 #include <WebCore/PlatformCALayer.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <wtf/HashMap.h>
@@ -74,6 +76,15 @@ public:
     bool updateLayerTree(const IPC::Connection&, const RemoteLayerTreeTransaction&, const std::optional<MainFrameData>&, float indicatorScaleFactor  = 1);
     void asyncSetLayerContents(WebCore::PlatformLayerIdentifier, RemoteLayerBackingStoreProperties&&);
 
+    // Held here rather than handed back to the process that asked for it, which must not see the
+    // pixels. That process names it when it wants one of its layers to display it.
+    bool startDisplayOnlyImage(RemoteSnapshotIdentifier);
+    // Only completes an image still started, so that one released, or dropped along with its process,
+    // stays dropped.
+    bool completeDisplayOnlyImage(RemoteSnapshotIdentifier, ImageBufferBackendHandle&&);
+    void releaseDisplayOnlyImage(RemoteSnapshotIdentifier);
+    void removeDisplayOnlyImagesForProcess(WebCore::ProcessIdentifier);
+
     void setIsDebugLayerTreeHost(bool flag) { m_isDebugLayerTreeHost = flag; }
     bool isDebugLayerTreeHost() const { return m_isDebugLayerTreeHost; }
 
@@ -112,6 +123,7 @@ private:
 
     bool updateBannerLayers(const std::optional<MainFrameData>&);
 
+    void applyDisplayOnlyImage(RemoteLayerTreeNode&, WebCore::ProcessIdentifier sender, Markable<RemoteSnapshotIdentifier>);
     void layerWillBeRemoved(WebCore::ProcessIdentifier, WebCore::PlatformLayerIdentifier);
 
     WeakPtr<RemoteLayerTreeDrawingAreaProxy> m_drawingArea;
@@ -121,6 +133,7 @@ private:
     HashMap<WebCore::LayerHostingContextIdentifier, WebCore::PlatformLayerIdentifier> m_hostedLayers;
     HashMap<WebCore::ProcessIdentifier, HashSet<WebCore::PlatformLayerIdentifier>> m_hostedLayersInProcess;
     HashMap<WebCore::PlatformLayerIdentifier, RetainPtr<WKAnimationDelegate>> m_animationDelegates;
+    HashMap<RemoteSnapshotIdentifier, RetainPtr<id>> m_displayOnlyImages;
 #if HAVE(AVKIT)
     HashMap<WebCore::PlatformLayerIdentifier, PlaybackSessionContextIdentifier> m_videoLayers;
 #endif

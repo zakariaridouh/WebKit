@@ -59,9 +59,6 @@ header: <wtf/text/AtomString.h>
     uint64_t low();
 }
 
-header: "RemoteSnapshotIdentifier.h"
-using WebKit::RemoteSnapshotIdentifier = WTF::UUID;
-
 header: <wtf/JSONValues.h>
 [RefCounted, CustomHeader, CreateUsing=optionalParseJSON] class WTF::JSONImpl::Value {
     String toJSONString();

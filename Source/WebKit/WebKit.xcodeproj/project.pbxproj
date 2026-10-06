@@ -1567,6 +1567,7 @@
 		5C1A7E512FA0000000000001 /* TransientZoomState.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C1A7E502FA0000000000001 /* TransientZoomState.h */; };
 		5C20CBA01BB1ECD800895BB1 /* NetworkSession.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C20CB9E1BB0DD1800895BB1 /* NetworkSession.h */; };
 		5C2397D52949235800BB4E10 /* WebRemoteFrameClient.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C2397D32949235700BB4E10 /* WebRemoteFrameClient.h */; };
+		DF9F173318F2C44C95734886 /* DisplayOnlyImageProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C6BE81F46F00E97FF47359F2 /* DisplayOnlyImageProxy.h */; };
 		5C26958520043212005C439B /* WKOpenPanelParametersPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C26958420042F12005C439B /* WKOpenPanelParametersPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5C298DA01C3DF02100470AFE /* PendingDownload.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C298D9E1C3DEF2900470AFE /* PendingDownload.h */; };
 		5C2C6FA927C9E5E200CCDA9E /* _WKDataTask.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C2C6FA427C9529900CCDA9E /* _WKDataTask.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -6736,6 +6737,8 @@
 		5C20CB9E1BB0DD1800895BB1 /* NetworkSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSession.h; sourceTree = "<group>"; };
 		5C2397D32949235700BB4E10 /* WebRemoteFrameClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebRemoteFrameClient.h; sourceTree = "<group>"; };
 		5C2397D42949235700BB4E10 /* WebRemoteFrameClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebRemoteFrameClient.cpp; sourceTree = "<group>"; };
+		398C30ABB490833500FA22A1 /* DisplayOnlyImageProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DisplayOnlyImageProxy.cpp; sourceTree = "<group>"; };
+		C6BE81F46F00E97FF47359F2 /* DisplayOnlyImageProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DisplayOnlyImageProxy.h; sourceTree = "<group>"; };
 		5C26958420042F12005C439B /* WKOpenPanelParametersPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKOpenPanelParametersPrivate.h; sourceTree = "<group>"; };
 		5C298D9E1C3DEF2900470AFE /* PendingDownload.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PendingDownload.h; sourceTree = "<group>"; };
 		5C2B1AF3223AB72800B91CF7 /* DownloadMonitor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DownloadMonitor.cpp; sourceTree = "<group>"; };
@@ -14736,6 +14739,8 @@
 				1CB7461927436DE300F19874 /* WebGPU */,
 				0F86361B27BDC2B6006E6D52 /* BufferIdentifierSet.h */,
 				86D1967529A4E6D30083B077 /* BufferIdentifierSet.serialization.in */,
+				398C30ABB490833500FA22A1 /* DisplayOnlyImageProxy.cpp */,
+				C6BE81F46F00E97FF47359F2 /* DisplayOnlyImageProxy.h */,
 				727A7F39240788F1004D2931 /* ImageBufferBackendHandle.h */,
 				0FA7467E27BB611800B5FF5A /* ImageBufferBackendHandleSharing.h */,
 				72F9A6CC2D30C5070019DE4B /* ImageBufferRemoteDisplayListBackend.cpp */,
@@ -18549,6 +18554,7 @@
 				7AFA6F6D2A9F58440055322A /* DisplayLink.h in Headers */,
 				0F189CAC24749F2F00E58D81 /* DisplayLinkObserverID.h in Headers */,
 				7AFA6F6E2A9F584A0055322A /* DisplayLinkProcessProxyClient.h in Headers */,
+				DF9F173318F2C44C95734886 /* DisplayOnlyImageProxy.h in Headers */,
 				07E065132F19DDEF00ECDA2E /* DocumentEditingContext.h in Headers */,
 				5C1427021C23F84C00D41183 /* Download.h in Headers */,
 				5C1427051C23F84C00D41183 /* DownloadID.h in Headers */,

@@ -40,6 +40,7 @@
 #include "ScrollingCoordinator.h"
 #include "TextDetectorInterface.h"
 #include "WorkerClient.h"
+#include <wtf/NativePromise.h>
 
 #if ENABLE(WEBGL)
 #include "GraphicsContextGL.h"
@@ -109,6 +110,11 @@ RefPtr<ShapeDetection::FaceDetector> ChromeClient::createFaceDetector(const Shap
 }
 
 RefPtr<ShapeDetection::TextDetector> ChromeClient::createTextDetector() const
+{
+    return nullptr;
+}
+
+RefPtr<NativePromise<Ref<NativeImage>, void>> ChromeClient::createDisplayOnlyImage(FrameIdentifier, const FloatSize&, float, const ColorSpace&, NOESCAPE const Function<void(GraphicsContext&)>&)
 {
     return nullptr;
 }

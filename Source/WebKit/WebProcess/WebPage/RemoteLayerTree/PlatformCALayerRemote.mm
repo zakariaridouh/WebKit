@@ -843,6 +843,7 @@ CFTypeRef PlatformCALayerRemote::contents() const
 
 void PlatformCALayerRemote::setContents(CFTypeRef value)
 {
+    m_properties.displayOnlyImage = { };
     if (CheckedPtr store = m_properties.backingStoreOrProperties.store.get(); store && !value)
         store->clearBackingStore();
 }
@@ -855,8 +856,18 @@ void PlatformCALayerRemote::setDelegatedContents(const PlatformCALayerDelegatedC
 void PlatformCALayerRemote::setRemoteDelegatedContents(const PlatformCALayerRemoteDelegatedContents& contents)
 {
     ASSERT(m_acceleratesDrawing);
+    m_properties.displayOnlyImage = { };
     ensureBackingStore();
     protect(m_properties.backingStoreOrProperties.store)->setDelegatedContents(contents);
+}
+
+void PlatformCALayerRemote::setDisplayOnlyImage(RemoteSnapshotIdentifier image)
+{
+    if (m_properties.displayOnlyImage == image)
+        return;
+
+    m_properties.displayOnlyImage = image;
+    m_properties.notePropertiesChanged(LayerChange::DisplayOnlyImageChanged);
 }
 
 void PlatformCALayerRemote::setContentsRect(const FloatRect& value)

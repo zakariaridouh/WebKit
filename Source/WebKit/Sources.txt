@@ -792,6 +792,7 @@ WebProcess/GPU/RemoteSharedResourceCacheProxy.cpp
 WebProcess/GPU/ShapeDetection/RemoteBarcodeDetectorProxy.cpp
 WebProcess/GPU/ShapeDetection/RemoteFaceDetectorProxy.cpp
 WebProcess/GPU/ShapeDetection/RemoteTextDetectorProxy.cpp
+WebProcess/GPU/graphics/DisplayOnlyImageProxy.cpp
 WebProcess/GPU/graphics/Model/RemoteMeshProxy.cpp
 WebProcess/GPU/graphics/Model/ModelDowncastConvertToBackingContext.cpp
 WebProcess/GPU/graphics/WebGPU/RemoteAdapterProxy.cpp
