@@ -569,6 +569,8 @@ list(APPEND WebKit_SOURCES
     UIProcess/ios/_WKCaptionStyleMenuControllerAVKit.mm
     UIProcess/ios/_WKCaptionStyleMenuControllerIOS.mm
 
+    WebProcess/WebCoreSupport/WebDeviceOrientationUpdateProvider.cpp
+
     ${WEBKIT_DIR}/Shared/EntryPointUtilities/Cocoa/ExtensionEventHandler.mm
 
     ${WEBKIT_DIR}/ModelProcess/cocoa/WKUSDStageConverter.swift
