@@ -42,6 +42,12 @@ extension WKTextSelectionController {
     @nonobjc
     private var lastRangeSelectionExtentPoint: NSPoint? = nil
 
+    @nonobjc
+    private var rangeSelectionWasPreventedByPage = false
+
+    @nonobjc
+    private var rangeSelectionCount = 0
+
     init(view: WKWebView) {
         self.view = view
         super.init()
@@ -341,21 +347,48 @@ extension WKTextSelectionController {
         lastRangeSelectionExtentPoint = nil
         page.cancelAutoscroll()
 
-        impl.beginSuppressingSingleClickGestureForTextSelection()
+        rangeSelectionCount += 1
+        let rangeSelection = rangeSelectionCount
+        rangeSelectionWasPreventedByPage = false
+
+        // A page can prevent a word or paragraph selection the way it prevents a mouse double click from selecting, which
+        // the web process decides. Suppress the single click only once the selection is made, so the page gets it otherwise.
+        let pageMayPreventSelection = granularity != .character && !shouldExtendExistingSelection
+        if !pageMayPreventSelection {
+            impl.beginSuppressingSingleClickGestureForTextSelection()
+        }
 
         Task.immediate {
             if shouldExtendExistingSelection {
                 await self.updateSelection(extendingTo: point, with: granularity, anchoredOn: .CurrentSelection)
+                return
+            }
+
+            let preventedByPage = await withCheckedContinuation { continuation in
+                page.selectTextWithGranularityAtPoint(
+                    nil,
+                    WebCore.IntPoint(point),
+                    .init(granularity),
+                    true, // FIXME: Properly handle the case where this isn't actually true.
+                    consuming: .init(continuation)
+                )
+            }
+
+            // A quick double click ends its range selection before the web process replies.
+            guard
+                pageMayPreventSelection,
+                rangeSelection == self.rangeSelectionCount,
+                self.currentRangeSelectionGranularity != nil,
+                let impl = self.view?._impl()
+            else {
+                return
+            }
+
+            if preventedByPage {
+                Logger.viewGestures.log("[pageProxyID=\(page.logIdentifier())] Not selecting because the page prevented the mouse press")
+                self.rangeSelectionWasPreventedByPage = true
             } else {
-                await withCheckedContinuation { continuation in
-                    page.selectTextWithGranularityAtPoint(
-                        nil,
-                        WebCore.IntPoint(point),
-                        .init(granularity),
-                        true, // FIXME: Properly handle the case where this isn't actually true.
-                        consuming: .init(continuation)
-                    )
-                }
+                impl.beginSuppressingSingleClickGestureForTextSelection()
             }
         }
     }
@@ -378,6 +411,10 @@ extension WKTextSelectionController {
             return
         }
 
+        guard !rangeSelectionWasPreventedByPage else {
+            return
+        }
+
         lastRangeSelectionExtentPoint = point
 
         Task.immediate {
@@ -397,6 +434,7 @@ extension WKTextSelectionController {
 
         page.cancelAutoscroll()
         lastRangeSelectionExtentPoint = nil
+        rangeSelectionWasPreventedByPage = false
 
         guard currentRangeSelectionGranularity != nil else {
             assertionFailure("endRangeSelection was called with a nil currentRangeSelectionGranularity")
