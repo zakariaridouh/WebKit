@@ -24,7 +24,6 @@
 #include "SVGTextPathElement.h"
 
 #include "ContainerNodeInlines.h"
-#include "LegacyRenderSVGResource.h"
 #include "NodeName.h"
 #include "RenderSVGTextPath.h"
 #include "SVGDocumentExtensions.h"
@@ -33,7 +32,6 @@
 #include "SVGNames.h"
 #include "SVGParsingError.h"
 #include "SVGPathElement.h"
-#include "Settings.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -119,7 +117,6 @@ void SVGTextPathElement::svgAttributeChanged(const QualifiedName& attrName)
 
     if (SVGURIReference::isKnownAttribute(attrName)) {
         buildPendingResource();
-        updateSVGRendererForElementChange();
         return;
     }
 
@@ -172,24 +169,14 @@ void SVGTextPathElement::buildPendingResource()
     if (!target.element) {
         // Do not register as pending if we are already pending this resource.
         Ref treeScope = treeScopeForSVGReferences();
-        if (treeScope->isPendingSVGResource(*this, target.identifier))
-            return;
-
-        if (!target.identifier.isEmpty()) {
+        if (!target.identifier.isEmpty() && !treeScope->isPendingSVGResource(*this, target.identifier)) {
             treeScope->addPendingSVGResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
     } else if (RefPtr pathElement = dynamicDowncast<SVGPathElement>(*target.element))
         pathElement->addReferencingElement(*this);
 
-    if (document().settings().layerBasedSVGEngineEnabled())
-        return;
-
-    CheckedPtr renderer = this->renderer();
-    if (!renderer)
-        return;
-
-    LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+    updateSVGRendererForElementChange();
 }
 
 Node::NeedsPostConnectionSteps SVGTextPathElement::insertionSteps(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
