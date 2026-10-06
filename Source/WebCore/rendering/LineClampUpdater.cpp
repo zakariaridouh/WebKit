@@ -69,7 +69,7 @@ LineClampUpdater::LineClampUpdater(const RenderBlock& blockContainer)
             return;
         // New, top level line clamp.
         m_isLineClampRoot = true;
-        layoutState->setLineClamp(RenderLayoutState::LineClamp { static_cast<size_t>(maximumLinesForBlockContainer->value), m_blockContainer->style().overflowContinue() == OverflowContinue::Discard });
+        layoutState->setLineClamp(RenderLayoutState::LineClamp { static_cast<size_t>(maximumLinesForBlockContainer->value), m_blockContainer->style().overflowContinue() == OverflowContinue::Discard, { } });
         return;
     }
 
@@ -82,7 +82,7 @@ LineClampUpdater::LineClampUpdater(const RenderBlock& blockContainer)
             return;
         }
         auto effectiveShouldDiscard = m_previousLineClamp->shouldDiscardOverflow  || m_blockContainer->style().overflowContinue() == OverflowContinue::Discard;
-        layoutState->setLineClamp(RenderLayoutState::LineClamp { m_previousLineClamp->maximumLines, effectiveShouldDiscard });
+        layoutState->setLineClamp(RenderLayoutState::LineClamp { m_previousLineClamp->maximumLines, effectiveShouldDiscard, { } });
         return;
     }
 }
@@ -113,7 +113,18 @@ LineClampUpdater::~LineClampUpdater()
     size_t lineCount = m_isLineClampRoot ? 0 : m_previousLineClamp->maximumLines - std::min(m_previousLineClamp->maximumLines, lineClamp->maximumLines);
     if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(m_blockContainer.get()); blockFlow && blockFlow->childrenInline())
         lineCount = blockFlow->lineCount();
-    layoutState->setLineClamp(RenderLayoutState::LineClamp { m_previousLineClamp->maximumLines - std::min(m_previousLineClamp->maximumLines, lineCount), m_previousLineClamp->shouldDiscardOverflow });
+    layoutState->setLineClamp(RenderLayoutState::LineClamp { m_previousLineClamp->maximumLines - std::min(m_previousLineClamp->maximumLines, lineCount), m_previousLineClamp->shouldDiscardOverflow, m_previousLineClamp->clampAfterBox });
+}
+
+bool LineClampUpdater::isAutoLineClampRoot() const
+{
+    // line-clamp: auto (or just a block-ellipsis value) leaves max-lines at auto on a line-clamp container.
+    CheckedRef style = m_blockContainer->style();
+    if (!style->maxLines().isAuto() || style->overflowContinue() != OverflowContinue::Discard)
+        return false;
+    // "If the box is a multicol container, the behavior is the same as continue: auto."
+    CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(m_blockContainer.get());
+    return !blockFlow || !blockFlow->multiColumnFlow();
 }
 
 void LineClampUpdater::setMaximumLines(size_t maximumLines)
@@ -122,7 +133,17 @@ void LineClampUpdater::setMaximumLines(size_t maximumLines)
     if (!layoutState)
         return;
     m_isLineClampRoot = true;
-    layoutState->setLineClamp(RenderLayoutState::LineClamp { maximumLines, m_blockContainer->style().overflowContinue() == OverflowContinue::Discard });
+    layoutState->setLineClamp(RenderLayoutState::LineClamp { maximumLines, m_blockContainer->style().overflowContinue() == OverflowContinue::Discard, { } });
+}
+
+void LineClampUpdater::setClampAfterBox(const RenderBox& clampAfterBox)
+{
+    auto* layoutState = m_blockContainer->view().frameView().layoutContext().layoutState();
+    if (!layoutState)
+        return;
+    m_isLineClampRoot = true;
+    // Lines before the clamp point do not run out of the budget (and no line gets the block ellipsis).
+    layoutState->setLineClamp(RenderLayoutState::LineClamp { std::numeric_limits<size_t>::max(), m_blockContainer->style().overflowContinue() == OverflowContinue::Discard, &clampAfterBox });
 }
 
 void LineClampUpdater::resetLineClamp()
@@ -134,13 +155,10 @@ void LineClampUpdater::resetLineClamp()
     layoutState->setLineClamp({ });
 }
 
-std::optional<size_t> LineClampUpdater::maximumLinesForAutoClampPoint() const
+std::optional<LineClampUpdater::AutoClampPoint> LineClampUpdater::autoClampPoint() const
 {
-    auto& lineClampContainer = downcast<RenderBlockFlow>(m_blockContainer.get());
-    // line-clamp: auto (or just a block-ellipsis value) leaves max-lines at auto on a line-clamp container.
+    auto& lineClampContainer = m_blockContainer.get();
     CheckedRef style = lineClampContainer.style();
-    if (!style->maxLines().isAuto() || style->overflowContinue() != OverflowContinue::Discard || lineClampContainer.multiColumnFlow())
-        return { };
     // "the block size the box would have if its automatic block size were infinite"
     auto maximumContentHeight = lineClampContainer.constrainContentBoxLogicalHeightByMinMax(lineClampContainer.computeContentLogicalHeight(style->logicalHeight(), std::nullopt).value_or(LayoutUnit::max()), std::nullopt);
     if (maximumContentHeight == LayoutUnit::max())
@@ -151,30 +169,61 @@ std::optional<size_t> LineClampUpdater::maximumLinesForAutoClampPoint() const
     // the line-clamp container's automatic block size (as determined below) is not greater than the block size the box would have
     // if its automatic block size were infinite."
     // https://drafts.csswg.org/css-overflow-4/#line-clamp-containers
-    // Lines only go down in the block formatting context, so the lines that fit are the ones before the auto clamp point.
-    size_t inlineLineCount = 0;
-    auto hasLineAfterClampPoint = false;
-    for (CheckedPtr<const RenderObject> descendant = &lineClampContainer; descendant;) {
-        CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(*descendant);
-        auto isSkippedOver = descendant != &lineClampContainer && (descendant->isFloatingOrOutOfFlowPositioned() || (blockFlow && (blockFlow->establishesIndependentFormattingContext() || blockFlow->style().display() == Style::DisplayType::RubyText)));
-        if (isSkippedOver) {
-            descendant = descendant->nextInPreOrderAfterChildren(&lineClampContainer);
-            continue;
+    // The lines of this block formatting context in the subtree, and the ones of them that end within the block size limit.
+    auto countLines = [&](const RenderBox& root) -> std::pair<size_t, size_t> {
+        size_t lineCount = 0;
+        size_t fittingLineCount = 0;
+        for (CheckedPtr<const RenderObject> descendant = &root; descendant;) {
+            CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(*descendant);
+            auto isSkippedOver = descendant != &lineClampContainer && (descendant->isFloatingOrOutOfFlowPositioned() || (blockFlow && (blockFlow->establishesIndependentFormattingContext() || blockFlow->style().display() == Style::DisplayType::RubyText)));
+            if (isSkippedOver) {
+                descendant = descendant->nextInPreOrderAfterChildren(&root);
+                continue;
+            }
+            if (blockFlow && blockFlow->inlineLayout()) {
+                // The line-clamp container's block size limit in this block's coordinates, less the border and padding (of the block and its ancestors) still following its lines.
+                auto availableHeightForLines = blockSizeLimit;
+                for (CheckedPtr<const RenderBlock> ancestor = blockFlow; ancestor && ancestor != &lineClampContainer; ancestor = ancestor->containingBlock())
+                    availableHeightForLines -= ancestor->logicalTop() + ancestor->borderAndPaddingAfter();
+                lineCount += blockFlow->inlineLayout()->lineCountForHeight(LayoutUnit::max()).first;
+                fittingLineCount += blockFlow->inlineLayout()->lineCountForHeight(availableHeightForLines).first;
+            }
+            descendant = descendant->nextInPreOrder(&root);
         }
-        if (blockFlow && blockFlow->inlineLayout()) {
-            // The line-clamp container's block size limit in this block's coordinates, less the border and padding (of the block and its ancestors) still following its lines.
-            auto availableHeightForLines = blockSizeLimit;
-            for (CheckedPtr<const RenderBlock> ancestor = blockFlow; ancestor && ancestor != &lineClampContainer; ancestor = ancestor->containingBlock())
-                availableHeightForLines -= ancestor->logicalTop() + ancestor->borderAndPaddingAfter();
-            auto [lineCount, hasLineAfter] = blockFlow->inlineLayout()->lineCountForHeight(availableHeightForLines);
-            inlineLineCount += lineCount;
-            hasLineAfterClampPoint = hasLineAfterClampPoint || hasLineAfter;
-        }
-        descendant = descendant->nextInPreOrder(&lineClampContainer);
+        return { lineCount, fittingLineCount };
+    };
+
+    if (lineClampContainer.childrenInline()) {
+        auto [lineCount, fittingLineCount] = countLines(lineClampContainer);
+        if (fittingLineCount == lineCount)
+            return { };
+        return AutoClampPoint { fittingLineCount };
     }
-    if (!hasLineAfterClampPoint)
-        return { };
-    return inlineLineCount;
+
+    // "A point between two in-flow block-level sibling boxes in the line-clamp container's block formatting context."
+    auto overflowsBlockSizeLimit = [&](const RenderBox& child) {
+        return child.logicalBottom() + lineClampContainer.marginAfterForChild(child) > blockSizeLimit;
+    };
+    size_t lineCountBeforeChild = 0;
+    std::optional<AutoClampPoint> clampPointAfterPreviousChild;
+    for (CheckedPtr child = lineClampContainer.firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox()) {
+        auto [lineCount, fittingLineCount] = countLines(*child);
+        if (overflowsBlockSizeLimit(*child)) {
+            // The clamp point is after the last line of this child that fits, or else between this child and the previous one.
+            if (fittingLineCount || !clampPointAfterPreviousChild)
+                return AutoClampPoint { lineCountBeforeChild + fittingLineCount };
+            return clampPointAfterPreviousChild;
+        }
+        lineCountBeforeChild += lineCount;
+        // "Ignoring any intervening absolutely positioned elements or element closing boundaries" the last line box of this
+        // child immediately precedes the clamp point after it and gets the block ellipsis. Without a line box, no line does.
+        // https://drafts.csswg.org/css-overflow-4/#block-ellipsis
+        if (lineCount)
+            clampPointAfterPreviousChild = AutoClampPoint { lineCountBeforeChild };
+        else
+            clampPointAfterPreviousChild = AutoClampPoint { CheckedRef { *child } };
+    }
+    return { };
 }
 
 } // namespace WebCore

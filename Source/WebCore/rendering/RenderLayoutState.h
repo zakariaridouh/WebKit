@@ -48,6 +48,8 @@ public:
     struct LineClamp {
         size_t maximumLines { 0 };
         bool shouldDiscardOverflow { false };
+        // A clamp point between this block and its next sibling, which no line box precedes (see the auto clamp point).
+        SingleThreadWeakPtr<const RenderBox> clampAfterBox;
     };
 
     struct LegacyLineClamp {

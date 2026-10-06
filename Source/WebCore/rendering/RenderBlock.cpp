@@ -1401,6 +1401,12 @@ bool RenderBlock::establishesIndependentFormattingContext() const
     if (establishesIndependentFormattingContextIgnoringDisplayType(style))
         return true;
 
+    // flow-root "always establishes a new block formatting context for its contents", and "unless otherwise specified,
+    // however, establishing a new formatting context creates an independent formatting context."
+    // https://drafts.csswg.org/css-display-3/#valdef-display-flow-root
+    if (style.display() == Style::DisplayType::BlockFlowRoot)
+        return true;
+
     if (isGridItem()) {
         // Grid items establish a new independent formatting context, unless they're a subgrid
         // https://drafts.csswg.org/css-grid-2/#grid-item-display
@@ -1436,7 +1442,6 @@ bool RenderBlock::createsNewFormattingContext() const
         || isRenderOrLegacyRenderSVGForeignObject()
         || style.specifiesColumns()
         || style.columnSpan() == ColumnSpan::All
-        || style.display() == Style::DisplayType::BlockFlowRoot
         || establishesIndependentFormattingContext();
 }
 

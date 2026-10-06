@@ -955,14 +955,18 @@ void RenderBlockFlow::layoutInFlowChildren(RelayoutChildren relayoutChildren, La
         };
         layoutChildren(relayoutChildren);
 
-        auto autoClampMaximumLines = lineClampUpdater.maximumLinesForAutoClampPoint();
+        auto autoClamp = lineClampUpdater.isAutoLineClampRoot() ? lineClampUpdater.autoClampPoint() : std::nullopt;
         auto ellipsisIsOnLastLine = lineClampUpdater.isLineClampRoot() && contentFitsWithinMaximumLines(*this);
-        if (autoClampMaximumLines)
-            lineClampUpdater.setMaximumLines(*autoClampMaximumLines);
-        else if (ellipsisIsOnLastLine)
+        if (autoClamp) {
+            WTF::switchOn(*autoClamp, [&](size_t maximumLines) {
+                lineClampUpdater.setMaximumLines(maximumLines);
+            }, [&](const CheckedRef<const RenderBox>& clampAfterBox) {
+                lineClampUpdater.setClampAfterBox(clampAfterBox);
+            });
+        } else if (ellipsisIsOnLastLine)
             lineClampUpdater.resetLineClamp();
 
-        auto contentNeedsRelayout = autoClampMaximumLines || ellipsisIsOnLastLine;
+        auto contentNeedsRelayout = autoClamp || ellipsisIsOnLastLine;
         if (contentNeedsRelayout) {
             rebuildFloatingObjectSetFromIntrudingFloats();
             for (CheckedRef descendant : descendantsOfType<RenderBox>(*this))
@@ -1077,6 +1081,10 @@ void RenderBlockFlow::layoutBlockChildren(RelayoutChildren relayoutChildren, Lay
 
         // Lay out the child.
         layoutBlockChild(child, marginInfo, previousFloatLogicalBottom, maxFloatLogicalBottom);
+
+        // What follows this child is after the clamp point.
+        if (auto* layoutState = view().frameView().layoutContext().layoutState(); layoutState && layoutState->lineClamp() && layoutState->lineClamp()->clampAfterBox == &child)
+            layoutState->setLineClamp(RenderLayoutState::LineClamp { 0, layoutState->lineClamp()->shouldDiscardOverflow, { } });
     }
     
     if (style().marginTrim().contains(Style::MarginTrimSide::BlockEnd))
