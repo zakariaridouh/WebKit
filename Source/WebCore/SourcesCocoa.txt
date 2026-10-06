@@ -208,7 +208,7 @@ editing/mac/TextAlternativeWithRange.mm @nonARC @no-unify-when(bundle<=8)
 editing/mac/TextUndoInsertionMarkupMac.mm @nonARC
 fileapi/FileCocoa.mm @nonARC
 history/mac/HistoryItemMac.mm @nonARC
-html/HTMLMediaElementCocoa.mm
+html/HTMLMediaElementCocoa.mm @nonARC
 html/canvas/GPUCanvasContextCocoa.mm @nonARC
 html/shadow/YouTubeEmbedShadowElement.cpp
 inspector/LegacyWebSocketInspectorInstrumentation.cpp
