@@ -72,7 +72,6 @@ private:
     float computeTextPathStartOffset(const RenderSVGTextPath&) const;
 
     void layoutTextOnLineOrPath(InlineIterator::SVGTextBoxIterator, const RenderSVGInlineText&, const Style::ComputedStyle&);
-    void finalizeTransformMatrices(Vector<InlineIterator::SVGTextBoxIterator>&);
 
     bool NODELETE currentLogicalCharacterAttributes(SVGTextLayoutAttributes*&);
     bool NODELETE currentLogicalCharacterMetrics(SVGTextLayoutAttributes*&, SVGTextMetrics&);
@@ -91,7 +90,7 @@ private:
     HashMap<InlineIterator::SVGTextBox::Key, Vector<SVGTextFragment>> m_fragmentMap;
 
     SVGTextChunkBuilder m_chunkLayoutBuilder;
-    HashSet<InlineIterator::SVGTextBox::Key> m_lineLayoutChunkStarts;
+    SVGTextChunkStarts m_lineLayoutChunkStarts;
 
     SVGTextFragment m_currentTextFragment;
     unsigned m_layoutAttributesPosition { 0 };

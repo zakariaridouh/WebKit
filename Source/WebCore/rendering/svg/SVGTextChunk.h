@@ -21,6 +21,7 @@
 #pragma once
 
 #include "InlineIteratorSVGTextBox.h"
+#include <span>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/OptionSet.h>
@@ -32,18 +33,20 @@ class AffineTransform;
 class SVGInlineTextBox;
 class SVGTextContentElement;
 
-using SVGChunkTransformMap = HashMap<InlineIterator::SVGTextBox::Key, AffineTransform>;
 using SVGTextFragmentMap = HashMap<InlineIterator::SVGTextBox::Key, Vector<SVGTextFragment>>;
+using SVGTextChunkStarts = HashMap<InlineIterator::SVGTextBox::Key, Vector<unsigned>>;
 
 // A SVGTextChunk describes a range of SVGTextFragments, see the SVG spec definition of a "text chunk".
 class SVGTextChunk {
 public:
-    SVGTextChunk(const Vector<InlineIterator::SVGTextBoxIterator>&, unsigned first, unsigned limit, SVGTextFragmentMap&);
+    explicit SVGTextChunk(const InlineIterator::SVGTextBox& firstBox);
+
+    void appendFragments(std::span<SVGTextFragment>);
 
     unsigned NODELETE totalCharacters() const;
     float totalLength() const;
     float totalAnchorShift() const;
-    void layout(SVGChunkTransformMap&) const;
+    void layout() const;
 
 private:
     friend class SVGTextChunkBuilder;
@@ -58,7 +61,8 @@ private:
     };
 
     void processTextAnchorCorrection() const;
-    void buildBoxTransformations(SVGChunkTransformMap&) const;
+    void applySpacingAndGlyphsTransform() const;
+    void setLengthAdjustTransform(const AffineTransform&) const;
     void processTextLengthSpacingCorrection() const;
 
     bool isVerticalText() const { return m_chunkStyle.contains(ChunkStyle::VerticalText); }
@@ -69,18 +73,11 @@ private:
     bool hasLengthAdjustSpacing() const { return m_chunkStyle.contains(ChunkStyle::LengthAdjustSpacing); }
     bool hasLengthAdjustSpacingAndGlyphs() const { return m_chunkStyle.contains(ChunkStyle::LengthAdjustSpacingAndGlyphs); }
 
-    bool boxSpacingAndGlyphsTransform(const Vector<SVGTextFragment>&, AffineTransform&) const;
-
-    Vector<SVGTextFragment>& fragments(InlineIterator::SVGTextBoxIterator);
-    const Vector<SVGTextFragment>& fragments(InlineIterator::SVGTextBoxIterator) const;
+    const SVGTextFragment* firstFragment() const;
 
 private:
-    // Contains all SVGInlineTextBoxes this chunk spans.
-    struct BoxAndFragments {
-        InlineIterator::SVGTextBoxIterator box;
-        Vector<SVGTextFragment>& fragments;
-    };
-    Vector<BoxAndFragments> m_boxes;
+    // Fragment ranges of the text boxes this chunk spans. A chunk may start or end inside a box.
+    Vector<std::span<SVGTextFragment>> m_fragmentRanges;
 
     // Owner used by SVGTextChunkBuilder to group chunks for element-level textLength. webkit.org/b/61855.
     CheckedPtr<const SVGTextContentElement> m_textContentElement;
