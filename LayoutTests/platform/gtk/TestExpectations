@@ -1100,8 +1100,6 @@ webkit.org/b/308976 svg/filters/feMerge.svg [ Pass Failure ImageOnlyFailure ]
 http/tests/media/hls/hls-audio-description-track-kind.html [ Skip ]
 
 webkit.org/b/306384 editing/pasteboard/copy-crash.html [ Timeout ]
-webkit.org/b/306384 fast/css/object-fit/object-fit-shrink.html [ ImageOnlyFailure ]
-webkit.org/b/306384 fast/css/object-position/object-position-img.html [ ImageOnlyFailure ]
 webkit.org/b/306384 fast/table/row-background-image.html [ ImageOnlyFailure ]
 webkit.org/b/306384 imported/w3c/web-platform-tests/quirks/line-height-in-list-item.html [ ImageOnlyFailure ]
 webkit.org/b/306384 scrollbars/corner-resizer-window-inactive.html [ ImageOnlyFailure ]
@@ -1251,7 +1249,6 @@ webkit.org/b/322647 [ Debug ] media/video-multiple-concurrent-playback.html [ Pa
 webkit.org/b/322648 [ Debug ] navigation-api/navigation-api-rate-limit-history-api.html [ Pass Failure ]
 webkit.org/b/322650 [ Debug ] webrtc/video-h264.html [ Pass Failure ]
 webkit.org/b/322651 [ Debug ] webrtc/video-remote-mute.html [ Pass Failure ]
-webkit.org/b/322652 [ Debug ] workers/btoa-oom.html [ Pass Timeout ]
 webkit.org/b/322811 [ Debug ] fast/mediastream/applyConstraints-with-takePhoto.html [ Pass Timeout ]
 webkit.org/b/322818 [ Debug ] imported/w3c/web-platform-tests/wasm/core/simd/simd_f32x4_cmp.wast.js.html [ Pass Timeout ]
 webkit.org/b/322819 [ Debug ] imported/w3c/web-platform-tests/wasm/core/simd/simd_f64x2_cmp.wast.js.html [ Pass Timeout ]
@@ -1280,7 +1277,7 @@ webkit.org/b/323779 imported/w3c/web-platform-tests/web-locks/mode-mixed.https.a
 webkit.org/b/323779 imported/w3c/web-platform-tests/web-locks/mode-shared.https.any.sharedworker.html [ Failure Pass ]
 
 webkit.org/b/324249 [ Release ] fullscreen/full-screen-enter-while-exiting.html [ Timeout Pass ]
-webkit.org/b/324251 [ Debug ] fast/mediastream/stream-switch.html [ Slow Pass ]
+webkit.org/b/324251 [ Debug ] fast/mediastream/stream-switch.html [ Crash Pass Timeout ]
 webkit.org/b/324252 fast/parser/entity-comment-in-textarea.html [ Timeout Pass ]
 webkit.org/b/324253 imported/w3c/web-platform-tests/content-security-policy/frame-ancestors/frame-ancestors-nested-same-in-same-url-block.html [ Failure Pass ]
 webkit.org/b/324254 imported/w3c/web-platform-tests/svg/animations/use-animate-display-none-symbol-2.html [ ImageOnlyFailure Pass ]
@@ -1311,3 +1308,8 @@ webkit.org/b/324374 webgl/2.0.y/conformance/textures/misc/texture-size-limit.htm
 webkit.org/b/319065 [ Debug ] imported/w3c/web-platform-tests/pointerevents/pointerevent_setpointercapture_relatedtarget.html [ Failure Pass ]
 
 webkit.org/b/325941 [ Debug ] fast/mediastream/video-mediastream-restricted-invisible-autoplay-user-click.html [ Crash Pass Timeout ]
+
+webkit.org/b/326556 inspector/debugger/breakpoint-action-log.html [ Failure ]
+webkit.org/b/326559 [ Release ] inspector/dom-debugger/dom-breakpoint-subtree-modified-add.html [ Crash Pass ]
+webkit.org/b/326560 [ Debug ] imported/w3c/web-platform-tests/uievents/textInput/delete-selection.html [ Crash Pass ]
+webkit.org/b/326563 compositing/backface-visibility/backface-visibility-3d.html [ Pass Timeout ]

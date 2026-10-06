@@ -1302,8 +1302,12 @@ webkit.org/b/324979 imported/w3c/web-platform-tests/web-locks/mode-shared.https.
 webkit.org/b/324374 webgl/1.0.x/conformance/textures/misc/texture-size-limit.html [ Failure ]
 webkit.org/b/324374 webgl/2.0.y/conformance/textures/misc/texture-size-limit.html [ Failure ]
 
-webkit.org/b/325930 [ x86_64 Release ] imported/w3c/web-platform-tests/IndexedDB/transaction-inflight-worker-terminate.window.html [ Crash Pass ]
-
 webkit.org/b/325931 [ Release ] media/media-source/media-source-hidden-play-before-data.html [ Pass Timeout ]
 
 webkit.org/b/325939 [ arm64 ] platform/glib/damage/animations-blur.html [ Failure Pass ]
+
+webkit.org/b/326557 [ arm64 ] fast/canvas/webgl/index-validation-with-subsequent-draws.html [ Crash Pass ]
+webkit.org/b/326562 [ x86_64 ] css3/viewport-percentage-lengths/css3-viewport-percentage-lengths-vh-absolute.html [ Pass Timeout ]
+webkit.org/b/326564 [ arm64 ] fast/backgrounds/size/backgroundSize-in-background-shorthand.html [ Pass Timeout ]
+webkit.org/b/326565 [ arm64 ] fast/pdf-plugin-destruction-dispatches-print-event-crash.html [ Pass Timeout ]
+webkit.org/b/326566 [ arm64 ] fast/backgrounds/angled-background-repeating-gradient-rendering-vertical.html [ Pass Timeout ]
