@@ -504,6 +504,9 @@ platform/ios/ios/fast/forms/range-input-container-touches.html [ Skip ]
 platform/ios/ios/fast/forms/range-input-readonly-and-disabled.html [ Skip ]
 platform/ios/ios/fast/forms/range-input-touches.html [ Skip ]
 platform/ios/ios/touch [ Skip ]
+http/tests/site-isolation/touch-events/touch-event-coordinates.html [ Skip ]
+http/tests/site-isolation/touch-events/drag-nested-cross-origin-frame-in-offset-subframe.html [ Skip ]
+http/tests/site-isolation/touch-events/drag-nested-cross-origin-frame-in-scrolled-subframe.html [ Skip ]
 pointerevents/pointer-event-twist-on-tap-or-click.html [ Skip ]
 media/modern-media-controls/css/pointer-events-none.html [ Skip ]
 
@@ -8494,11 +8497,6 @@ webkit.org/b/297013 [ Debug ] imported/w3c/web-platform-tests/css/css-viewport/z
 webkit.org/b/297026 [ Release ] http/tests/app-privacy-report/app-attribution-beacon-isappinitiated.html [ Pass Failure ]
 
 http/tests/ipc/write-web-archive-frame-ancestry-check.html [ Pass ]
-
-webkit.org/b/297056 http/tests/site-isolation/touch-events/touch-event-coordinates.html [ Pass Failure Timeout ] # rdar://156634858
-# Same touchend defect as the test above: the lift-up is delivered 21px above the drag endpoint.
-webkit.org/b/297056 http/tests/site-isolation/touch-events/drag-nested-cross-origin-frame-in-offset-subframe.html [ Failure ] # rdar://156634858
-webkit.org/b/297056 http/tests/site-isolation/touch-events/drag-nested-cross-origin-frame-in-scrolled-subframe.html [ Failure ] # rdar://156634858
 
 webkit.org/b/297067 fast/forms/state-restore-form-associated-custom-elements.html [ Pass Timeout ]
 # webkit.org/b/297122 2x imported/w3c/web-platform-tests/css/css-shapes/spec-examples/shape-outside (layout-tests) tests are flaky text failures
