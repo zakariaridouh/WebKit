@@ -19287,6 +19287,7 @@
 		BC024A9C270A789D00FD4C3F /* WebXRSession+AR.idl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WebXRSession+AR.idl"; sourceTree = "<group>"; };
 		BC02A63B0E09A9CF004B6D2B /* CSSFunctionValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSSFunctionValue.h; sourceTree = "<group>"; };
 		BC02A6450E09AAE9004B6D2B /* CSSFunctionValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CSSFunctionValue.cpp; sourceTree = "<group>"; };
+		23AF01A06B65F567B07D3310 /* CSSNormalizedMixPercentages.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSNormalizedMixPercentages.h; sourceTree = "<group>"; };
 		BC02CF5E2CE26E8B007DA764 /* CSSPrimitiveNumericRange.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSPrimitiveNumericRange.h; sourceTree = "<group>"; };
 		BC02CF732CE2E10A007DA764 /* JSDOMConvertUndefined.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JSDOMConvertUndefined.h; sourceTree = "<group>"; };
 		BC04A7C8296E57810003F9DB /* CSSColorMix.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CSSColorMix.cpp; sourceTree = "<group>"; };
@@ -39536,6 +39537,7 @@
 				BC292C162F90E06F001165EB /* CSSKeyword.cpp */,
 				BC292C152F90E06F001165EB /* CSSKeyword.h */,
 				BC3EBCAC2F957A110046F457 /* CSSKeywordList.h */,
+				23AF01A06B65F567B07D3310 /* CSSNormalizedMixPercentages.h */,
 				BCB271D92CC0142C00265123 /* CSSPosition.cpp */,
 				BCB271D82CC0142C00265123 /* CSSPosition.h */,
 				BC2C0C8E2D32EBCB00FCFBA0 /* CSSPrimitiveData.h */,

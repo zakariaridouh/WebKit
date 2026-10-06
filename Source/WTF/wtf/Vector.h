@@ -752,6 +752,16 @@ public:
         return result;
     }
 
+    template<typename SizedRange, typename MapFunction>
+    static Vector map(SizedRange&& range, NOESCAPE const MapFunction& mapFunction)
+    {
+        Vector result;
+        result.reserveInitialCapacity(std::size(range));
+        for (auto&& item : range)
+            result.unsafeAppendWithoutCapacityCheck(mapFunction(std::forward<decltype(item)>(item)));
+        return result;
+    }
+
     Vector(WTF::HashTableDeletedValueType)
         : Base(0, std::numeric_limits<decltype(m_size)>::max())
     {
