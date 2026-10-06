@@ -265,11 +265,11 @@ DecodingMode MultiImage::decodingModeForImageDraw(const RenderBoxModelObject& re
     return protect(m_selectedImage)->decodingModeForImageDraw(renderer, paintInfo);
 }
 
-InterpolationQuality MultiImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, const void* layer, const LayoutSize& size) const
+InterpolationQuality MultiImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const void* layer, const LayoutSize& size) const
 {
     if (!m_selectedImage)
-        return Image::interpolationQualityForImageDraw(context, renderer, layer, size);
-    return protect(m_selectedImage)->interpolationQualityForImageDraw(context, renderer, layer, size);
+        return Image::interpolationQualityForImageDraw(context, renderer, concreteObjectSize, layer, size);
+    return protect(m_selectedImage)->interpolationQualityForImageDraw(context, renderer, concreteObjectSize, layer, size);
 }
 
 } // namespace Style

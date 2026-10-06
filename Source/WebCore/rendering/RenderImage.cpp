@@ -783,11 +783,14 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
     if (!styleImage || !styleImage->canDrawAtSize(*this, rect.size()))
         return ImageDrawResult::DidNothing;
 
+    auto containerSize = FloatSize(imageContainerSize());
+    auto concreteObjectSize = ConcreteObjectSize::fixed(containerSize);
+
     ImagePaintingOptions options = {
         CompositeOperator::SourceOver,
         styleImage->decodingModeForImageDraw(*this, paintInfo),
         imageOrientation(),
-        styleImage->interpolationQualityForImageDraw(paintInfo.context(), *this, styleImage.get(), LayoutSize(rect.size())),
+        styleImage->interpolationQualityForImageDraw(paintInfo.context(), *this, concreteObjectSize, styleImage.get(), LayoutSize(rect.size())),
         settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
         settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No,
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
@@ -808,10 +811,8 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
         drawResult = paintInfo.context().drawMultiRepresentationHEIC(*protect(cachedImage->image()), style().fontCascade().primaryFont(), rect, options);
 #endif
 
-    if (drawResult == ImageDrawResult::DidNothing) {
-        auto containerSize = FloatSize(imageContainerSize());
-        drawResult = styleImage->draw(paintInfo.context(), *this, ConcreteObjectSize::fixed(containerSize), rect, FloatRect { { }, containerSize }, options);
-    }
+    if (drawResult == ImageDrawResult::DidNothing)
+        drawResult = styleImage->draw(paintInfo.context(), *this, concreteObjectSize, rect, FloatRect { { }, containerSize }, options);
 
     if (drawResult == ImageDrawResult::DidRequestDecoding)
         protect(imageResource().cachedImage())->addClientWaitingForAsyncDecoding(protect(cachedImageClient()));

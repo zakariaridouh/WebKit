@@ -513,10 +513,10 @@ DecodingMode CachedImage::decodingModeForImageDraw(const RenderBoxModelObject& r
     return renderer.decodingModeForImageDraw(*protect(protect(m_cachedImage)->image()), paintInfo);
 }
 
-InterpolationQuality CachedImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, const void* layer, const LayoutSize& size) const
+InterpolationQuality CachedImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const void* layer, const LayoutSize& size) const
 {
     if (!m_cachedImage || renderSVGResource(&renderer) || legacyRenderSVGResource(&renderer))
-        return Image::interpolationQualityForImageDraw(context, renderer, layer, size);
+        return Image::interpolationQualityForImageDraw(context, renderer, concreteObjectSize, layer, size);
     return ImageQualityController::chooseInterpolationQuality(context, renderer, *protect(protect(m_cachedImage)->image()), layer, size);
 }
 

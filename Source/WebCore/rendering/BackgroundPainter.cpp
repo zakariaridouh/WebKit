@@ -561,12 +561,14 @@ template<typename Layer> void BackgroundPainter::paintFillLayerImpl(const Color&
                     return m_renderer.imageOrientation();
             }();
 
+            auto concreteObjectSize = ConcreteObjectSize::fixed(geometry.tileSizeWithoutPixelSnapping);
+
             ImagePaintingOptions options = {
                 op == CompositeOperator::SourceOver ? layer.layer.compositeForPainting(layer.isLast) : op,
                 layerBlendMode,
                 bgImage->decodingModeForImageDraw(m_renderer, m_paintInfo),
                 orientation,
-                bgImage->interpolationQualityForImageDraw(context, m_renderer, &layer.layer, geometry.tileSize),
+                bgImage->interpolationQualityForImageDraw(context, m_renderer, concreteObjectSize, &layer.layer, geometry.tileSize),
                 layer.layer.maskMode() == Style::MaskMode::Luminance ? DrawLuminanceMask::Yes : DrawLuminanceMask::No,
                 document().settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
@@ -578,7 +580,7 @@ template<typename Layer> void BackgroundPainter::paintFillLayerImpl(const Color&
                 style.dynamicRangeLimit().toPlatformDynamicRangeLimit()
             };
 
-            auto drawResult = bgImage->drawTiled(context, clientForBackgroundImage, ConcreteObjectSize::fixed(geometry.tileSizeWithoutPixelSnapping), geometry.destinationRect, toLayoutPoint(geometry.relativePhase()), geometry.tileSize, geometry.spaceSize, options, isFirstLine);
+            auto drawResult = bgImage->drawTiled(context, clientForBackgroundImage, concreteObjectSize, geometry.destinationRect, toLayoutPoint(geometry.relativePhase()), geometry.tileSize, geometry.spaceSize, options, isFirstLine);
             if (drawResult == ImageDrawResult::DidRequestDecoding) {
                 ASSERT(bgImage->hasCachedImage());
                 protect(bgImage->cachedImage())->addClientWaitingForAsyncDecoding(protect(m_renderer)->cachedImageClient());

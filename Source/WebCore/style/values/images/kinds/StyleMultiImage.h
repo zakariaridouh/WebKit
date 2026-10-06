@@ -92,7 +92,7 @@ private:
     void stopAnimation() final;
     void resetAnimation() final;
     DecodingMode decodingModeForImageDraw(const RenderBoxModelObject&, const PaintInfo&) const final;
-    InterpolationQuality interpolationQualityForImageDraw(GraphicsContext&, const RenderElement&, const void* layer, const LayoutSize&) const final;
+    InterpolationQuality interpolationQualityForImageDraw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const void* layer, const LayoutSize&) const final;
     const Image* selectedImage() const final { return m_selectedImage.get(); }
     Image* selectedImage() final { return m_selectedImage.get(); }
 

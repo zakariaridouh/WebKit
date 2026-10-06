@@ -202,9 +202,11 @@ void LegacyRenderSVGImage::paintForeground(PaintInfo& paintInfo)
 
     imageElement().preserveAspectRatio().transformRect(destRect, srcRect);
 
+    auto concreteObjectSize = ConcreteObjectSize::fixed(imageRenderingSize);
+
     ImagePaintingOptions options = {
         imageOrientation(),
-        styleImage->interpolationQualityForImageDraw(paintInfo.context(), *this, styleImage.get(), LayoutSize(destRect.size())),
+        styleImage->interpolationQualityForImageDraw(paintInfo.context(), *this, concreteObjectSize, styleImage.get(), LayoutSize(destRect.size())),
         settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
         // FIXME: Remove the Image::nullImage() parameter once AXCustomColorModeController::shouldInvertContentImage() is updated.
@@ -217,7 +219,7 @@ void LegacyRenderSVGImage::paintForeground(PaintInfo& paintInfo)
     };
 
     auto& context = paintInfo.context();
-    styleImage->draw(context, *this, ConcreteObjectSize::fixed(imageRenderingSize), destRect, srcRect, options);
+    styleImage->draw(context, *this, concreteObjectSize, destRect, srcRect, options);
 
     if (RefPtr cachedImage = imageResource().cachedImage(); cachedImage && !context.paintingDisabled())
         protect(document())->didPaintImage(imageElement(), cachedImage, destRect);

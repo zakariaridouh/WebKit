@@ -222,7 +222,7 @@ DecodingMode FilterImage::decodingModeForImageDraw(const RenderBoxModelObject& r
     return protect(m_image)->decodingModeForImageDraw(renderer, paintInfo);
 }
 
-InterpolationQuality FilterImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, const void* layer, const LayoutSize& size) const
+InterpolationQuality FilterImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize, const void* layer, const LayoutSize& size) const
 {
     return ImageQualityController::chooseInterpolationQualityForBitmapOfSize(context, renderer, calculateImageBufferBackendSize(size, 1), layer, size);
 }

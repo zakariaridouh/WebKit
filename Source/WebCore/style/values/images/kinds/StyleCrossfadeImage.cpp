@@ -314,7 +314,7 @@ FloatSize CrossfadeImage::fixedSize(const RenderElement& renderer) const
     return fromImageSize * inverseProgress + toImageSize * progress;
 }
 
-InterpolationQuality CrossfadeImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, const void* layer, const LayoutSize& size) const
+InterpolationQuality CrossfadeImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize, const void* layer, const LayoutSize& size) const
 {
     return ImageQualityController::chooseInterpolationQualityForBitmapOfSize(context, renderer, expandedIntSize(fixedSize(renderer)), layer, size);
 }

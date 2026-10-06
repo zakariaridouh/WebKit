@@ -140,11 +140,11 @@ bool CanvasImage::canDrawAtSize(const RenderElement& renderer, const FloatSize& 
     return !size.isEmpty() && canDraw(renderer);
 }
 
-InterpolationQuality CanvasImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, const void* layer, const LayoutSize& size) const
+InterpolationQuality CanvasImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const void* layer, const LayoutSize& size) const
 {
     RefPtr image = resolvedImage(renderer);
     if (!image)
-        return Image::interpolationQualityForImageDraw(context, renderer, layer, size);
+        return Image::interpolationQualityForImageDraw(context, renderer, concreteObjectSize, layer, size);
     return ImageQualityController::chooseInterpolationQuality(context, renderer, *image, layer, size);
 }
 
