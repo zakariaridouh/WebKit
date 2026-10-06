@@ -209,6 +209,12 @@ std::optional<LineClampUpdater::AutoClampPoint> LineClampUpdater::autoClampPoint
     for (CheckedPtr child = lineClampContainer.firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox()) {
         auto [lineCount, fittingLineCount] = countLines(*child);
         if (overflowsBlockSizeLimit(*child)) {
+            // A block keeps its set height whatever its content, and its min-height keeps it at least that tall, so no clamp point inside it fits either.
+            CheckedRef childStyle = child->style();
+            auto fixedMinimumHeight = childStyle->logicalMinHeight().tryFixed();
+            auto minimumHeightOverflows = fixedMinimumHeight && child->logicalTop() + LayoutUnit { fixedMinimumHeight->resolveZoom(childStyle->usedZoomForLength()) } > blockSizeLimit;
+            if (!childStyle->logicalHeight().isAuto() || minimumHeightOverflows)
+                fittingLineCount = 0;
             // The clamp point is after the last line of this child that fits, or else between this child and the previous one.
             if (fittingLineCount || !clampPointAfterPreviousChild)
                 return AutoClampPoint { lineCountBeforeChild + fittingLineCount };
