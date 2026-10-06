@@ -1816,6 +1816,16 @@ WI.DebuggerManager = class DebuggerManager extends WI.Object
 
         this.dataForTarget(target).updateForResume();
 
+        if (activeCallFrameDidChange) {
+            for (let targetData of this._targetDebuggerDataMap.values()) {
+                let callFrame = targetData.paused && targetData.stackTrace.callFrames[0];
+                if (callFrame) {
+                    this._activeCallFrame = callFrame;
+                    break;
+                }
+            }
+        }
+
         if (!this.paused)
             this.dispatchEventToListeners(WI.DebuggerManager.Event.Resumed);
 
