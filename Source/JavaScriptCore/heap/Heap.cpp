@@ -1765,7 +1765,6 @@ void Heap::willStartCollection(CollectionScope scope)
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    ++m_gcVersion;
     if (Options::verifyGC()) [[unlikely]] {
         m_verifierSlotVisitor = makeUnique<VerifierSlotVisitor>(*m_collector);
         ASSERT(!m_isMarkingForGCVerifier);

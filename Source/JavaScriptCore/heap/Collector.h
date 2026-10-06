@@ -134,8 +134,9 @@ private:
     bool changePhase(GCConductor, CollectorPhase);
     bool finishChangingPhase(GCConductor);
 
-    void beginMarking(CollectionScope);
-    void endMarking();
+    // The per-heap part of the Begin and End phases.
+    void beginCollectionInEachHeap(CollectionScope, MonotonicTime startTime);
+    void endCollectionInEachHeap();
 
     void stopThePeriphery();
     void resumeThePeriphery();
@@ -217,6 +218,8 @@ private:
 
     // Describes the cycle for Instruments. Built at Begin, cleared at End.
     UTF8CString m_signpostMessage;
+    // Numbers the collections in the signpost.
+    uint64_t m_gcVersion { 0 };
 };
 
 } // namespace JSC

@@ -948,7 +948,6 @@ private:
     bool m_didDeferGCWork { false };
 
     uint64_t m_mutatorExecutionVersion { 0 };
-    uint64_t m_gcVersion { 0 };
 
     MonotonicTime m_lastGCEndTime;
     MonotonicTime m_currentGCStartTime;

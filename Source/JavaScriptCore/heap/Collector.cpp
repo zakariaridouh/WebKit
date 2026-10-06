@@ -363,7 +363,7 @@ NEVER_INLINE bool Collector::runNotRunningPhase(GCConductor conn)
 
 NEVER_INLINE bool Collector::runBeginPhase(GCConductor conn)
 {
-    m_heap.m_currentGCStartTime = MonotonicTime::now();
+    MonotonicTime startTime = MonotonicTime::now();
 
     {
         Locker locker { *m_threadLock };
@@ -375,20 +375,31 @@ NEVER_INLINE bool Collector::runBeginPhase(GCConductor conn)
 
     m_beforeGC = MonotonicTime::now();
 
-    if (!Options::seedOfVMRandomForFuzzer())
-        m_heap.vm().random().setSeed(cryptographicallyRandomNumber<uint32_t>());
-
     CollectionScope scope = decideCollectionScope();
-    m_heap.willStartCollection(scope);
 
+    ++m_gcVersion;
     if (Options::useGCSignpost()) [[unlikely]] {
         StringPrintStream stream;
-        stream.print("GC:(", RawPointer(&m_heap), "),mode:(", scope, "),version:(", m_heap.m_gcVersion, "),conn:(", gcConductorShortName(conn), "),capacity(", m_heap.capacity() / 1024, "kb)");
+        stream.print("GC:(", RawPointer(&m_heap), "),mode:(", scope, "),version:(", m_gcVersion, "),conn:(", gcConductorShortName(conn), "),capacity(", m_heap.capacity() / 1024, "kb)");
         m_signpostMessage = stream.toUTF8CString();
-        WTFBeginSignpost(&m_heap, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.isNull() ? "(nullptr)"_s : m_signpostMessage);
+        WTFBeginSignpost(this, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.isNull() ? "(nullptr)"_s : m_signpostMessage);
     }
 
-    beginMarking(scope);
+    beginCollectionInEachHeap(scope, startTime);
+
+    if (scope == CollectionScope::Full) {
+        m_opaqueRoots.clear();
+        m_collectorSlotVisitor->clearMarkStacks();
+    }
+    RELEASE_ASSERT(m_raceMarkStack->isEmpty());
+
+    // Read once the heap has begun marking, since a Full collection advances the marking version there.
+    HeapVersion markingVersion = m_heap.objectSpace().markingVersion();
+    HeapAnalyzer* heapAnalyzer = m_heap.vm().activeHeapAnalyzer();
+    forEachSlotVisitor(
+        [&](SlotVisitor& visitor) {
+            visitor.didStartMarking(scope, markingVersion, heapAnalyzer);
+        });
 
     m_parallelMarkersShouldExit = false;
 
@@ -414,18 +425,14 @@ NEVER_INLINE bool Collector::runBeginPhase(GCConductor conn)
             }
         });
 
-    SlotVisitor& visitor = *m_collectorSlotVisitor;
-
     m_constraintSet->didStartMarking();
 
     m_scheduler->beginCollection();
     if (Options::logGC()) [[unlikely]]
         m_scheduler->log();
 
-    // After this, we will almost certainly fall through all of the "visitor.isEmpty()"
-    // checks because bootstrap would have put things into the visitor. So, we should fall
-    // through to draining.
-
+    SlotVisitor& visitor = *m_collectorSlotVisitor;
+    // Marking starts with nothing to drain, so Fixpoint's first iteration runs the root constraints.
     if (!visitor.didReachTermination()) {
         dataLog("Fatal: SlotVisitor should think that GC should terminate before constraint solving, but it does not think this.\n");
         dataLog("visitor.isEmpty(): ", visitor.isEmpty(), "\n");
@@ -439,6 +446,15 @@ NEVER_INLINE bool Collector::runBeginPhase(GCConductor conn)
     }
 
     return changePhase(conn, CollectorPhase::Fixpoint);
+}
+
+void Collector::beginCollectionInEachHeap(CollectionScope scope, MonotonicTime startTime)
+{
+    m_heap.m_currentGCStartTime = startTime;
+    if (!Options::seedOfVMRandomForFuzzer())
+        m_heap.vm().random().setSeed(cryptographicallyRandomNumber<uint32_t>());
+    m_heap.willStartCollection(scope);
+    m_heap.beginMarking();
 }
 
 NEVER_INLINE bool Collector::runFixpointPhase(GCConductor conn)
@@ -577,21 +593,17 @@ NEVER_INLINE bool Collector::runEndPhase(GCConductor conn)
     }
     m_helperClient.finish();
 
-    ASSERT(m_heap.m_mutatorMarkStack->isEmpty());
-    ASSERT(m_raceMarkStack->isEmpty());
+    assertMarkStacksEmpty();
+    RELEASE_ASSERT(m_raceMarkStack->isEmpty());
 
-    // Executing CodeBlocks keep writing their profiles without barriers after this collection. Remembering
-    // them makes the next collection reconcile those profiles even if it is an Eden collection.
-    m_heap.rememberExecutingAndCompilingCodeBlocks(*m_collectorSlotVisitor);
-    endMarking();
+    endCollectionInEachHeap();
 
-    m_heap.verifyMarking();
-    m_heap.pruneDeadReferences();
-    m_heap.prepareForAllocation();
+    forEachSlotVisitor(
+        [&](SlotVisitor& visitor) {
+            visitor.reset();
+        });
 
     m_afterGC = MonotonicTime::now();
-
-    m_heap.didFinishCollection();
 
     if (Options::logGC()) [[unlikely]] {
         double thisPauseMS = (m_afterGC - m_stopTime).milliseconds();
@@ -608,13 +620,27 @@ NEVER_INLINE bool Collector::runEndPhase(GCConductor conn)
 
     dataLogLnIf(Options::logGC(), "GC END!");
     if (Options::useGCSignpost()) [[unlikely]] {
-        WTFEndSignpost(&m_heap, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.isNull() ? "(nullptr)"_s : m_signpostMessage);
+        WTFEndSignpost(this, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.isNull() ? "(nullptr)"_s : m_signpostMessage);
         m_signpostMessage = { };
     }
 
     m_heap.setNeedCollectionEpilogue();
     m_heap.recordCollectionTime(m_afterGC - m_beforeGC);
     return changePhase(conn, CollectorPhase::NotRunning);
+}
+
+void Collector::endCollectionInEachHeap()
+{
+    ASSERT(m_heap.m_mutatorMarkStack->isEmpty());
+
+    // Executing CodeBlocks keep writing their profiles without barriers after this collection. Remembering
+    // them makes the next collection reconcile those profiles even if it is an Eden collection.
+    m_heap.rememberExecutingAndCompilingCodeBlocks(*m_collectorSlotVisitor);
+    m_heap.endMarking(bytesVisited());
+    m_heap.verifyMarking();
+    m_heap.pruneDeadReferences();
+    m_heap.prepareForAllocation();
+    m_heap.didFinishCollection();
 }
 
 bool Collector::changePhase(GCConductor conn, CollectorPhase nextPhase)
@@ -670,37 +696,6 @@ NEVER_INLINE bool Collector::finishChangingPhase(GCConductor conn)
 
     m_currentPhase = m_nextPhase;
     return true;
-}
-
-void Collector::beginMarking(CollectionScope scope)
-{
-    if (scope == CollectionScope::Full) {
-        m_opaqueRoots.clear();
-        m_collectorSlotVisitor->clearMarkStacks();
-    }
-    RELEASE_ASSERT(m_raceMarkStack->isEmpty());
-
-    m_heap.beginMarking();
-
-    HeapVersion markingVersion = m_heap.objectSpace().markingVersion();
-    HeapAnalyzer* heapAnalyzer = m_heap.vm().activeHeapAnalyzer();
-    forEachSlotVisitor(
-        [&] (SlotVisitor& visitor) {
-            visitor.didStartMarking(scope, markingVersion, heapAnalyzer);
-        });
-}
-
-void Collector::endMarking()
-{
-    assertMarkStacksEmpty();
-    RELEASE_ASSERT(m_raceMarkStack->isEmpty());
-
-    m_heap.endMarking(bytesVisited());
-
-    forEachSlotVisitor(
-        [&] (SlotVisitor& visitor) {
-            visitor.reset();
-        });
 }
 
 void Collector::stopThePeriphery()
