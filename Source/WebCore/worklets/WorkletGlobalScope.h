@@ -79,7 +79,7 @@ public:
 
     SocketProvider* socketProvider() final { return nullptr; }
 
-    bool isSecureContext() const final { return false; }
+    bool isSecureContext() const final { return true; }
 
     String agentClusterID() const final { return m_agentClusterID; }
 
