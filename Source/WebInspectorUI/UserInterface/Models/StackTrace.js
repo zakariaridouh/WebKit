@@ -38,13 +38,13 @@ WI.StackTrace = class StackTrace
 
     // Static
 
-    static fromPayload(target, payload)
+    static fromPayload(target, payload, options = {})
     {
         let result = null;
         let previousStackTrace = null;
 
         while (payload) {
-            let callFrames = payload.callFrames.map((x) => WI.CallFrame.fromPayload(target, x));
+            let callFrames = payload.callFrames.map((x) => WI.CallFrame.fromPayload(target, x, options));
             let stackTrace = new WI.StackTrace(callFrames, {
                 topCallFrameIsBoundary: payload.topCallFrameIsBoundary,
                 truncated: payload.truncated,

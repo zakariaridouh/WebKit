@@ -132,7 +132,7 @@ WI.Canvas = class Canvas extends WI.Object
             contextAttributes: payload.contextAttributes,
             features: payload.features,
             memoryCost: payload.memoryCost,
-            stackTrace: WI.StackTrace.fromPayload(target, payload.stackTrace),
+            stackTrace: WI.StackTrace.fromPayload(target, payload.stackTrace, {deliveredOnTarget: true}),
             displayName: payload.name,
         });
     }

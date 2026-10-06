@@ -1169,7 +1169,7 @@ WI.TimelineManager = class TimelineManager extends WI.Object
         if (Array.isArray(payload))
             payload = {callFrames: payload};
 
-        return WI.StackTrace.fromPayload(target, payload);
+        return WI.StackTrace.fromPayload(target, payload, {deliveredOnTarget: true});
     }
 
     _addRecord(record)
