@@ -1129,8 +1129,9 @@ bool contains(std::span<T, TExtent> haystack, std::span<U, UExtent> needle)
     return find(haystack, needle) != notFound;
 }
 
+// memcpy() is not annotated NODELETE, but it runs no destructors, so the suppression is safe.
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
-void NODELETE memcpySpan(std::span<T, TExtent> destination, std::span<U, UExtent> source)
+SUPPRESS_NODELETE void NODELETE memcpySpan(std::span<T, TExtent> destination, std::span<U, UExtent> source)
 {
     static_assert(sizeof(T) == sizeof(U));
     static_assert(std::is_trivially_copyable_v<T> || std::is_floating_point_v<T>);
@@ -1139,8 +1140,9 @@ void NODELETE memcpySpan(std::span<T, TExtent> destination, std::span<U, UExtent
     memcpy(destination.data(), source.data(), source.size_bytes()); // NOLINT
 }
 
+// memmove() is not annotated NODELETE, but it runs no destructors, so the suppression is safe.
 template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
-void NODELETE memmoveSpan(std::span<T, TExtent> destination, std::span<U, UExtent> source)
+SUPPRESS_NODELETE void NODELETE memmoveSpan(std::span<T, TExtent> destination, std::span<U, UExtent> source)
 {
     static_assert(sizeof(T) == sizeof(U));
     static_assert(std::is_trivially_copyable_v<T> || std::is_floating_point_v<T>);
@@ -1169,8 +1171,9 @@ void zeroBytes(T& object)
     zeroSpan(asMutableByteSpan(object));
 }
 
+// memset(), memset_s() and the compiler barrier are not annotated NODELETE, but they run no destructors, so the suppression is safe.
 template<typename T, std::size_t Extent>
-void NODELETE secureZeroSpan(std::span<T, Extent> destination)
+SUPPRESS_NODELETE void NODELETE secureZeroSpan(std::span<T, Extent> destination)
 {
     static_assert(std::is_trivially_copyable_v<T>);
 #ifdef __STDC_LIB_EXT1__

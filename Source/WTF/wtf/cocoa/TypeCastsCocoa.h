@@ -125,7 +125,8 @@ template<typename T, typename U> inline T *checked_objc_cast(U *object)
 
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(is_objc<T>(object));
 
-    return static_cast<T*>(object);
+    // The cast is safe because the type was checked above.
+    SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<T*>(object);
 }
 
 // Use dynamic_objc_cast<> instead of checked_objc_cast<> when actively checking NS types,
@@ -171,7 +172,8 @@ template<typename T> T *dynamic_objc_cast(NSObject *object)
 {
     if (!is_objc<T>(object))
         return nullptr;
-    return static_cast<T*>(object);
+    // The cast is safe because the type was checked above.
+    SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<T*>(object);
 }
 
 template<typename T> T *dynamic_objc_cast(id object)

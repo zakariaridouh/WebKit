@@ -30,15 +30,15 @@
 #include <wtf/CodePtr.h>
 #include <wtf/RawPointer.h>
 
+#if BENABLE(LIBPAS) && (OS(DARWIN) || OS(LINUX) || OS(WINDOWS))
+#define ENABLE_LIBPAS_JIT_HEAP 1
+#endif
+
 #if ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
 #include <wtf/CodePtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #else
 #include <wtf/MetaAllocatorHandle.h>
-#endif
-
-#if BENABLE(LIBPAS) && (OS(DARWIN) || OS(LINUX) || OS(WINDOWS))
-#define ENABLE_LIBPAS_JIT_HEAP 1
 #endif
 
 namespace JSC {

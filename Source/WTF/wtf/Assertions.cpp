@@ -683,7 +683,8 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
 
 #if !ASAN_ENABLED && (OS(DARWIN) || PLATFORM(PLAYSTATION)) && (CPU(X86_64) || CPU(ARM64))
 
-void WTFCrashWithInfoImpl(int, const char*, const char*, UCPURegister reason, UCPURegister misc1, UCPURegister misc2, UCPURegister misc3, UCPURegister misc4, UCPURegister misc5, UCPURegister misc6)
+// The crash instruction is inline assembly, which the static analyzer cannot prove runs no destructors.
+SUPPRESS_NODELETE void WTFCrashWithInfoImpl(int, const char*, const char*, UCPURegister reason, UCPURegister misc1, UCPURegister misc2, UCPURegister misc3, UCPURegister misc4, UCPURegister misc5, UCPURegister misc6)
 {
     register UCPURegister reasonGPR __asm__(CRASH_GPR0) = reason;
     register UCPURegister misc1GPR __asm__(CRASH_GPR1) = misc1;
@@ -696,7 +697,8 @@ void WTFCrashWithInfoImpl(int, const char*, const char*, UCPURegister reason, UC
     __builtin_unreachable();
 }
 
-void WTFCrashWithInfoImpl(int, const char*, const char*, UCPURegister reason, UCPURegister misc1, UCPURegister misc2, UCPURegister misc3, UCPURegister misc4, UCPURegister misc5)
+// The crash instruction is inline assembly, which the static analyzer cannot prove runs no destructors.
+SUPPRESS_NODELETE void WTFCrashWithInfoImpl(int, const char*, const char*, UCPURegister reason, UCPURegister misc1, UCPURegister misc2, UCPURegister misc3, UCPURegister misc4, UCPURegister misc5)
 {
     register UCPURegister reasonGPR __asm__(CRASH_GPR0) = reason;
     register UCPURegister misc1GPR __asm__(CRASH_GPR1) = misc1;

@@ -47,6 +47,7 @@
 #include <unicode/udatpg.h>
 #include <unicode/uenum.h>
 #include <wtf/Range.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>

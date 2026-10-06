@@ -31,6 +31,7 @@
 #include "Interpreter.h"
 #include "JSFunctionInlines.h"
 #include "ThrowScope.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 

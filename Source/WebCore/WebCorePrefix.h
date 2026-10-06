@@ -497,7 +497,6 @@
 #include <wtf/LazyRef.h>
 #include <wtf/LazyUniqueRef.h>
 #include <wtf/MallocPtr.h>
-#include <wtf/MetaAllocatorHandle.h>
 #include <wtf/NakedPtr.h>
 #include <wtf/OSAllocator.h>
 #include <wtf/PackedRefPtr.h>

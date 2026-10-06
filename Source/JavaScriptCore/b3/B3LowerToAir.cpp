@@ -66,6 +66,7 @@
 #include <wtf/IndexSet.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 // On Windows, there's macros for these which interfere with the opcodes. The
 // undefs have to follow every #include: <windows.h> defines them, so anything
