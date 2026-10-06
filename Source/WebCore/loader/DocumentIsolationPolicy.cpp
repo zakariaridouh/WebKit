@@ -34,9 +34,11 @@
 
 namespace WebCore {
 
-DocumentIsolationPolicy obtainDocumentIsolationPolicy(const ResourceResponse& response, const ScriptExecutionContext& context)
+DocumentIsolationPolicy obtainDocumentIsolationPolicy(const ResourceResponse& response, IsSecureContext isSecureContext, const ScriptExecutionContext& context)
 {
-    if (!context.settingsValues().documentIsolationPolicyEnabled || !context.settingsValues().siteIsolationEnabled || !context.isSecureContext())
+    if (isSecureContext == IsSecureContext::No)
+        return DocumentIsolationPolicy::None;
+    if (!context.settingsValues().documentIsolationPolicyEnabled || !context.settingsValues().siteIsolationEnabled)
         return DocumentIsolationPolicy::None;
 
     auto parsedItem = RFC8941::parseItemStructuredFieldValue(response.httpHeaderField(HTTPHeaderName::DocumentIsolationPolicy));

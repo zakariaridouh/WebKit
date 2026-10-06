@@ -377,6 +377,7 @@
 		0A11FACE2F6A00A3009B51B0 /* TestPage.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A11FACE2F6A00A1009B51B0 /* TestPage.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0A11FACE2F6A00A4009B51B0 /* TestPage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0A11FACE2F6A00A2009B51B0 /* TestPage.cpp */; };
 		0A1B2C3D4E5F60718293A4B5 /* PortalAction.h in Headers */ = {isa = PBXBuildFile; fileRef = 1F2E3D4C5B6A79880716253F /* PortalAction.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		0A5ECC0C0000000000000002 /* IsSecureContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A5ECC0C0000000000000001 /* IsSecureContext.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0AC0AC10260AC10260AC1010 /* OriginKeyed.h in Headers */ = {isa = PBXBuildFile; fileRef = 0AC0AC10260AC10260AC1011 /* OriginKeyed.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0AC17AC10001000100010003 /* OriginAgentClusterPolicy.h in Headers */ = {isa = PBXBuildFile; fileRef = 0AC17AC10001000100010001 /* OriginAgentClusterPolicy.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0AFDAC3D10F5448C00E1F3D2 /* PluginViewBase.h in Headers */ = {isa = PBXBuildFile; fileRef = 0AFDAC3C10F5448C00E1F3D2 /* PluginViewBase.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -8341,6 +8342,7 @@
 		0A11FACE2F6A00A1009B51B0 /* TestPage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TestPage.h; sourceTree = "<group>"; };
 		0A11FACE2F6A00A2009B51B0 /* TestPage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TestPage.cpp; sourceTree = "<group>"; };
 		0AB951FD42B2EBB60ABA110D /* Volume0-RTL.svg */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Volume0-RTL.svg"; sourceTree = "<group>"; };
+		0A5ECC0C0000000000000001 /* IsSecureContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IsSecureContext.h; sourceTree = "<group>"; };
 		0AC0AC10260AC10260AC1011 /* OriginKeyed.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OriginKeyed.h; sourceTree = "<group>"; };
 		0AC17AC10001000100010001 /* OriginAgentClusterPolicy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OriginAgentClusterPolicy.h; sourceTree = "<group>"; };
 		0AC17AC10001000100010002 /* OriginAgentClusterPolicy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = OriginAgentClusterPolicy.cpp; sourceTree = "<group>"; };
@@ -43532,6 +43534,7 @@
 				A88FE6802CCF6FF30070D898 /* InternalObserverSome.h */,
 				33839EF92C5CB39E00F1E4FA /* InternalObserverTake.cpp */,
 				33839EFA2C5CB3A600F1E4FA /* InternalObserverTake.h */,
+				0A5ECC0C0000000000000001 /* IsSecureContext.h */,
 				FFEFAB2D183BCC6F00514553 /* JSSubscriberCustom.cpp */,
 				85031B2D0A44EFC700F992E0 /* KeyboardEvent.cpp */,
 				85031B2E0A44EFC700F992E0 /* KeyboardEvent.h */,
@@ -46924,6 +46927,7 @@
 				CD5FF49B2162E4B7004BD86F /* ISOSchemeTypeBox.h in Headers */,
 				CD5FF4972162E2B7004BD86F /* ISOTrackEncryptionBox.h in Headers */,
 				07D12F5C23DE543F0080997D /* ISOVTTCue.h in Headers */,
+				0A5ECC0C0000000000000002 /* IsSecureContext.h in Headers */,
 				71247E381FEA5F86008C08CE /* IterationCompositeOperation.h in Headers */,
 				7C30D9841F815AEC00268356 /* JSAbortController.h in Headers */,
 				7C30D9861F815AEC00268356 /* JSAbortSignal.h in Headers */,

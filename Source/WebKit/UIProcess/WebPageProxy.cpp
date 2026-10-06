@@ -6583,7 +6583,8 @@ void WebPageProxy::receivedNavigationResponsePolicyDecision(WebCore::PolicyActio
         Ref responseOrigin = SecurityOrigin::create(response.url());
         RefPtr mainFrame = m_mainFrame;
         auto& topLevelCreationURL = navigationResponse->frame().isMainFrame() || !mainFrame ? response.url() : mainFrame->url();
-        isOriginKeyed = protect(browsingContextGroup())->resolveAgentClusterKeying(responseOrigin->data(), obtainOriginAgentClusterPolicy(response, topLevelCreationURL, nullptr));
+        auto isSecureContext = responseOrigin->isPotentiallyTrustworthy() && SecurityOrigin::create(topLevelCreationURL)->isPotentiallyTrustworthy() ? IsSecureContext::Yes : IsSecureContext::No;
+        isOriginKeyed = protect(browsingContextGroup())->resolveAgentClusterKeying(responseOrigin->data(), obtainOriginAgentClusterPolicy(response, isSecureContext, nullptr));
     }
 
     completionHandler(PolicyDecision { isNavigatingToAppBoundDomain(), action, navigation ? std::optional { navigation->navigationID() } : std::nullopt, downloadID, { }, { }, { }, SafeBrowsingCheckOngoing::No, nullptr, isOriginKeyed });

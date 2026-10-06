@@ -25,20 +25,9 @@
 
 #pragma once
 
-#include <WebCore/IsSecureContext.h>
-
 namespace WebCore {
 
-class ResourceResponse;
-class ScriptExecutionContext;
-
-// https://wicg.github.io/document-isolation-policy/#dip-value
-enum class DocumentIsolationPolicy : bool {
-    None,
-    IsolateAndRequireCORP
-};
-
-// https://wicg.github.io/document-isolation-policy/#obtain-dip
-DocumentIsolationPolicy obtainDocumentIsolationPolicy(const ResourceResponse&, IsSecureContext, const ScriptExecutionContext&);
+// https://html.spec.whatwg.org/#secure-context
+enum class IsSecureContext : bool { No, Yes };
 
 } // namespace WebCore

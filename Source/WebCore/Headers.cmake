@@ -1380,6 +1380,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/ImageOverlay.h
     dom/ImportNodeOptions.h
     dom/InlineStyleSheetOwner.h
+    dom/IsSecureContext.h
     dom/KeyboardEvent.h
     dom/LiveNodeList.h
     dom/LiveNodeListInlines.h

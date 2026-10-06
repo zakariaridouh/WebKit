@@ -32,6 +32,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp-load-from-cache-storage.tentative.https.html.headers
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp.tentative.https.html
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp.tentative.https.html.headers
+/LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/no-secure-context-https-iframe.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/no-secure-context.tentative.html
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/no-secure-context.tentative.html.headers
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/reporting-cache-storage-corp.tentative.https.html

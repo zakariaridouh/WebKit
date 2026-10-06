@@ -886,8 +886,9 @@ void FrameLoader::didBeginDocument(bool dispatch, LocalDOMWindow* previousWindow
             protect(document->contentSecurityPolicy())->updateSourceSelf(SecurityOrigin::create(document->url()));
 
         if (document->url().protocolIsInHTTPFamily() || document->url().protocolIsBlob()) {
-            document->setCrossOriginEmbedderPolicy(obtainCrossOriginEmbedderPolicy(documentLoader->response(), document.ptr()));
-            document->setDocumentIsolationPolicy(obtainDocumentIsolationPolicy(documentLoader->response(), document));
+            auto isSecureContext = document->isSecureContext() ? IsSecureContext::Yes : IsSecureContext::No;
+            document->setCrossOriginEmbedderPolicy(obtainCrossOriginEmbedderPolicy(documentLoader->response(), isSecureContext, document.ptr()));
+            document->setDocumentIsolationPolicy(obtainDocumentIsolationPolicy(documentLoader->response(), isSecureContext, document));
 
             if (auto ipAddressSpace = documentLoader->response().ipAddressSpace(); ipAddressSpace != IPAddressSpace::Unknown)
                 document->setIPAddressSpace(ipAddressSpace);

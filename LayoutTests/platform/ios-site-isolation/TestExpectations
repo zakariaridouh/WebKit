@@ -74,4 +74,5 @@ imported/w3c/web-platform-tests/html/user-activation/propagation-crossorigin.sub
 # Document-Isolation-Policy is partially implemented.
 imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp-load-from-cache-storage.tentative.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp.tentative.https.html [ Pass ]
+imported/w3c/web-platform-tests/html/document-isolation-policy/no-secure-context-https-iframe.tentative.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/no-secure-context.tentative.html [ Pass ]

@@ -887,7 +887,9 @@ bool NetworkResourceLoader::shouldInterruptNavigationForCrossOriginEmbedderPolic
 
     // https://html.spec.whatwg.org/multipage/origin.html#check-a-navigation-response's-adherence-to-its-embedder-policy
     if (m_parameters.parentCrossOriginEmbedderPolicy.value == WebCore::CrossOriginEmbedderPolicyValue::RequireCORP || m_parameters.parentCrossOriginEmbedderPolicy.reportOnlyValue == WebCore::CrossOriginEmbedderPolicyValue::RequireCORP) {
-        auto responseCOEP = WebCore::obtainCrossOriginEmbedderPolicy(response, nullptr);
+        // A parent can only require CORP in a secure context, so only the response URL matters.
+        auto isSecureContext = WebCore::SecurityOrigin::create(response.url())->isPotentiallyTrustworthy() ? WebCore::IsSecureContext::Yes : WebCore::IsSecureContext::No;
+        auto responseCOEP = WebCore::obtainCrossOriginEmbedderPolicy(response, isSecureContext, nullptr);
         if (m_parameters.parentCrossOriginEmbedderPolicy.reportOnlyValue == WebCore::CrossOriginEmbedderPolicyValue::RequireCORP && responseCOEP.value != WebCore::CrossOriginEmbedderPolicyValue::RequireCORP)
             sendCOEPInheritenceViolation(*this, m_parameters.parentFrameURL.isValid() ? m_parameters.parentFrameURL : aboutBlankURL(), m_parameters.parentCrossOriginEmbedderPolicy.reportOnlyReportingEndpoint, COEPDisposition::Reporting, "navigation"_s, m_firstResponseURL);
 
@@ -909,7 +911,8 @@ bool NetworkResourceLoader::shouldInterruptWorkerLoadForCrossOriginEmbedderPolic
         return false;
 
     if (m_parameters.crossOriginEmbedderPolicy.value == WebCore::CrossOriginEmbedderPolicyValue::RequireCORP || m_parameters.crossOriginEmbedderPolicy.reportOnlyValue == WebCore::CrossOriginEmbedderPolicyValue::RequireCORP) {
-        auto responseCOEP = WebCore::obtainCrossOriginEmbedderPolicy(response, nullptr);
+        // An owner can only require CORP in a secure context, which its worker inherits.
+        auto responseCOEP = WebCore::obtainCrossOriginEmbedderPolicy(response, WebCore::IsSecureContext::Yes, nullptr);
         if (m_parameters.crossOriginEmbedderPolicy.reportOnlyValue == WebCore::CrossOriginEmbedderPolicyValue::RequireCORP && responseCOEP.value == WebCore::CrossOriginEmbedderPolicyValue::UnsafeNone)
             sendCOEPInheritenceViolation(*this, m_parameters.frameURL.isValid() ? m_parameters.frameURL : aboutBlankURL(), m_parameters.crossOriginEmbedderPolicy.reportOnlyReportingEndpoint, COEPDisposition::Reporting, "worker initialization"_s, m_firstResponseURL);
 
