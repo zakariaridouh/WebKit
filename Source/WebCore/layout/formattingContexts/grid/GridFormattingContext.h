@@ -43,6 +43,7 @@ class ElementBox;
 class PlacedGridItem;
 class UnplacedGridItem;
 
+struct AutoRepeatConstraint;
 struct GridAreaLines;
 struct GridLayoutConstraints;
 
@@ -107,7 +108,7 @@ public:
         LayoutUnit maximum;
     };
 
-    IntrinsicWidths computeIntrinsicWidths();
+    IntrinsicWidths computeIntrinsicWidths(const AutoRepeatConstraint& inlineAxisAutoRepeatConstraint, const AutoRepeatConstraint& blockAxisAutoRepeatConstraint);
     IntrinsicWidthSizingPath intrinsicWidthSizingPath() const { return m_intrinsicWidthSizingPath; }
 
     PlacedGridItems constructPlacedGridItems(const GridAreas&) const;

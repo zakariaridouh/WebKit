@@ -222,8 +222,24 @@ void GridLayout::invalidateFormattingContextRootRenderer(RenderGrid& renderGrid)
 
 std::pair<LayoutUnit, LayoutUnit> GridLayout::computeIntrinsicWidths()
 {
+    CheckedRef gridContainerRenderer = gridBoxRenderer();
+    CheckedRef gridContainerStyle = gridContainerRenderer->style();
+    auto gridContainerZoom = gridContainerStyle->usedZoomForLength();
+
+    auto inlineAxisAutoRepeatConstraint = Layout::AutoRepeatConstraint {
+        { },
+        minimumSizeConstraint(gridContainerStyle->minWidth(), gridContainerZoom),
+        maximumSizeConstraint(gridContainerStyle->maxWidth(), gridContainerZoom)
+    };
+
+    auto blockAxisAutoRepeatConstraint = Layout::AutoRepeatConstraint {
+        gridContainerRenderer->availableLogicalHeightForContentBox(),
+        minimumSizeConstraint(gridContainerStyle->minHeight(), gridContainerZoom),
+        maximumSizeConstraint(gridContainerStyle->maxHeight(), gridContainerZoom)
+    };
+
     auto gridFormattingContext = Layout::GridFormattingContext { gridBox(), layoutState() };
-    auto intrinsicWidths = gridFormattingContext.computeIntrinsicWidths();
+    auto intrinsicWidths = gridFormattingContext.computeIntrinsicWidths(inlineAxisAutoRepeatConstraint, blockAxisAutoRepeatConstraint);
     return { intrinsicWidths.minimum, intrinsicWidths.maximum };
 }
 
