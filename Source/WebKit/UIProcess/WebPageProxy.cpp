@@ -6305,6 +6305,14 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
                     return;
                 }
 
+                // The page may have been closed or reset (e.g. m_mainFrame cleared) while waiting for the reply.
+                auto currentMainFrameID = protectedThis->m_mainFrame ? std::optional<WebCore::FrameIdentifier> { protectedThis->m_mainFrame->frameID() } : std::nullopt;
+                if (protectedThis->isClosed()
+                    || !protectedThis->m_mainFrame
+                    || !protectedThis->m_navigationState->hasNavigation(navigation->navigationID())
+                    || (navigationAction->mainFrameIDBeforeNavigationActionDecision() && navigationAction->mainFrameIDBeforeNavigationActionDecision() != currentMainFrameID))
+                    cancelled = true;
+
                 if (cancelled) {
                     protectedThis->receivedPolicyDecision(PolicyAction::Ignore, navigation.ptr(), std::nullopt, WTF::move(navigationAction), WillContinueLoadInNewProcess::No, std::nullopt, WTF::move(message), WTF::move(completionHandler));
                     return;

@@ -18643,6 +18643,33 @@ TEST(SiteIsolation, CrossSiteIframeProcessesDoNotReportMainFrameScroll)
     EXPECT_EQ(pageScrollsForMainFrameScrollTo(300), 1u);
 }
 
+TEST(SiteIsolation, CloseWhileDispatchingNavigateEventBeforeProcessSwap)
+{
+    HTTPServer server({
+        { "/example"_s, { "<a id='link' href='https://webkit.org/destination'>link</a><script>navigation.onnavigate = () => window.webkit.messageHandlers.testHandler.postMessage('navigate');</script>"_s } },
+        { "/destination"_s, { "destination"_s } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto webViewAndDelegates = makeWebViewAndDelegates(server);
+    RetainPtr webView = webViewAndDelegates.webView;
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [webViewAndDelegates.navigationDelegate waitForDidFinishNavigation];
+
+    // The navigate event for a cross-site process-swapping navigation is dispatched while the UI process
+    // waits for the reply to DispatchPendingNavigateEventForProcessSwap. The script message is sent before
+    // that reply, so the page is closed before the reply arrives.
+    __block bool closedWebView = false;
+    [webViewAndDelegates.messageHandler addMessage:@"navigate" withHandler:^{
+        [webView _close];
+        closedWebView = true;
+    }];
+    [webView evaluateJavaScript:@"document.getElementById('link').click()" completionHandler:nil];
+    Util::run(&closedWebView);
+
+    // Give the reply a chance to arrive. This used to crash in WebPageProxy::continueNavigationInNewProcess.
+    Util::runFor(0.5_s);
+}
+
 } // namespace TestWebKitAPI
 
 #endif // PLATFORM(MAC)
