@@ -1862,7 +1862,11 @@ LineBuilder::Result LineBuilder::processLineBreakingResult(LineCandidate& lineCa
 
             // The block ellipsis displaces content back to the last soft wrap opportunity on the line. With none (an empty line, or
             // e.g. text-wrap-mode: nowrap, where <wbr> is not one), that is the start of the line and all of the line's content moves.
-            if (m_wrapOpportunityList.isEmpty()) {
+            // A line that floats leave no room for the block ellipsis on is "too small to contain any content": it is no line box,
+            // and its content wraps below the floats as usual.
+            // https://drafts.csswg.org/css2/#floats
+            auto canHoldBlockEllipsis = !isLineConstrainedByFloat() || m_lineClamp.blockEllipsis->logicalWidth <= m_lineLogicalRect.width();
+            if (m_wrapOpportunityList.isEmpty() && canHoldBlockEllipsis) {
                 // "If this results in the entire contents of the line box being displaced, the line box is considered to contain a strut"
                 // https://drafts.csswg.org/css-overflow-4/#block-ellipsis
                 // Everything placed on the line so far (content, inline box starts, floats, out-of-flow boxes) moves to the next line together with the content.
