@@ -81,7 +81,6 @@ private:
 
     void setContainerSize(const FloatSize&);
     IntSize containerSize() const;
-    void computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) final;
     NaturalDimensions unorientedNaturalDimensions() const final;
 
     void reportApproximateMemoryCost() const;

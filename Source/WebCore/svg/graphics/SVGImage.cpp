@@ -467,20 +467,6 @@ LocalFrameView* SVGImage::frameView() const
     return localMainFrame->view();
 }
 
-void SVGImage::computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
-{
-    RefPtr rootElement = this->rootElement();
-    if (!rootElement)
-        return;
-
-    intrinsicWidth = rootElement->intrinsicWidth();
-    intrinsicHeight = rootElement->intrinsicHeight();
-
-    intrinsicRatio = rootElement->viewBox().size();
-    if (intrinsicRatio.isEmpty())
-        intrinsicRatio = FloatSize { intrinsicWidth, intrinsicHeight };
-}
-
 NaturalDimensions SVGImage::unorientedNaturalDimensions() const
 {
     RefPtr rootElement = this->rootElement();

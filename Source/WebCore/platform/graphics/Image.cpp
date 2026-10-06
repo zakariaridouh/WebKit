@@ -222,13 +222,6 @@ void Image::drawPattern(GraphicsContext& ctxt, ConcreteObjectSize concreteObject
         observer->didDraw(*this);
 }
 
-void Image::computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
-{
-    intrinsicRatio = size();
-    intrinsicWidth = intrinsicRatio.width();
-    intrinsicHeight = intrinsicRatio.height();
-}
-
 void Image::startAnimationAsynchronously()
 {
     if (!m_animationStartTimer)
