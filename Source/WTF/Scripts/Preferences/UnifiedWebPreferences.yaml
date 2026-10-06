@@ -6494,6 +6494,16 @@ UseAppKitGesturesForGestureEvents:
     default: false
     WebKit: defaultUseAppKitGestures()
 
+UseAppKitGesturesForPointerEvents:
+  type: bool
+  status: internal
+  humanReadableName: "AppKit gestures for pointer events"
+  humanReadableDescription: "Use AppKit gestures to drive DOM pointer events directly, rather than deriving them from synthesized mouse events"
+  condition: PLATFORM(MAC)
+  defaultValue:
+    default: false
+    WebKit: defaultUseAppKitGestures()
+
 UseAsyncUIKitInteractions:
   type: bool
   status: internal
