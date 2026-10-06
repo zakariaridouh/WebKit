@@ -49,8 +49,8 @@ static NaturalDimensions tileNaturalDimensions(const WebCore::Image& image)
         return NaturalDimensions::none();
     auto size = image.size();
     return {
-        .width = image.hasRelativeWidth() ? std::nullopt : std::optional { size.width() },
-        .height = image.hasRelativeHeight() ? std::nullopt : std::optional { size.height() },
+        .width = size.width(),
+        .height = size.height(),
         .aspectRatio = std::nullopt,
     };
 }

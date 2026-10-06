@@ -261,10 +261,8 @@ FloatSize CachedImage::imageSize(ImageOrientation orientation, float multiplier,
     auto imageSize = image->size(orientation);
 
     float scaleFactor = multiplier * density;
-    float widthScale = image->hasRelativeWidth() ? 1.0f : scaleFactor;
-    float heightScale = image->hasRelativeHeight() ? 1.0f : scaleFactor;
-    if (widthScale != 1.0f || heightScale != 1.0f)
-        imageSize.scale(widthScale, heightScale);
+    if (scaleFactor != 1.0f)
+        imageSize.scale(scaleFactor);
     return imageSize;
 }
 
