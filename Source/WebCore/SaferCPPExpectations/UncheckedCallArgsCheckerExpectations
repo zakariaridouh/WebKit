@@ -1,11 +1,5 @@
 StyleBuilderGenerated.cpp
 StyleExtractorGenerated.cpp
-animation/BlendingKeyframes.cpp
-animation/ElementAnimationRareData.cpp
-animation/KeyframeEffect.cpp
-animation/ScrollTimeline.cpp
-animation/ViewTimeline.cpp
-animation/WebAnimation.cpp
 bindings/js/DOMPromiseProxy.h
 bindings/js/JSCanvasRenderingContext2DCustom.cpp
 bindings/js/JSCustomElementInterface.cpp

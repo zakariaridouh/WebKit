@@ -219,7 +219,7 @@ void BlendingKeyframes::fillImplicitKeyframes(const KeyframeEffect& effect, cons
         // If we're provided an existing implicit keyframe, we need to add all the styles for the implicit properties.
         if (existingImplicitBlendingKeyframe) {
             ASSERT(existingImplicitBlendingKeyframe->style());
-            auto keyframeStyle = Style::ComputedStyle::clonePtr(*existingImplicitBlendingKeyframe->style());
+            auto keyframeStyle = Style::ComputedStyle::clonePtr(*protect(existingImplicitBlendingKeyframe->style()));
             for (auto property : implicitProperties) {
                 Style::Interpolation::interpolate(property, *keyframeStyle, underlyingStyle, underlyingStyle, 1, CompositeOperation::Replace, effect);
                 existingImplicitBlendingKeyframe->addProperty(property);
@@ -477,7 +477,7 @@ BlendingKeyframe::BlendingKeyframe(const BlendingKeyframe& source)
     : m_specifiedOffset(source.m_specifiedOffset)
     , m_computedOffset(source.m_computedOffset)
     , m_properties(source.m_properties)
-    , m_style(Style::ComputedStyle::clonePtr(*source.style()))
+    , m_style(Style::ComputedStyle::clonePtr(*protect(source.style())))
     , m_timingFunction(source.m_timingFunction)
     , m_compositeOperation(source.m_compositeOperation)
     , m_containsDirectionAwareProperty(source.m_containsDirectionAwareProperty)

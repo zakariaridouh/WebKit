@@ -1835,11 +1835,11 @@ void KeyframeEffect::getAnimatedStyle(std::unique_ptr<Style::ComputedStyle>& ani
         if (CheckedPtr style = targetStyleable()->lastStyleChangeEventStyle())
             animatedStyle = Style::ComputedStyle::clonePtr(*style);
         else
-            animatedStyle = Style::ComputedStyle::clonePtr(renderer()->style());
+            animatedStyle = Style::ComputedStyle::clonePtr(protect(renderer()->style()));
     }
 
     ASSERT(computedTiming.currentIteration);
-    setAnimatedPropertiesInStyle(*animatedStyle.get(), computedTiming);
+    setAnimatedPropertiesInStyle(*protect(animatedStyle), computedTiming);
 }
 
 void KeyframeEffect::setAnimatedPropertiesInStyle(Style::ComputedStyle& targetStyle, const ComputedEffectTiming& computedTiming) const
@@ -1860,7 +1860,7 @@ void KeyframeEffect::setAnimatedPropertiesInStyle(Style::ComputedStyle& targetSt
     // progress which already accounts for the transition's timing function.
     if (m_animationType == WebAnimationType::CSSTransition) {
         ASSERT(properties.size() == 1);
-        Style::Interpolation::interpolate(*properties.begin(), targetStyle, *m_blendingKeyframes[0].style(), *m_blendingKeyframes[1].style(), iterationProgress, m_compositeOperation, *this);
+        Style::Interpolation::interpolate(*properties.begin(), targetStyle, *protect(m_blendingKeyframes[0].style()), *protect(m_blendingKeyframes[1].style()), iterationProgress, m_compositeOperation, *this);
         return;
     }
 
@@ -1892,7 +1892,7 @@ void KeyframeEffect::setAnimatedPropertiesInStyle(Style::ComputedStyle& targetSt
         auto startKeyframeStyle = Style::ComputedStyle::clone(*startBlendingKeyframe->style());
         auto endKeyframeStyle = Style::ComputedStyle::clone(*endBlendingKeyframe->style());
 
-        KeyframeInterpolation::CompositionCallback composeProperty = [&] (const KeyframeInterpolation::Keyframe& keyframe, CompositeOperation compositeOperation) {
+        interpolateKeyframes(property, interval, iterationProgress, currentIteration, iterationDuration(), before, [&](const KeyframeInterpolation::Keyframe& keyframe, CompositeOperation compositeOperation) {
             auto* blendingKeyframe = dynamicDowncast<BlendingKeyframe>(keyframe);
             if (!blendingKeyframe) {
                 ASSERT_NOT_REACHED();
@@ -1900,12 +1900,10 @@ void KeyframeEffect::setAnimatedPropertiesInStyle(Style::ComputedStyle& targetSt
             }
 
             if (blendingKeyframe->offset() == startBlendingKeyframe->offset())
-                Style::Interpolation::interpolate(property, startKeyframeStyle, targetStyle, *blendingKeyframe->style(), 1, compositeOperation, *this);
+                Style::Interpolation::interpolate(property, startKeyframeStyle, targetStyle, *protect(blendingKeyframe->style()), 1, compositeOperation, *this);
             else
-                Style::Interpolation::interpolate(property, endKeyframeStyle, targetStyle, *blendingKeyframe->style(), 1, compositeOperation, *this);
-        };
-
-        KeyframeInterpolation::AccumulationCallback accumulateProperty = [&](const KeyframeInterpolation::Keyframe& keyframe) {
+                Style::Interpolation::interpolate(property, endKeyframeStyle, targetStyle, *protect(blendingKeyframe->style()), 1, compositeOperation, *this);
+        }, [&](const KeyframeInterpolation::Keyframe& keyframe) {
             auto* blendingKeyframe = dynamicDowncast<BlendingKeyframe>(keyframe);
             if (!blendingKeyframe) {
                 ASSERT_NOT_REACHED();
@@ -1913,20 +1911,14 @@ void KeyframeEffect::setAnimatedPropertiesInStyle(Style::ComputedStyle& targetSt
             }
 
             if (blendingKeyframe->offset() == startBlendingKeyframe->offset())
-                Style::Interpolation::interpolate(property, startKeyframeStyle, *endBlendingKeyframe->style(), startKeyframeStyle, 1, CompositeOperation::Accumulate, *this);
+                Style::Interpolation::interpolate(property, startKeyframeStyle, *protect(endBlendingKeyframe->style()), startKeyframeStyle, 1, CompositeOperation::Accumulate, *this);
             else
-                Style::Interpolation::interpolate(property, endKeyframeStyle, *endBlendingKeyframe->style(), endKeyframeStyle, 1, CompositeOperation::Accumulate, *this);
-        };
-
-        KeyframeInterpolation::InterpolationCallback interpolateProperty = [&](double intervalProgress, double currentIteration, IterationCompositeOperation iterationCompositeOperation) {
+                Style::Interpolation::interpolate(property, endKeyframeStyle, *protect(endBlendingKeyframe->style()), endKeyframeStyle, 1, CompositeOperation::Accumulate, *this);
+        }, [&](double intervalProgress, double currentIteration, IterationCompositeOperation iterationCompositeOperation) {
             Style::Interpolation::interpolate(property, targetStyle, startKeyframeStyle, endKeyframeStyle, intervalProgress, CompositeOperation::Replace, iterationCompositeOperation, currentIteration, *this);
-        };
-
-        KeyframeInterpolation::RequiresInterpolationForAccumulativeIterationCallback requiresInterpolationForAccumulativeIterationCallback = [&]() {
+        }, [&] {
             return Style::Interpolation::requiresInterpolationForAccumulativeIteration(property, startKeyframeStyle, endKeyframeStyle, *this);
-        };
-
-        interpolateKeyframes(property, interval, iterationProgress, currentIteration, iterationDuration(), before, composeProperty, accumulateProperty, interpolateProperty, requiresInterpolationForAccumulativeIterationCallback);
+        });
     }
 
     // In case one of the animated properties has its value set to "inherit" in one of the keyframes,
@@ -2347,7 +2339,7 @@ void KeyframeEffect::wasRemovedFromEffectStack()
             // to allow the finished promise callback to observe the final animation state (e.g., layer tree).
             // Only immediately stop animations removed mid-flight.
             if (RefPtr context = animation->scriptExecutionContext()) {
-                context->eventLoop().queueMicrotask(context->vm(), [protectedThis = Ref { *this }] {
+                protect(context->eventLoop())->queueMicrotask(context->vm(), [protectedThis = Ref { *this }] {
                     protectedThis->applyPendingAcceleratedActions();
                 });
             }
@@ -2469,7 +2461,7 @@ void KeyframeEffect::applyPendingAcceleratedActions()
         auto underlyingStyle = [&]() {
             if (CheckedPtr lastStyleChangeEventStyle = m_target->lastStyleChangeEventStyle(m_pseudoElementIdentifier))
                 return Style::ComputedStyle::clonePtr(*lastStyleChangeEventStyle);
-            return Style::ComputedStyle::clonePtr(renderer->style());
+            return Style::ComputedStyle::clonePtr(protect(renderer->style()));
         }();
 
         for (const auto& effect : effectStack->sortedEffects()) {

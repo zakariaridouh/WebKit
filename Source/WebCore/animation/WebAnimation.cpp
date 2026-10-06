@@ -867,7 +867,7 @@ void WebAnimation::cancel(Silently silently)
         // 2. Reject the current finished promise with a DOMException named "AbortError".
         // 3. Set the [[PromiseIsHandled]] internal slot of the current finished promise to true.
         if (RefPtr context = scriptExecutionContext(); context && !m_finishedPromise->isFulfilled()) {
-            context->eventLoop().queueMicrotask(context->vm(), [finishedPromise = WTF::move(m_finishedPromise)]() mutable {
+            protect(context->eventLoop())->queueMicrotask(context->vm(), [finishedPromise = WTF::move(m_finishedPromise)] mutable {
                 finishedPromise->reject(Exception { ExceptionCode::AbortError }, RejectAsHandled::Yes);
             });
         }
@@ -988,7 +988,7 @@ void WebAnimation::resetPendingTasks()
     // 5. Reject animation's current ready promise with a DOMException named "AbortError".
     // 6. Set the [[PromiseIsHandled]] internal slot of animation’s current ready promise to true.
     if (RefPtr context = scriptExecutionContext()) {
-        context->eventLoop().queueMicrotask(context->vm(), [readyPromise = WTF::move(m_readyPromise)]() mutable {
+        protect(context->eventLoop())->queueMicrotask(context->vm(), [readyPromise = WTF::move(m_readyPromise)] mutable {
             if (!readyPromise->isFulfilled())
                 readyPromise->reject(Exception { ExceptionCode::AbortError }, RejectAsHandled::Yes);
         });
@@ -1137,7 +1137,7 @@ void WebAnimation::updateFinishedState(DidSeek didSeek, SynchronouslyNotify sync
             // is already a microtask queued to run those steps for animation.
             m_finishNotificationStepsMicrotaskPending = true;
             if (RefPtr context = scriptExecutionContext()) {
-                context->eventLoop().queueMicrotask(context->vm(), [this, protectedThis = Ref { *this }] {
+                protect(context->eventLoop())->queueMicrotask(context->vm(), [this, protectedThis = Ref { *this }] {
                     if (m_finishNotificationStepsMicrotaskPending) {
                         m_finishNotificationStepsMicrotaskPending = false;
                         finishNotificationSteps();
@@ -1987,8 +1987,10 @@ bool WebAnimation::isSkippedContentAnimation() const
     if (pending())
         return false;
     if (auto animation = dynamicDowncast<StyleOriginatedAnimation>(this)) {
-        if (auto element = animation->owningElement())
-            return element->element.renderer() && element->element.renderer()->isSkippedContent();
+        if (auto element = animation->owningElement()) {
+            CheckedPtr renderer = element->element.renderer();
+            return renderer && renderer->isSkippedContent();
+        }
     }
     return false;
 }

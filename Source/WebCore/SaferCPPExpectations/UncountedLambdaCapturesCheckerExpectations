@@ -1,4 +1,3 @@
-animation/KeyframeEffect.cpp
 css/values/CSSValueTypes+DeprecatedCSSOMValueCreation.h
 rendering/BorderPainter.cpp
 rendering/RenderBox.cpp
