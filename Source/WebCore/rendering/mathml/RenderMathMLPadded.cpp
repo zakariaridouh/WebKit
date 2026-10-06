@@ -162,7 +162,7 @@ std::optional<LayoutUnit> RenderMathMLPadded::firstLineBaseline() const
     if (CheckedPtr baselineChild = firstInFlowChildBox())
         ascent = ascentForChild(*baselineChild) + baselineChild->logicalTop() + voffset();
     else
-        ascent = mpaddedHeight(0);
+        ascent = mpaddedHeight(0) + borderAndPaddingBefore();
     return ascent;
 }
 
