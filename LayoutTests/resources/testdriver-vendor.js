@@ -49,7 +49,7 @@ function originOffset(origin)
     };
 
     if (originWindow !== originWindow.top && originWindow.internals) {
-        const rootViewBounds = originWindow.internals.boundingBoxInRootViewCoordinates(origin);
+        const rootViewBounds = originWindow.internals.boundingBoxInMainFrameViewCoordinates(origin);
         offset.x += rootViewBounds.left - bounds.left;
         offset.y += rootViewBounds.top - bounds.top;
     }
@@ -448,13 +448,14 @@ window.test_driver_internal.click = async function (element, coords)
     const targetWindow = element.ownerDocument.defaultView || window;
     const targetEventSender = targetWindow.eventSender || eventSender;
 
-    // coords are frame-local; when the element is in a subframe, shift them to root-view
-    // coordinates since the click is hit-tested from the top window. A top-level element needs no
+    // coords are frame-local; when the element is in a subframe, shift them to main-frame-view
+    // coordinates (which, unlike root-view coordinates, cross process boundaries under site
+    // isolation) since the click is hit-tested from the top window. A top-level element needs no
     // shift. The shift ignores CSS transforms on an ancestor <iframe> (webkit.org/b/318752).
     let point = coords;
     const elementWindow = element.ownerDocument.defaultView;
     if (elementWindow && elementWindow !== elementWindow.top) {
-        const rootView = targetWindow.internals.boundingBoxInRootViewCoordinates(element);
+        const rootView = targetWindow.internals.boundingBoxInMainFrameViewCoordinates(element);
         const frameLocal = element.getBoundingClientRect();
         point = {
             x: coords.x + rootView.left - frameLocal.left,

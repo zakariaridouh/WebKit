@@ -626,6 +626,7 @@ enum ContentsFormat {
 
     DOMRect boundingBox(Element element);
     DOMRect boundingBoxInRootViewCoordinates(Element element);
+    DOMRect boundingBoxInMainFrameViewCoordinates(Element element);
 
     unsigned long inspectorGridOverlayCount();
     unsigned long inspectorFlexOverlayCount();
