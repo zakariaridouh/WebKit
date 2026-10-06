@@ -169,6 +169,7 @@
 #include <JavaScriptCore/CPU.h>
 #include <JavaScriptCore/Forward.h>
 #include <JavaScriptCore/JSCConfig.h>
+#include <JavaScriptCore/JSCellInlines.h>
 #include <JavaScriptCore/OptionsList.h>
 #include <JavaScriptCore/SourceID.h>
 #include <JavaScriptCore/Weak.h>
