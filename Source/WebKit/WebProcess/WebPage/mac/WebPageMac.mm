@@ -180,6 +180,10 @@ void WebPage::createMockAccessibilityElement(pid_t pid)
 
 void WebPage::platformReinitializeAccessibilityToken()
 {
+    // platformInitializeAccessibility will transfer the token once the mock element is created.
+    if (!m_mockAccessibilityElement)
+        return;
+
     RefPtr frame = m_page->focusController().focusedOrMainFrame();
     if (!frame)
         return;
