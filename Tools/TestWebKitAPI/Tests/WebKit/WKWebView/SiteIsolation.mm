@@ -16527,6 +16527,45 @@ TEST(SiteIsolation, MultiProcessBFCacheSameSiteEvictionDoesNotCrashIframe)
     EXPECT_FALSE([[webView objectByEvaluatingJavaScript:@"window.__bfcacheMarker_a1 ? true : false" inFrame:[webView firstChildFrame]] boolValue]);
 }
 
+TEST(SiteIsolation, MultiProcessBFCacheSameSiteCachedLocalRootFrameNoRenderingUpdate)
+{
+    HTTPServer server({
+        { "/a1"_s, { "<iframe src='https://b.com/frame'></iframe>"_s } },
+        { "/a2"_s, { "a2"_s } },
+        { "/frame"_s, { "<iframe src='https://a.com/grandchild'></iframe>"_s } },
+        { "/grandchild"_s, { "grandchild"_s } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto *configuration = server.httpsProxyConfiguration();
+    setFeatureEnabled(configuration, @"MultiProcessBackForwardCacheEnabled", true);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration, CGRectMake(0, 0, 800, 600));
+
+    Vector<ExpectedFrameTree> expectedWithGrandchild = {
+        { "https://a.com"_s, { { RemoteFrame, { { "https://a.com"_s } } } } },
+        { RemoteFrame, { { "https://b.com"_s, { { RemoteFrame } } } } },
+    };
+    auto waitForFrameTrees = [&] {
+        TestWebKitAPI::Util::waitFor([&] {
+            return frameTreesMatch(frameTrees(webView.get()).get(), Vector<ExpectedFrameTree> { expectedWithGrandchild });
+        });
+        checkFrameTreesInProcesses(frameTrees(webView.get()).get(), expectedWithGrandchild);
+    };
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://a.com/a1"]]];
+    [navigationDelegate waitForDidFinishNavigationAndLoadInSubframe];
+    waitForFrameTrees();
+    [webView waitForNextPresentationUpdate];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://a.com/a2"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView waitForNextPresentationUpdate];
+
+    [webView goBack];
+    [navigationDelegate waitForDidFinishNavigation];
+    waitForFrameTrees();
+    [webView waitForNextPresentationUpdate];
+}
+
 TEST(SiteIsolation, MultiProcessBFCacheSameSiteNavAfterRestore)
 {
     // Regression test for stale process in processForTheFrameItem.

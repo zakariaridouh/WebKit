@@ -9241,18 +9241,6 @@ void WebPage::suspendWithFrameItem(BackForwardFrameItemIdentifier identifier, Co
     if (RefPtr frame = m_mainFrame->coreLocalFrame())
         frame->detachFromAllOpenedFrames();
 
-    if (!page->localMainFrame()) {
-        // Detach the current root frames instead of freezing the whole page, so a same-site navigation
-        // later reusing this WebPage for a new root frame doesn't get frozen too.
-        HashSet<WeakRef<WebCore::LocalFrame>> detachedFrames;
-        for (auto& weakFrame : copyToVector(page->rootFrames())) {
-            Ref frame = weakFrame.get();
-            detachedFrames.add(weakFrame);
-            page->removeRootFrame(frame);
-        }
-        BackForwardCache::singleton().setDetachedRootFramesForFrameItem(identifier, WTF::move(detachedFrames));
-    }
-
     m_isSuspended = true;
     WEBPAGE_RELEASE_LOG(ProcessSwapping, "suspendWithFrameItem: Successfully cached page");
     completionHandler(true);
@@ -9283,14 +9271,7 @@ void WebPage::restoreWithFrameItem(BackForwardFrameItemIdentifier identifier, st
         page->setMainFrameURLAndOrigin(mainFrameURLAndOrigin->first, mainFrameURLAndOrigin->second.securityOrigin());
 
     m_isSuspended = false;
-    auto restoredFrames = cachedPage->takeDetachedRootFrames();
     detachResidualSubframesForBackForwardCacheRestore(*page);
-
-    // Resume rendering for the frames detached in suspendWithFrameItem.
-    for (auto& weakFrame : restoredFrames) {
-        Ref frame = weakFrame.get();
-        page->addRootFrame(frame);
-    }
 
     cachedPage->restore(*page);
     completionHandler(true);

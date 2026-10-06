@@ -84,8 +84,6 @@ public:
     WEBCORE_EXPORT bool NODELETE isInBackForwardCache(BackForwardFrameItemIdentifier) const;
     bool hasCachedPageExpired(BackForwardFrameItemIdentifier) const;
 
-    WEBCORE_EXPORT void setDetachedRootFramesForFrameItem(BackForwardFrameItemIdentifier, HashSet<WeakRef<LocalFrame>>&&);
-
 private:
     BackForwardCache();
     ~BackForwardCache() = delete; // Make sure nobody accidentally calls delete -- WebCore does not delete singletons.
