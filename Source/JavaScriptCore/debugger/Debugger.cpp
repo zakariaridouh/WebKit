@@ -1238,7 +1238,7 @@ private:
 
 void Debugger::exception(JSGlobalObject* globalObject, CallFrame* callFrame, JSValue exception, bool hasCatchHandler)
 {
-    if (m_isPaused)
+    if (m_isPaused || isPauseBlockedByAnotherDebugger())
         return;
 
     if (JSObject* object = dynamicDowncast<JSObject>(exception)) {
