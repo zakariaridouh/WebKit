@@ -614,9 +614,9 @@ static ASCIICString indentation(size_t count)
 static void printTree(_WKFrameTreeNode *n, size_t indent = 0)
 {
     if (n.info._isLocalFrame)
-        SAFE_WTFLOGALWAYS("%s%@://%@ (pid %d)", indentation(indent), n.info.securityOrigin.protocol, n.info.securityOrigin.host, n.info._processIdentifier);
+        SAFE_WTFLOGALWAYS("%s%@://%@ (pid %d)", indentation(indent), n.info.securityOrigin.protocol, n.info.securityOrigin.host, n._processIdentifierForTesting);
     else
-        SAFE_WTFLOGALWAYS("%s(remote) (pid %d)", indentation(indent), n.info._processIdentifier);
+        SAFE_WTFLOGALWAYS("%s(remote) (pid %d)", indentation(indent), n._processIdentifierForTesting);
     for (_WKFrameTreeNode *c in n.childFrames)
         printTree(c, indent + 1);
 }
@@ -668,7 +668,7 @@ static pid_t findFramePID(NSSet<_WKFrameTreeNode *> *set, FrameType local)
 {
     for (_WKFrameTreeNode *node in set) {
         if (node.info._isLocalFrame == (local == FrameType::Local))
-            return node.info._processIdentifier;
+            return node._processIdentifierForTesting;
     }
     EXPECT_FALSE(true);
     return 0;

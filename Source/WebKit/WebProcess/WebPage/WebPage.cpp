@@ -1338,10 +1338,7 @@ void WebPage::createRemoteSubframe(WebCore::FrameIdentifier parentID, WebCore::F
 
 Awaitable<std::optional<FrameTreeNodeData>> WebPage::getFrameTree()
 {
-    auto data = m_mainFrame->frameTreeData();
-    if (RefPtr page = corePage())
-        data.topDocumentURLForTesting = page->mainFrameURL();
-    co_return data;
+    co_return m_mainFrame->frameTreeData();
 }
 
 Awaitable<URL> WebPage::getBackForwardCacheEntryTopDocumentURL(WebCore::BackForwardFrameItemIdentifier frameItemID)

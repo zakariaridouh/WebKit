@@ -152,7 +152,7 @@ public:
 
     Awaitable<std::optional<FrameInfoData>> getFrameInfo();
     FrameInfoData info() const;
-    FrameTreeNodeData frameTreeData() const;
+    std::optional<FrameTreeNodeData> frameTreeData() const;
 
     WebCore::FrameIdentifier frameID() const { return m_frameID; }
 

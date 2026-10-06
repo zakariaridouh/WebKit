@@ -329,38 +329,43 @@ FrameInfoData WebFrame::info() const
         frameID(),
         page ? std::optional { page->webPageProxyIdentifier() } : std::nullopt,
         document ? std::optional { document->identifier() } : std::nullopt,
-        getCurrentProcessID(),
         isFocused(),
         loadingFrame && loadingFrame->loader().errorOccurredInLoading(),
         WTF::move(metrics)
     };
 }
 
-FrameTreeNodeData WebFrame::frameTreeData() const
+std::optional<FrameTreeNodeData> WebFrame::frameTreeData() const
 {
-    FrameTreeNodeData data {
-        info(),
-        { },
-        { }
-    };
-
     if (!m_coreFrame) {
         ASSERT_NOT_REACHED();
-        return data;
+        return std::nullopt;
     }
 
-    data.children.reserveInitialCapacity(m_coreFrame->tree().childCount());
-
+    Vector<FrameTreeNodeData> children;
+    children.reserveInitialCapacity(m_coreFrame->tree().childCount());
     for (RefPtr child = m_coreFrame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         RefPtr childWebFrame = WebFrame::fromCoreFrame(*child);
         if (!childWebFrame) {
             ASSERT_NOT_REACHED();
             continue;
         }
-        data.children.append(childWebFrame->frameTreeData());
+        auto data = childWebFrame->frameTreeData();
+        if (!data) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+        children.append(WTF::move(*data));
     }
 
-    return data;
+    RefPtr page = m_coreFrame->page();
+
+    return FrameTreeNodeData {
+        info(),
+        WTF::move(children),
+        page ? page->mainFrameURL() : URL(),
+        getCurrentProcessID()
+    };
 }
 
 void WebFrame::invalidate()
