@@ -25,6 +25,8 @@
 
 #pragma once
 
+#import <optional>
+
 namespace WebGPU::Metal {
 
 class Buffer;
@@ -42,7 +44,9 @@ public:
 protected:
     bool NODELETE prepareTheEncoderState() const;
     NSString* encoderStateName() const;
-    static bool NODELETE computedSizeOverflows(const Buffer&, uint64_t offset, uint64_t& size);
+    // The size of the buffer range at the offset: the size, or the rest of the buffer for std::nullopt.
+    // std::nullopt when the range does not fit in the buffer.
+    static std::optional<uint64_t> NODELETE bufferRangeSize(const Buffer&, uint64_t offset, std::optional<uint64_t> size);
 
     EncoderState m_state { EncoderState::Open };
 };
