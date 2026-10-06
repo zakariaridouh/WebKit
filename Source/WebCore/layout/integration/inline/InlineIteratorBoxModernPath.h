@@ -92,7 +92,7 @@ public:
             extraTrailingLength(),
             box.isLineBreak(),
             textContent.partiallyVisibleContentLength(),
-            formattingContextRoot().writingMode().bidiDirection() != direction()
+            (line().isLeftToRightInlineDirection() ? TextDirection::LTR : TextDirection::RTL) != direction()
         };
     }
 

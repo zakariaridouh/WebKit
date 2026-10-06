@@ -4194,7 +4194,6 @@ webkit.org/b/206748 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/
 webkit.org/b/206748 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-with-floats-009.html [ ImageOnlyFailure ]
 webkit.org/b/206748 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-with-floats-013.html [ ImageOnlyFailure ]
 webkit.org/b/206748 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-with-floats-014.html [ ImageOnlyFailure ]
-webkit.org/b/206748 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-with-text-overflow-string-006.html [ ImageOnlyFailure ]
 webkit.org/b/324326 imported/w3c/web-platform-tests/css/css-overflow/scroll-axis-lock-dynamic-change.html [ Skip ]
 webkit.org/b/324326 imported/w3c/web-platform-tests/css/css-overflow/scroll-axis-lock-none-touch-viewport.html [ Skip ]
 webkit.org/b/324326 imported/w3c/web-platform-tests/css/css-overflow/scroll-axis-lock-none-wheel-viewport.html [ Skip ]
@@ -5354,9 +5353,6 @@ imported/w3c/web-platform-tests/css/css-overflow/text-overflow-scroll-vertical-l
 imported/w3c/web-platform-tests/css/css-overflow/text-overflow-scroll-vertical-lr-rtl-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-overflow/text-overflow-scroll-vertical-rl-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-overflow/text-overflow-scroll-vertical-rl-rtl-001.html [ ImageOnlyFailure ]
-
-# text-overflow should take in account unicode-bidi to determine ellipsis position.
-imported/w3c/web-platform-tests/css/css-overflow/text-overflow-string-008.html
 
 webkit.org/b/214387 imported/w3c/web-platform-tests/svg/animations/seeking-events-4.html [ Pass Failure ]
 
