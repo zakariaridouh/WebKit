@@ -56,13 +56,6 @@
 #import <WebKitAdditions/WebPrivacyHelpersAdditions.mm>
 #endif
 
-#if HAVE(SYSTEM_SUPPORT_FOR_ADVANCED_PRIVACY_PROTECTIONS)
-#if !defined(WebKit_libnetworkLibrary_SoftLinked)
-SOFT_LINK_LIBRARY_OPTIONAL(libnetwork)
-#endif
-SOFT_LINK_OPTIONAL(libnetwork, nw_context_set_tracker_lookup_callback, void, __cdecl, (nw_context_t, nw_context_tracker_lookup_callback_t))
-#endif
-
 @interface WKWebPrivacyNotificationListener : NSObject
 
 @end
@@ -878,11 +871,7 @@ void configureForAdvancedPrivacyProtections(NSURLSession *session)
     TrackerAddressLookupInfo::populateIfNeeded();
     TrackerDomainLookupInfo::populateIfNeeded();
 
-    auto* setTrackerLookupCallback = nw_context_set_tracker_lookup_callbackPtr();
-    if (!setTrackerLookupCallback)
-        return;
-
-    setTrackerLookupCallback(context.get(), ^(nw_endpoint_t endpoint, const char** hostName, const char** owner, bool* canBlock) {
+    nw_context_set_tracker_lookup_callback(context.get(), ^(nw_endpoint_t endpoint, const char** hostName, const char** owner, bool* canBlock) {
         // The networking stack reads *owner and *hostName after this block returns (it copies them
         // before the next lookup on this thread), so the strings must outlive the block without
         // being tied to the lookup lists, which are refreshed on the WebPrivacy thread. Hold them in
