@@ -52,6 +52,7 @@
 #include "HTMLLegendElement.h"
 #include "HTMLNames.h"
 #include "HTMLSelectElement.h"
+#include "HTMLTableElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HitTestResult.h"
 #include "InlineIteratorBoxInlines.h"
@@ -4031,8 +4032,12 @@ template<typename SizeType> std::optional<LayoutUnit> RenderBox::computePercenta
     // then we must subtract the border and padding from the cell's
     // |availableHeight| (given by |overridingLogicalHeight|) to arrive
     // at the child's computed height.
-    bool subtractBorderAndPadding = isRenderTable() || (is<RenderTableCell>(*containingBlock) && !skippedAutoHeightContainingBlock && containingBlock->overridingBorderBoxLogicalHeight() && style().boxSizing() == BoxSizing::ContentBox);
-    if (subtractBorderAndPadding) {
+    auto shouldSubtractBorderAndPadding = [&] {
+        if (isRenderTable())
+            return is<HTMLTableElement>(element()) || style().boxSizing() == BoxSizing::BorderBox;
+        return is<RenderTableCell>(*containingBlock) && !skippedAutoHeightContainingBlock && containingBlock->overridingBorderBoxLogicalHeight() && style().boxSizing() == BoxSizing::ContentBox;
+    };
+    if (shouldSubtractBorderAndPadding()) {
         result -= borderAndPaddingLogicalHeight();
         return std::max(0_lu, result);
     }
