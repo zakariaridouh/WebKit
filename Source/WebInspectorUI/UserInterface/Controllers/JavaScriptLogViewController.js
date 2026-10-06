@@ -250,7 +250,8 @@ WI.JavaScriptLogViewController = class JavaScriptLogViewController extends WI.Ob
 
     consolePromptGetEvaluationPreviewObject(prompt, text, callback)
     {
-        let target = WI.debuggerManager.activeCallFrame?.target || WI.runtimeManager.activeExecutionContext.target;
+        let activeCallFrame = WI.runtimeManager.useActiveCallFrame ? WI.debuggerManager.activeCallFrame : null;
+        let target = activeCallFrame?.target || WI.runtimeManager.activeExecutionContext.target;
         let options = {
             objectGroup: `console-evaluation-preview-${++this._evaluationPreviewRequestIdentifier}`,
             includeCommandLineAPI: true,
