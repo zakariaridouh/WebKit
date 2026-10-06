@@ -221,11 +221,7 @@ class UploadContext(object):
 
         for branch in self.commit_context.branch_keys_for_commits(commits):
             hash_key = hash(configuration) ^ hash(branch) ^ hash(self.commit_context.uuid_for_commits(commits)) ^ hash(suite) ^ hash(timestamp)
-            self.redis.set(
-                f'{self.QUEUE_NAME}:{hash_key}',
-                json.dumps(dict(started_processing=0, attempts=0)),
-                ex=self.PROCESS_TIMEOUT,
-            )
+            # FIXME: Write the data and queue entry atomically. If this process crashes between the two writes, the data is orphaned until it expires.
             self.redis.set(
                 f'data_for_{self.QUEUE_NAME}:{hash_key}',
                 json.dumps(dict(
@@ -235,6 +231,11 @@ class UploadContext(object):
                     timestamp=timestamp,
                     test_results=test_results,
                 )),
+                ex=self.PROCESS_TIMEOUT,
+            )
+            self.redis.set(
+                f'{self.QUEUE_NAME}:{hash_key}',
+                json.dumps(dict(started_processing=0, attempts=0)),
                 ex=self.PROCESS_TIMEOUT,
             )
         return {key: dict(status='Queued') for key in list(self._process_upload_callbacks[suite].keys()) + list(self._process_upload_callbacks[None].keys())}
