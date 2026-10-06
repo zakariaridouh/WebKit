@@ -736,7 +736,7 @@ float TextUtil::hangablePunctuationEndWidth(const String& text, const Style::Com
         return { };
     if (!isHangableClosePunctuation(text[text.length() - 1]))
         return { };
-    return style.fontCascade().width(text.right(1));
+    return protect(style.fontCascade())->width(text.right(1));
 }
 
 bool TextUtil::hasHangableStopOrCommaEnd(const InlineTextItem& inlineTextItem, const Style::ComputedStyle& style)
