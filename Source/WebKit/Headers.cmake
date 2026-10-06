@@ -56,7 +56,7 @@ set(_webkit_c_api_headers
     UIProcess/API/C/WKGeolocationPermissionRequest.h
     UIProcess/API/C/WKGeolocationPosition.h
     UIProcess/API/C/WKHTTPCookieStoreRef.h
-    UIProcess/API/C/WKHitTestResult.h
+    UIProcess/API/C/WKHitTestResultRef.h
     UIProcess/API/C/WKIconDatabase.h
     UIProcess/API/C/WKInspector.h
     UIProcess/API/C/WKJSHandleRef.h

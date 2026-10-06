@@ -24,8 +24,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WKHitTestResult_h
-#define WKHitTestResult_h
+#ifndef WKHitTestResultRef_h
+#define WKHitTestResultRef_h
 
 #include <WebKit/WKBase.h>
 #include <WebKit/WKGeometry.h>
@@ -53,4 +53,4 @@ WK_EXPORT WKRect WKHitTestResultGetElementBoundingBox(WKHitTestResultRef hitTest
 }
 #endif
 
-#endif /* WKHitTestResult_h */
+#endif /* WKHitTestResultRef_h */

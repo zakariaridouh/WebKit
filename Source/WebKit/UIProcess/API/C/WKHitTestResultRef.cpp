@@ -25,7 +25,7 @@
  */
 
 #include "config.h"
-#include "WKHitTestResult.h"
+#include "WKHitTestResultRef.h"
 
 #include "APIHitTestResult.h"
 #include "WKAPICast.h"

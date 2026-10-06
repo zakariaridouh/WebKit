@@ -2148,7 +2148,7 @@
 		B61F9E812F742CFE005CE453 /* WKStageModeOrbitSimulator.h in Headers */ = {isa = PBXBuildFile; fileRef = B61F9E7E2F742CFE005CE453 /* WKStageModeOrbitSimulator.h */; };
 		B624FF1B2ABE503000F6EDF6 /* WebExtensionScriptInjectionResultParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = B624FF1A2ABE503000F6EDF6 /* WebExtensionScriptInjectionResultParameters.h */; };
 		B626B7BE2B4F1E3A008E8DD1 /* JSWebExtensionAPIStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = B626B7BD2B4F1DF8008E8DD1 /* JSWebExtensionAPIStorage.h */; };
-		B62E7312143047B00069EC35 /* WKHitTestResult.h in Headers */ = {isa = PBXBuildFile; fileRef = B62E7311143047B00069EC35 /* WKHitTestResult.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		B62E7312143047B00069EC35 /* WKHitTestResultRef.h in Headers */ = {isa = PBXBuildFile; fileRef = B62E7311143047B00069EC35 /* WKHitTestResultRef.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		B62FB8632AA9180C00E61418 /* WebExtensionAPIScripting.h in Headers */ = {isa = PBXBuildFile; fileRef = B62FB8622AA9180C00E61418 /* WebExtensionAPIScripting.h */; };
 		B63A99762B7EA001004611FD /* JSWebExtensionAPIWebPageRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = B63A99732B7EA000004611FD /* JSWebExtensionAPIWebPageRuntime.h */; };
 		B63C10352B51C0C5004A69B8 /* JSWebExtensionAPIStorageArea.h in Headers */ = {isa = PBXBuildFile; fileRef = B63C10322B51C09C004A69B8 /* JSWebExtensionAPIStorageArea.h */; };
@@ -8023,8 +8023,8 @@
 		B624FF1A2ABE503000F6EDF6 /* WebExtensionScriptInjectionResultParameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebExtensionScriptInjectionResultParameters.h; sourceTree = "<group>"; };
 		B624FF1C2ABE54B500F6EDF6 /* WebExtensionDynamicScripts.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = WebExtensionDynamicScripts.serialization.in; sourceTree = "<group>"; };
 		B626B7BD2B4F1DF8008E8DD1 /* JSWebExtensionAPIStorage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSWebExtensionAPIStorage.h; sourceTree = "<group>"; };
-		B62E730F143047A60069EC35 /* WKHitTestResult.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKHitTestResult.cpp; sourceTree = "<group>"; };
-		B62E7311143047B00069EC35 /* WKHitTestResult.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKHitTestResult.h; sourceTree = "<group>"; };
+		B62E730F143047A60069EC35 /* WKHitTestResultRef.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKHitTestResultRef.cpp; sourceTree = "<group>"; };
+		B62E7311143047B00069EC35 /* WKHitTestResultRef.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKHitTestResultRef.h; sourceTree = "<group>"; };
 		B62FB8622AA9180C00E61418 /* WebExtensionAPIScripting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebExtensionAPIScripting.h; sourceTree = "<group>"; };
 		B63403F814910D57001070B5 /* APIObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = APIObject.cpp; sourceTree = "<group>"; };
 		B63A99732B7EA000004611FD /* JSWebExtensionAPIWebPageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSWebExtensionAPIWebPageRuntime.h; sourceTree = "<group>"; };
@@ -16739,8 +16739,8 @@
 				BC06F44C12DBDF3F002D78DE /* WKGeolocationPermissionRequest.h */,
 				BC0E619712D6CD120012A72A /* WKGeolocationPosition.cpp */,
 				BC0E619612D6CD120012A72A /* WKGeolocationPosition.h */,
-				B62E730F143047A60069EC35 /* WKHitTestResult.cpp */,
-				B62E7311143047B00069EC35 /* WKHitTestResult.h */,
+				B62E730F143047A60069EC35 /* WKHitTestResultRef.cpp */,
+				B62E7311143047B00069EC35 /* WKHitTestResultRef.h */,
 				5C66A4B32320961300EA4D44 /* WKHTTPCookieStoreRef.cpp */,
 				5C66A4B42320961400EA4D44 /* WKHTTPCookieStoreRef.h */,
 				5110AE0A133C16CB0072717A /* WKIconDatabase.cpp */,
@@ -19726,7 +19726,7 @@
 				0753932C2DC94A2B0002EBCD /* WKGroupSession.h in Headers */,
 				F4DB54E62319E733009E3155 /* WKHighlightLongPressGestureRecognizer.h in Headers */,
 				1A422F8B18B29B5400D8CD96 /* WKHistoryDelegatePrivate.h in Headers */,
-				B62E7312143047B00069EC35 /* WKHitTestResult.h in Headers */,
+				B62E7312143047B00069EC35 /* WKHitTestResultRef.h in Headers */,
 				51D124991E763C01002B2820 /* WKHTTPCookieStore.h in Headers */,
 				DF462E0F23F22F5500EFF35F /* WKHTTPCookieStorePrivate.h in Headers */,
 				5C66A4B52320962400EA4D44 /* WKHTTPCookieStoreRef.h in Headers */,
