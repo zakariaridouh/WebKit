@@ -113,17 +113,21 @@ static inline Layout::GridLayoutConstraints constraintsForGridContent(const Layo
     auto gridContainerZoom = gridContainerStyle->usedZoomForLength();
 
     auto inlineAxisMinMaxSizes = [&]() -> std::pair<std::optional<LayoutUnit>, std::optional<LayoutUnit>> {
-        return {
-            minimumSizeConstraint(gridContainerStyle->minWidth(), gridContainerZoom),
-            maximumSizeConstraint(gridContainerStyle->maxWidth(), gridContainerZoom)
+        auto adjustForBoxSizing = [&](LayoutUnit width) {
+            return gridContainerRenderer->adjustContentBoxLogicalWidthForBoxSizing(width);
         };
+        auto minWidth = minimumSizeConstraint(gridContainerStyle->minWidth(), gridContainerZoom).transform(adjustForBoxSizing);
+        auto maxWidth = maximumSizeConstraint(gridContainerStyle->maxWidth(), gridContainerZoom).transform(adjustForBoxSizing);
+        return { minWidth, maxWidth };
     }();
 
     auto blockAxisMinMaxSizes = [&]() -> std::pair<std::optional<LayoutUnit>, std::optional<LayoutUnit>> {
-        return {
-            minimumSizeConstraint(gridContainerStyle->minHeight(), gridContainerZoom),
-            maximumSizeConstraint(gridContainerStyle->maxHeight(), gridContainerZoom)
+        auto adjustForBoxSizing = [&](LayoutUnit height) {
+            return gridContainerRenderer->adjustContentBoxLogicalHeightForBoxSizing(height);
         };
+        auto minHeight = minimumSizeConstraint(gridContainerStyle->minHeight(), gridContainerZoom).transform(adjustForBoxSizing);
+        auto maxHeight = maximumSizeConstraint(gridContainerStyle->maxHeight(), gridContainerZoom).transform(adjustForBoxSizing);
+        return { minHeight, maxHeight };
     }();
 
     auto inlineAxisConstraint = Layout::AxisConstraint::definite(
