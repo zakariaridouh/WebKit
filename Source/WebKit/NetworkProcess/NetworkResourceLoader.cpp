@@ -1183,12 +1183,19 @@ void NetworkResourceLoader::processUseAsDictionaryHeader(const ResourceResponse&
 
     // The record keeps the lifetime the response allowed rather than the response, so that a
     // dictionary can be matched without decoding one. https://www.rfc-editor.org/rfc/rfc9842#name-dictionary-freshness-requir
-    auto responseTimestamp = WallTime::now();
-    auto freshnessLifetime = computeFreshnessLifetimeForHTTPFamily(response, responseTimestamp);
-    auto currentAge = computeCurrentAge(response, responseTimestamp);
-    if (freshnessLifetime <= currentAge)
+    if (response.cacheControlContainsNoCache())
         return;
-    info.expirationTime = responseTimestamp + (freshnessLifetime - currentAge);
+    auto responseTimestamp = WallTime::now();
+    auto lifetime = computeFreshnessLifetimeForHTTPFamily(response, responseTimestamp);
+    if (!response.cacheControlContainsMustRevalidate()) {
+        CheckedPtr networkSession = protect(connectionToWebProcess())->networkSession();
+        if (auto staleWhileRevalidate = response.cacheControlStaleWhileRevalidate(); staleWhileRevalidate && networkSession && networkSession->isStaleWhileRevalidateEnabled())
+            lifetime += *staleWhileRevalidate;
+    }
+    auto currentAge = computeCurrentAge(response, responseTimestamp);
+    if (lifetime <= currentAge)
+        return;
+    info.expirationTime = responseTimestamp + (lifetime - currentAge);
 
     m_compressionDictionaryInfoForCache = WTF::move(info);
 }
