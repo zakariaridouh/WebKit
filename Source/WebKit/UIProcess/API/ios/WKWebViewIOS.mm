@@ -3585,6 +3585,60 @@ static WebCore::IntDegrees activeOrientation(WKWebView *webView)
         protect(_gestureController)->didSameDocumentNavigationForMainFrame(navigationType);
 }
 
+- (void)_adjustScrollViewForKeyboardCoalescingAdjustmentsIfNeeded:(NSDictionary *)keyboardInfo
+{
+    auto adjustScrollViewForKeyboardInfo = [](WKWebView *webView, NSDictionary *info) {
+        CGFloat bottomInsetBeforeAdjustment = [webView->_scrollView contentInset].bottom;
+        SetForScope insetAdjustmentGuard(webView->_perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard, YES);
+        [webView->_scrollView _adjustForAutomaticKeyboardInfo:info animated:YES lastAdjustment:&webView->_lastAdjustmentForScroller];
+        CGFloat bottomInsetAfterAdjustment = [webView->_scrollView contentInset].bottom;
+        // FIXME: This "total bottom content inset adjustment" mechanism hasn't worked since iOS 11, since -_adjustForAutomaticKeyboardInfo:animated:lastAdjustment:
+        // no longer sets -[UIScrollView contentInset] for apps linked on or after iOS 11. We should consider removing this logic, since the original bug this was
+        // intended to fix, <rdar://problem/23202254>, remains fixed through other means.
+        if (bottomInsetBeforeAdjustment != bottomInsetAfterAdjustment)
+            webView->_totalScrollViewBottomInsetAdjustmentForKeyboard += bottomInsetAfterAdjustment - bottomInsetBeforeAdjustment;
+    };
+
+    bool shouldCoalesceAdjustments = [&] {
+        // FIXME: Remove this once rdar://189235007 is addressed.
+        if (!WTF::IOSApplication::isNews() || !UIKeyboard.isInHardwareKeyboardMode)
+            return false;
+
+        RetainPtr accessoryView = [self inputAccessoryView];
+        if (!accessoryView)
+            return false;
+
+        return [_contentView _formInputSession].customInputAccessoryView || accessoryView != [_contentView inputAccessoryViewForWebView];
+    }();
+
+    if (!shouldCoalesceAdjustments) {
+        _pendingKeyboardInfoForScrollViewAdjustment = nullptr;
+        adjustScrollViewForKeyboardInfo(self, keyboardInfo);
+        return;
+    }
+
+    if (_didAdjustScrollViewForKeyboardInCurrentRunLoopIteration) {
+        _pendingKeyboardInfoForScrollViewAdjustment = keyboardInfo;
+        return;
+    }
+
+    _didAdjustScrollViewForKeyboardInCurrentRunLoopIteration = YES;
+    RunLoop::mainSingleton().dispatch([weakSelf = WeakObjCPtr<WKWebView>(self), adjustScrollViewForKeyboardInfo] {
+        RetainPtr strongSelf = weakSelf.get();
+        if (!strongSelf)
+            return;
+
+        strongSelf->_didAdjustScrollViewForKeyboardInCurrentRunLoopIteration = NO;
+        RetainPtr pendingInfo = std::exchange(strongSelf->_pendingKeyboardInfoForScrollViewAdjustment, nullptr);
+        if (!pendingInfo)
+            return;
+
+        adjustScrollViewForKeyboardInfo(strongSelf, pendingInfo);
+        [strongSelf _scheduleVisibleContentRectUpdate];
+    });
+    adjustScrollViewForKeyboardInfo(self, keyboardInfo);
+}
+
 - (void)_keyboardChangedWithInfo:(NSDictionary *)keyboardInfo adjustScrollView:(BOOL)adjustScrollView
 {
     NSValue *endFrameValue = [keyboardInfo objectForKey:UIKeyboardFrameEndUserInfoKey];
@@ -3611,17 +3665,8 @@ static WebCore::IntDegrees activeOrientation(WKWebView *webView)
     BOOL keyboardShouldOverlayContent = _perProcessState.viewportMetaTagInteractiveWidget == WebCore::InteractiveWidgetValue::OverlaysContent;
     BOOL keyboardShouldResizeContent = _perProcessState.viewportMetaTagInteractiveWidget == WebCore::InteractiveWidgetValue::ResizesContent;
 
-    if (adjustScrollView && !keyboardShouldOverlayContent) {
-        CGFloat bottomInsetBeforeAdjustment = [_scrollView contentInset].bottom;
-        SetForScope insetAdjustmentGuard(_perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard, YES);
-        [_scrollView _adjustForAutomaticKeyboardInfo:keyboardInfo animated:YES lastAdjustment:&_lastAdjustmentForScroller];
-        CGFloat bottomInsetAfterAdjustment = [_scrollView contentInset].bottom;
-        // FIXME: This "total bottom content inset adjustment" mechanism hasn't worked since iOS 11, since -_adjustForAutomaticKeyboardInfo:animated:lastAdjustment:
-        // no longer sets -[UIScrollView contentInset] for apps linked on or after iOS 11. We should consider removing this logic, since the original bug this was
-        // intended to fix, <rdar://problem/23202254>, remains fixed through other means.
-        if (bottomInsetBeforeAdjustment != bottomInsetAfterAdjustment)
-            _totalScrollViewBottomInsetAdjustmentForKeyboard += bottomInsetAfterAdjustment - bottomInsetBeforeAdjustment;
-    }
+    if (adjustScrollView && !keyboardShouldOverlayContent)
+        [self _adjustScrollViewForKeyboardCoalescingAdjustmentsIfNeeded:keyboardInfo];
 
     if (selectionWasVisible && [_contentView _hasFocusedElement] && !CGRectIsEmpty(previousInputViewBounds) && !CGRectIsEmpty(_inputViewBoundsInWindow) && !CGRectEqualToRect(previousInputViewBounds, _inputViewBoundsInWindow))
         [self _scrollToAndRevealSelectionIfNeeded];
