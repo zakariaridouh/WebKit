@@ -254,11 +254,11 @@ WPEView* wpeDisplayCreateView(WPEDisplay* display)
     return view;
 }
 
-bool wpeDisplayCheckEGLExtension(WPEDisplay* display, const char* extensionName)
+bool wpeDisplayCheckEGLExtension(WPEDisplay* display, ASCIILiteral extensionName)
 {
-    auto addResult = display->priv->extensionsMap.ensure(ASCIILiteral::fromLiteralUnsafe(extensionName), [&] {
+    auto addResult = display->priv->extensionsMap.ensure(extensionName, [&] {
         auto* eglDisplay = wpe_display_get_egl_display(display, nullptr);
-        return eglDisplay && epoxy_has_egl_extension(eglDisplay, extensionName);
+        return eglDisplay && epoxy_has_egl_extension(eglDisplay, extensionName.characters());
     });
     return addResult.iterator->value;
 }

@@ -2163,7 +2163,7 @@ static std::optional<GRefPtr<GstContext>> requestGLContext(ASCIILiteral contextT
     if (!gstGLDisplay || !gstGLContext)
         return std::nullopt;
 
-    if (contextType == ASCIILiteral::fromLiteralUnsafe(GST_GL_DISPLAY_CONTEXT_TYPE)) {
+    if (contextType == ASCIILiteral { GST_GL_DISPLAY_CONTEXT_TYPE }) {
         GRefPtr<GstContext> displayContext = adoptGRef(gst_context_new(GST_GL_DISPLAY_CONTEXT_TYPE, FALSE));
         gst_context_set_gl_display(displayContext.get(), gstGLDisplay);
         return displayContext;

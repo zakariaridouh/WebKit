@@ -183,8 +183,7 @@ GStreamerInternalVideoDecoder::GStreamerInternalVideoDecoder(const String& codec
     configureVideoDecoderForHarnessing(element);
 
 #if USE(GSTREAMER_GL)
-    static ASCIILiteral gstGlDisplayContextType = ASCIILiteral::fromLiteralUnsafe(GST_GL_DISPLAY_CONTEXT_TYPE);
-    if (!setGstElementGLContext(element.get(), gstGlDisplayContextType))
+    if (!setGstElementGLContext(element.get(), GST_GL_DISPLAY_CONTEXT_TYPE))
         return;
     if (!setGstElementGLContext(element.get(), "gst.gl.app_context"_s))
         return;
