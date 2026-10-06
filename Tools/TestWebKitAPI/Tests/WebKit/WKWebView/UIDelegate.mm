@@ -686,8 +686,9 @@ TEST(WebKit, LockdownModeAskAgainFirstUseMessage)
     [secondWebView addToTestWindow];
 
     EXPECT_EQ(presentViewControllerCallCount, 0);
-    [secondWebView waitForNextPresentationUpdate];
-    EXPECT_EQ(presentViewControllerCallCount, 1);
+    TestWebKitAPI::Util::waitFor([&] {
+        return presentViewControllerCallCount == 1;
+    });
 
     EXPECT_FALSE(showedCustomFirstUseMessage);
     EXPECT_FALSE(requestFutureFirstUseMessage);
