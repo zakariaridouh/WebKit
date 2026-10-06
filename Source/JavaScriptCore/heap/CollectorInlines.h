@@ -34,7 +34,7 @@ template<typename Func>
 void Collector::forEachSlotVisitor(NOESCAPE const Func& func)
 {
     func(*m_collectorSlotVisitor);
-    func(*m_heap.m_mutatorSlotVisitor);
+    func(*heap().m_mutatorSlotVisitor);
     for (auto& visitor : m_parallelSlotVisitors)
         func(*visitor);
 }
