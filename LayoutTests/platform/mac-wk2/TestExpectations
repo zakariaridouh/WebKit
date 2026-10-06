@@ -1369,8 +1369,6 @@ http/tests/webgpu/webgpu/api/operation/command_buffer/queries/timestampQuery.htm
 [ x86_64 ] fast/webgpu/nocrash/fuzz-291708.html [ Pass Failure ]
 [ x86_64 ] fast/webgpu/nocrash/fuzz-291867.html [ Pass Failure ]
 
-[ x86_64 ] fast/webgpu/nocrash/fuzz-291168.html [ Pass Timeout ]
-
 # skipped on Intel due to intermittently timing out due to the workload
 [ x86_64 ] fast/webgpu/nocrash/fuzz-282052.html [ Skip ]
 
@@ -2625,6 +2623,23 @@ webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/express
 [ GoldenGate Debug ] platform/mac/fast/objc/webScriptObject-hasWebScriptKey.html [ Failure ]
 [ GoldenGate Debug ] storage/websql/sql-error-codes.html [ Failure ]
 [ GoldenGate Debug ] storage/websql/test-authorizer.html [ Failure ]
+[ GoldenGate Debug ] http/tests/permissions/permission-status-onchange-event-service-worker.html [ Pass Crash ]
+[ GoldenGate Debug ] http/tests/site-isolation/inspector/target/target.html [ Pass Crash ]
+[ GoldenGate Debug ] http/tests/workers/service/page-caching.html [ Pass Crash ]
+[ GoldenGate Debug ] imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-auto-054.html [ Pass Crash ]
+[ GoldenGate Debug ] accessibility/element-reflection-ariaowns.html [ Failure ]
+[ GoldenGate Debug ] fast/quirks/active-quirks-by-domain.html [ Failure ]
+[ GoldenGate Debug ] imported/w3c/web-platform-tests/css/css-overflow/line-clamp/block-ellipsis-bidi-003.html [ ImageOnlyFailure ]
+[ GoldenGate Debug ] accessibility/isolated-tree/element-reflection-ariaowns.html [ Pass Failure ]
+[ GoldenGate Debug ] fast/webgpu/nocrash/fuzz-291168.html [ Pass Failure ]
+[ GoldenGate Debug ] http/tests/resourceLoadStatistics/prune-statistics.html [ Pass Timeout ]
+[ GoldenGate Debug ] http/tests/site-isolation/only-broadcast-frame-geometry-from-frames-with-cross-process-descendants.html [ Pass Failure ]
+[ GoldenGate Debug ] http/wpt/webauthn/public-key-credential-get-success-u2f.https.html [ Pass Failure ]
+[ GoldenGate Debug ] imported/w3c/web-platform-tests/css/filter-effects/crashtests/fecomponenttransfer-tablevalues-crash.html [ Pass Timeout ]
+[ GoldenGate Debug ] imported/w3c/web-platform-tests/wasm/core/float_literals.wast.js.html [ Pass Timeout ]
+[ GoldenGate Debug ] imported/w3c/web-platform-tests/workers/semantics/structured-clone/shared.html [ Pass Failure ]
+[ GoldenGate Debug ] media/video-page-visibility-restriction.html [ Pass Timeout ]
+[ GoldenGate Debug ] swipe/main-frame-pinning-requirement.html [ Pass Timeout ]
 
 # webkit.org/b/318157 11x imported/w3c/web-platform-tests/IndexedDB/* (layout-tests) are constant text failures.
 [ Debug ] imported/w3c/web-platform-tests/IndexedDB/interleaved-cursors-small.any.html [ Failure ]
