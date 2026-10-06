@@ -203,37 +203,7 @@ namespace TestWebKitAPI {
 // the process containing the focused frame. These tests put the selection in a cross-origin iframe and
 // check that each command takes effect there (or that its reply describes the iframe). If the command is
 // sent to the main frame's process instead, it finds the main frame's empty selection and does nothing.
-
-TEST(SiteIsolation, ListCommandsInCrossOriginIframe)
-{
-    HTTPServer server({
-        { "/mainframe"_s, { mainFrameTextWithCrossOriginIframe } },
-        { "/iframe"_s, { "<body contenteditable><ul><li>One</li><li id='item'>Two</li></ul></body>"_s } }
-    }, HTTPServer::Protocol::HttpsProxy);
-
-    auto [webView, navigationDelegate, childFrame] = webViewWithFocusedCrossOriginIframe(server);
-    setSelectionInFrame(webView.get(), childFrame.get(), @"getSelection().setPosition(item.firstChild, 1)", _WKSelectionAttributeIsCaret);
-
-    auto listDepth = [&] {
-        return [[webView objectByEvaluatingJavaScript:@"(() => { let depth = 0; for (let element = item.parentElement; element; element = element.parentElement) { if (element.matches('ol, ul')) ++depth; } return depth; })()" inFrame:childFrame.get()] intValue];
-    };
-    EXPECT_EQ(1, listDepth());
-
-    [webView _increaseListLevel:nil];
-    EXPECT_TRUE(Util::waitFor([&] {
-        return listDepth() == 2;
-    }));
-
-    [webView _decreaseListLevel:nil];
-    EXPECT_TRUE(Util::waitFor([&] {
-        return listDepth() == 1;
-    }));
-
-    [webView _changeListType:nil];
-    EXPECT_TRUE(Util::waitFor([&] {
-        return [[webView stringByEvaluatingJavaScript:@"item.closest('ol, ul').tagName" inFrame:childFrame.get()] isEqualToString:@"OL"];
-    }));
-}
+// SiteIsolationEditingTests.swift has more tests like these.
 
 #if PLATFORM(MAC)
 

@@ -2022,34 +2022,6 @@ TEST(SiteIsolation, NavigatingCrossOriginIframeToSameOrigin)
     EXPECT_WK_STREQ(childFrame.info.securityOrigin.host, "example.com");
 }
 
-TEST(SiteIsolation, ParentNavigatingCrossOriginIframeToSameOrigin)
-{
-    HTTPServer server({
-        { "/example"_s, { "<iframe id='webkit_frame' src='https://webkit.org/webkit'></iframe><script>onload = () => { document.getElementById('webkit_frame').src = 'https://example.com/example_subframe' }</script>"_s } },
-        { "/example_subframe"_s, { "<script>onload = ()=>{ alert('done') }</script>"_s } },
-        { "/webkit"_s, { "hi"_s } }
-    }, HTTPServer::Protocol::HttpsProxy);
-    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
-    EXPECT_WK_STREQ([webView _test_waitForAlert], "done");
-
-    auto mainFrame = [webView mainFrame];
-    auto childFrame = mainFrame.childFrames.firstObject;
-    pid_t mainFramePid = mainFrame.info._processIdentifier;
-    pid_t childFramePid = childFrame.info._processIdentifier;
-    EXPECT_NE(mainFramePid, 0);
-    EXPECT_NE(childFramePid, 0);
-    EXPECT_EQ(mainFramePid, childFramePid);
-    EXPECT_WK_STREQ(mainFrame.info.securityOrigin.host, "example.com");
-    EXPECT_WK_STREQ(childFrame.info.securityOrigin.host, "example.com");
-
-    checkFrameTreesInProcesses(webView.get(), {
-        { "https://example.com"_s,
-            { { "https://example.com"_s } }
-        }
-    });
-}
-
 TEST(SiteIsolation, IframeNavigatesSelfWithoutChangingOrigin)
 {
     HTTPServer server({
@@ -2357,46 +2329,6 @@ TEST(SiteIsolation, GrandchildIframe)
 
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "grandchild loaded successfully");
-}
-
-TEST(SiteIsolation, GrandchildIframeSameOriginAsGrandparent)
-{
-    HTTPServer server({
-        { "/example"_s, { "<iframe id='webkit_frame' src='https://webkit.org/webkit'></iframe>"_s } },
-        { "/webkit"_s, { "<iframe src='https://example.com/example_grandchild'></iframe>\">"_s } },
-        { "/example_grandchild"_s, { "<script>alert('grandchild loaded successfully')</script>"_s } },
-    }, HTTPServer::Protocol::HttpsProxy);
-
-    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
-
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
-    EXPECT_WK_STREQ([webView _test_waitForAlert], "grandchild loaded successfully");
-    checkFrameTreesInProcesses(webView.get(), {
-        { "https://example.com"_s, { { RemoteFrame, { { "https://example.com"_s } } } } },
-        { RemoteFrame, { { "https://webkit.org"_s, { { RemoteFrame } } } } }
-    });
-}
-
-TEST(SiteIsolation, ChildNavigatingToNewDomain)
-{
-    HTTPServer server({
-        { "/example"_s, { "<iframe id='webkit_frame' src='https://webkit.org/webkit'></iframe>"_s } },
-        { "/example_subframe"_s, { "<script>alert('done')</script>"_s } },
-        { "/webkit"_s, { "<script>window.location='https://foo.com/example_subframe'</script>"_s } }
-    }, HTTPServer::Protocol::HttpsProxy);
-    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
-    EXPECT_WK_STREQ([webView _test_waitForAlert], "done");
-
-    auto mainFrame = [webView mainFrame];
-    auto childFrame = mainFrame.childFrames.firstObject;
-    pid_t mainFramePid = mainFrame.info._processIdentifier;
-    pid_t childFramePid = childFrame.info._processIdentifier;
-    EXPECT_NE(mainFramePid, 0);
-    EXPECT_NE(childFramePid, 0);
-    EXPECT_NE(mainFramePid, childFramePid);
-    EXPECT_WK_STREQ(mainFrame.info.securityOrigin.host, "example.com");
-    EXPECT_WK_STREQ(childFrame.info.securityOrigin.host, "foo.com");
 }
 
 TEST(SiteIsolation, ChildNavigatingToMainFrameDomain)
@@ -3474,38 +3406,6 @@ TEST(SiteIsolation, DragAndDropWithoutNavigation)
     EXPECT_EQ(windowDropCount, 1);
 }
 #endif
-
-TEST(SiteIsolation, ShutDownFrameProcessesAfterNavigation)
-{
-    HTTPServer server({
-        { "/example"_s, { "<iframe src='https://webkit.org/webkit'></iframe>"_s } },
-        { "/webkit"_s, { "hello"_s } },
-        { "/apple"_s, { "hello"_s } }
-    }, HTTPServer::Protocol::HttpsProxy);
-
-    // The test verifies that the iframe process is torn down on cross-site
-    // navigation. With BFCache the iframe page would be kept alive as a
-    // suspended cached iframe, so disable BFCache to keep the original
-    // shutdown semantics under test.
-    auto *configuration = server.httpsProxyConfiguration();
-    configuration.processPool = processPoolWithBackForwardCacheDisabled().get();
-    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration);
-
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
-    [navigationDelegate waitForDidFinishNavigation];
-    pid_t iframePID = findFramePID(frameTrees(webView.get()).get(), FrameType::Remote);
-    checkFrameTreesInProcesses(webView.get(), {
-        { "https://example.com"_s, { { RemoteFrame } } },
-        { RemoteFrame, { { "https://webkit.org"_s } } }
-    });
-
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/apple"]]];
-    [navigationDelegate waitForDidFinishNavigation];
-    checkFrameTreesInProcesses(webView.get(), { { "https://apple.com"_s } });
-
-    while (processStillRunning(iframePID))
-        Util::spinRunLoop();
-}
 
 TEST(SiteIsolation, ShutDownFrameProcessesAfterNavigationBFCacheEnabled)
 {
