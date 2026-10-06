@@ -1308,7 +1308,6 @@ ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, c
             functionExecutable->prepareForExecution<FunctionExecutable>(vm, uncheckedDowncast<JSFunction>(function), functionScope, CodeSpecializationKind::CodeForCall, newCodeBlock);
             RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, scope.exception());
             ASSERT(newCodeBlock);
-            newCodeBlock->m_shouldAlwaysBeInlined = false;
         }
 
         {
@@ -1404,7 +1403,6 @@ JSObject* Interpreter::executeConstruct(JSObject* constructor, const CallData& c
             constructData.js.functionExecutable->prepareForExecution<FunctionExecutable>(vm, uncheckedDowncast<JSFunction>(constructor), scope, CodeSpecializationKind::CodeForConstruct, newCodeBlock);
             RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(throwScope, nullptr);
             ASSERT(newCodeBlock);
-            newCodeBlock->m_shouldAlwaysBeInlined = false;
         }
 
         {
@@ -1441,7 +1439,6 @@ CodeBlock* Interpreter::prepareForCachedCall(CachedCall& cachedCall, JSFunction*
     RETURN_IF_EXCEPTION(throwScope, { });
 
     ASSERT(newCodeBlock);
-    newCodeBlock->m_shouldAlwaysBeInlined = false;
 
     cachedCall.m_addressForCall = newCodeBlock->jitCode()->addressForCall();
     newCodeBlock->linkIncomingCall(nullptr, &cachedCall);
@@ -1459,7 +1456,6 @@ CodeBlock* Interpreter::prepareForMicrotaskCall(MicrotaskCall& microtaskCall, JS
     RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(throwScope, { });
 
     ASSERT(newCodeBlock);
-    newCodeBlock->m_shouldAlwaysBeInlined = false;
 
     microtaskCall.m_addressForCall = newCodeBlock->jitCode()->addressForCall();
     newCodeBlock->linkIncomingCall(nullptr, &microtaskCall);

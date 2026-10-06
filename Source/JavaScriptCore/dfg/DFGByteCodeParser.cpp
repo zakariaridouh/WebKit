@@ -2065,11 +2065,7 @@ std::tuple<unsigned, InlineAttribute> ByteCodeParser::inliningCost(CallVariant c
         return { UINT_MAX, InlineAttribute::None };
     }
     
-    // Check if the caller is already too large. We do this check here because that's just
-    // where we happen to also have the callee's code block, and we want that for the
-    // purpose of unsetting SABI.
     if (!isSmallEnoughToInlineCodeInto(m_codeBlock)) {
-        codeBlock->m_shouldAlwaysBeInlined = false;
         VERBOSE_LOG("    Failing because the caller is too large.\n");
         return { UINT_MAX, InlineAttribute::None };
     }

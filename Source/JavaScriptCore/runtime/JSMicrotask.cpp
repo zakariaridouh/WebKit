@@ -137,7 +137,6 @@ static JSValue callMicrotask(JSGlobalObject* globalObject, JSValue functionObjec
             functionExecutable->prepareForExecution<FunctionExecutable>(vm, uncheckedDowncast<JSFunction>(functionObject.asCell()), functionScope, CodeSpecializationKind::CodeForCall, newCodeBlock);
             RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, scope.exception());
             ASSERT(newCodeBlock);
-            newCodeBlock->m_shouldAlwaysBeInlined = false;
         }
 
         if (microtaskCallCache) {
