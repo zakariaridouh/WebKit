@@ -5070,6 +5070,7 @@ void WebViewImpl::startDrag(const WebCore::DragItem& item, ShareableBitmap::Hand
 
 #if HAVE(APPKIT_GESTURES_SUPPORT)
     RetainPtr gestureController = appKitGestureController();
+    [gestureController didReceiveDragStart];
     bool missingDragInitiator = !m_lastMouseDownEvent && ![gestureController activeDragGestureRecognizer];
 #else
     bool missingDragInitiator = !m_lastMouseDownEvent;
