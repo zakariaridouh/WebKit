@@ -1076,7 +1076,12 @@ std::optional<IPC::Connection::AsyncReplyID> WebPageProxy::drawToImage(FrameIden
 
 void WebPageProxy::contentSizeCategoryDidChange(const String& contentSizeCategory)
 {
-    protect(legacyMainFrameProcess())->send(Messages::WebPage::ContentSizeCategoryDidChange(contentSizeCategory), webPageIDInMainFrameProcess());
+    m_contentSizeCategory = contentSizeCategory;
+    if (RefPtr provisionalPage = m_provisionalPage)
+        provisionalPage->send(Messages::WebPage::ContentSizeCategoryDidChange(contentSizeCategory));
+    forEachWebContentProcess([&](auto& process, auto pageID) {
+        process.send(Messages::WebPage::ContentSizeCategoryDidChange(contentSizeCategory), pageID);
+    });
 }
 
 void WebPageProxy::generateSyntheticEditingCommand(WebKit::SyntheticEditingCommandType command)

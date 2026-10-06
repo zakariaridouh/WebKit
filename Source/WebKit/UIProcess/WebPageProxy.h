@@ -3991,6 +3991,7 @@ private:
 #if PLATFORM(IOS_FAMILY)
     std::optional<WebCore::InputMode> m_pendingInputModeChange;
     WebCore::IntDegrees m_deviceOrientation { 0 };
+    String m_contentSizeCategory;
     bool m_hasNetworkRequestsOnSuspended { false };
     bool m_isKeyboardAnimatingIn { false };
     bool m_isScrollingOrZooming { false };

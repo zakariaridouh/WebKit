@@ -141,6 +141,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
     bool canShowWhileLocked;
     bool isCapturingScreen;
     WebCore::Color insertionPointColor;
+    String contentSizeCategory;
 #endif
 #if PLATFORM(COCOA)
     bool smartInsertDeleteEnabled;

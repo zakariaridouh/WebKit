@@ -15127,6 +15127,7 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
     parameters.canShowWhileLocked = m_configuration->canShowWhileLocked();
     parameters.isCapturingScreen = pageClient && pageClient->isScreenBeingCaptured();
     parameters.insertionPointColor = pageClient ? pageClient->insertionPointColor() : WebCore::Color { };
+    parameters.contentSizeCategory = m_contentSizeCategory;
 #endif
 
 #if PLATFORM(VISION) && ENABLE(GAMEPAD)

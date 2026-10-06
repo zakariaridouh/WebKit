@@ -4012,6 +4012,8 @@ void WebPage::drawPrintingPagesToSnapshotiOS(RemoteSnapshotIdentifier snapshotId
 
 void WebPage::contentSizeCategoryDidChange(const String& contentSizeCategory)
 {
+    if (contentSizeCategory == String { WebCore::contentSizeCategory() })
+        return;
     setContentSizeCategory(contentSizeCategory);
     FontCache::invalidateAllFontCaches();
 }

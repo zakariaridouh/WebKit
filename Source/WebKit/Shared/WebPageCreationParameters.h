@@ -228,6 +228,7 @@ struct WebPageCreationParameters {
     bool canShowWhileLocked { false };
     bool isCapturingScreen { false };
     WebCore::Color insertionPointColor { };
+    String contentSizeCategory { };
 #endif
 #if PLATFORM(COCOA)
     bool smartInsertDeleteEnabled { false };

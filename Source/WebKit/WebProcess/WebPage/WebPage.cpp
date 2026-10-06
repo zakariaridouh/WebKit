@@ -1124,6 +1124,9 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 
     page->setTextAutosizingWidth(parameters.textAutosizingWidth);
     setOverrideViewportArguments(parameters.overrideViewportArguments);
+
+    if (!parameters.contentSizeCategory.isNull())
+        contentSizeCategoryDidChange(parameters.contentSizeCategory);
 #endif
 
     platformInitialize(parameters);
