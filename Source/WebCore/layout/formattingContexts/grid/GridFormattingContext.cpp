@@ -248,7 +248,7 @@ GridLayoutResult GridFormattingContext::layout(GridLayoutConstraints layoutConst
     auto usedJustifyContent = gridStyle->justifyContent().resolve();
     auto usedAlignContent = gridStyle->alignContent().resolve();
 
-    GridLayoutState layoutState { layoutConstraints, gridDefinition, usedJustifyContent, usedAlignContent, usedColumnGap, usedRowGap };
+    GridLayoutState layoutState { layoutConstraints, usedJustifyContent, usedAlignContent, usedColumnGap, usedRowGap };
 
     // https://drafts.csswg.org/css-grid-1/#layout-algorithm
     // 1. Run the Grid Item Placement Algorithm to resolve the placement of all grid items in the grid.
@@ -394,7 +394,7 @@ GridFormattingContext::IntrinsicWidths GridFormattingContext::computeIntrinsicWi
             .inlineAxis = intrinsicConstraint,
             .blockAxis = intrinsicConstraint
         };
-        GridLayoutState layoutState { layoutConstraints, gridDefinition, usedJustifyContent, usedAlignContent, usedColumnGap, usedRowGap };
+        GridLayoutState layoutState { layoutConstraints, usedJustifyContent, usedAlignContent, usedColumnGap, usedRowGap };
 
         auto placedGridItems = constructPlacedGridItems(gridItemPlacementResult.gridAreas);
         auto columnTrackSizingFunctionsList = trackSizingFunctions(gridItemPlacementResult.columnsCount, leadingImplicitTracks.columnsCount, gridDefinition.explicitGridTrackSizes.columnTrackSizes, gridDefinition.gridAutoColumns, gridDefinition.zoom);

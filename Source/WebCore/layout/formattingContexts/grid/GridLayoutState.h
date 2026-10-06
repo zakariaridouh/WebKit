@@ -33,7 +33,6 @@ namespace Layout {
 
 struct GridLayoutState {
     const GridLayoutConstraints gridLayoutConstraints;
-    const GridDefinition gridDefinition;
     const StyleContentAlignmentData usedJustifyContent;
     const StyleContentAlignmentData usedAlignContent;
     const LayoutUnit usedColumnGap;
