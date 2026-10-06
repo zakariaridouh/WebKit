@@ -878,6 +878,7 @@ void Page::setMainFrame(Ref<Frame>&& frame)
     if (RefPtr localFrame = dynamicDowncast<LocalFrame>(m_mainFrame.get())) {
         if (RefPtr document = localFrame->document())
             m_topDocumentSyncData = document->syncData();
+        pageOverlayController().mainFrameDidBecomeLocal();
     }
 
     // Notify the web page that the frame changed, so that we can re-intitialize the remote token.

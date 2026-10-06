@@ -74,6 +74,8 @@ public:
     void didChangeViewExposedRect();
     void didScrollFrame(LocalFrame&);
 
+    void mainFrameDidBecomeLocal();
+
     void didChangeOverlayFrame(PageOverlay&);
     void didChangeOverlayBackgroundColor(PageOverlay&);
 
