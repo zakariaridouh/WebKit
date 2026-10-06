@@ -692,6 +692,9 @@ public:
 #if PLATFORM(IOS_FAMILY) && ENABLE(UNIFIED_PDF)
     void setPDFDisplayMode(PDFPluginDisplayMode);
     void requestPDFDisplayMode(PDFPluginDisplayMode);
+
+    PDFPluginDisplayMode initialPDFDisplayMode() const;
+    void setInitialPDFDisplayMode(PDFPluginDisplayMode);
 #endif
 
 #if ENABLE(PDF_PLUGIN) && PLATFORM(MAC)

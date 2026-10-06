@@ -465,6 +465,7 @@ public:
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(UNIFIED_PDF)
     PDFPluginDisplayMode pdfDisplayMode { PDFPluginDisplayMode::SinglePageContinuous };
+    PDFPluginDisplayMode initialPDFDisplayMode { PDFPluginDisplayMode::SinglePageContinuous };
 #endif
 
 #if HAVE(NSVIEW_CORNER_CONFIGURATION)

@@ -4847,6 +4847,16 @@ void WebPage::requestPDFDisplayMode(PDFPluginDisplayMode mode)
         return pluginView->setPDFDisplayMode(mode);
 }
 
+PDFPluginDisplayMode WebPage::initialPDFDisplayMode() const
+{
+    return m_internals->initialPDFDisplayMode;
+}
+
+void WebPage::setInitialPDFDisplayMode(PDFPluginDisplayMode mode)
+{
+    m_internals->initialPDFDisplayMode = mode;
+}
+
 #endif
 
 } // namespace WebKit

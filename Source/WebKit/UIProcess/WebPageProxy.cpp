@@ -15130,6 +15130,10 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
     parameters.contentSizeCategory = m_contentSizeCategory;
 #endif
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(UNIFIED_PDF)
+    parameters.initialPDFDisplayMode = internals().initialPDFDisplayMode;
+#endif
+
 #if PLATFORM(VISION) && ENABLE(GAMEPAD)
     parameters.gamepadAccessRequiresExplicitConsent = m_configuration->gamepadAccessRequiresExplicitConsent();
 #endif

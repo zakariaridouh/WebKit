@@ -262,6 +262,9 @@ void WebPage::platformInitialize(const WebPageCreationParameters& parameters)
 #if PLATFORM(IOS_FAMILY)
     setInsertionPointColor(parameters.insertionPointColor);
     setHardwareKeyboardState(parameters.hardwareKeyboardState);
+#if ENABLE(UNIFIED_PDF)
+    setInitialPDFDisplayMode(parameters.initialPDFDisplayMode);
+#endif
 #endif
     if (!WebProcess::singleton().isLockdownModeEnabled()) {
         WebCore::setAdditionalSupportedImageTypes(parameters.additionalSupportedImageTypes);

@@ -6387,14 +6387,6 @@ TwoUpPDFDisplayModeSupportEnabled:
     default: true
     WebKitLegacy: false
 
-TwoUpPDFTrailingPageLeftAlignmentEnabled:
-  type: bool
-  status: internal
-  humanReadableName: "Two-Up PDF Trailing Page Left Alignment"
-  humanReadableDescription: "In two-up PDF display mode, align the trailing odd page to the same column as the first page instead of centering it"
-  condition: ENABLE(UNIFIED_PDF)
-  defaultValue: false
-
 # FIXME: Is this implemented for WebKitLegacy? If not, this should be excluded from WebKitLegacy entirely.
 UndoManagerAPIEnabled:
   type: bool

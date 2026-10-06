@@ -2656,6 +2656,7 @@ public:
     void setPDFDisplayMode(PDFPluginDisplayMode);
 
     void requestPDFDisplayMode(PDFPluginDisplayMode);
+    void setInitialPDFDisplayMode(PDFPluginDisplayMode);
 #endif
 
     Seconds mediaCaptureReportingDelay() const { return m_mediaCaptureReportingDelay; }

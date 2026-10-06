@@ -28,6 +28,7 @@
 #include "DrawingAreaInfo.h"
 #include "FrameTreeCreationParameters.h"
 #include "LayerTreeContext.h"
+#include "PDFDisplayMode.h"
 #include "ProvisionalFrameCreationParameters.h"
 #include "SandboxExtension.h"
 #include "SessionState.h"
@@ -229,6 +230,9 @@ struct WebPageCreationParameters {
     bool isCapturingScreen { false };
     WebCore::Color insertionPointColor { };
     String contentSizeCategory { };
+#endif
+#if PLATFORM(IOS_FAMILY) && ENABLE(UNIFIED_PDF)
+    PDFPluginDisplayMode initialPDFDisplayMode { PDFPluginDisplayMode::SinglePageContinuous };
 #endif
 #if PLATFORM(COCOA)
     bool smartInsertDeleteEnabled { false };

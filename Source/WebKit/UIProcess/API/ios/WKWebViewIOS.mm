@@ -35,6 +35,7 @@
 #import "LayerProperties.h"
 #import "NativeWebWheelEvent.h"
 #import "NavigationState.h"
+#import "PDFDisplayMode.h"
 #import "PointerTouchCompatibilitySimulator.h"
 #import "RemoteLayerTreeCommitBundle.h"
 #import "RemoteLayerTreeDrawingAreaProxy.h"
@@ -214,6 +215,10 @@ static WebCore::IntDegrees deviceOrientationForUIInterfaceOrientation(UIInterfac
     [_warningView setFrame:self.bounds];
     [super layoutSubviews];
     [self _frameOrBoundsMayHaveChanged];
+
+#if ENABLE(UNIFIED_PDF) && HAVE(UIVIEW_RESERVED_REGION)
+    [self _updatePDFDisplayModeIfNeeded];
+#endif
 }
 
 #pragma mark - iOS implementation methods
@@ -885,6 +890,53 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
 
     return UIEdgeInsetsZero;
 }
+
+#if ENABLE(UNIFIED_PDF) && HAVE(UIVIEW_RESERVED_REGION)
+
+- (void)_updatePDFDisplayModeIfNeeded
+{
+    RefPtr page = _page;
+    if (!page)
+        return;
+
+    if (!protect(page->preferences())->twoUpPDFDisplayModeSupportEnabled())
+        return;
+
+    BOOL shouldUseTwoUp = [&] {
+        RetainPtr regions = [self reservedRegionsOfKind:[UIViewReservedRegionKind divisionRegionKind]];
+        if ([regions count] != 1)
+            return NO;
+
+        CGRect unobscuredBounds = UIEdgeInsetsInsetRect(self.bounds, [self _computedObscuredInset]);
+        CGRect divisionFrame = [regions firstObject].frame;
+
+        if (CGRectGetMinX(divisionFrame) <= CGRectGetMinX(unobscuredBounds) || CGRectGetMaxX(divisionFrame) >= CGRectGetMaxX(unobscuredBounds))
+            return NO;
+
+        if (!WTF::areEssentiallyEqual<CGFloat>(CGRectGetMidX(divisionFrame), CGRectGetMidX(unobscuredBounds)))
+            return NO;
+
+        return YES;
+    }();
+
+    page->setInitialPDFDisplayMode(shouldUseTwoUp ? WebKit::PDFPluginDisplayMode::TwoUpContinuous : WebKit::PDFPluginDisplayMode::SinglePageContinuous);
+
+    if (shouldUseTwoUp == _shouldUseTwoUpPDFDisplayModeWithDivisionRegion)
+        return;
+
+    _shouldUseTwoUpPDFDisplayModeWithDivisionRegion = shouldUseTwoUp;
+
+    if (![self _isDisplayingPDF])
+        return;
+
+    BOOL isSinglePage = WebKit::isSinglePagePDFDisplayMode(page->pdfDisplayMode());
+    if (shouldUseTwoUp && isSinglePage)
+        page->requestPDFDisplayMode(WebKit::PDFPluginDisplayMode::TwoUpContinuous);
+    else if (!shouldUseTwoUp && !isSinglePage)
+        page->requestPDFDisplayMode(WebKit::PDFPluginDisplayMode::SinglePageContinuous);
+}
+
+#endif
 
 - (void)_processWillSwapOrDidExit
 {

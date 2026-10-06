@@ -72,6 +72,7 @@
 #include <WebCore/ColorCocoa.h>
 #include <WebCore/ContainerNodeInlines.h>
 #include <WebCore/DataDetectorElementInfo.h>
+#include <WebCore/DevicePostureType.h>
 #include <WebCore/DictionaryLookup.h>
 #include <WebCore/DictionaryPopupInfo.h>
 #include <WebCore/DocumentView.h>
@@ -240,7 +241,16 @@ UnifiedPDFPlugin::UnifiedPDFPlugin(HTMLPlugInElement& element)
     annotationContainer->appendChild(annotationStyleElement);
     installAnnotationContainer();
 
-    setDisplayMode(PDFPluginDisplayMode::SinglePageContinuous);
+    auto initialDisplayMode = PDFPluginDisplayMode::SinglePageContinuous;
+#if PLATFORM(IOS_FAMILY)
+    if (isFullMainFramePlugin()) {
+        if (RefPtr frame = m_frame.get()) {
+            if (RefPtr webPage = frame->page())
+                initialDisplayMode = webPage->initialPDFDisplayMode();
+        }
+    }
+#endif
+    setDisplayMode(initialDisplayMode);
 
     lazyInitialize(m_accessibilityDocumentObject, adoptNS([[WKAccessibilityPDFDocumentObject alloc] initWithPDFDocument:m_pdfDocument andElement:&element]));
     [m_accessibilityDocumentObject setPDFPlugin:this];
@@ -1448,8 +1458,10 @@ void UnifiedPDFPlugin::updateLayout(AdjustScaleAfterLayout shouldAdjustScale, st
     auto layoutSize = availableContentsRect().size();
     auto autoSizeMode = shouldUpdateAutoSizeScaleOverride.value_or(m_didLayoutWithValidDocument ? m_shouldUpdateAutoSizeScale : ShouldUpdateAutoSizeScale::Yes);
 
-    if (RefPtr corePage = page())
-        m_documentLayout.setShouldLeftAlignTrailingTwoUpPage(corePage->settings().twoUpPDFTrailingPageLeftAlignmentEnabled());
+    bool shouldLeftAlignTrailingTwoUpPage = false;
+    if (RefPtr webPage = this->webPage())
+        shouldLeftAlignTrailingTwoUpPage = webPage->devicePostureType() != WebCore::DevicePostureType::Continuous;
+    m_documentLayout.setShouldLeftAlignTrailingTwoUpPage(shouldLeftAlignTrailingTwoUpPage);
 
     Ref presentationController = *m_presentationController;
     auto computeAnchoringInfo = [&] {

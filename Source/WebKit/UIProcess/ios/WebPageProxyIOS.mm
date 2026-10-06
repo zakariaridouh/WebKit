@@ -1775,6 +1775,19 @@ void WebPageProxy::requestPDFDisplayMode(PDFPluginDisplayMode mode)
     protect(legacyMainFrameProcess())->send(Messages::WebPage::RequestPDFDisplayMode(mode), webPageIDInMainFrameProcess());
 }
 
+void WebPageProxy::setInitialPDFDisplayMode(PDFPluginDisplayMode mode)
+{
+    if (internals().initialPDFDisplayMode == mode)
+        return;
+
+    internals().initialPDFDisplayMode = mode;
+
+    if (!hasRunningProcess())
+        return;
+
+    protect(legacyMainFrameProcess())->send(Messages::WebPage::SetInitialPDFDisplayMode(mode), webPageIDInMainFrameProcess());
+}
+
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
