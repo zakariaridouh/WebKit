@@ -24,10 +24,11 @@ from fakeredis import FakeStrictRedis
 from redis import StrictRedis
 from resultsdbpy.controller.configuration import Configuration
 from resultsdbpy.model.cassandra_context import CassandraContext
-from resultsdbpy.model.mock_cassandra_context import MockCassandraContext
+from resultsdbpy.model.mock_cassandra_context import MockCassandraContext, MockCluster
 from resultsdbpy.model.mock_model_factory import MockModelFactory
 from resultsdbpy.model.upload_context import UploadContext
 from resultsdbpy.model.wait_for_docker_test_case import WaitForDockerTestCase
+from unittest import mock
 
 
 class UploadContextTest(WaitForDockerTestCase):
@@ -170,3 +171,24 @@ class UploadContextTest(WaitForDockerTestCase):
             self.assertEqual(0, len(self.model.suite_context.find_by_commit(configurations=[Configuration()], suite='layout-tests')))
             self.assertTrue(self.model.upload_context.do_processing_work())
             self.assertEqual(1, len(self.model.suite_context.find_by_commit(configurations=[Configuration()], suite='layout-tests')))
+
+    def test_async_processing_reuses_cassandra_connection(self):
+        self.init_database(redis=FakeStrictRedis, cassandra=MockCassandraContext, async_processing=True)
+        MockModelFactory.add_mock_results(self.model)
+
+        with MockModelFactory.safari(), MockModelFactory.webkit():
+            configuration_to_search = Configuration(platform='ios', version='12.0.0', is_simulator=True, style='Release')
+            configuration, uploads = next(iter(self.model.upload_context.find_test_results(configurations=[configuration_to_search], suite='layout-tests', recent=False).items()))
+            for upload in uploads[:2]:
+                self.model.upload_context.process_test_results(
+                    configuration=configuration,
+                    commits=upload['commits'],
+                    suite='layout-tests',
+                    test_results=upload['test_results'],
+                    timestamp=upload['timestamp'],
+                )
+
+            with mock.patch.object(MockCluster, 'connect', autospec=True, side_effect=MockCluster.connect) as connect:
+                self.assertTrue(self.model.upload_context.do_processing_work())
+            self.assertEqual(1, connect.call_count)
+            self.assertEqual([], list(self.model.upload_context.redis.scan_iter(match=f'*{UploadContext.QUEUE_NAME}*')))

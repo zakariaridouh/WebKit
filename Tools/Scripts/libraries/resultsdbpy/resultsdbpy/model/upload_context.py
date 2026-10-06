@@ -202,13 +202,14 @@ class UploadContext(object):
         jobs_left = True
         did_complete = False
 
-        while jobs_left:
-            jobs_left, key, attempts = self._find_job_with_attempts()
+        with self:
+            while jobs_left:
+                jobs_left, key, attempts = self._find_job_with_attempts()
 
-            if key:
-                did_complete |= self._do_job_for_key(key, attempts=attempts)
-            elif jobs_left:
-                time.sleep(10)  # There are jobs, but other workers are processing them.
+                if key:
+                    did_complete |= self._do_job_for_key(key, attempts=attempts)
+                elif jobs_left:
+                    time.sleep(10)  # There are jobs, but other workers are processing them.
 
         return did_complete
 
