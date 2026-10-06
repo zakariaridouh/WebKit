@@ -1007,6 +1007,11 @@ if (SWIFT_REQUIRED)
     # should match the rest of WebKit and use -Onone, but it negatively impacts build time
     webkit_target_add_swift_options(WebKit
         "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:-O>")
+    # Every frontend job imports most of WebCore's C++ declarations, at a cost
+    # of seconds of CPU time and gigabytes of memory, before compiling anything.
+    # One batch per core repeats that work for each core and competes with the
+    # C++ compiles for memory, so use fewer, larger batches.
+    webkit_target_add_swift_options(WebKit "-driver-batch-count 4")
 endif ()
 
 if (WebKit_PUBLIC_FRAMEWORK_HEADERS)
