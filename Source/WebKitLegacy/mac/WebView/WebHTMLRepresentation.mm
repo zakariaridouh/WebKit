@@ -92,7 +92,9 @@ using JSC::Yarr::RegularExpression;
 @implementation WebHTMLRepresentationPrivate
 @end
 
-@implementation WebHTMLRepresentation
+@implementation WebHTMLRepresentation {
+    RetainPtr<WebHTMLRepresentationPrivate> _private;
+}
 
 + (NSArray *)supportedMIMETypes
 {
@@ -131,7 +133,7 @@ using JSC::Yarr::RegularExpression;
     if (!self)
         return nil;
     
-    _private = [[WebHTMLRepresentationPrivate alloc] init];
+    _private = adoptNS([[WebHTMLRepresentationPrivate alloc] init]);
 
     return self;
 }
@@ -140,9 +142,6 @@ using JSC::Yarr::RegularExpression;
 {
     if (_private && _private->includedInWebKitStatistics)
         --WebHTMLRepresentationCount;
-
-    // Retaining the member just to release it would be pointless.
-    SUPPRESS_UNRETAINED_ARG [_private release];
 
     [super dealloc];
 }

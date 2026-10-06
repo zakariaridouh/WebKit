@@ -1723,7 +1723,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
     }
 #endif
 
-    _private = [[WebViewPrivate alloc] init];
+    _private = adoptNS([[WebViewPrivate alloc] init]);
     [self _commonInitializationWithFrameName:frameName groupName:groupName];
     [self setMaintainsBackForwardList: YES];
     return self;
@@ -1781,7 +1781,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
     if (!self)
         return nil;
 
-    _private = [[WebViewPrivate alloc] init];
+    _private = adoptNS([[WebViewPrivate alloc] init]);
 
     if (!preferences)
         preferences = [WebPreferences standardPreferences];
@@ -5415,7 +5415,7 @@ static bool needsWebViewInitThreadWorkaround()
         BOOL allowsUndo = YES;
 
         result = [super initWithCoder:decoder];
-        result->_private = [[WebViewPrivate alloc] init];
+        result->_private = adoptNS([[WebViewPrivate alloc] init]);
 
         // We don't want any of the archived subviews. The subviews will always
         // be created in _commonInitializationFrameName:groupName:.
@@ -5530,7 +5530,6 @@ static bool needsWebViewInitThreadWorkaround()
             SUPPRESS_UNRETAINED_ARG [_private->frameLoadDelegate release];
 #endif
 
-        SUPPRESS_UNRETAINED_ARG [_private release];
         // [super dealloc] can end up dispatching against _private (3466082)
         _private = nil;
     }

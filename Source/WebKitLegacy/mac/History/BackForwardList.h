@@ -85,7 +85,7 @@ private:
 
     bool isBackForwardList() const final { return true; }
 
-    WebView* m_webView;
+    __weak WebView *m_webView;
     Vector<Ref<WebCore::HistoryItem>> m_entries;
     HistoryItemHashSet m_entryHash;
     unsigned m_current;

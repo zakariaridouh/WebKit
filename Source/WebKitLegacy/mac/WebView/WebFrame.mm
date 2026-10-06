@@ -429,7 +429,7 @@ static NSURL *createUniqueWebDataURL();
     if (!self)
         return nil;
 
-    _private = [[WebFramePrivate alloc] init];
+    _private = adoptNS([[WebFramePrivate alloc] init]);
 
     // Set includedInWebKitStatistics before calling WebFrameView _setWebFrame, since
     // it calls WebFrame _isIncludedInWebKitStatistics.
@@ -2392,9 +2392,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     if (_private && _private->includedInWebKitStatistics)
         --WebFrameCount;
-
-    // Retaining the member just to release it would be pointless.
-    SUPPRESS_UNRETAINED_ARG [_private release];
 
     [super dealloc];
 }

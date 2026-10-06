@@ -103,6 +103,12 @@ WebView *getWebView(WebFrame *webFrame);
 }
 @end
 
+@interface WebFrame () {
+@package
+    RetainPtr<WebFramePrivate> _private;
+}
+@end
+
 @protocol WebCoreRenderTreeCopier <NSObject>
 - (NSObject *)nodeWithName:(NSString *)name position:(NSPoint)position rect:(NSRect)rect view:(NSView *)view children:(NSArray *)children;
 @end
