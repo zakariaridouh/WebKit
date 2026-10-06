@@ -1614,6 +1614,10 @@ JSPromise* GlobalObject::moduleLoaderFetch(JSGlobalObject* globalObject, JSModul
             promise->resolve(globalObject, vm, sourceCode);
             return promise;
         }
+        case ScriptFetchParameters::Type::CSS:
+            // Previous steps in the module loading process would've prevented
+            // this environment from loading CSS module scripts.
+            RELEASE_ASSERT_NOT_REACHED();
         default:
             break;
         }
