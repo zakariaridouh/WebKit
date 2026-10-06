@@ -39,7 +39,6 @@ webaudio/MediaElementAudioSource/mediaelementaudiosourcenode-channel-count.html 
 # Tests that Image fail #
 #########################
 css3/filters/effect-combined-hw.html [ ImageOnlyFailure ]
-http/tests/loading/reusing-cached-stylesheet-from-different-domain.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-fonts/variation-sequences.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-fixed-ancestor.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-position-auto-001.html [ Pass ImageOnlyFailure ]
