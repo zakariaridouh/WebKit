@@ -181,6 +181,7 @@ public:
     void clearLogoutSurvivingIdentityCookiesIfNeeded(const URL& fetchURL, int httpStatusCode);
 
     void determineRelevantQuirks();
+    void urlsDidChange();
     void logQuirksToConsoleIfNecessary() const;
 
 private:
@@ -204,6 +205,7 @@ private:
 
     bool m_needsConfigurableIndexedPropertiesQuirk { false };
     bool m_needsToCopyUserSelectNoneQuirk { false };
+    bool m_didApplyFacebookFlagQuirk { false };
 
     Vector<RegistrableDomain> m_subFrameDomainsForStorageAccessQuirk;
     URL m_topDocumentURLForTesting;

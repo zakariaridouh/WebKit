@@ -524,7 +524,9 @@ static Vector<Ref<Element>> copyElements(const NodeList& nodeList)
 
 Ref<NodeList> Quirks::applyFacebookFlagQuirk(Document& document, NodeList& nodeList)
 {
-    m_quirksData.removeBehaviorsMatching(QuirkBehaviors::shouldEnableFacebookFlagQuirk.id);
+    if (m_didApplyFacebookFlagQuirk)
+        return nodeList;
+    m_didApplyFacebookFlagQuirk = true;
 
     if (!document.settings().facebookLiveRecordingQuirkEnabled())
         return nodeList;
@@ -1226,7 +1228,12 @@ URL Quirks::topDocumentURL() const
     if (!m_topDocumentURLForTesting.isEmpty()) [[unlikely]]
         return m_topDocumentURLForTesting;
 
-    return protect(m_document)->topURL();
+    Ref document = *protect(m_document);
+    auto url = document->topURL();
+    if (RefPtr page = document->page(); page && !page->quirksTopDocumentHostForTesting().isEmpty()) [[unlikely]]
+        url.setHost(page->quirksTopDocumentHostForTesting());
+
+    return url;
 }
 
 URL Quirks::documentURL() const
@@ -1288,6 +1295,15 @@ void Quirks::determineRelevantQuirks()
 
     // rdar://133423460
     m_quirksData.setEnabled(QuirkBehaviors::shouldPreventOrientationMediaQueryFromEvaluatingToLandscapeQuirk, shouldPreventOrientationMediaQueryFromEvaluatingToLandscapeInternal(quirksURL));
+}
+
+void Quirks::urlsDidChange()
+{
+    auto previousQuirksData = m_quirksData;
+    determineRelevantQuirks();
+
+    if (!m_quirksData.hasSameBehaviorFlags(previousQuirksData))
+        protect(m_document)->scheduleFullStyleRebuild();
 }
 
 void Quirks::logQuirksToConsoleIfNecessary() const

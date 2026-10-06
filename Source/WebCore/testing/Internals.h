@@ -1588,6 +1588,7 @@ public:
 
     void setTopDocumentURLForQuirks(const String&);
     void setSubframeURLForQuirks(const String&);
+    void setTopDocumentHostForQuirks(const String&);
     Vector<String> activeQuirks() const;
 
 #if ENABLE(APP_HIGHLIGHTS)

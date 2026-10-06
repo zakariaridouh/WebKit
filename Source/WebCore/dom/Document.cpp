@@ -1073,6 +1073,12 @@ Quirks& Document::ensureQuirks()
     return *m_quirks;
 }
 
+void Document::urlsAffectingQuirksDidChange()
+{
+    if (m_quirks)
+        m_quirks->urlsDidChange();
+}
+
 CachedResourceLoader& Document::ensureCachedResourceLoader()
 {
     ASSERT(m_constructionDidFinish);
@@ -4751,6 +4757,10 @@ void Document::setURL(URL&& url)
     m_documentURI = m_url.url();
     m_adjustedURL = adjustedURL();
     updateBaseURL();
+
+    urlsAffectingQuirksDidChange();
+    if (RefPtr page = this->page(); page && isTopDocument())
+        page->topDocumentURLDidChange();
 }
 
 const URL& Document::urlForBindings()

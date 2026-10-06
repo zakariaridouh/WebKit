@@ -1592,6 +1592,7 @@ enum ContentsFormat {
 
     undefined setTopDocumentURLForQuirks(DOMString urlString);
     undefined setSubframeURLForQuirks(DOMString urlString);
+    undefined setTopDocumentHostForQuirks(DOMString host);
     sequence<DOMString> activeQuirks();
 
     [CallWith=CurrentGlobalObject] ReadableStream readableStreamFromMessagePort(MessagePort port);

@@ -751,6 +751,7 @@ public:
 
     inline Quirks& quirks(); // Defined in DocumentQuirks.h
     inline const Quirks& quirks() const; // Defined in DocumentQuirks.h
+    void urlsAffectingQuirksDidChange();
 
     WEBCORE_EXPORT float NODELETE deviceScaleFactor() const;
     float NODELETE pixelSnappingScaleFactor() const;
@@ -1442,7 +1443,7 @@ public:
     void inheritPolicyContainerFrom(const PolicyContainer&) final;
     void enforceSandboxFlags(SandboxFlags, SandboxFlagsSource = SandboxFlagsSource::Other) final;
 
-    void updateURLForPushOrReplaceState(const URL&);
+    WEBCORE_EXPORT void updateURLForPushOrReplaceState(const URL&);
     void statePopped(Ref<SerializedScriptValue>&&);
 
     bool processingLoadEvent() const { return m_processingLoadEvent; }

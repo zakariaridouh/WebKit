@@ -642,6 +642,7 @@ void Internals::resetToConsistentState(Page& page)
     page.setResourceCachingDisabledByWebInspector(false);
     page.setConsoleMessageListenerForTesting(nullptr);
     page.setQuirksSubframeURLForTesting({ });
+    page.setQuirksTopDocumentHostForTesting({ });
 
     RefPtr localMainFrame = page.localMainFrame();
     if (!localMainFrame)
@@ -8963,6 +8964,17 @@ void Internals::setSubframeURLForQuirks(const String& urlString)
     Ref page = *protect(document->page());
     page->settings().setNeedsSiteSpecificQuirks(true);
     page->setQuirksSubframeURLForTesting(URL { urlString });
+}
+
+void Internals::setTopDocumentHostForQuirks(const String& host)
+{
+    RefPtr document = contextDocument();
+    if (!document || !document->page())
+        return;
+
+    Ref page = *protect(document->page());
+    page->settings().setNeedsSiteSpecificQuirks(true);
+    page->setQuirksTopDocumentHostForTesting(String { host });
 }
 
 Vector<String> Internals::activeQuirks() const

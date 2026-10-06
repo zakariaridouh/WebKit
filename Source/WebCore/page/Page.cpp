@@ -890,12 +890,15 @@ void Page::setMainFrameURLAndOrigin(const URL& url, RefPtr<SecurityOrigin>&& ori
     // directly hosting the local main frame.
     RefPtr localFrame = dynamicDowncast<LocalFrame>(m_mainFrame.get());
     if (!localFrame) {
+        bool urlChanged = m_topDocumentSyncData->documentURL != url;
         m_topDocumentSyncData->documentURL = url;
 
         if (!origin)
             origin = SecurityOrigin::create(url);
         m_topDocumentSyncData->documentSecurityOrigin = WTF::move(origin);
 
+        if (urlChanged)
+            topDocumentURLDidChange();
         return;
     }
 
@@ -1009,12 +1012,15 @@ void Page::updateTopDocumentSyncData(const DocumentSyncSerializationData& data)
     switch (static_cast<DocumentSyncDataType>(data.value.index())) {
     case DocumentSyncDataType::DocumentClasses:
     case DocumentSyncDataType::DocumentSecurityOrigin:
-    case DocumentSyncDataType::DocumentURL:
     case DocumentSyncDataType::HasInjectedUserScript:
     case DocumentSyncDataType::IsAutofocusProcessed:
     case DocumentSyncDataType::IsClosing:
     case DocumentSyncDataType::UserDidInteractWithPage:
         protect(m_topDocumentSyncData)->update(data);
+        break;
+    case DocumentSyncDataType::DocumentURL:
+        protect(m_topDocumentSyncData)->update(data);
+        topDocumentURLDidChange();
         break;
 #if ENABLE(DOM_AUDIO_SESSION)
     case DocumentSyncDataType::AudioSessionType:
@@ -1040,6 +1046,7 @@ void Page::updateTopDocumentSyncData(const DocumentSyncSerializationData& data)
 
 void Page::updateTopDocumentSyncData(Ref<DocumentSyncData>&& data)
 {
+    bool documentURLChanged = m_topDocumentSyncData->documentURL != data->documentURL;
     m_topDocumentSyncData = WTF::move(data);
 
 #if ENABLE(DOM_AUDIO_SESSION)
@@ -1047,6 +1054,9 @@ void Page::updateTopDocumentSyncData(Ref<DocumentSyncData>&& data)
     // the override the type implies, as the per-field path does for later changes.
     DOMAudioSession::applyTypeToAudioSessionCategoryOverride(m_topDocumentSyncData->audioSessionType);
 #endif
+
+    if (documentURLChanged)
+        topDocumentURLDidChange();
 }
 
 void Page::setMainFrameURLFragment(String&& fragment)
@@ -5834,6 +5844,27 @@ void Page::setQuirksSubframeURLForTesting(URL&& url)
 
         document.quirks().determineRelevantQuirks();
         document.scheduleFullStyleRebuild();
+    });
+}
+
+void Page::setQuirksTopDocumentHostForTesting(String&& host)
+{
+    if (m_quirksTopDocumentHostForTesting == host)
+        return;
+
+    m_quirksTopDocumentHostForTesting = WTF::move(host);
+
+    forEachDocument([](Document& document) {
+        document.quirks().determineRelevantQuirks();
+        document.scheduleFullStyleRebuild();
+    });
+}
+
+void Page::topDocumentURLDidChange()
+{
+    forEachDocument([](Document& document) {
+        if (!document.isTopDocument())
+            document.urlsAffectingQuirksDidChange();
     });
 }
 

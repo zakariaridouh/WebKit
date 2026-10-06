@@ -45,6 +45,11 @@ public:
         return !m_behaviorFlags.isEmpty();
     }
 
+    inline bool hasSameBehaviorFlags(const QuirksData& other) const
+    {
+        return m_behaviorFlags == other.m_behaviorFlags;
+    }
+
     inline const Vector<QuirkBehavior>& behaviors() const LIFETIME_BOUND
     {
         return m_behaviors;

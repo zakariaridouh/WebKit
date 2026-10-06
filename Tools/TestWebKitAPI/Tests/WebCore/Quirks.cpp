@@ -1252,4 +1252,32 @@ TEST_F(QuirksTest, InstagramReelsGrowToFillTheirFlexContainerOnlyWhenTheyContain
 }
 #endif // ENABLE(VIDEO)
 
+static bool hasActiveQuirk(WebCore::Document& document, ASCIILiteral quirkName)
+{
+    return document.quirks().activeQuirks().contains(String { quirkName });
+}
+
+static TestPageHarness createPageWithQuirksEnabled()
+{
+    return TestPageHarness::create({ .configureSettings = [](auto& settings) {
+        settings.setNeedsSiteSpecificQuirks(true);
+    } });
+}
+
+TEST_F(QuirksTest, SameDocumentNavigationReresolvesQuirks)
+{
+    auto page = createPageWithQuirksEnabled();
+    page.loadHTML("<!DOCTYPE html>"_s);
+
+    Ref document = page.document();
+    document->setURL(URL { "https://www.apple.com/"_s });
+    EXPECT_FALSE(hasActiveQuirk(document, "ShouldDisableScrollAnchoringQuirk"_s));
+
+    document->updateURLForPushOrReplaceState(URL { "https://www.apple.com/retail"_s });
+    EXPECT_TRUE(hasActiveQuirk(document, "ShouldDisableScrollAnchoringQuirk"_s));
+
+    document->updateURLForPushOrReplaceState(URL { "https://www.apple.com/"_s });
+    EXPECT_FALSE(hasActiveQuirk(document, "ShouldDisableScrollAnchoringQuirk"_s));
+}
+
 } // namespace TestWebKitAPI

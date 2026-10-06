@@ -456,6 +456,7 @@ public:
     WEBCORE_EXPORT RefPtr<Frame> findFrameByPath(const Vector<uint64_t>& path) const;
 
     WEBCORE_EXPORT void setMainFrameURLAndOrigin(const URL&, RefPtr<SecurityOrigin>&&);
+    void topDocumentURLDidChange();
 #if ENABLE(DOM_AUDIO_SESSION)
     void setAudioSessionType(DOMAudioSessionType);
     DOMAudioSessionType NODELETE audioSessionType() const;
@@ -1310,6 +1311,8 @@ public:
 
     const URL& NODELETE quirksSubframeURLForTesting() const LIFETIME_BOUND { return m_quirksSubframeURLForTesting; }
     WEBCORE_EXPORT void setQuirksSubframeURLForTesting(URL&&);
+    const String& NODELETE quirksTopDocumentHostForTesting() const LIFETIME_BOUND { return m_quirksTopDocumentHostForTesting; }
+    WEBCORE_EXPORT void setQuirksTopDocumentHostForTesting(String&&);
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(WEBXR)
     WEBCORE_EXPORT bool hasActiveImmersiveSession() const;
@@ -1845,6 +1848,7 @@ private:
     std::optional<std::pair<uint16_t, uint16_t>> m_portsForUpgradingInsecureSchemeForTesting;
 
     URL m_quirksSubframeURLForTesting;
+    String m_quirksTopDocumentHostForTesting;
 
     RefPtr<StringCallback> m_consoleMessageListenerForTesting;
 
