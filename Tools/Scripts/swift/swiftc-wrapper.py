@@ -115,15 +115,16 @@ def write_ninja_depfile(request, output_file_map):
         )
 
     excludes = excluded_paths(request)
+    # Every frontend job reports (nearly) the same ~16-25K module dependencies,
+    # so collect the distinct spellings first and only canonicalize those: the
+    # per-token normpath over ~1M tokens used to take >10s for WebKit.
+    raw = set()
+    for source in sources:
+        raw |= depfile.dependency_set(source)
     # Sorted: swiftc reports a dependency once per frontend job that saw it, so
     # discovery order follows job scheduling and would rewrite this file, and
     # cost a build, for a dependency set that did not change.
-    deps = sorted({
-        dep
-        for source in sources
-        for dep in depfile.parse(source)
-        if _canonical(dep) not in excludes
-    })
+    deps = sorted(dep for dep in raw if _canonical(dep) not in excludes)
 
     lines = [f"{depfile.escape(request.target)}:"]
     lines += (f"  {depfile.escape(dep)}" for dep in deps)

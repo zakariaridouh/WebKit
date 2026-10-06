@@ -150,6 +150,10 @@ if (APPLE)
 
     webkit_add_swift_options(
         -explicit-module-build
+        # Reuse the previous build's dependency scan, revalidated against its
+        # inputs, instead of rescanning from scratch: the WebKit target's scan
+        # reads ~16K files and takes ~14 s, on every rebuild of its Swift module.
+        -incremental-dependency-scan
     )
 
     webkit_add_swift_options(
