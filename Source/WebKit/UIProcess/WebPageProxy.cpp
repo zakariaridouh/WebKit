@@ -6230,10 +6230,20 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
         }
 
         RefPtr pageClientProtector = pageClient();
+        // With site isolation, a subframe navigation may already be loading in a provisional frame in another process
+        // (e.g. on a redirect). Keep using that provisional frame when the navigation stays in its process.
+        RefPtr provisionalFrameForNavigation = frame->provisionalFrame();
+        if (provisionalFrameForNavigation && (provisionalFrameForNavigation->navigationID() != navigation->navigationID()
+            || provisionalFrameForNavigation->process().coreProcessIdentifier() != processNavigatingTo->coreProcessIdentifier()))
+            provisionalFrameForNavigation = nullptr;
         Ref processNavigatingFrom = [&] {
             RefPtr provisionalPage = m_provisionalPage;
             bool needsSwap = preferences->siteIsolationEnabled() && frame->isMainFrame() && provisionalPage && provisionalPage->hasActiveLoadForNavigation(navigation);
-            return protect(needsSwap ? provisionalPage->process() : frame->process());
+            if (needsSwap)
+                return protect(provisionalPage->process());
+            if (provisionalFrameForNavigation)
+                return protect(provisionalFrameForNavigation->process());
+            return protect(frame->process());
         }();
 
         const bool navigationChangesFrameProcess = processNavigatingTo->coreProcessIdentifier() != processNavigatingFrom->coreProcessIdentifier();
@@ -6244,7 +6254,8 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
             LOG_WITH_STREAM(ProcessSwapping, stream << "(ProcessSwapping) Switching from process "_s << legacyMainFrameProcessID() << " to new process ("_s << processNavigatingTo->processID() << ") for navigation "_s << navigation->navigationID().toUInt64() << " '"_s << navigation->loggingString() << "'"_s);
         } else {
             WEBPAGEPROXY_RELEASE_LOG(ProcessSwapping, "decidePolicyForNavigationAction: keep using process %i for navigation, reason=%" PUBLIC_LOG_STRING, legacyMainFrameProcessID(), reason.characters());
-            frame->takeProvisionalFrame();
+            if (!provisionalFrameForNavigation)
+                frame->takeProvisionalFrame();
         }
 
         if (navigationChangesFrameProcess) {
