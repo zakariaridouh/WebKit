@@ -4309,7 +4309,18 @@ class YarrGenerator final : public YarrJITInfo {
                 op.m_checkAdjust = Checked<unsigned>(alternative->m_minimumSize);
                 if ((term->quantityType == QuantifierType::FixedCount) && (term->quantityMaxCount == 1) && (term->type != PatternTerm::Type::ParentheticalAssertion))
                     op.m_checkAdjust -= disjunction->m_minimumSize;
-                if (op.m_checkAdjust)
+
+                if (isEOLStringListAlternative(op)) {
+                    ASSERT(m_stringListLengthMismatches.empty());
+                    ASSERT(m_stringListGroupFailures.empty());
+                    if (op.m_checkAdjust)
+                        consumeIndex(MacroAssembler::Imm32(op.m_checkAdjust));
+                    m_stringListLengthMismatches.append(m_jit.branch32(MacroAssembler::NotEqual, m_regs.index, m_regs.length));
+                    if (alternative->m_isLastAlternative) {
+                        op.m_jumps.append(m_stringListLengthMismatches);
+                        m_stringListLengthMismatches.clear();
+                    }
+                } else if (op.m_checkAdjust)
                     op.m_jumps.append(jumpIfNoAvailableInput(op.m_checkAdjust));
                 break;
             }
@@ -4371,11 +4382,40 @@ class YarrGenerator final : public YarrJITInfo {
                     op.m_jumps.link(&m_jit);
                     op.m_jumps.clear();
                     auto lastCheckAdjust = prevOp->m_checkAdjust;
-                    if (lastCheckAdjust > op.m_checkAdjust)
-                        m_jit.sub32(MacroAssembler::Imm32(lastCheckAdjust - op.m_checkAdjust), m_regs.index);
-                    else if (op.m_checkAdjust > lastCheckAdjust)
-                        m_jit.add32(MacroAssembler::Imm32(op.m_checkAdjust - lastCheckAdjust), m_regs.index);
-                    op.m_jumps.append(jumpIfNoAvailableInput());
+                    if (isEOLStringListAlternative(op)) {
+                        // Alternatives of an EOL string list are sorted by length, so a length check passed by the previous
+                        // alternative also holds here. A failed length check skips to the next group of a different length.
+                        if (lastCheckAdjust != op.m_checkAdjust) {
+                            ASSERT(lastCheckAdjust > op.m_checkAdjust);
+                            // Reaching here without a length mismatch means the previous group had exactly the remaining
+                            // length and none of its strings matched, so no shorter group can match either. Fail the
+                            // whole list, adjusting the index to what the last alternative's failure path expects.
+                            unsigned lastAlternativeCheckAdjust = disjunction->m_alternatives.last()->m_minimumSize;
+                            if ((term->quantityType == QuantifierType::FixedCount) && (term->quantityMaxCount == 1) && (term->type != PatternTerm::Type::ParentheticalAssertion))
+                                lastAlternativeCheckAdjust -= disjunction->m_minimumSize;
+                            ASSERT(lastCheckAdjust > lastAlternativeCheckAdjust);
+                            m_jit.sub32(MacroAssembler::Imm32(lastCheckAdjust - lastAlternativeCheckAdjust), m_regs.index);
+                            m_stringListGroupFailures.append(m_jit.jump());
+
+                            m_stringListLengthMismatches.link(&m_jit);
+                            m_stringListLengthMismatches.clear();
+                            m_jit.sub32(MacroAssembler::Imm32(lastCheckAdjust - op.m_checkAdjust), m_regs.index);
+                            m_stringListLengthMismatches.append(m_jit.branch32(MacroAssembler::NotEqual, m_regs.index, m_regs.length));
+                        }
+                        if (alternative->m_isLastAlternative) {
+                            op.m_jumps.append(m_stringListLengthMismatches);
+                            m_stringListLengthMismatches.clear();
+                            op.m_jumps.append(m_stringListGroupFailures);
+                            m_stringListGroupFailures.clear();
+                        }
+                    } else {
+                        if (lastCheckAdjust > op.m_checkAdjust)
+                            m_jit.sub32(MacroAssembler::Imm32(lastCheckAdjust - op.m_checkAdjust), m_regs.index);
+                        else if (op.m_checkAdjust > lastCheckAdjust)
+                            m_jit.add32(MacroAssembler::Imm32(op.m_checkAdjust - lastCheckAdjust), m_regs.index);
+
+                        op.m_jumps.append(jumpIfNoAvailableInput());
+                    }
                 } else if (op.m_checkAdjust)
                     op.m_jumps.append(jumpIfNoAvailableInput(op.m_checkAdjust));
                 break;
@@ -5597,6 +5637,16 @@ class YarrGenerator final : public YarrJITInfo {
         return false;
     }
 
+    bool isEOLStringListAlternative(const YarrOp& op)
+    {
+        if (op.m_op != YarrOpCode::StringListAlternativeBegin && op.m_op != YarrOpCode::StringListAlternativeNext)
+            return false;
+        if (!op.m_term->parentheses.isEOLStringList)
+            return false;
+        ASSERT(m_direction == Forward);
+        return true;
+    }
+
     // Compilation methods:
     // ====================
 
@@ -5637,7 +5687,7 @@ class YarrGenerator final : public YarrJITInfo {
                     nestedDisjunction->m_alternatives.last()->m_isLastAlternative = false;
 
                     std::ranges::sort(nestedDisjunction->m_alternatives, [](auto& l, auto& r) {
-                        return l->m_terms.size() > r->m_terms.size();
+                        return l->m_minimumSize > r->m_minimumSize;
                     });
                     nestedDisjunction->m_alternatives.last()->m_isLastAlternative = true;
                 }
@@ -7660,6 +7710,8 @@ private:
     MacroAssembler::JumpList m_hitMatchLimit;
     MacroAssembler::JumpList m_inlinedMatched;
     MacroAssembler::JumpList m_inlinedFailedMatch;
+    MacroAssembler::JumpList m_stringListLengthMismatches;
+    MacroAssembler::JumpList m_stringListGroupFailures;
 
     MatchDirection m_direction { Forward };
 
