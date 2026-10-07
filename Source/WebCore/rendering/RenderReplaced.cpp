@@ -1026,19 +1026,35 @@ void RenderReplaced::computeIntrinsicLogicalWidthContributions()
         if (shouldIgnoreLogicalMinMaxWidthSizes())
             return;
 
-        // Apply max-width before min-width so that min-width wins when min > max, matching
-        // CSS 2.1 §10.4 and RenderBox::constrainIntrinsicLogicalWidthsByMinMax().
-        if (auto fixedLogicalMaxWidth = styleToUse.logicalMaxWidth().tryFixed()) {
-            auto maxWidth = adjustContentBoxLogicalWidthForBoxSizing(*fixedLogicalMaxWidth);
-            m_maxContentLogicalWidthContribution = std::min(m_maxContentLogicalWidthContribution, maxWidth);
-            m_minContentLogicalWidthContribution = std::min(m_minContentLogicalWidthContribution, maxWidth);
-        }
+        // Resolve the used min/max width, then clamp by max-width before min-width so that min-width
+        // wins when min > max (CSS 2.1 section 10.4). A min-content/max-content keyword min-width floors
+        // the contribution by the box's own min-content/max-content size; this matters for a
+        // percentage-width replaced element, whose min-content contribution is resolved against zero
+        // (CSS Sizing 3 section 5.2.1) and is then floored by the minimum size in its own axis.
+        // Mirrors RenderBox::constrainIntrinsicLogicalWidthsByMinMax().
+        auto& logicalMinWidth = styleToUse.logicalMinWidth();
 
-        if (auto fixedLogicalMinWidth = styleToUse.logicalMinWidth().tryFixed()) {
-            auto minWidth = adjustContentBoxLogicalWidthForBoxSizing(*fixedLogicalMinWidth);
-            m_maxContentLogicalWidthContribution = std::max(m_maxContentLogicalWidthContribution, minWidth);
-            m_minContentLogicalWidthContribution = std::max(m_minContentLogicalWidthContribution, minWidth);
-        }
+        auto usedMaxLogicalWidth = [&] -> LayoutUnit {
+            if (auto fixedLogicalMaxWidth = styleToUse.logicalMaxWidth().tryFixed())
+                return adjustContentBoxLogicalWidthForBoxSizing(*fixedLogicalMaxWidth);
+            return LayoutUnit::max();
+        }();
+
+        auto usedMinLogicalWidth = [&] -> LayoutUnit {
+            if (auto fixedLogicalMinWidth = logicalMinWidth.tryFixed())
+                return adjustContentBoxLogicalWidthForBoxSizing(*fixedLogicalMinWidth);
+            if (logicalMinWidth.isMaxContent())
+                return m_maxContentLogicalWidthContribution;
+            if (logicalMinWidth.isMinContent())
+                return m_minContentLogicalWidthContribution;
+            return { };
+        }();
+
+        m_maxContentLogicalWidthContribution = std::min(m_maxContentLogicalWidthContribution, usedMaxLogicalWidth);
+        m_minContentLogicalWidthContribution = std::min(m_minContentLogicalWidthContribution, usedMaxLogicalWidth);
+
+        m_maxContentLogicalWidthContribution = std::max(m_maxContentLogicalWidthContribution, usedMinLogicalWidth);
+        m_minContentLogicalWidthContribution = std::max(m_minContentLogicalWidthContribution, usedMinLogicalWidth);
     };
 
     applyExplicitMinMaxWidthConstraints();
