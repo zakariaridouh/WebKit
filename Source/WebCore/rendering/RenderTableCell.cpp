@@ -638,8 +638,11 @@ void RenderTableCell::styleDidChange(Style::Difference diff, const Style::Comput
 
     RenderBlockFlow::styleDidChange(diff, oldStyle);
 
-    if (parent() && section() && oldStyle && style().height() != oldStyle->height())
-        section()->rowLogicalHeightChanged(rowIndex());
+    if (parent() && section() && oldStyle) {
+        auto rowWritingMode = row()->writingMode();
+        if (style().logicalHeight(rowWritingMode) != oldStyle->logicalHeight(rowWritingMode))
+            section()->rowLogicalHeightChanged(rowIndex());
+    }
 
     // Our intrinsic padding pushes us down to align with the baseline of other cells on the row. If our vertical-align
     // has changed then so will the padding needed to align with other cells - clear it so we can recalculate it from scratch.
