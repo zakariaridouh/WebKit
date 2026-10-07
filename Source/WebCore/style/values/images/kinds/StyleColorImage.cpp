@@ -116,7 +116,7 @@ bool ColorImage::knownToBeOpaque(const RenderElement& renderer) const
 
 WebCore::Color ColorImage::resolvedColor(const RenderElement& renderer) const
 {
-    return ColorResolver { renderer.style() }.colorResolvingCurrentColor(m_color);
+    return ColorResolver { renderer.style() }.colorResolvingCurrentColorApplyingColorFilter(m_color);
 }
 
 } // namespace Style
