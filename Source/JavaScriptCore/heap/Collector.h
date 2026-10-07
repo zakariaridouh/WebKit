@@ -61,7 +61,19 @@ public:
     explicit Collector(Heap&);
     ~Collector();
 
-    Heap& heap() { return m_heap; }
+    // FIXME: remove all uses of this. This exists only so multi-heap support can be added incrementally.
+    Heap& heap()
+    {
+        ASSERT(m_heaps.size() == 1);
+        return *m_heaps.first();
+    }
+
+    template<typename Func>
+    void forEachHeap(NOESCAPE const Func& func)
+    {
+        for (Heap* heap : m_heaps)
+            func(*heap);
+    }
 
     SlotVisitor& collectorSlotVisitor() LIFETIME_BOUND { return *m_collectorSlotVisitor; }
 
@@ -147,8 +159,10 @@ private:
     void assertMarkStacksEmpty();
 
     size_t bytesVisited();
+    size_t bytesVisitedIn(Heap&);
 
-    Heap& m_heap;
+    // The heaps this Collector's collections cover.
+    Vector<Heap*, 1> m_heaps;
 
     // Mutated by the marking threads, grouped so that marking dirties as few cache lines as possible and
     // so that fields the mutator reads are not on those lines.
