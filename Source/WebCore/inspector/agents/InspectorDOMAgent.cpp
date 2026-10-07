@@ -3004,7 +3004,7 @@ void InspectorDOMAgent::flexibleBoxRendererWrappedToNextLine(const RenderObject&
     }).iterator->value.append(lineStartItemIndex);
 }
 
-Vector<size_t> InspectorDOMAgent::flexibleBoxRendererCachedItemsAtStartOfLine(const RenderObject& renderer)
+Vector<size_t> InspectorDOMAgent::flexibleBoxRendererCachedItemsAtStartOfLine(const RenderObject& renderer) const
 {
     return m_flexibleBoxRendererCachedItemsAtStartOfLine.get(renderer);
 }
