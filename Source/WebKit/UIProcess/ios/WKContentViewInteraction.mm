@@ -2973,6 +2973,14 @@ static inline WebCore::FloatSize tapHighlightBorderRadius(WebCore::FloatSize bor
 #endif
 }
 
+- (BOOL)_allowScalingToRevealFocusedElement
+{
+    if (!PAL::currentUserInterfaceIdiomIsSmallScreen())
+        return NO;
+
+    return self.traitCollection.horizontalSizeClass != UIUserInterfaceSizeClassRegular || self.traitCollection.verticalSizeClass != UIUserInterfaceSizeClassRegular;
+}
+
 - (void)_zoomToRevealFocusedElement
 {
     _revealFocusedElementDeferrer = nullptr;
@@ -2990,7 +2998,7 @@ static inline WebCore::FloatSize tapHighlightBorderRadius(WebCore::FloatSize bor
         fontSize:_focusedElementInformation.nodeFontSize
         minimumScale:_focusedElementInformation.minimumScaleFactor
         maximumScale:_focusedElementInformation.maximumScaleFactorIgnoringAlwaysScalable
-        allowScaling:_focusedElementInformation.allowsUserScalingIgnoringAlwaysScalable && PAL::currentUserInterfaceIdiomIsSmallScreen()
+        allowScaling:_focusedElementInformation.allowsUserScalingIgnoringAlwaysScalable && self._allowScalingToRevealFocusedElement
         forceScroll:[self requiresAccessoryView]];
 }
 

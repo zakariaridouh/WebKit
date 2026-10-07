@@ -1096,6 +1096,7 @@
 				WebKit/WKWebView/ios/WKWebViewAutofillTests.mm,
 				WebKit/WKWebView/ios/WKWebViewOpaque.mm,
 				WebKit/WKWebView/ios/WKWebViewPausePlayingAudioTests.mm,
+				WebKit/WKWebView/ios/ZoomToFocusedElement.mm,
 				WebKit/WKWebView/mac/AcceptsFirstMouse.mm,
 				WebKit/WKWebView/mac/AttributedString.mm,
 				WebKit/WKWebView/mac/AttributedSubstringForProposedRange.mm,
