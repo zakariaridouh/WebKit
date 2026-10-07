@@ -8936,7 +8936,7 @@ imported/w3c/web-platform-tests/IndexedDB/interleaved-cursors-small.any.html [ P
 imported/w3c/web-platform-tests/IndexedDB/nested-cloning-large-multiple.any.html [ Pass Failure ] # rdar://178158917
 imported/w3c/web-platform-tests/IndexedDB/nested-cloning-large-multiple.any.worker.html [ Pass Failure ] # rdar://178158917
 imported/w3c/web-platform-tests/css/css-anchor-position/scroll-to-anchored-fixed-000.html [ Pass ImageOnlyFailure ] # rdar://178676781
-imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-033.html [ Pass Crash ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-033.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-shapes/spec-examples/shape-outside-011.html [ Pass Failure ] # rdar://178676728
 imported/w3c/web-platform-tests/css/css-text-decor/text-emphasis-position-auto-002.html [ Pass ImageOnlyFailure ] # rdar://178676895
 imported/w3c/web-platform-tests/css/css-view-transitions/view-transition-waituntil-finished-promise.html [ Pass Failure ] # rdar://178676670
