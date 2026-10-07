@@ -6058,6 +6058,8 @@ void LocalFrameView::paintContentsForSnapshot(GraphicsContext& context, const In
             if (CheckedPtr renderView = localFrame->contentRenderer())
                 renderView->selection().clear();
         }
+
+        updateLayoutAndStyleIfNeededRecursive();
     }
 
     if (coordinateSpace == DocumentCoordinates)

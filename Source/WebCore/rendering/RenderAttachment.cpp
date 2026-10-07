@@ -153,6 +153,7 @@ bool RenderAttachment::paintWideLayoutAttachmentOnly(const PaintInfo& paintInfo,
     if (auto* wideLayoutShadowElement = attachmentElement().wideLayoutShadowContainer()) {
         if (auto* wideLayoutShadowRenderer = wideLayoutShadowElement->renderer()) {
             auto shadowPaintInfo = paintInfo;
+            shadowPaintInfo.updateSubtreePaintRootForChildren(this);
             for (PaintPhase phase : { PaintPhase::BlockBackground, PaintPhase::ChildBlockBackgrounds, PaintPhase::Float, PaintPhase::Foreground, PaintPhase::Outline }) {
                 shadowPaintInfo.phase = phase;
                 wideLayoutShadowRenderer->paint(shadowPaintInfo, offset);
