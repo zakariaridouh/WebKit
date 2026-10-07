@@ -177,6 +177,7 @@ https://www.hulu.com/
     NeedsVideoShouldMaintainAspectRatioQuirk
 https://www.icloud.com/
     MayNeedToIgnoreContentObservation
+    ShouldTreatLongClickAsSecondaryClickQuirk
 https://www.iheart.com/
     NeedsScriptToEvaluateBeforeRunningScriptFromURLQuirk
 https://www.imdb.com/

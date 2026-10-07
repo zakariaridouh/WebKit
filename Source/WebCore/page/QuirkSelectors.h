@@ -59,6 +59,7 @@ inline constexpr auto onGoogleSitesButton = ".DPvwYc.sm8sCf"_s;
 inline constexpr auto onYahooButton = ".DPvwYc.sm8sCf, .vjs-subs-cap-button.vjs-menu-button"_s;
 inline constexpr auto onOutlookSuggestions = ".ms-Suggestions, .ms-Suggestions *"_s;
 inline constexpr auto onOutlookMailListItem = "[data-focusable-row], [data-focusable-row] *"_s;
+inline constexpr auto onICloudMailListItem = ".thread-list-item[role=treeitem i], .thread-list-item[role=treeitem i] *"_s;
 inline constexpr auto onElementContainingVideo = ":has(video)"_s;
 inline constexpr auto onBingImageSearchDialog = "#sb_sbidialog"_s;
 inline constexpr auto onBankOfAmericaLoadingSignInButton = "#signIn.loading"_s;

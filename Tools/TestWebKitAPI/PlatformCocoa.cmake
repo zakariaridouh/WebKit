@@ -727,6 +727,7 @@ list(APPEND TestWebKit_SOURCES
     "Tests/WebKit/WebPage/AppKit Gesture Tests/DoubleClickGesturesTests.swift"
     "Tests/WebKit/WebPage/AppKit Gesture Tests/EmbeddedAppKitGesturesTests.swift"
     "Tests/WebKit/WebPage/AppKit Gesture Tests/InactiveWindowAppKitGesturesTests.swift"
+    "Tests/WebKit/WebPage/AppKit Gesture Tests/QuirksAppKitGesturesTests.swift"
     "Tests/WebKit/WebPage/AppKit Gesture Tests/RefreshControlGesturesTests.swift"
     "Tests/WebKit/WebPage/AppKit Gesture Tests/SiteIsolationAppKitGesturesTests.swift"
 

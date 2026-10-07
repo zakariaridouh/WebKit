@@ -793,6 +793,7 @@ NeedsStorageAccessForYouTubeWatchLaterQuirk:
   implementation: custom
 
 # Outlook on the web: rdar://187832523
+# icloud.com: rdar://188875593
 ShouldTreatLongClickAsSecondaryClickQuirk:
   available: appKitGestures
   conditions: [ElementSelector]

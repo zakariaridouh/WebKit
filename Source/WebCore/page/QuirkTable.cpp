@@ -530,6 +530,9 @@ static constexpr Quirk fullTable[] = {
     // icloud.com rdar://187710972
     { .match = URLMatch::domain("icloud.com"_s),
         .behaviors = { mayNeedToIgnoreContentObservation.when(elementMatchesSelector(onTreeItem)) } },
+    // icloud.com rdar://188875593
+    { .match = URLMatch::domain("icloud.com"_s),
+        .behaviors = { shouldTreatLongClickAsSecondaryClickQuirk.when(elementMatchesSelector(onICloudMailListItem)) } },
     // icloud.com rdar://131836301
     { .match = URLMatch::domain("icloud.com"_s).when(pathContains("mail"_s)),
         .behaviors = { shouldSilenceWindowResizeEventsDuringApplicationSnapshotting } },
