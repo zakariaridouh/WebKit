@@ -47,6 +47,7 @@
 #include "RenderObjectInlines.h"
 #include "RenderVideoInlines.h"
 #include "RenderView.h"
+#include "ShareableBitmap.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -468,6 +469,11 @@ void RenderVideo::styleDidChange(Style::Difference difference, const Style::Comp
 HTMLVideoElement& NODELETE RenderVideo::videoElement() const
 {
     return downcast<HTMLVideoElement>(RenderMedia::mediaElement());
+}
+
+RefPtr<ShareableBitmap> RenderVideo::createShareableBitmap(const CreateShareableBitmapFromImageOptions&) const
+{
+    return protect(videoElement())->bitmapImageForCurrentTimeSync();
 }
 
 void RenderVideo::updateFromElement()

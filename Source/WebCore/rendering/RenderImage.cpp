@@ -31,11 +31,13 @@
 #include "AXObjectCache.h"
 #include "BitmapImage.h"
 #include "CachedImage.h"
+#include "DefaultSizing.h"
 #include "DocumentView.h"
 #include "FocusController.h"
 #include "FontCache.h"
 #include "FontCascadeInlines.h"
 #include "FrameSelection.h"
+#include "FrameSnapshotting.h"
 #include "GeometryUtilities.h"
 #include "GraphicsContext.h"
 #include "HTMLAreaElement.h"
@@ -44,16 +46,20 @@
 #include "HTMLMapElement.h"
 #include "HTMLNames.h"
 #include "HitTestResult.h"
+#include "ImageBuffer.h"
 #include "ImageOverlay.h"
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorInlineBox.h"
 #include "InlineIteratorLineBox.h"
 #include "LineSelection.h"
 #include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "LogicalSelectionOffsetCachesInlines.h"
+#include "NativeImage.h"
 #include "Page.h"
 #include "PaintInfo.h"
 #include "PlatformRenderTheme.h"
+#include "PlatformScreen.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
@@ -69,6 +75,7 @@
 #include "SVGImage.h"
 #include "SelectionGeometry.h"
 #include "Settings.h"
+#include "ShareableBitmap.h"
 #include "StyleImageDrawingExtras.h"
 #include "StyleComputedStyle+GettersInlines.h"
 #include "StyleComputedStyle+InitialInlines.h"
@@ -366,6 +373,75 @@ IntSize RenderImage::imageContainerSize() const
 std::optional<FloatSize> RenderImage::usedImageSize() const
 {
     return imageResource().usedImageSize(imageContainerSize());
+}
+
+RefPtr<ShareableBitmap> RenderImage::createShareableBitmap(const CreateShareableBitmapFromImageOptions& options) const
+{
+    Ref frame = this->frame();
+    auto colorSpaceForBitmap = screenColorSpace(protect(protect(frame->mainFrame())->virtualView()).get());
+    if (!isRenderMedia() && !opacity() && options.useSnapshotForTransparentImages == CreateShareableBitmapFromImageOptions::UseSnapshotForTransparentImages::Yes) {
+        auto snapshotRect = absoluteBoundingBoxRect();
+        if (snapshotRect.isEmpty())
+            return { };
+
+        OptionSet<SnapshotFlags> snapshotFlags { SnapshotFlags::ExcludeSelectionHighlighting, SnapshotFlags::PaintEverythingExcludingSelection };
+        // FIXME: Should this be using colorSpaceForBitmap? If not, document why specifying sRGB makes sense.
+        auto imageBuffer = snapshotFrameRect(frame.get(), snapshotRect, { snapshotFlags, PixelFormat::BGRA8, ColorSpace::SRGB() });
+        if (!imageBuffer)
+            return { };
+
+        auto snapshotImage = ImageBuffer::sinkIntoNativeImage(WTF::move(imageBuffer));
+        if (!snapshotImage)
+            return { };
+
+        auto bitmap = ShareableBitmap::create({ snapshotImage->size(), WTF::move(colorSpaceForBitmap) });
+        if (!bitmap)
+            return { };
+
+        auto context = bitmap->createGraphicsContext();
+        if (!context)
+            return { };
+        FloatRect imageRect { { }, snapshotImage->size() };
+        context->drawNativeImage(*snapshotImage, imageRect, imageRect);
+        return bitmap;
+    }
+
+    RefPtr styleImage = imageResource().styleImage();
+    if (!styleImage || styleImage->errorOccurred() || !styleImage->canDraw(*this))
+        return { };
+
+    if (options.allowAnimatedImages == CreateShareableBitmapFromImageOptions::AllowAnimatedImages::No && styleImage->isAnimated())
+        return { };
+
+    auto naturalDimensions = imageResource().naturalDimensions();
+    if ((naturalDimensions.width && *naturalDimensions.width <= 1) || (naturalDimensions.height && *naturalDimensions.height <= 1))
+        return { };
+
+    auto containerSize = FloatSize { imageContainerSize() };
+    if (auto usedZoom = style().usedZoom(); usedZoom != 1)
+        containerSize.scale(1 / usedZoom);
+    auto concreteObjectSize = DefaultSizing { containerSize }.resolve(naturalDimensions);
+
+    auto bitmapSize = concreteObjectSize.size();
+    if (bitmapSize.isEmpty())
+        return { };
+
+    if (options.screenSizeInPixels) {
+        auto scaledSize = largestRectWithAspectRatioInsideRect(bitmapSize.width() / bitmapSize.height(), { FloatPoint(), *options.screenSizeInPixels }).size();
+        bitmapSize = scaledSize.width() < bitmapSize.width() ? scaledSize : bitmapSize;
+    }
+
+    // FIXME: Only select ExtendedColor on images known to need wide gamut.
+    auto sharedBitmap = ShareableBitmap::create({ IntSize(bitmapSize), WTF::move(colorSpaceForBitmap) });
+    if (!sharedBitmap)
+        return { };
+
+    auto graphicsContext = sharedBitmap->createGraphicsContext();
+    if (!graphicsContext)
+        return { };
+
+    styleImage->draw(*graphicsContext, *this, concreteObjectSize, FloatRect { { }, bitmapSize }, FloatRect { { }, concreteObjectSize.size() }, { imageOrientation() });
+    return sharedBitmap;
 }
 
 void RenderImage::repaintOrMarkForLayout(ImageSizeChangeType imageSizeChange, const IntRect* rect)

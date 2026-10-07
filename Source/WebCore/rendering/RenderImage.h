@@ -34,10 +34,20 @@ class HTMLAreaElement;
 class HTMLMapElement;
 class GraphicsContext;
 class ImageBuffer;
+class ShareableBitmap;
 
 enum ImageSizeChangeType {
     ImageSizeChangeNone,
     ImageSizeChangeForAltText
+};
+
+struct CreateShareableBitmapFromImageOptions {
+    enum class AllowAnimatedImages : bool { No, Yes };
+    enum class UseSnapshotForTransparentImages : bool { No, Yes };
+
+    std::optional<FloatSize> screenSizeInPixels;
+    AllowAnimatedImages allowAnimatedImages { AllowAnimatedImages::Yes };
+    UseSnapshotForTransparentImages useSnapshotForTransparentImages { UseSnapshotForTransparentImages::No };
 };
 
 class RenderImage : public RenderReplaced {
@@ -88,6 +98,8 @@ public:
 #endif
 
     WEBCORE_EXPORT std::optional<FloatSize> usedImageSize() const final;
+
+    WEBCORE_EXPORT virtual RefPtr<ShareableBitmap> createShareableBitmap(const CreateShareableBitmapFromImageOptions& = { }) const;
 
     WEBCORE_EXPORT static FloatSize imageSizeAsRendered(const CachedImage&, const RenderElement*, float multiplier = 1.0f, CachedImage::SizeType = CachedImage::UsedSize, float density = 1.0f);
 
