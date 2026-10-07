@@ -3387,7 +3387,7 @@ static RefPtr<RemoteFrame> remoteFrameForTapTarget(LocalFrame* localRootFrame, N
 
     // Like EventHandler::subframeForHitTestResult, only route the tap into the frame if it lands on the frame's
     // content. A tap on the owner element's border or padding is dispatched to the owner element in this frame.
-    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
+    constexpr OptionSet hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
     auto result = localRootFrame->eventHandler().hitTestResultAtPoint(view->windowToContents(roundedIntPoint(tapLocationInRootView)), hitType);
     if (result.innerNode() != frameOwner || !result.isOverWidget())
         return nullptr;
