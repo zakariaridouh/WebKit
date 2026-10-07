@@ -61,6 +61,8 @@ ALWAYS_INLINE bool Heap::isMarked(const void* rawCell)
 {
     ASSERT(!m_isMarkingForGCVerifier);
     HeapCell* cell = std::bit_cast<HeapCell*>(rawCell);
+    // The marking version must come from the cell's own heap's object space.
+    ASSERT(cell->heap() == this);
     if (cell->isPreciseAllocation())
         return cell->preciseAllocation().isMarked();
     MarkedBlock& block = cell->markedBlock();

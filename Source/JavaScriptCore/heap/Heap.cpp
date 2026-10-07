@@ -566,6 +566,7 @@ void Heap::reportExtraMemoryAllocatedSlowCase(GCDeferralContext* deferralContext
 {
     didAllocate(size);
     if (cell) {
+        ASSERT(cell->heap() == this);
         if (isWithinThreshold(cell->cellState(), barrierThreshold())) [[unlikely]]
             reportExtraMemoryAllocatedPossiblyFromAlreadyMarkedCell(cell, size);
     }
@@ -626,6 +627,7 @@ void Heap::protect(JSValue k)
     if (!k.isCell())
         return;
 
+    ASSERT(k.asCell()->heap() == this);
     m_protectedValues.add(k.asCell());
 }
 
@@ -637,11 +639,13 @@ bool Heap::unprotect(JSValue k)
     if (!k.isCell())
         return false;
 
+    ASSERT(k.asCell()->heap() == this);
     return m_protectedValues.remove(k.asCell());
 }
 
 void Heap::addReference(JSCell* cell, ArrayBuffer* buffer)
 {
+    ASSERT(cell->heap() == this);
     if (m_arrayBuffers.addReference(cell, buffer)) {
         collectIfNecessaryOrDefer();
         didAllocate(buffer->gcSizeEstimateInBytes());
@@ -1147,6 +1151,9 @@ void Heap::addToRememberedSet(const JSCell* constCell)
 {
     JSCell* cell = const_cast<JSCell*>(constCell);
     ASSERT(cell);
+    // FIXME: Remember shared cells too. But the code below assumes the cell is marked only by this
+    // heap's collections and that no other thread writes to it.
+    ASSERT(cell->heap() == this);
     ASSERT(!Options::useConcurrentJIT() || !isCompilationThread());
     m_barriersExecuted++;
     if (m_mutatorShouldBeFenced) {
@@ -2039,11 +2046,14 @@ void Heap::didAllocate(size_t bytes)
 
 void Heap::addFinalizer(JSCell* cell, CFinalizer finalizer)
 {
+    // The handle lives in the cell's heap but names this heap's owner, which has to outlive it.
+    ASSERT(cell->heap() == this);
     WeakSet::allocate(cell, &m_cFinalizerOwner, std::bit_cast<void*>(finalizer)); // Balanced by CFinalizerOwner::finalize().
 }
 
 void Heap::addFinalizer(JSCell* cell, LambdaFinalizer function)
 {
+    ASSERT(cell->heap() == this);
     WeakSet::allocate(cell, &m_lambdaFinalizerOwner, function.leak()); // Balanced by LambdaFinalizerOwner::finalize().
 }
 
