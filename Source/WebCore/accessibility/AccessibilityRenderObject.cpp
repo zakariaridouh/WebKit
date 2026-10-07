@@ -1021,11 +1021,12 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     AX_ASSERT(m_initialized);
 #endif
 
-    if (is<SelectPopoverElement>(node())) {
-        // The base-appearance select popover (Menu) must always be included so that it
+    if (RefPtr popover = dynamicDowncast<SelectPopoverElement>(node())) {
+        // The base-appearance picker (Menu) must always be included so that it
         // properly wraps the menu items. Check before the !m_renderer bailout
         // because the popover has display:contents (no renderer) when closed.
-        return false;
+        RefPtr select = popover->selectElement();
+        return !select || !select->usesBaseAppearancePicker();
     }
 
     if (!m_renderer)
@@ -3022,7 +3023,8 @@ void AccessibilityRenderObject::addChildren()
     };
 
     auto addListBoxChildrenIfNecessary = [&](Node& node) -> bool {
-        if (role() == AccessibilityRole::ListBox) {
+        // Only a RenderListBox paints its list items itself.
+        if (role() == AccessibilityRole::ListBox && is<RenderListBox>(m_renderer)) {
             if (RefPtr selectElement = dynamicDowncast<HTMLSelectElement>(node)) {
                 for (const auto& listItem : selectElement->listItems())
                     addChild(protect(cache->getOrCreate(protect(listItem.get()))), AccessibilityObject::DescendIfIgnored::No);

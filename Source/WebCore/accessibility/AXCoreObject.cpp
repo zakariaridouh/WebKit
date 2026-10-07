@@ -1075,20 +1075,32 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedChildren()
     return { };
 }
 
+// Returns true once the selected option of a single-selection list box is found.
+static bool appendSelectedOptions(AXCoreObject& container, bool isMultiSelectable, AXCoreObject::AccessibilityChildrenVector& result)
+{
+    for (const auto& child : container.unignoredChildren()) {
+        if (child->isGroup()) {
+            if (appendSelectedOptions(child, isMultiSelectable, result))
+                return true;
+            continue;
+        }
+
+        if (!child->isListBoxOption() || !child->isSelected())
+            continue;
+
+        result.append(child);
+        if (!isMultiSelectable)
+            return true;
+    }
+    return false;
+}
+
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::listboxSelectedChildren()
 {
     AX_ASSERT(role() == AccessibilityRole::ListBox);
 
     AccessibilityChildrenVector result;
-    bool isMulti = isMultiSelectable();
-    for (const auto& child : unignoredChildren()) {
-        if (!child->isListBoxOption() || !child->isSelected())
-            continue;
-
-        result.append(child);
-        if (!isMulti)
-            return result;
-    }
+    appendSelectedOptions(*this, isMultiSelectable(), result);
     return result;
 }
 

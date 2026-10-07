@@ -1833,6 +1833,14 @@ void AXObjectCache::handleChildrenChanged(AccessibilityObject& object)
 
     object.recomputeIsIgnored();
 
+    // The select popover is only exposed as a base appearance picker, which depends on the box type.
+    if (RefPtr select = dynamicDowncast<HTMLSelectElement>(object.node())) {
+        if (RefPtr popover = select->pickerPopoverElement()) {
+            if (RefPtr axPopover = get(*popover))
+                axPopover->recomputeIsIgnored();
+        }
+    }
+
     if (auto* optionElement = dynamicDowncast<HTMLOptionElement>(object.node()); optionElement && optionElement->isRenderedWithBaseAppearance()) {
         // When a base-appearance select option's children change, its text descendants may need to
         // change their is-ignored state. Text is only exposed when the option has complex content

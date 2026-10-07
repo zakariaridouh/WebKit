@@ -4895,10 +4895,8 @@ void AccessibilityNodeObject::setSelectedChildren(const AccessibilityChildrenVec
         return;
 
     // Unselect any selected option.
-    for (const auto& child : unignoredChildren()) {
-        if (child->isSelected())
-            child->setSelected(false);
-    }
+    for (const auto& child : selectedChildren())
+        child->setSelected(false);
 
     for (const auto& object : children) {
         if (object->isListBoxOption())
