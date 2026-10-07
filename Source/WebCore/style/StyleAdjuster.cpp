@@ -102,6 +102,7 @@
 namespace WebCore {
 namespace Style {
 static inline void adjustForManipulationSurfaceQuirk(ComputedStyle&) { }
+static inline void adjustForBoxAnnotationQuirk(ComputedStyle&) { }
 } // namespace Style
 } // namespace WebCore
 #endif
@@ -1137,6 +1138,10 @@ void Adjuster::adjustForSiteSpecificQuirks(Style::ComputedStyle& style) const
     // google.com/maps/embed rdar://184166392
     if (documentQuirks.needsGoogleMapsEmbedManipulationSurfaceQuirk())
         adjustForManipulationSurfaceQuirk(style);
+
+    // box.com rdar://187475153
+    if (documentQuirks.needsBoxAnnotationQuirk(protect(*m_element)))
+        adjustForBoxAnnotationQuirk(style);
 
 #if PLATFORM(IOS_FAMILY)
     if (documentQuirks.needsGoogleMapsScrollingQuirk()) {

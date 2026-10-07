@@ -223,6 +223,10 @@ static constexpr Quirk fullTable[] = {
             needsMediaRewriteRangeRequestQuirk.when(secondaryURLMatches(URLMatch::domain("bing.com"_s))),
         } },
 
+    // box.com rdar://187475153
+    { .match = URLMatch::domain("box.com"_s),
+        .behaviors = { needsBoxAnnotationQuirk.when(elementMatchesSelector(onBoxRegionAnnotationCreator)) } },
+
     // bungalow.com rdar://61658940
     { .match = URLMatch::domain("bungalow.com"_s),
         .behaviors = { shouldBypassAsyncScriptDeferring } },

@@ -39,6 +39,7 @@ inline constexpr auto onCrosswordID = "[id*=crossword]"_s;
 inline constexpr auto onEANetworkNav = "ea-network-nav"_s;
 inline constexpr auto onExpediaOpeningMenu = ".uitk-menu-mounted .uitk-menu-container.uitk-menu-container-autoposition.uitk-menu-container-has-intersection-root-el.uitk-menu-open"_s;
 inline constexpr auto onAviaButton = "avia-button"_s;
+inline constexpr auto onBoxRegionAnnotationCreator = ".ba-RegionCreation-creator"_s;
 inline constexpr auto onGoogleDocsMLPromotion = ".docs-ml-promotion-action-container, .docs-ml-promotion-action-container > *, .docs-ml-promotion-action-container > * > *"_s;
 inline constexpr auto onSuggestionsLabel = "[aria-label=Suggestions], [aria-label=Suggestions] *"_s;
 inline constexpr auto onSwatchColorPicker = "[id^=swatchColorPicker]"_s;

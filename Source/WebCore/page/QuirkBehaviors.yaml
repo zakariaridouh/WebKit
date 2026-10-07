@@ -110,6 +110,11 @@ NeedsAirIndiaExpressLayeringQuirk:
 # spotify.com rdar://138918575
 NeedsBodyScrollbarWidthNoneDisabledQuirk:
 
+# box.com rdar://187475153
+NeedsBoxAnnotationQuirk:
+  available: mac
+  conditions: [ElementSelector]
+
 # hulu.com rdar://55041979
 NeedsCanPlayAfterSeekedQuirk:
 
