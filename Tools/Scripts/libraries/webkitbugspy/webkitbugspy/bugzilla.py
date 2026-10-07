@@ -667,9 +667,9 @@ class Tracker(GenericTracker):
                 '{}/rest/product/{}{}'.format(self.url, id, self._login_arguments(required=False)),
                 timeout=self.timeout,
             )
-            if response.status_code // 100 == 4 and self._logins_left:
+            if id_response.status_code // 100 == 4 and self._logins_left:
                 self._logins_left -= 1
-            if response.status_code // 100 != 2:
+            if id_response.status_code // 100 != 2:
                 sys.stderr.write("Failed to query bugzilla about prod '{}'\n".format(id))
                 continue
             for product in id_response.json()['products']:

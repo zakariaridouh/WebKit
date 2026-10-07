@@ -579,6 +579,23 @@ What component in 'WebKit' should the bug be associated with?:
             self.assertEqual(created.version, 'WebKit Local Build')
             self.assertEqual(captured.stderr.getvalue(), '')
 
+    def test_projects_failed_product_query(self):
+        product_details = mocks.Bugzilla._product_details
+
+        def failing_product_details(mock, url, id):
+            if id == mocks.PROJECTS['CFNetwork']['id']:
+                return wkmocks.Response(status_code=500, url=url)
+            return product_details(mock, url, id)
+
+        with mocks.Bugzilla(self.URL.split('://')[1], projects=mocks.PROJECTS), \
+                patch.object(mocks.Bugzilla, '_product_details', failing_product_details), \
+                OutputCapture() as captured:
+            self.assertEqual(list(bugzilla.Tracker(self.URL).projects.keys()), ['WebKit'])
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            "Failed to query bugzilla about prod '{}'\n".format(mocks.PROJECTS['CFNetwork']['id']),
+        )
+
     def test_projects_excludes_inactive_versions(self):
         projects = copy.deepcopy(mocks.PROJECTS)
         projects['WebKit']['versions'].insert(0, '528+ (Nightly build)')
