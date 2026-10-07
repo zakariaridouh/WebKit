@@ -66,6 +66,8 @@ http/tests/site-isolation/ios/tap-highlight-with-two-same-site-cross-origin-ifra
 http/tests/site-isolation/touch-events/content-observation.html [ Pass ]
 http/tests/site-isolation/touch-events/dblclick-nested-cross-origin-frame-in-offset-subframe.html [ Pass ]
 http/tests/site-isolation/touch-events/tap-nested-cross-origin-frame-in-offset-subframe.html [ Pass ]
+http/tests/site-isolation/touch-events/tap-cross-origin-iframe-border.html [ Pass ]
+http/tests/site-isolation/touch-events/tap-near-cross-origin-iframe.html [ Pass ]
 http/tests/site-isolation/touch-events/tap-screen-coordinates-in-cross-origin-iframe.html [ Pass ]
 http/tests/site-isolation/touch-events/touch-click-coordinates.html [ Pass ]
 
@@ -10297,8 +10299,6 @@ webkit.org/b/322847 imported/w3c/web-platform-tests/css/css-grid/grid-lanes/subg
 webkit.org/b/322847 imported/w3c/web-platform-tests/css/css-grid/grid-lanes/subgrid/grid-subgridded-to-grid-lanes/baseline/row-grid-lanes-item-baseline-subgrid-004.html [ Crash ]
 
 webkit.org/b/321524 [ Debug ] imported/w3c/web-platform-tests/payment-request/rejects_if_not_active.https.html [ Pass Crash ]
-
-webkit.org/b/325011 imported/w3c/web-platform-tests/html/user-activation/propagation-crossorigin.sub.html [ Failure ]
 
 webkit.org/b/325013 [ Debug ] ipc/webgpu-command-encoder-cross-thread-destruction-race.html [ Timeout ]
 webkit.org/b/325013 [ Debug ] ipc/webgpu-instance-cross-thread-destruction-race.html [ Timeout ]

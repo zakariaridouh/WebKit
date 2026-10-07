@@ -67,9 +67,6 @@ http/tests/security/block-top-level-navigations-by-sandboxed-iframe-with-propaga
 http/tests/security/block-top-level-navigations-by-third-party-iframes.html [ Failure ]
 http/tests/security/block-top-level-navigations-by-third-party-sandboxed-iframe.html [ Failure ]
 
-# rdar://178066625
-imported/w3c/web-platform-tests/html/user-activation/propagation-crossorigin.sub.html [ Failure ]
-
 # Document-Isolation-Policy is partially implemented.
 imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp-load-from-cache-storage.tentative.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp.tentative.https.html [ Pass ]

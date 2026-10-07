@@ -3374,6 +3374,27 @@ void WebPage::dispatchDeferredSyntheticClickIfNeeded()
         dispatch();
 }
 
+static RefPtr<RemoteFrame> remoteFrameForTapTarget(LocalFrame* localRootFrame, Node* tapTarget, const FloatPoint& tapLocationInRootView)
+{
+    RefPtr frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(tapTarget);
+    RefPtr remoteFrame = frameOwner ? dynamicDowncast<RemoteFrame>(frameOwner->contentFrame()) : nullptr;
+    if (!remoteFrame || !localRootFrame)
+        return nullptr;
+
+    RefPtr view = localRootFrame->view();
+    if (!view)
+        return nullptr;
+
+    // Like EventHandler::subframeForHitTestResult, only route the tap into the frame if it lands on the frame's
+    // content. A tap on the owner element's border or padding is dispatched to the owner element in this frame.
+    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
+    auto result = localRootFrame->eventHandler().hitTestResultAtPoint(view->windowToContents(roundedIntPoint(tapLocationInRootView)), hitType);
+    if (result.innerNode() != frameOwner || !result.isOverWidget())
+        return nullptr;
+
+    return remoteFrame;
+}
+
 Awaitable<std::optional<WebCore::RemoteUserInputEventData>> WebPage::potentialTapAtPosition(std::optional<WebCore::FrameIdentifier> frameID, WebKit::TapIdentifier requestID, WebCore::FloatPoint positionInRootView, bool shouldRequestMagnificationInformation, WebKit::WebEventInputSource inputSource)
 {
     m_potentialTapInputSource = platform(inputSource);
@@ -3384,14 +3405,13 @@ Awaitable<std::optional<WebCore::RemoteUserInputEventData>> WebPage::potentialTa
     if (localRootFrame)
         m_potentialTapNode = localRootFrame->nodeRespondingToClickEvents(positionInRootView, m_potentialTapLocation, m_potentialTapSecurityOrigin.get());
 
-    RefPtr frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(m_potentialTapNode.get());
-    if (RefPtr remoteFrame = frameOwner ? dynamicDowncast<RemoteFrame>(frameOwner->contentFrame()) : nullptr) {
+    if (RefPtr remoteFrame = remoteFrameForTapTarget(localRootFrame.get(), protect(m_potentialTapNode).get(), m_potentialTapLocation)) {
         RefPtr localRootView = localRootFrame ? localRootFrame->view() : nullptr;
         if (RefPtr remoteFrameView = remoteFrame->view(); remoteFrameView && localRootView) {
             RemoteFrameGeometryTransformer transformer(remoteFrameView.releaseNonNull(), localRootView.releaseNonNull(), remoteFrame->frameID());
             co_return WebCore::RemoteUserInputEventData {
                 remoteFrame->frameID(),
-                transformer.transformToRemoteFrameCoordinates(positionInRootView)
+                transformer.transformToRemoteFrameCoordinates(m_potentialTapLocation)
             };
         }
     }
@@ -3453,9 +3473,7 @@ Awaitable<std::optional<WebCore::RemoteUserInputEventData>> WebPage::potentialTa
 
 Awaitable<std::optional<WebCore::FrameIdentifier>> WebPage::commitPotentialTap(std::optional<WebCore::FrameIdentifier> frameID, OptionSet<WebEventModifier> modifiers, TransactionID lastLayerTreeTransactionId, WebCore::PointerID pointerId, CompletesDoubleClick completesDoubleClick)
 {
-    RefPtr frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(m_potentialTapNode.get());
-    RefPtr remoteFrame = frameOwner ? dynamicDowncast<RemoteFrame>(frameOwner->contentFrame()) : nullptr;
-    if (remoteFrame)
+    if (RefPtr remoteFrame = remoteFrameForTapTarget(this->localRootFrame(frameID).get(), protect(m_potentialTapNode).get(), m_potentialTapLocation))
         co_return remoteFrame->frameID();
 
 #if ENABLE(TWO_PHASE_CLICKS)
