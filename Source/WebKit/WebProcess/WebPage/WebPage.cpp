@@ -7311,11 +7311,11 @@ void WebPage::paintRemoteFrameContents(FrameIdentifier frameID, const IntRect& r
     // Painting remote frames supported only for snapshot purposes.
     if (!m_remoteSnapshotState || m_remoteSnapshotState->recorder.ptr() != &context)
         return;
-    // Not waited for: the GPU process knows the snapshot is complete once every placeholder has been
-    // resolved. Dispatched even while the UI process is blocked waiting for the snapshot, since that
-    // process is the one that asks the frame's process to record it.
-    protect(WebProcess::singleton().parentProcessConnection())->send(Messages::WebProcessProxy::DrawFrameToSnapshot(frameID, rect, m_remoteSnapshotState->identifier, context.renderingMode()), 0, IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
+    // A frame can be painted more than once, as one straddling a page break is when printing. Each
+    // placeholder draws the frame where it was painted, under the clip it was painted with, so the
+    // frame records once, covering every part that was painted.
     m_remoteSnapshotState->recorder->drawSnapshotFrame(frameID);
+    m_remoteSnapshotState->paintedFrameRects.add(frameID, IntRect { }).iterator->value.unite(rect);
 #else
     UNUSED_PARAM(frameID);
     UNUSED_PARAM(rect);
@@ -7340,8 +7340,16 @@ bool WebPage::recordRemoteSnapshot(RemoteSnapshotIdentifier snapshotIdentifier, 
     if (role == RemoteSnapshotRole::Root)
         remoteRenderingBackend->createSnapshot(snapshotIdentifier, frameIdentifier, rootSize);
 
-    m_remoteSnapshotState = { snapshotIdentifier, remoteRenderingBackend->createSnapshotRecorder(initialClip, snapshotIdentifier, renderingMode), WTF::move(callback) };
+    m_remoteSnapshotState = { snapshotIdentifier, remoteRenderingBackend->createSnapshotRecorder(initialClip, snapshotIdentifier, renderingMode), WTF::move(callback), { } };
     paint(m_remoteSnapshotState->recorder);
+
+    // Not waited for: the GPU process knows the snapshot is complete once every placeholder has been
+    // resolved. Dispatched even while the UI process is blocked waiting for the snapshot, since that
+    // process is the one that asks the frame's process to record it.
+    Ref parentProcessConnection = *WebProcess::singleton().parentProcessConnection();
+    for (auto& [paintedFrameID, rect] : m_remoteSnapshotState->paintedFrameRects)
+        parentProcessConnection->send(Messages::WebProcessProxy::DrawFrameToSnapshot(paintedFrameID, rect, snapshotIdentifier, renderingMode), 0, IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
+
     remoteRenderingBackend->sinkSnapshotRecorderIntoSnapshotFrame(WTF::move(m_remoteSnapshotState->recorder), frameIdentifier, Ref { m_remoteSnapshotState->callback }->chain());
     m_remoteSnapshotState = std::nullopt;
     return true;

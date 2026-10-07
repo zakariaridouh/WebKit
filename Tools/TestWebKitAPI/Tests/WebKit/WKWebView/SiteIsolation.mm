@@ -81,6 +81,7 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/HashSet.h>
 #import <wtf/StdLibExtras.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -18193,7 +18194,7 @@ TEST(SiteIsolation, DrawPagesToPDFSynchronouslyIncludesCrossSiteFrames)
     }];
     Util::run(&computedPages);
 
-    RetainPtr data = [webView _drawPagesToPDFSynchronouslyForTesting:[mainFrame _handle]];
+    RetainPtr data = [webView _drawPagesToPDFSynchronouslyForTesting:[mainFrame _handle] pageCount:1];
     ASSERT_NOT_NULL(data.get());
 
     RetainPtr document = adoptNS([[TestPDFDocument alloc] initFromData:data.get()]);
@@ -18202,6 +18203,73 @@ TEST(SiteIsolation, DrawPagesToPDFSynchronouslyIncludesCrossSiteFrames)
     EXPECT_TRUE([text containsString:@"Mainframe"]);
     EXPECT_TRUE([text containsString:@"Subframe"]);
     EXPECT_TRUE([text containsString:@"Nested"]);
+}
+
+// Whether the pixel at a point, measured from the top left of a page, is close to an sRGB color. Unlike
+// TestPDFPage's colorAtPoint:, this can tell apart colors at different heights.
+static bool pdfPageHasColorAtPoint(NSData *data, size_t pageNumber, CGPoint point, std::array<uint8_t, 3> color)
+{
+    RetainPtr provider = adoptCF(CGDataProviderCreateWithCFData(bridge_cast(data)));
+    RetainPtr document = adoptCF(CGPDFDocumentCreateWithProvider(provider.get()));
+    CGPDFPageRef page = CGPDFDocumentGetPage(document.get(), pageNumber);
+    if (!page)
+        return false;
+    auto bounds = CGPDFPageGetBoxRect(page, kCGPDFMediaBox);
+    size_t width = bounds.size.width;
+    size_t height = bounds.size.height;
+    RetainPtr colorSpace = adoptCF(CGColorSpaceCreateWithName(kCGColorSpaceSRGB));
+    RetainPtr context = adoptCF(CGBitmapContextCreate(nullptr, width, height, 8, width * 4, colorSpace.get(), kCGImageAlphaPremultipliedLast));
+    CGContextSetRGBFillColor(context.get(), 1, 1, 1, 1);
+    CGContextFillRect(context.get(), CGRectMake(0, 0, width, height));
+    CGContextDrawPDFPage(context.get(), page);
+    auto pixels = unsafeMakeSpan(static_cast<const uint8_t*>(CGBitmapContextGetData(context.get())), width * height * 4);
+    auto pixel = pixels.subspan((static_cast<size_t>(point.y) * width + static_cast<size_t>(point.x)) * 4, 3);
+    for (size_t i = 0; i < 3; ++i) {
+        if (std::abs(pixel[i] - color[i]) > 2)
+            return false;
+    }
+    return true;
+}
+
+// An iframe taller than a page straddles the page break, so printing paints it once on each page. Its
+// process records it once, and each page shows the part of it that falls on that page.
+TEST(SiteIsolation, DrawPagesToPDFIncludesCrossSiteFrameOnEveryPageItSpans)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<body style='margin:0'><iframe style='display:block;border:0;width:400px;height:1200px' src='https://b.com/subframe'></iframe></body>"_s } },
+        { "/subframe"_s, { "<body style='margin:0;print-color-adjust:exact'><div style='height:600px;background:red'></div><div style='height:600px;background:blue'></div></body>"_s } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    setFeatureEnabled(configuration.get(), @"RemoteSnapshottingEnabled", true);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration, CGRectMake(0, 0, 800, 600));
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://a.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigationAndLoadInSubframe];
+
+    RetainPtr<WKFrameInfo> mainFrame = [webView mainFrame].info;
+    RetainPtr<WKFrameInfo> subframe = [webView mainFrame].childFrames.firstObject.info;
+    EXPECT_NE([mainFrame _processIdentifier], [subframe _processIdentifier]);
+
+    __block bool computedPages = false;
+    [webView _computePagesForPrinting:[mainFrame _handle] completionHandler:^{
+        computedPages = true;
+    }];
+    Util::run(&computedPages);
+
+    RetainPtr data = [webView _drawPagesToPDFSynchronouslyForTesting:[mainFrame _handle] pageCount:2];
+    ASSERT_NOT_NULL(data.get());
+    RetainPtr document = adoptNS([[TestPDFDocument alloc] initFromData:data.get()]);
+    EXPECT_EQ([document pageCount], 2);
+
+    // The first page ends in the blue half of the iframe, and the second shows the rest of it.
+    constexpr std::array<uint8_t, 3> red { 255, 0, 0 };
+    constexpr std::array<uint8_t, 3> blue { 0, 0, 255 };
+    constexpr std::array<uint8_t, 3> white { 255, 255, 255 };
+    EXPECT_TRUE(pdfPageHasColorAtPoint(data.get(), 1, CGPointMake(100, 300), red));
+    EXPECT_TRUE(pdfPageHasColorAtPoint(data.get(), 1, CGPointMake(100, 700), blue));
+    EXPECT_TRUE(pdfPageHasColorAtPoint(data.get(), 2, CGPointMake(100, 100), blue));
+    EXPECT_TRUE(pdfPageHasColorAtPoint(data.get(), 2, CGPointMake(100, 500), white));
+    EXPECT_TRUE(pdfPageHasColorAtPoint(data.get(), 2, CGPointMake(500, 100), white));
 }
 
 #endif // HAVE(PDFKIT)

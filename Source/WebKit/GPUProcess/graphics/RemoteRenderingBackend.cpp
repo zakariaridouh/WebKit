@@ -294,8 +294,7 @@ void RemoteRenderingBackend::sinkSnapshotRecorderIntoSnapshotFrame(RemoteSnapsho
     MESSAGE_CHECK(recorder, "Recorder sunk into snapshot before being cached");
     Ref snapshot = recorder->snapshot();
     // FIXME: using global identifiers (frameIdentifier) is not secure. Do not follow this pattern.
-    bool success = snapshot->setFrame(frameIdentifier, recorder->takeDisplayList(), workQueue());
-    MESSAGE_CHECK(success, "Frame already present");
+    snapshot->setFrame(frameIdentifier, recorder->takeDisplayList(), workQueue());
     completionHandler(true);
 }
 

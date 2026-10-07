@@ -63,8 +63,8 @@ public:
     // The size the root was recorded at, which is what the snapshot is drawn at.
     WebCore::FloatSize size() const;
     void setSize(const WebCore::FloatSize&);
-    [[nodiscard]] bool addFrameReference(WebCore::FrameIdentifier);
-    [[nodiscard]] bool setFrame(WebCore::FrameIdentifier, Ref<const WebCore::DisplayList::DisplayList>&&, SerialFunctionDispatcher&);
+    void addFrameReference(WebCore::FrameIdentifier);
+    void setFrame(WebCore::FrameIdentifier, Ref<const WebCore::DisplayList::DisplayList>&&, SerialFunctionDispatcher&);
     // Resolves a frame that will not be recorded, so that the snapshot does not wait for it.
     void abandonFrame(WebCore::FrameIdentifier);
     // Notes which process was asked to record a frame, so that the frame can be abandoned if that process goes away.

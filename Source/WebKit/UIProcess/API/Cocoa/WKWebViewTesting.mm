@@ -881,7 +881,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     });
 }
 
-- (NSData *)_drawPagesToPDFSynchronouslyForTesting:(_WKFrameHandle *)handle
+- (NSData *)_drawPagesToPDFSynchronouslyForTesting:(_WKFrameHandle *)handle pageCount:(NSUInteger)pageCount
 {
     RefPtr frame = WebKit::WebFrameProxy::webFrame(*handle->_frameHandle->frameID());
     if (!frame)
@@ -893,7 +893,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     printInfo.availablePaperHeight = 792;
     // Outlives this call if the wait gives up.
     auto result = Box<RetainPtr<NSData>>::create();
-    auto replyID = _page->drawPagesToPDF(*frame, printInfo, 0, 1, [result](API::Data* data) {
+    auto replyID = _page->drawPagesToPDF(*frame, printInfo, 0, pageCount, [result](API::Data* data) {
         if (data)
             *result = toNSData(data->span());
     });

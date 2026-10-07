@@ -45,6 +45,7 @@
 #include <WebCore/FrameTreeSyncData.h>
 #include <WebCore/HighlightVisibility.h>
 #include <WebCore/IntDegrees.h>
+#include <WebCore/IntRectHash.h>
 #include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/MediaControlsContextMenuItem.h>
 #include <WebCore/MediaKeySystemRequest.h>
@@ -3408,6 +3409,8 @@ private:
         RemoteSnapshotIdentifier identifier;
         UniqueRef<RemoteSnapshotRecorderProxy> recorder;
         Ref<MainRunLoopSuccessCallbackAggregator> callback;
+        // Frames hosted elsewhere that were painted into the recording, and the parts painted.
+        HashMap<WebCore::FrameIdentifier, WebCore::IntRect> paintedFrameRects;
     };
     std::optional<RemoteSnapshotState> m_remoteSnapshotState;
 #endif
