@@ -22,6 +22,8 @@
 
 #include "CachedImage.h"
 #include "Image.h"
+#include "LayoutSize.h"
+#include "ObjectSizeNegotiation.h"
 #include "RenderElement.h"
 #include "SVGImageElement.h"
 #include "SVGImageElementSizing.h"
@@ -105,6 +107,28 @@ FloatSize svgImageRenderingSize(const Style::Image& styleImage, const RenderElem
         return containerSize;
     auto naturalDimensions = svgImageNaturalDimensions(styleImage, renderer);
     return { naturalDimensions.width.value_or(0), naturalDimensions.height.value_or(0) };
+}
+
+IntSize svgImageSizeForPreserveAspectRatioNone(const CachedImage& cachedImage, float usedZoom)
+{
+    if (!cachedImage.hasImage() || cachedImage.errorOccurred())
+        return { };
+
+    auto naturalDimensions = protect(cachedImage.image())->naturalDimensions();
+    auto size = [&] -> FloatSize {
+        if (naturalDimensions.width && naturalDimensions.height)
+            return { *naturalDimensions.width, *naturalDimensions.height };
+        if (naturalDimensions.aspectRatio)
+            return *naturalDimensions.aspectRatio;
+        return ObjectSizeNegotiation::defaultObjectSize;
+    }();
+    size.scale(usedZoom);
+
+    // Don't let a dimension of 1 or more shrink below 1 when zoomed.
+    LayoutSize layoutSize { size };
+    if (!layoutSize.isEmpty() && usedZoom != 1)
+        layoutSize.clampToMinimumSize({ layoutSize.width() > 0 ? 1 : 0, layoutSize.height() > 0 ? 1 : 0 });
+    return roundedIntSize(layoutSize);
 }
 
 } // namespace WebCore

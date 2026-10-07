@@ -184,7 +184,7 @@ IntSize LegacyRenderSVGImage::imageContainerSize() const
     // https://w3c.github.io/svgwg/svg2-draft/coords.html#PreserveAspectRatioAttribute
     if (imageElement().preserveAspectRatio().align() == SVGPreserveAspectRatioValue::SVG_PRESERVEASPECTRATIO_NONE) {
         if (RefPtr cachedImage = imageResource().cachedImage())
-            return roundedIntSize(cachedImage->clampedImageSize(ImageOrientation::Orientation::FromImage, style().usedZoom()));
+            return svgImageSizeForPreserveAspectRatioNone(*cachedImage, style().usedZoom());
     }
 
     return enclosingIntRect(m_objectBoundingBox).size();

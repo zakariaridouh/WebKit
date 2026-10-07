@@ -65,14 +65,6 @@ public:
     void updateBuffer(const FragmentedSharedBuffer&) override;
     void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) override;
 
-    enum SizeType {
-        UsedSize,
-        IntrinsicSize
-    };
-    WEBCORE_EXPORT FloatSize imageSize(ImageOrientation = ImageOrientation::Orientation::FromImage, float multiplier = 1.0f, SizeType = UsedSize, float density = 1.0f) const;
-    LayoutSize clampedImageSize(ImageOrientation, float multiplier, SizeType = UsedSize, float density = 1.0f) const;
-    static LayoutSize clampForZoom(FloatSize, float multiplier);
-
     NaturalDimensions naturalDimensions(ImageOrientation = ImageOrientation::Orientation::FromImage) const;
 
     bool hasHDRContent() const;

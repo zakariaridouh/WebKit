@@ -112,45 +112,6 @@ RefPtr<SVGSVGElement> SVGImage::rootElement() const
     return DocumentSVG::rootElement(*localMainFrame->document());
 }
 
-FloatSize SVGImage::resolvedIntrinsicSize(float density) const
-{
-    constexpr float defaultWidth = 300;
-    constexpr float defaultHeight = 150;
-
-    RefPtr rootElement = this->rootElement();
-    if (!rootElement)
-        return { defaultWidth, defaultHeight };
-
-    std::optional<float> aspectRatio;
-    auto viewBox = rootElement->viewBox();
-    if (!viewBox.isEmpty())
-        aspectRatio = viewBox.width() / viewBox.height();
-
-    constexpr float defaultRatio = defaultWidth / defaultHeight;
-    float width = defaultWidth;
-    float height = defaultHeight;
-
-    // Four cases for { hasIntrinsicWidth, hasIntrinsicHeight }.
-    if (rootElement->hasIntrinsicWidth()) {
-        width = rootElement->intrinsicWidth() * density;
-        if (rootElement->hasIntrinsicHeight())
-            height = rootElement->intrinsicHeight() * density;  // Case 1: { true, true }
-        else if (aspectRatio)                                   // Case 2: { true, false }
-            height = width / *aspectRatio;
-    } else if (rootElement->hasIntrinsicHeight()) {
-        height = rootElement->intrinsicHeight() * density;
-        if (aspectRatio)                                        // Case 3: { false, true }
-            width = height * *aspectRatio;
-    } else if (aspectRatio) {
-        if (*aspectRatio >= defaultRatio)                       // Case 4: { false, false }
-            height = width / *aspectRatio;
-        else
-            width = height * *aspectRatio;
-    }
-
-    return { width, height };
-}
-
 bool SVGImage::renderingTaintsOrigin() const
 {
     RefPtr rootElement = this->rootElement();

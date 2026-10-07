@@ -24,6 +24,7 @@
 namespace WebCore {
 
 class CachedImage;
+class IntSize;
 class RenderElement;
 class SVGImageElement;
 struct NaturalDimensions;
@@ -54,5 +55,6 @@ FloatRect calculateSVGImageObjectBoundingBox(const SVGImageElement&, const Style
 
 NaturalDimensions svgImageNaturalDimensions(const Style::Image&, const RenderElement&);
 FloatSize svgImageRenderingSize(const Style::Image&, const RenderElement&, FloatSize containerSize);
+IntSize svgImageSizeForPreserveAspectRatioNone(const CachedImage&, float usedZoom);
 
 } // namespace WebCore

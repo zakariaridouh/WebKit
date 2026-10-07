@@ -70,8 +70,6 @@ public:
     Page* internalPage() { return m_page.get(); }
     WEBCORE_EXPORT RefPtr<SVGSVGElement> rootElement() const;
 
-    FloatSize resolvedIntrinsicSize(float density = 1.0f) const;
-
     RefPtr<NativeImage> nativeImage(const FloatSize&, const ColorSpace& = ColorSpace::SRGB(), const ImageDrawingExtras* = nullptr, ImagePaintingOptions = { });
 
 private:
@@ -83,6 +81,7 @@ private:
 
     void setContainerSize(const FloatSize&);
     IntSize containerSize() const;
+
     NaturalDimensions unorientedNaturalDimensions() const final;
 
     void reportApproximateMemoryCost() const;
