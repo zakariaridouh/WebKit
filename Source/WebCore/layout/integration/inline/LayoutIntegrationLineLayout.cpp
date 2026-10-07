@@ -66,6 +66,7 @@
 #include "RenderListOutsideMarker.h"
 #include "RenderObjectInlines.h"
 #include "RenderView.h"
+#include "SVGTextDisplayContentBuilder.h"
 #include "SVGTextFragment.h"
 #include "Settings.h"
 #include "ShapeOutsideInfo.h"
@@ -814,6 +815,35 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
             continue;
         }
     }
+}
+
+bool LineLayout::layoutSVGText()
+{
+    ASSERT(flow().isRenderSVGText());
+
+    auto displayContent = Layout::buildSVGTextDisplayContent(rootLayoutBox());
+    if (!displayContent)
+        return false;
+
+    clearInlineContent();
+    auto& inlineContent = ensureInlineContent();
+    inlineContent.displayContent().set(WTF::move(*displayContent));
+    inlineContent.svgTextFragmentsForBoxes().resize(inlineContent.displayContent().boxes.size());
+
+    if (inlineContent.hasContentfulInlineLevelBox())
+        inlineContent.setHasPaintedInlineLevelBoxes();
+
+    for (auto& box : inlineContent.displayContent().boxes) {
+        if (box.isNonRootInlineBox())
+            layoutState().ensureGeometryForBox(box.layoutBox());
+    }
+
+    // The display content does not refer to removed boxes anymore.
+    m_lineDamage = { };
+    // Damage tracking falls back to full layout without inline items.
+    m_inlineContentCache.inlineItems().set({ }, { }, Layout::InlineContentCache::InlineItems::IsPopulatedFromCache::No);
+
+    return true;
 }
 
 FloatRect LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
@@ -1620,6 +1650,11 @@ bool LineLayout::insertedIntoTree(const RenderElement& parent, RenderObject& chi
     }
 
     CheckedRef childLayoutBox = BoxTreeUpdater { flow() }.insert(parent, child, child.previousSibling());
+    if (flow().isRenderSVGText()) {
+        // SVG text is always fully laid out.
+        Layout::InlineInvalidation::resetInlineDamage(ensureLineDamage());
+        return true;
+    }
     if (CheckedPtr childInlineTextBox = dynamicDowncast<Layout::InlineTextBox>(childLayoutBox.get())) {
         auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
         return invalidation.textInserted(*childInlineTextBox);
@@ -1650,6 +1685,13 @@ bool LineLayout::removedFromTree(const RenderElement& parent, RenderObject& chil
         return false;
     }
 
+    if (flow().isRenderSVGText()) {
+        // SVG text is always fully laid out.
+        Layout::InlineInvalidation::resetInlineDamage(ensureLineDamage());
+        m_lineDamage->addDetachedBox(BoxTreeUpdater { flow() }.remove(parent, child));
+        return true;
+    }
+
     CheckedRef childLayoutBox = *child.layoutBox();
     CheckedPtr childInlineTextBox = dynamicDowncast<Layout::InlineTextBox>(childLayoutBox.get());
     auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
@@ -1672,6 +1714,12 @@ bool LineLayout::updateTextContent(const RenderText& textRenderer, std::optional
     }
 
     BoxTreeUpdater::updateContent(textRenderer);
+
+    if (flow().isRenderSVGText()) {
+        // SVG text is always fully laid out.
+        Layout::InlineInvalidation::resetInlineDamage(ensureLineDamage());
+        return true;
+    }
 
     auto invalidation = Layout::InlineInvalidation { ensureLineDamage(), m_inlineContentCache.inlineItems().content(), m_inlineContent->displayContent() };
     CheckedRef inlineTextBox = *textRenderer.layoutBox();

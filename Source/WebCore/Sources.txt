@@ -2126,6 +2126,7 @@ layout/formattingContexts/inline/InlineQuirks.cpp @header:RenderStyleGetters
 layout/formattingContexts/inline/InlineTextItem.cpp @header:RenderStyleGetters
 layout/formattingContexts/inline/IntrinsicWidthHandler.cpp @header:RenderStyleGetters
 layout/formattingContexts/inline/RangeBasedLineBuilder.cpp @header:RenderStyleGetters
+layout/formattingContexts/inline/SVGTextDisplayContentBuilder.cpp @header:RenderStyleGetters
 layout/formattingContexts/inline/TextOnlySimpleLineBuilder.cpp @header:RenderStyleGetters
 layout/formattingContexts/inline/display/InlineDisplayContent.cpp
 layout/formattingContexts/inline/display/InlineDisplayContentBuilder.cpp @header:RenderStyleGetters

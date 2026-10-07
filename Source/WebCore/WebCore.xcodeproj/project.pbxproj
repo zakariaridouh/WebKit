@@ -4414,6 +4414,7 @@
 		A1D0C50120260608000A0003 /* StyleDocumentScope.h in Headers */ = {isa = PBXBuildFile; fileRef = A1D0C50120260608000A0002 /* StyleDocumentScope.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A1D0C50120260608000B0001 /* UnifiedSource78-header-RenderStyleGetters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1D0C50120260608000B0002 /* UnifiedSource78-header-RenderStyleGetters.cpp */; };
 		A1D0C50120260608000B0003 /* UnifiedSource79-header-RenderStyleGetters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A1D0C50120260608000B0004 /* UnifiedSource79-header-RenderStyleGetters.cpp */; };
+		B384EB205E92575AF1B810CC /* UnifiedSource80-header-RenderStyleGetters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CBE08D3A16AF9588C6EA0AD /* UnifiedSource80-header-RenderStyleGetters.cpp */; };
 		A1D506142331EDD40014EE4E /* JSApplePaySessionError.h in Headers */ = {isa = PBXBuildFile; fileRef = A1D506112331ED960014EE4E /* JSApplePaySessionError.h */; };
 		A1DD618A2B7EB59400075A92 /* VideoReceiverEndpoint.h in Headers */ = {isa = PBXBuildFile; fileRef = A1DD61892B7EB59300075A92 /* VideoReceiverEndpoint.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A1DF5A7F1F7EBD0B0058A477 /* ApplePayRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = A1DF5A7C1F7EBD0B0058A477 /* ApplePayRequest.h */; };
@@ -6982,6 +6983,7 @@
 		E401E0A41C3C0B8300F34D10 /* StyleChange.h in Headers */ = {isa = PBXBuildFile; fileRef = E401E0A31C3C0B8300F34D10 /* StyleChange.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E403B7A2251B11930019E800 /* LayoutIntegrationCoverage.h in Headers */ = {isa = PBXBuildFile; fileRef = E403B7A1251B11930019E800 /* LayoutIntegrationCoverage.h */; };
 		E403B7A3251B11C10019E800 /* LayoutIntegrationPagination.h in Headers */ = {isa = PBXBuildFile; fileRef = E4312AB724B3265600678349 /* LayoutIntegrationPagination.h */; };
+		C814C569BBA6F36D17A949B9 /* SVGTextDisplayContentBuilder.h in Headers */ = {isa = PBXBuildFile; fileRef = 8C34B552C743CB4BA7256D9A /* SVGTextDisplayContentBuilder.h */; };
 		E406204C2E5F2EC0009144F4 /* StyleRuleFunction.h in Headers */ = {isa = PBXBuildFile; fileRef = E406204B2E5F2EC0009144F4 /* StyleRuleFunction.h */; };
 		E415EB13270C351300E8DA1B /* InlineIteratorInlineBox.h in Headers */ = {isa = PBXBuildFile; fileRef = E415EB11270C351200E8DA1B /* InlineIteratorInlineBox.h */; };
 		E418025523D4549B00FFB071 /* LayoutIntegrationBoxTreeUpdater.h in Headers */ = {isa = PBXBuildFile; fileRef = E418025323D4549A00FFB071 /* LayoutIntegrationBoxTreeUpdater.h */; };
@@ -17604,6 +17606,7 @@
 		A1D0C50120260608000A0002 /* StyleDocumentScope.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StyleDocumentScope.h; sourceTree = "<group>"; };
 		A1D0C50120260608000B0002 /* UnifiedSource78-header-RenderStyleGetters.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "UnifiedSource78-header-RenderStyleGetters.cpp"; sourceTree = "<group>"; };
 		A1D0C50120260608000B0004 /* UnifiedSource79-header-RenderStyleGetters.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "UnifiedSource79-header-RenderStyleGetters.cpp"; sourceTree = "<group>"; };
+		3CBE08D3A16AF9588C6EA0AD /* UnifiedSource80-header-RenderStyleGetters.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "UnifiedSource80-header-RenderStyleGetters.cpp"; sourceTree = "<group>"; };
 		A1D506112331ED960014EE4E /* JSApplePaySessionError.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSApplePaySessionError.h; sourceTree = "<group>"; };
 		A1D506132331ED970014EE4E /* JSApplePaySessionError.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSApplePaySessionError.cpp; sourceTree = "<group>"; };
 		A1DD61892B7EB59300075A92 /* VideoReceiverEndpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoReceiverEndpoint.h; sourceTree = "<group>"; };
@@ -23072,6 +23075,8 @@
 		E43105BA16750F1600DB2FB8 /* NodeTraversal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NodeTraversal.h; sourceTree = "<group>"; };
 		E4312AB524B3265600678349 /* LayoutIntegrationPagination.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LayoutIntegrationPagination.cpp; sourceTree = "<group>"; };
 		E4312AB724B3265600678349 /* LayoutIntegrationPagination.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LayoutIntegrationPagination.h; sourceTree = "<group>"; };
+		5D3C5B1036F71428B78A1EE2 /* SVGTextDisplayContentBuilder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SVGTextDisplayContentBuilder.cpp; sourceTree = "<group>"; };
+		8C34B552C743CB4BA7256D9A /* SVGTextDisplayContentBuilder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SVGTextDisplayContentBuilder.h; sourceTree = "<group>"; };
 		E43A023A17EB370A004CDD25 /* RenderElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderElement.h; sourceTree = "<group>"; };
 		E43A023C17EB3713004CDD25 /* RenderElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RenderElement.cpp; sourceTree = "<group>"; };
 		E43AF8E41AC5B7DD00CA717E /* CacheValidation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CacheValidation.cpp; sourceTree = "<group>"; };
@@ -25474,6 +25479,8 @@
 				DDD517EB2A9FC5440069AF81 /* LineLayoutResult.h */,
 				DDECCC1D2BABA83E0041CD3C /* RangeBasedLineBuilder.cpp */,
 				DDECCC1E2BABA8480041CD3C /* RangeBasedLineBuilder.h */,
+				5D3C5B1036F71428B78A1EE2 /* SVGTextDisplayContentBuilder.cpp */,
+				8C34B552C743CB4BA7256D9A /* SVGTextDisplayContentBuilder.h */,
 				DDA3D5D02A7D847E000ECEE1 /* TextOnlySimpleLineBuilder.cpp */,
 				DDA3D5CE2A7D844D000ECEE1 /* TextOnlySimpleLineBuilder.h */,
 			);
@@ -29957,6 +29964,7 @@
 				538EC85D1F993F22004D22A8 /* UnifiedSource78.cpp */,
 				A1D0C50120260608000B0004 /* UnifiedSource79-header-RenderStyleGetters.cpp */,
 				538EC8371F993F0E004D22A8 /* UnifiedSource79.cpp */,
+				3CBE08D3A16AF9588C6EA0AD /* UnifiedSource80-header-RenderStyleGetters.cpp */,
 				538EC8401F993F13004D22A8 /* UnifiedSource80.cpp */,
 				538EC8651F993F26004D22A8 /* UnifiedSource81.cpp */,
 				538EC8821F993F36004D22A8 /* UnifiedSource82.cpp */,
@@ -50142,6 +50150,7 @@
 				08F0BFC31255C53C00075185 /* SVGTextChunk.h in Headers */,
 				081668D4125603BF006F25DE /* SVGTextChunkBuilder.h in Headers */,
 				B2227AC80D00BF220071B782 /* SVGTextContentElement.h in Headers */,
+				C814C569BBA6F36D17A949B9 /* SVGTextDisplayContentBuilder.h in Headers */,
 				B2227ACB0D00BF220071B782 /* SVGTextElement.h in Headers */,
 				08F0BFC41255C53C00075185 /* SVGTextFragment.h in Headers */,
 				088C2F7A12390081003D65CE /* SVGTextLayoutAttributes.h in Headers */,
@@ -51938,6 +51947,7 @@
 				538EC8BF1F993F9D004D22A8 /* UnifiedSource78.cpp in Sources */,
 				A1D0C50120260608000B0003 /* UnifiedSource79-header-RenderStyleGetters.cpp in Sources */,
 				538EC8C01F993F9D004D22A8 /* UnifiedSource79.cpp in Sources */,
+				B384EB205E92575AF1B810CC /* UnifiedSource80-header-RenderStyleGetters.cpp in Sources */,
 				538EC8C11F993F9D004D22A8 /* UnifiedSource80.cpp in Sources */,
 				538EC8C21F993F9D004D22A8 /* UnifiedSource81.cpp in Sources */,
 				538EC8C31F993F9D004D22A8 /* UnifiedSource82.cpp in Sources */,

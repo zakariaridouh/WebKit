@@ -27,6 +27,7 @@
 #include "config.h"
 #include "RenderSVGText.h"
 
+#include "AXObjectCache.h"
 #include "FloatQuad.h"
 #include "Font.h"
 #include "FontCascadeInlines.h"
@@ -36,6 +37,7 @@
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorLogicalOrderTraversal.h"
 #include "InlineIteratorSVGTextBox.h"
+#include "InlineWalker.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LayoutRepainter.h"
 #include "LegacyRenderSVGResource.h"
@@ -412,10 +414,12 @@ void RenderSVGText::layout()
 
     ASSERT(childrenInline());
 
-    LayoutUnit repaintLogicalTop;
-    LayoutUnit repaintLogicalBottom;
     rebuildFloatingObjectSetFromIntrudingFloats();
-    layoutInlineChildren(RelayoutChildren::Yes, logicalHeight(), repaintLogicalTop, repaintLogicalBottom);
+    if (!layoutInlineChildrenWithoutLineLayout()) {
+        LayoutUnit repaintLogicalTop;
+        LayoutUnit repaintLogicalBottom;
+        layoutInlineChildren(RelayoutChildren::Yes, logicalHeight(), repaintLogicalTop, repaintLogicalBottom);
+    }
 
     computePerCharacterLayoutInformation();
 
@@ -455,6 +459,49 @@ void RenderSVGText::layout()
     repainter.repaintAfterLayout();
     clearNeedsLayout();
     m_hasPerformedLayout = true;
+}
+
+bool RenderSVGText::layoutInlineChildrenWithoutLineLayout()
+{
+    // Empty content without a line needs no line layout.
+    if (!firstChild() && !hasLineIfEmpty())
+        return false;
+
+    computeAndSetLineLayoutPath();
+    if (lineLayoutPath() != InlinePath)
+        return false;
+
+    auto& inlineLayout = ensureInlineLayout();
+    if (!inlineLayout.layoutSVGText())
+        return false;
+
+    CheckedPtr cache = protect(document())->existingAXObjectCache();
+    for (auto walker = InlineWalker(*this); !walker.atEnd(); walker.advance()) {
+        auto& renderer = *walker.current();
+        ASSERT((isAnyOf<RenderInline, RenderText>(renderer)));
+        renderer.clearNeedsLayout();
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+        if (cache)
+            cache->onTextRunsChanged(renderer);
+#endif
+    }
+
+    // Only content without a contentful line keeps this height. updatePositionAndOverflow() sets the geometry otherwise.
+    auto contentLogicalHeight = [&] -> LayoutUnit {
+        if (inlineLayout.hasContentfulInlineLine())
+            return inlineLayout.contentLogicalHeight();
+        if (hasLineIfEmpty())
+            return lineHeight();
+        return { };
+    };
+    setLogicalHeight(borderAndPaddingLogicalHeight() + contentLogicalHeight());
+
+    // Makes LayoutRepainter issue a full repaint.
+    setNeedsLayout(MarkingBehavior::MarkOnlyThis);
+
+    if (cache)
+        cache->onLaidOutInlineContent(*this);
+    return true;
 }
 
 void RenderSVGText::computePerCharacterLayoutInformation()

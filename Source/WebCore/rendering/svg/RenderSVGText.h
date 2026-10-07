@@ -108,6 +108,7 @@ private:
     bool requiresLayer() const override;
     void layout() override;
 
+    bool layoutInlineChildrenWithoutLineLayout();
     void computePerCharacterLayoutInformation();
     void layoutCharactersInTextBoxes(const InlineIterator::InlineBoxIterator&, SVGTextLayoutEngine&);
     FloatRect layoutChildBoxes(LegacyInlineFlowBox*, SVGTextFragmentMap&);
