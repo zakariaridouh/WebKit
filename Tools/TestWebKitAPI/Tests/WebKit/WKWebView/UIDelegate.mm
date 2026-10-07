@@ -575,8 +575,9 @@ TEST(WebKit, LockdownModeDefaultFirstUseMessage)
     [webView addToTestWindow];
 
     EXPECT_EQ(presentViewControllerCallCount, 0);
-    [webView waitForNextPresentationUpdate];
-    EXPECT_EQ(presentViewControllerCallCount, 1);
+    TestWebKitAPI::Util::waitFor([&] {
+        return presentViewControllerCallCount == 1;
+    });
 
     EXPECT_TRUE([[NSUserDefaults standardUserDefaults] boolForKey:WebKitLockdownModeAlertShownKey]);
     
