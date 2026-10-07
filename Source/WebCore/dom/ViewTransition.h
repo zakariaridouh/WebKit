@@ -176,7 +176,10 @@ class ViewTransition : public RefCounted<ViewTransition>, public VisibilityChang
 public:
     static Ref<ViewTransition> createSamePage(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
     static RefPtr<ViewTransition> resolveInboundCrossDocumentViewTransition(Document&, std::unique_ptr<ViewTransitionParams>);
-    static Ref<ViewTransition> setupCrossDocumentViewTransition(Document&);
+    // Given the old document's params once its state has been captured, or null if the transition was
+    // skipped. Proceeds with the navigation, which must not happen before then.
+    using OutboundPostCaptureSteps = CompletionHandler<void(std::unique_ptr<ViewTransitionParams>&&)>;
+    static Ref<ViewTransition> setupCrossDocumentViewTransition(Document&, OutboundPostCaptureSteps&& = { });
     ~ViewTransition();
 
     // ContextDestructionObserver.
@@ -237,6 +240,8 @@ private:
 
     void clearViewTransition();
 
+    void runOutboundPostCaptureSteps();
+
     // VisibilityChangeClient.
     void visibilityStateChanged() final;
 
@@ -259,6 +264,9 @@ private:
     PromiseAndWrapper m_updateCallbackDone;
     PromiseAndWrapper m_finished;
     EventLoopTimerHandle m_updateCallbackTimeout;
+
+    // Set on the old document's transition while a cross-document navigation waits for it to capture.
+    OutboundPostCaptureSteps m_outboundPostCaptureSteps;
 
     Ref<ViewTransitionTypeSet> m_types;
 };

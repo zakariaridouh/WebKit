@@ -107,6 +107,7 @@
 #include "TextResourceDecoder.h"
 #include "UserContentProvider.h"
 #include "UserContentURLPattern.h"
+#include "ViewTransition.h"
 #include "ViolationReportType.h"
 #include <wtf/Assertions.h>
 #include <wtf/CompletionHandler.h>
@@ -1084,7 +1085,7 @@ void DocumentLoader::responseReceived(ResourceResponse&& response, CompletionHan
 
     // Always show content with valid substitute data.
     if (m_substituteData.isValid()) {
-        continueAfterContentPolicy(PolicyAction::Use);
+        continueAfterContentPolicy(PolicyAction::Use, completionHandlerCaller.release());
         return;
     }
 
@@ -1101,11 +1102,12 @@ void DocumentLoader::responseReceived(ResourceResponse&& response, CompletionHan
 
     protect(frameLoader())->checkContentPolicy(m_response, [this, protectedThis = Ref { *this }, mainResourceLoader = WTF::move(mainResourceLoader),
         completionHandler = completionHandlerCaller.release()] (PolicyAction policy) mutable {
-        continueAfterContentPolicy(policy);
-        if (mainResourceLoader)
-            mainResourceLoader->didReceiveResponsePolicy();
-        if (completionHandler)
-            completionHandler();
+        continueAfterContentPolicy(policy, [mainResourceLoader = WTF::move(mainResourceLoader), completionHandler = WTF::move(completionHandler)] mutable {
+            if (mainResourceLoader)
+                mainResourceLoader->didReceiveResponsePolicy();
+            if (completionHandler)
+                completionHandler();
+        });
     });
 }
 
@@ -1161,8 +1163,9 @@ bool DocumentLoader::disallowDataRequest() const
     return true;
 }
 
-void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
+void DocumentLoader::continueAfterContentPolicy(PolicyAction policy, CompletionHandler<void()>&& completionHandler)
 {
+    CompletionHandlerCallingScope callCompletionHandler(WTF::move(completionHandler));
     ASSERT(m_waitingForContentPolicy);
     m_waitingForContentPolicy = false;
     if (isStopping())
@@ -1251,6 +1254,23 @@ void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
         }
     }
 
+    // https://html.spec.whatwg.org/multipage/browsing-the-web.html#deactivate-a-document-for-a-cross-document-navigation
+    // Nothing is committed until the rest of the response comes through, so holding it back holds the
+    // navigation back while the current document captures a view transition into this one.
+    RefPtr frameLoader = this->frameLoader();
+    if (!frameLoader)
+        return;
+    m_waitingForOutboundViewTransitionCapture = true;
+    frameLoader->waitForOutboundViewTransitionCapture(*this, false, [this, protectedThis = Ref { *this }, completionHandler = callCompletionHandler.release()] mutable {
+        if (std::exchange(m_waitingForOutboundViewTransitionCapture, false))
+            commitSubstituteDataIfNeeded();
+        if (completionHandler)
+            completionHandler();
+    });
+}
+
+void DocumentLoader::commitSubstituteDataIfNeeded()
+{
     if (!isStopping() && m_substituteData.isValid() && isLoadingMainResource()) {
         RefPtr content = m_substituteData.content();
         if (content && content->size()) {
@@ -2420,6 +2440,15 @@ void DocumentLoader::cancelPolicyCheckIfNeeded()
         frameLoader()->policyChecker().stopCheck();
         m_waitingForContentPolicy = false;
         m_waitingForNavigationPolicy = false;
+    }
+
+    // The current document stays, so it stops holding its rendering for a transition that will not happen.
+    if (std::exchange(m_waitingForOutboundViewTransitionCapture, false)) {
+        RefPtr frame = m_frame.get();
+        if (RefPtr document = frame ? frame->document() : nullptr) {
+            if (RefPtr viewTransition = document->activeViewTransition())
+                viewTransition->skipTransition();
+        }
     }
 }
 

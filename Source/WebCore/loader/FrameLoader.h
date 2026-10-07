@@ -282,6 +282,10 @@ public:
     bool loadingFromCachedPage() const { return m_loadingFromCachedPage; }
 
     void commitProvisionalLoad();
+    // https://html.spec.whatwg.org/multipage/browsing-the-web.html#deactivate-a-document-for-a-cross-document-navigation
+    // Before a provisional load commits, gives the current document the chance to capture a
+    // cross-document view transition into it. Calls proceedWithNavigation once that is done.
+    void waitForOutboundViewTransitionCapture(DocumentLoader&, bool fromBackForwardCache, CompletionHandler<void()>&& proceedWithNavigation);
     void provisionalLoadFailedInAnotherProcess();
 
     void setLoadsSynchronously(bool loadsSynchronously) { m_loadsSynchronously = loadsSynchronously; }
@@ -416,6 +420,7 @@ private:
     void loadDifferentDocumentItem(HistoryItem&, HistoryItem* fromItem, FrameLoadType, FormSubmissionCacheLoadPolicy, ShouldTreatAsContinuingLoad, ShouldRestoreFromBackForwardCache = ShouldRestoreFromBackForwardCache::Unspecified, PolicyAlreadyDecided = PolicyAlreadyDecided::No);
 
     void loadProvisionalItemFromCachedPage();
+    void dispatchPageswapEvent(DocumentLoader*, bool fromBackForwardCache, CompletionHandler<void()>&& proceedWithNavigation);
 
     void setFirstPartyForCookies(const URL&);
 

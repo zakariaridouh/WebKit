@@ -9136,23 +9136,50 @@ void Document::transferViewTransitionParams(Document& newDocument)
     newDocument.m_inboundViewTransitionParams = std::exchange(m_inboundViewTransitionParams, nullptr);
 }
 
-void Document::dispatchPageswapEvent(CanTriggerCrossDocumentViewTransition canTriggerCrossDocumentViewTransition, RefPtr<NavigationActivation>&& activation)
+// https://html.spec.whatwg.org/multipage/browsing-the-web.html#deactivate-a-document-for-a-cross-document-navigation
+void Document::dispatchPageswapEvent(CanTriggerCrossDocumentViewTransition canTriggerCrossDocumentViewTransition, RefPtr<NavigationActivation>&& activation, CompletionHandler<void()>&& proceedWithNavigation)
 {
     RefPtr<ViewTransition> oldViewTransition;
+    bool navigationWaitsForCapture = !!proceedWithNavigation;
 
     auto startTime = MonotonicTime::now();
     PageSwapEvent::Init swapInit;
     swapInit.activation = WTF::move(activation);
     if (canTriggerCrossDocumentViewTransition == CanTriggerCrossDocumentViewTransition::Yes && globalObject()) {
-        oldViewTransition = ViewTransition::setupCrossDocumentViewTransition(*this);
+        ViewTransition::OutboundPostCaptureSteps outboundPostCaptureSteps;
+        if (navigationWaitsForCapture) {
+            outboundPostCaptureSteps = [weakThis = WeakPtr<Document, WeakPtrImplWithEventTargetData> { *this }, startTime, proceedWithNavigation = std::exchange(proceedWithNavigation, nullptr)](std::unique_ptr<ViewTransitionParams>&& params) mutable {
+                if (RefPtr protectedThis = weakThis.get(); protectedThis && params) {
+                    params->startTime = startTime;
+                    params->oldDocumentOrigin = &protectedThis->securityOrigin();
+                    // FIXME: This should set the params on the new Document, but it doesn't exist yet.
+                    // Store it on the old, and we'll call transferViewTransitionParams soon.
+                    protectedThis->m_inboundViewTransitionParams = WTF::move(params);
+                }
+                // Not from within whatever skipped or completed the capture, which may be script.
+                callOnMainThread(WTF::move(proceedWithNavigation));
+            };
+        }
+        oldViewTransition = ViewTransition::setupCrossDocumentViewTransition(*this, WTF::move(outboundPostCaptureSteps));
         swapInit.viewTransition = oldViewTransition;
     }
 
     dispatchWindowEvent(PageSwapEvent::create(eventNames().pageswapEvent, WTF::move(swapInit)), this);
 
-    // FIXME: This should actually defer the navigation, and run the setupViewTransition
-    // (capture the old state) on the next rendering update.
-    // https://html.spec.whatwg.org/multipage/browsing-the-web.html#deactivate-a-document-for-a-cross-document-navigation
+    // Proceeds from the transition's outbound post-capture steps instead, if there is one.
+    if (navigationWaitsForCapture) {
+        if (proceedWithNavigation) {
+            proceedWithNavigation();
+            return;
+        }
+        // FIXME: This should capture in the next rendering update, but there is none until the new
+        // document paints: the layer tree is frozen from when the provisional load started.
+        if (oldViewTransition && oldViewTransition->phase() == ViewTransitionPhase::PendingCapture)
+            oldViewTransition->setupViewTransition();
+        return;
+    }
+
+    // The navigation cannot wait, so capture now.
     if (oldViewTransition && oldViewTransition->phase() != ViewTransitionPhase::Done) {
         oldViewTransition->setupViewTransition();
 

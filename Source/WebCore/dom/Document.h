@@ -1463,7 +1463,9 @@ public:
     void queueTaskToDispatchEventOnWindow(LocalDOMWindow&, TaskSource, Ref<Event>&&);
     void dispatchPageshowEvent(PageshowEventPersistence);
     void dispatchPagehideEvent(PageshowEventPersistence);
-    WEBCORE_EXPORT void dispatchPageswapEvent(CanTriggerCrossDocumentViewTransition, RefPtr<NavigationActivation>&&);
+    // With proceedWithNavigation, a view transition is captured in a later rendering update, and the
+    // navigation proceeds once it has been. Without it, the capture is made before returning.
+    WEBCORE_EXPORT void dispatchPageswapEvent(CanTriggerCrossDocumentViewTransition, RefPtr<NavigationActivation>&&, CompletionHandler<void()>&& proceedWithNavigation = { });
     void transferViewTransitionParams(Document&);
     WEBCORE_EXPORT void enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEventInit&&);
     void enqueueHashchangeEvent(const String& oldURL, const String& newURL);

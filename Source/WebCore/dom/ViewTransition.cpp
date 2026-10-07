@@ -67,6 +67,7 @@
 #include "ViewTransitionTypeSet.h"
 #include "WebAnimation.h"
 #include <wtf/OrderedHashSet.h>
+#include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
@@ -149,7 +150,7 @@ RefPtr<ViewTransition> ViewTransition::resolveInboundCrossDocumentViewTransition
 }
 
 // https://drafts.csswg.org/css-view-transitions-2/#setup-cross-document-view-transition
-Ref<ViewTransition> ViewTransition::setupCrossDocumentViewTransition(Document& document)
+Ref<ViewTransition> ViewTransition::setupCrossDocumentViewTransition(Document& document, OutboundPostCaptureSteps&& outboundPostCaptureSteps)
 {
     auto types = document.resolveViewTransitionRule();
     ASSERT(!std::holds_alternative<Document::SkipTransition>(types));
@@ -161,6 +162,8 @@ Ref<ViewTransition> ViewTransition::setupCrossDocumentViewTransition(Document& d
     viewTransition->suspendIfNeeded();
 
     document.setActiveViewTransition(protect(viewTransition.ptr()));
+
+    viewTransition->m_outboundPostCaptureSteps = WTF::move(outboundPostCaptureSteps);
 
     return viewTransition;
 }
@@ -189,6 +192,14 @@ void ViewTransition::skipViewTransition(ExceptionOr<JSC::JSValue>&& reason)
     LOG_WITH_STREAM(ViewTransitions, stream << "ViewTransition " << this << " skipViewTransition - phase " << m_phase);
 
     ASSERT(m_phase != ViewTransitionPhase::Done);
+
+    // https://drafts.csswg.org/css-view-transitions-2/#skip-the-view-transition
+    // The navigation proceeds without the transition.
+    auto outboundPostCaptureSteps = std::exchange(m_outboundPostCaptureSteps, nullptr);
+    auto runOutboundPostCaptureSteps = makeScopeExit([&] {
+        if (outboundPostCaptureSteps)
+            outboundPostCaptureSteps(nullptr);
+    });
 
     Ref document = *this->document();
     if (m_phase < ViewTransitionPhase::UpdateCallbackCalled) {
@@ -335,6 +346,12 @@ void ViewTransition::setupViewTransition()
     }
 
     Ref document = *this->document();
+    if (m_outboundPostCaptureSteps) {
+        document->setRenderingIsSuppressedForViewTransitionImmediately();
+        runOutboundPostCaptureSteps();
+        return;
+    }
+
     if (m_isCrossDocument)
         document->setRenderingIsSuppressedForViewTransitionImmediately();
     else
@@ -1114,11 +1131,24 @@ void ViewTransition::stop()
 
     m_phase = ViewTransitionPhase::Done;
 
+    // The document is going away before it could capture, so the navigation proceeds without it.
+    if (auto outboundPostCaptureSteps = std::exchange(m_outboundPostCaptureSteps, nullptr))
+        outboundPostCaptureSteps(nullptr);
+
     Ref document = *this->document();
     document->unregisterForVisibilityStateChangedCallbacks(*this);
 
     if (document->activeViewTransition() == this)
         clearViewTransition();
+}
+
+// https://drafts.csswg.org/css-view-transitions-2/#perform-pending-transition-operations
+void ViewTransition::runOutboundPostCaptureSteps()
+{
+    auto params = takeViewTransitionParams();
+    // Left capturing, with rendering suppressed, until the navigation replaces this document and
+    // skips it, as when the capture was made just before the navigation committed.
+    std::exchange(m_outboundPostCaptureSteps, nullptr)(params.moveToUniquePtr());
 }
 
 Document* ViewTransition::document() const

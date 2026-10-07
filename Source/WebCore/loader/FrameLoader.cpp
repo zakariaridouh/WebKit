@@ -2553,34 +2553,11 @@ void FrameLoader::commitProvisionalLoad()
 
     LOG_WITH_STREAM(BackForwardCache, stream << "WebCoreLoading frame "_s << m_frame->frameID().toUInt64() << ": About to commit provisional load from previous URL '"_s << (frame->document() ? frame->document()->url().stringCenterEllipsizedToLength() : emptyString()) << "' to new URL '"_s << (pdl ? pdl->url().stringCenterEllipsizedToLength() : "<no provisional DocumentLoader>"_s) << "' with cached page "_s << cachedPage.get());
 
-    if (RefPtr document = m_frame->document()) {
-        auto canTriggerCrossDocumentViewTransition = CanTriggerCrossDocumentViewTransition::No;
-        RefPtr<NavigationActivation> activation;
-        if (pdl) {
-            canTriggerCrossDocumentViewTransition = pdl->navigationCanTriggerCrossDocumentViewTransition(*document, !!cachedPage);
-
-            RefPtr window = document->window();
-            auto navigationAPIType = pdl->triggeringAction().navigationAPIType();
-            if (window && navigationAPIType && document->settings().navigationAPIEnabled()) {
-                // FIXME: The NavigationActivation for pageswap should be created after the global
-                // history update, but before the unload event (which might be delayed). Those steps
-                // are currently intertwined, so this creates a fake/detached new history entry to
-                // use for this purpose.
-                RefPtr<HistoryItem> newItem;
-                if (RefPtr page = frame->page(); page && *navigationAPIType != NavigationNavigationType::Reload)
-                    newItem = history().createItemWithLoader(page->historyItemClient(), pdl.get());
-
-                activation = protect(window->navigation())->createForPageswapEvent(newItem.get(), pdl.get(), !!cachedPage);
-            }
-        }
-        SetForScope dispatchingPageSwapEvent(m_isDispatchingPageSwapEvent, true);
-        document->dispatchPageswapEvent(canTriggerCrossDocumentViewTransition, WTF::move(activation));
-
-        // https://html.spec.whatwg.org/multipage/browsing-the-web.html#deactivate-a-document-for-a-cross-document-navigation
-        // FIXME: If the pageswap event resulted in starting a view-transition, then the
-        // 'proceedWithNavigationAfterViewTransitionCapture' steps should proceed after the next
-        // rendering update (which includes firing the unload event for the old Document).
-    }
+    // Already dispatched if the navigation waited for a view transition to be captured.
+    if (!pdl || !pdl->hasDispatchedPageswapEvent())
+        dispatchPageswapEvent(pdl.get(), !!cachedPage, { });
+    if (pdl)
+        pdl->setHasDispatchedPageswapEvent(false);
 
     if (RefPtr document = frame->document()) {
         // In the case where we're restoring from a cached page, our document will not
@@ -4631,6 +4608,53 @@ bool FrameLoader::shouldInterruptLoadForXFrameOptions(const String& content, con
     return false;
 }
 
+void FrameLoader::dispatchPageswapEvent(DocumentLoader* provisionalLoader, bool fromBackForwardCache, CompletionHandler<void()>&& proceedWithNavigation)
+{
+    RefPtr document = m_frame->document();
+    if (!document) {
+        if (proceedWithNavigation)
+            proceedWithNavigation();
+        return;
+    }
+
+    Ref frame = m_frame.get();
+    auto canTriggerCrossDocumentViewTransition = CanTriggerCrossDocumentViewTransition::No;
+    RefPtr<NavigationActivation> activation;
+    if (provisionalLoader) {
+        canTriggerCrossDocumentViewTransition = provisionalLoader->navigationCanTriggerCrossDocumentViewTransition(*document, fromBackForwardCache);
+
+        RefPtr window = document->window();
+        auto navigationAPIType = provisionalLoader->triggeringAction().navigationAPIType();
+        if (window && navigationAPIType && document->settings().navigationAPIEnabled()) {
+            // FIXME: The NavigationActivation for pageswap should be created after the global
+            // history update, but before the unload event (which might be delayed). Those steps
+            // are currently intertwined, so this creates a fake/detached new history entry to
+            // use for this purpose.
+            RefPtr<HistoryItem> newItem;
+            if (RefPtr page = frame->page(); page && *navigationAPIType != NavigationNavigationType::Reload)
+                newItem = history().createItemWithLoader(page->historyItemClient(), provisionalLoader);
+
+            activation = protect(window->navigation())->createForPageswapEvent(newItem.get(), provisionalLoader, fromBackForwardCache);
+        }
+    }
+    SetForScope dispatchingPageSwapEvent(m_isDispatchingPageSwapEvent, true);
+    document->dispatchPageswapEvent(canTriggerCrossDocumentViewTransition, WTF::move(activation), WTF::move(proceedWithNavigation));
+}
+
+void FrameLoader::waitForOutboundViewTransitionCapture(DocumentLoader& provisionalLoader, bool fromBackForwardCache, CompletionHandler<void()>&& proceedWithNavigation)
+{
+    // Only a navigation that can trigger a transition waits, and dispatches pageswap early to do so.
+    // Every other one dispatches it when it commits, as it always has.
+    RefPtr document = m_frame->document();
+    if (!document || &provisionalLoader != m_provisionalDocumentLoader || provisionalLoader.hasDispatchedPageswapEvent()
+        || provisionalLoader.navigationCanTriggerCrossDocumentViewTransition(*document, fromBackForwardCache) == CanTriggerCrossDocumentViewTransition::No) {
+        proceedWithNavigation();
+        return;
+    }
+    provisionalLoader.setHasDispatchedPageswapEvent(true);
+    dispatchPageswapEvent(&provisionalLoader, fromBackForwardCache, WTF::move(proceedWithNavigation));
+}
+
 void FrameLoader::loadProvisionalItemFromCachedPage()
 {
     RefPtr provisionalLoader = provisionalDocumentLoader();
@@ -4646,7 +4670,12 @@ void FrameLoader::loadProvisionalItemFromCachedPage()
     provisionalLoader->timing().markStartTime();
     
     provisionalLoader->setCommitted(true);
-    commitProvisionalLoad();
+    waitForOutboundViewTransitionCapture(*provisionalLoader, true, [frame = Ref { m_frame.get() }, provisionalLoader] {
+        // Another navigation may have started meanwhile.
+        if (frame->loader().provisionalDocumentLoader() != provisionalLoader.get())
+            return;
+        protect(frame->loader())->commitProvisionalLoad();
+    });
 }
 
 bool FrameLoader::shouldTreatURLAsSameAsCurrent(const SecurityOrigin* requesterOrigin, const URL& url) const
