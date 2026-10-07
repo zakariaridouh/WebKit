@@ -29,6 +29,7 @@
 #include "BuiltinNames.h"
 #include "ClonedArguments.h"
 #include "ExecutableBaseInlines.h"
+#include "IndexingTypeInlines.h"
 #include "JSCInlines.h"
 #include "JSMapIterator.h"
 #include "JSSet.h"

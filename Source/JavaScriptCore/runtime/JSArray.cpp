@@ -25,6 +25,7 @@
 
 #include "ArrayPrototypeInlines.h"
 #include "GCDeferralContextInlines.h"
+#include "IndexingTypeInlines.h"
 #include "JSArrayInlines.h"
 #include "JSCInlines.h"
 #include "PropertyNameArray.h"

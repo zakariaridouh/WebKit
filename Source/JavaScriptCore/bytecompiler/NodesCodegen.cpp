@@ -32,6 +32,7 @@
 #include "BuiltinNames.h"
 #include "BytecodeGenerator.h"
 #include "BytecodeGeneratorBaseInlines.h"
+#include "IndexingTypeInlines.h"
 #include "JSArrayIterator.h"
 #include "JSAsyncDisposableStack.h"
 #include "JSAsyncFromSyncIterator.h"
@@ -445,14 +446,14 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
     unsigned length = 0;
 
     IndexingType recommendedIndexingType = ArrayWithUndecided;
+    MarkedArgumentBufferWithSize<16> constants;
     ElementNode* firstPutElement;
     for (firstPutElement = m_element; firstPutElement; firstPutElement = firstPutElement->next()) {
-        if (firstPutElement->elision() || firstPutElement->value()->isSpreadExpression())
+        if (firstPutElement->elision())
             break;
-        if (!firstPutElement->value()->isConstant())
-            hadVariableExpression = true;
-        else {
-            JSValue constant = static_cast<ConstantNode*>(firstPutElement->value())->jsValue(generator);
+        ExpressionNode* value = firstPutElement->value();
+        if (value->isConstant()) {
+            JSValue constant = static_cast<ConstantNode*>(value)->jsValue(generator);
             if (!constant) [[unlikely]]
                 hadVariableExpression = true;
             else {
@@ -461,11 +462,19 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
                     allDenseStrings = false;
                 else if (auto* impl = asString(constant)->tryGetValueImpl(); !impl || !impl->isAtom())
                     allDenseStrings = false;
+                if (!hadVariableExpression)
+                    constants.append(constant);
             }
+        } else {
+            if (value->isSpreadExpression())
+                break;
+            hadVariableExpression = true;
         }
 
         ++length;
     }
+    if (constants.hasOverflowed()) [[unlikely]]
+        hadVariableExpression = true;
     if (hadVariableExpression)
         allDenseStrings = false;
 
@@ -479,17 +488,26 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
             auto* array = JSCellButterfly::tryCreate(generator.vm(), cellButterflyStructure, length);
             RELEASE_ASSERT(array);
 
-            unsigned index = 0;
-            for (ElementNode* element = elements; index < length; element = element->next()) {
-                ASSERT(element->value()->isConstant());
-                JSValue constant = static_cast<ConstantNode*>(element->value())->jsValue(generator);
-                ASSERT(constant);
-                if (allDenseStrings) {
-                    JSString* string = asString(constant);
+            ASSERT(elements == m_element);
+            ASSERT(constants.size() == length);
+            if (allDenseStrings) {
+                for (auto& slot : constants.mutableSpan()) {
+                    JSString* string = asString(slot);
                     StringImpl* stringImpl = const_cast<StringImpl*>(string->getValueImpl());
-                    constant = vm.atomStringToJSStringMap.ensureValue(stringImpl, [&] { return string; });
+                    slot = vm.atomStringToJSStringMap.ensureValue(stringImpl, [&] { return string; });
                 }
-                array->setIndex(generator.vm(), index++, constant);
+            }
+
+            if (hasInt32(array->indexingType())) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+                memcpy(std::bit_cast<EncodedJSValue*>(array->toButterfly()->contiguous().data()), constants.data(), length * sizeof(EncodedJSValue));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            } else if (hasContiguous(array->indexingType())) {
+                gcSafeMemcpy(std::bit_cast<EncodedJSValue*>(array->toButterfly()->contiguous().data()), constants.data(), length * sizeof(EncodedJSValue));
+                vm.writeBarrier(array);
+            } else {
+                for (unsigned index = 0; index < length; ++index)
+                    array->setIndex(vm, index, constants.at(index));
             }
             return generator.emitNewArrayBuffer(dst, array, recommendedIndexingType);
         }
