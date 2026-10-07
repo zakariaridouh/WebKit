@@ -24,7 +24,8 @@
 
 import WebKit_Internal
 
-final class TestWithSwiftWeakRef {
+// Safety: target is only written in init, assumeIsolated asserts the main thread, and weak loads are atomic in the Swift runtime
+final class TestWithSwiftWeakRef: @unchecked Sendable {
     private weak var target: TestWithSwift?
     init(target: TestWithSwift) {
         self.target = target
@@ -37,21 +38,40 @@ final class TestWithSwiftWeakRef {
 
     @used
     func dispatchTestAsyncMessage(
-        connection: IPC.Connection,
-        param: UInt32,
-        completionHandler: CompletionHandlers.TestWithSwift.TestAsyncMessageCompletionHandler
+        connection: sending IPC.Connection,
+        param: sending UInt32,
+        completionHandler: sending CompletionHandlers.TestWithSwift.TestAsyncMessageCompletionHandler
     ) {
-        guard let target else {
-            return
-        }
-        do {
-            try mayThrowInvalidMessage(
-                target.testAsyncMessage(
+        MainActor.assumeIsolated {
+            guard let target else {
+                return
+            }
+            Task.immediateOnMainActor {
+                await Self.runTestAsyncMessage(
+                    target: target,
                     connection: connection,
                     param: param,
                     completionHandler: completionHandler
                 )
+            }
+        }
+    }
+
+    @MainActor
+    private static func runTestAsyncMessage(
+        target: TestWithSwift,
+        connection: IPC.Connection,
+        param: UInt32,
+        completionHandler: CompletionHandlers.TestWithSwift.TestAsyncMessageCompletionHandler
+    ) async {
+        do {
+            let reply = try await mayThrowInvalidMessage(
+                target.testAsyncMessage(
+                    connection: connection,
+                    param: param
+                )
             )
+            completionHandler.pointee(reply)
         } catch {
             markMessageInvalid(error, on: connection)
             CompletionHandlers.TestWithSwift.completeWithDefaultReply(completionHandler)
@@ -60,21 +80,40 @@ final class TestWithSwiftWeakRef {
 
     @used
     func dispatchTestSyncMessage(
-        connection: IPC.Connection,
-        param: UInt32,
-        completionHandler: CompletionHandlers.TestWithSwift.TestSyncMessageCompletionHandler
+        connection: sending IPC.Connection,
+        param: sending UInt32,
+        completionHandler: sending CompletionHandlers.TestWithSwift.TestSyncMessageCompletionHandler
     ) {
-        guard let target else {
-            return
-        }
-        do {
-            try mayThrowInvalidMessage(
-                target.testSyncMessage(
+        MainActor.assumeIsolated {
+            guard let target else {
+                return
+            }
+            Task.immediateOnMainActor {
+                await Self.runTestSyncMessage(
+                    target: target,
                     connection: connection,
                     param: param,
                     completionHandler: completionHandler
                 )
+            }
+        }
+    }
+
+    @MainActor
+    private static func runTestSyncMessage(
+        target: TestWithSwift,
+        connection: IPC.Connection,
+        param: UInt32,
+        completionHandler: CompletionHandlers.TestWithSwift.TestSyncMessageCompletionHandler
+    ) async {
+        do {
+            let reply = try await mayThrowInvalidMessage(
+                target.testSyncMessage(
+                    connection: connection,
+                    param: param
+                )
             )
+            completionHandler.pointee(reply)
         } catch {
             markMessageInvalid(error, on: connection)
             CompletionHandlers.TestWithSwift.completeWithDefaultReply(completionHandler)
@@ -83,14 +122,31 @@ final class TestWithSwiftWeakRef {
 
     @used
     func dispatchTestMessageWithAliasedParameter(
+        connection: sending IPC.Connection,
+        frameState: sending WebKit.RefFrameState
+    ) {
+        MainActor.assumeIsolated {
+            guard let target else {
+                return
+            }
+            Task.immediateOnMainActor {
+                await Self.runTestMessageWithAliasedParameter(
+                    target: target,
+                    connection: connection,
+                    frameState: frameState
+                )
+            }
+        }
+    }
+
+    @MainActor
+    private static func runTestMessageWithAliasedParameter(
+        target: TestWithSwift,
         connection: IPC.Connection,
         frameState: WebKit.RefFrameState
-    ) {
-        guard let target else {
-            return
-        }
+    ) async {
         do {
-            try mayThrowInvalidMessage(
+            try await mayThrowInvalidMessage(
                 target.testMessageWithAliasedParameter(
                     connection: connection,
                     frameState: frameState
@@ -103,21 +159,40 @@ final class TestWithSwiftWeakRef {
 
     @used
     func dispatchTestThrowingMessageWithReply(
-        connection: IPC.Connection,
-        param: UInt32,
-        completionHandler: CompletionHandlers.TestWithSwift.TestThrowingMessageWithReplyCompletionHandler
+        connection: sending IPC.Connection,
+        param: sending UInt32,
+        completionHandler: sending CompletionHandlers.TestWithSwift.TestThrowingMessageWithReplyCompletionHandler
     ) {
-        guard let target else {
-            return
-        }
-        do {
-            try mayThrowInvalidMessage(
-                target.testThrowingMessageWithReply(
+        MainActor.assumeIsolated {
+            guard let target else {
+                return
+            }
+            Task.immediateOnMainActor {
+                await Self.runTestThrowingMessageWithReply(
+                    target: target,
                     connection: connection,
                     param: param,
                     completionHandler: completionHandler
                 )
+            }
+        }
+    }
+
+    @MainActor
+    private static func runTestThrowingMessageWithReply(
+        target: TestWithSwift,
+        connection: IPC.Connection,
+        param: UInt32,
+        completionHandler: CompletionHandlers.TestWithSwift.TestThrowingMessageWithReplyCompletionHandler
+    ) async {
+        do {
+            let reply = try await mayThrowInvalidMessage(
+                target.testThrowingMessageWithReply(
+                    connection: connection,
+                    param: param
+                )
             )
+            completionHandler.pointee(reply)
         } catch {
             markMessageInvalid(error, on: connection)
             CompletionHandlers.TestWithSwift.completeWithDefaultReply(completionHandler)
@@ -126,15 +201,34 @@ final class TestWithSwiftWeakRef {
 
     @used
     func dispatchTestThrowingMessageWithoutReply(
+        connection: sending IPC.Connection,
+        frameState: sending WebKit.RefFrameState,
+        frameID: sending WebCore.FrameIdentifier
+    ) {
+        MainActor.assumeIsolated {
+            guard let target else {
+                return
+            }
+            Task.immediateOnMainActor {
+                await Self.runTestThrowingMessageWithoutReply(
+                    target: target,
+                    connection: connection,
+                    frameState: frameState,
+                    frameID: frameID
+                )
+            }
+        }
+    }
+
+    @MainActor
+    private static func runTestThrowingMessageWithoutReply(
+        target: TestWithSwift,
         connection: IPC.Connection,
         frameState: WebKit.RefFrameState,
         frameID: WebCore.FrameIdentifier
-    ) {
-        guard let target else {
-            return
-        }
+    ) async {
         do {
-            try mayThrowInvalidMessage(
+            try await mayThrowInvalidMessage(
                 target.testThrowingMessageWithoutReply(
                     connection: connection,
                     frameState: frameState,
@@ -143,6 +237,48 @@ final class TestWithSwiftWeakRef {
             )
         } catch {
             markMessageInvalid(error, on: connection)
+        }
+    }
+
+    @used
+    func dispatchTestMessageWithEmptyReply(
+        connection: sending IPC.Connection,
+        param: sending UInt32,
+        completionHandler: sending CompletionHandlers.TestWithSwift.TestMessageWithEmptyReplyCompletionHandler
+    ) {
+        MainActor.assumeIsolated {
+            guard let target else {
+                return
+            }
+            Task.immediateOnMainActor {
+                await Self.runTestMessageWithEmptyReply(
+                    target: target,
+                    connection: connection,
+                    param: param,
+                    completionHandler: completionHandler
+                )
+            }
+        }
+    }
+
+    @MainActor
+    private static func runTestMessageWithEmptyReply(
+        target: TestWithSwift,
+        connection: IPC.Connection,
+        param: UInt32,
+        completionHandler: CompletionHandlers.TestWithSwift.TestMessageWithEmptyReplyCompletionHandler
+    ) async {
+        do {
+            try await mayThrowInvalidMessage(
+                target.testMessageWithEmptyReply(
+                    connection: connection,
+                    param: param
+                )
+            )
+            completionHandler.pointee()
+        } catch {
+            markMessageInvalid(error, on: connection)
+            CompletionHandlers.TestWithSwift.completeWithDefaultReply(completionHandler)
         }
     }
 }

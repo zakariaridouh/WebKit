@@ -1117,6 +1117,21 @@ def swift_dispatch_target_and_function(receiver, message):
     return ('target.get()', handler_function(receiver, message))
 
 
+# How a Swift handler's return value is handed to the C++ completion handler. C++ reply types are
+# moved into the handler; Swift primitives are passed by value.
+def swift_reply_completion_argument(message, reply_variable):
+    reply_parameters = message.reply_parameters or []
+    if not reply_parameters:
+        return ''
+    if len(reply_parameters) > 1:
+        raise UnmappableSwiftType("Cannot derive a Swift reply for '%s': multi-value replies would need "
+                                  "a tuple return, which is not implemented." % message.name)
+    cpp_type = _strip_cpp_type_decorations(reply_parameters[0].type)
+    if _swift_primitive_type_name(cpp_type):
+        return reply_variable
+    return 'consuming: %s' % reply_variable
+
+
 def generates_swift_trampoline(receiver, message):
     return bool(receiver.swift_receiver or receiver.swift_receiver_build_enabled_by) and not message.is_async_reply
 
@@ -2356,7 +2371,8 @@ def generate_swift_message_handler(receiver):
     if receiver.swift_receiver_build_enabled_by:
         result.append('#if ENABLE_%s\n' % (receiver.swift_receiver_build_enabled_by))
 
-    result.append('final class %s {\n' % (weak_ref_class))
+    result.append('// Safety: target is only written in init, assumeIsolated asserts the main thread, and weak loads are atomic in the Swift runtime\n')
+    result.append('final class %s: @unchecked Sendable {\n' % (weak_ref_class))
     result.append('    private weak var target: %s?\n' % (class_name))
     result.append('    init(target: %s) {\n' % (class_name))
     result.append('        self.target = target\n')
@@ -2376,40 +2392,71 @@ def generate_swift_message_handler(receiver):
             continue
 
         connection_type = 'IPC.StreamServerConnection' if receiver.has_attribute(STREAM_ATTRIBUTE) else 'IPC.Connection'
-        parameters = ['connection: %s' % connection_type]
+        # `sending` rather than marking these types Sendable: C++ hands each value to dispatch and
+        # does not use it again, which is a far narrower claim than the type being safe to share.
+        parameters = ['connection: sending %s' % connection_type]
         arguments = ['connection: connection']
         for parameter in message.parameters:
-            parameters.append('%s: %s' % (parameter.name, swift_type_name(parameter.type)))
+            parameters.append('%s: sending %s' % (parameter.name, swift_type_name(parameter.type)))
             arguments.append('%s: %s' % (parameter.name, parameter.name))
         completion_handler = None
         if message.reply_parameters is not None:
             completion_handler = 'CompletionHandlers.%s.%sCompletionHandler' % (receiver.name, message.name)
-            parameters.append('completionHandler: %s' % completion_handler)
-            arguments.append('completionHandler: completionHandler')
+            parameters.append('completionHandler: sending %s' % completion_handler)
 
+        # Any handler may be async: .messages.in cannot say, and even a Synchronous reply may be sent
+        # after dispatch returns, since handleMessageSynchronous moves the reply encoder into the
+        # completion handler. Handlers are isolated to the main actor, so dispatch enters it with
+        # assumeIsolated, which also asserts that IPC really did dispatch us on the main thread, and
+        # runs the handler in a Task which starts inline, so it stays in order with C++-handled
+        # messages, and which inherits that isolation, so it stays on the main thread. The work
+        # lives in an async method rather than the Task's closure: a typed `catch` inside the closure
+        # widens to `any Error`, and spelling the type makes the closure throwing, which
+        # -Werror NoUseUnstructuredThrowingTask rejects.
         result.append('\n')
         result.append('    @used\n')
         result.append('    func dispatch%s(\n' % message.name)
         result.append(',\n'.join(['        %s' % parameter for parameter in parameters]))
         result.append('\n    ) {\n')
-        result.append('        guard let target else {\n')
-        result.append('            return\n')
+        result.append('        MainActor.assumeIsolated {\n')
+        result.append('            guard let target else {\n')
+        result.append('                return\n')
+        result.append('            }\n')
+        result.append('            Task.immediateOnMainActor {\n')
+        result.append('                await Self.run%s(\n' % message.name)
+        forwarded = ['target', 'connection'] + [p.name for p in message.parameters]
+        if completion_handler:
+            forwarded.append('completionHandler')
+        result.append(',\n'.join(['                    %s: %s' % (name, name) for name in forwarded]))
+        result.append('\n                )\n')
+        result.append('            }\n')
         result.append('        }\n')
-        call = ['try mayThrowInvalidMessage(']
+        result.append('    }\n')
+
+        result.append('\n')
+        result.append('    @MainActor\n')
+        result.append('    private static func run%s(\n' % message.name)
+        body_parameters = ['target: %s' % class_name] + [p.replace(': sending ', ': ') for p in parameters]
+        result.append(',\n'.join(['        %s' % parameter for parameter in body_parameters]))
+        result.append('\n    ) async {\n')
+        base = '        '
+        result.append('%sdo {\n' % base)
+        assignment = 'let reply = ' if message.reply_parameters else ''
+        call = ['%stry await mayThrowInvalidMessage(' % assignment]
         call.append('    target.%s(' % handler_function_name(message))
         call.append(',\n'.join(['        %s' % argument for argument in arguments]))
         call.append('    )')
         call.append(')')
-        result.append('        do {\n')
-        indent = '            '
         for line in call:
-            result.append('\n'.join(['%s%s' % (indent, part) for part in line.split('\n')]))
+            result.append('\n'.join(['%s    %s' % (base, part) for part in line.split('\n')]))
             result.append('\n')
-        result.append('        } catch {\n')
-        result.append('            markMessageInvalid(error, on: connection)\n')
         if completion_handler:
-            result.append('            CompletionHandlers.%s.completeWithDefaultReply(completionHandler)\n' % receiver.name)
-        result.append('        }\n')
+            result.append('%s    completionHandler.pointee(%s)\n' % (base, swift_reply_completion_argument(message, 'reply')))
+        result.append('%s} catch {\n' % base)
+        result.append('%s    markMessageInvalid(error, on: connection)\n' % base)
+        if completion_handler:
+            result.append('%s    CompletionHandlers.%s.completeWithDefaultReply(completionHandler)\n' % (base, receiver.name))
+        result.append('%s}\n' % base)
         result.append('    }\n')
 
     result.append('}\n')

@@ -27,7 +27,8 @@ import WebKit_Internal
 #endif
 
 #if ENABLE_SWIFT_TEST_CONDITION
-final class TestWithSwiftConditionallyWeakRef {
+// Safety: target is only written in init, assumeIsolated asserts the main thread, and weak loads are atomic in the Swift runtime
+final class TestWithSwiftConditionallyWeakRef: @unchecked Sendable {
     private weak var target: TestWithSwiftConditionally?
     init(target: TestWithSwiftConditionally) {
         self.target = target
@@ -40,21 +41,40 @@ final class TestWithSwiftConditionallyWeakRef {
 
     @used
     func dispatchTestAsyncMessage(
-        connection: IPC.Connection,
-        param: UInt32,
-        completionHandler: CompletionHandlers.TestWithSwiftConditionally.TestAsyncMessageCompletionHandler
+        connection: sending IPC.Connection,
+        param: sending UInt32,
+        completionHandler: sending CompletionHandlers.TestWithSwiftConditionally.TestAsyncMessageCompletionHandler
     ) {
-        guard let target else {
-            return
-        }
-        do {
-            try mayThrowInvalidMessage(
-                target.testAsyncMessage(
+        MainActor.assumeIsolated {
+            guard let target else {
+                return
+            }
+            Task.immediateOnMainActor {
+                await Self.runTestAsyncMessage(
+                    target: target,
                     connection: connection,
                     param: param,
                     completionHandler: completionHandler
                 )
+            }
+        }
+    }
+
+    @MainActor
+    private static func runTestAsyncMessage(
+        target: TestWithSwiftConditionally,
+        connection: IPC.Connection,
+        param: UInt32,
+        completionHandler: CompletionHandlers.TestWithSwiftConditionally.TestAsyncMessageCompletionHandler
+    ) async {
+        do {
+            let reply = try await mayThrowInvalidMessage(
+                target.testAsyncMessage(
+                    connection: connection,
+                    param: param
+                )
             )
+            completionHandler.pointee(reply)
         } catch {
             markMessageInvalid(error, on: connection)
             CompletionHandlers.TestWithSwiftConditionally.completeWithDefaultReply(completionHandler)
@@ -63,21 +83,40 @@ final class TestWithSwiftConditionallyWeakRef {
 
     @used
     func dispatchTestSyncMessage(
-        connection: IPC.Connection,
-        param: UInt32,
-        completionHandler: CompletionHandlers.TestWithSwiftConditionally.TestSyncMessageCompletionHandler
+        connection: sending IPC.Connection,
+        param: sending UInt32,
+        completionHandler: sending CompletionHandlers.TestWithSwiftConditionally.TestSyncMessageCompletionHandler
     ) {
-        guard let target else {
-            return
-        }
-        do {
-            try mayThrowInvalidMessage(
-                target.testSyncMessage(
+        MainActor.assumeIsolated {
+            guard let target else {
+                return
+            }
+            Task.immediateOnMainActor {
+                await Self.runTestSyncMessage(
+                    target: target,
                     connection: connection,
                     param: param,
                     completionHandler: completionHandler
                 )
+            }
+        }
+    }
+
+    @MainActor
+    private static func runTestSyncMessage(
+        target: TestWithSwiftConditionally,
+        connection: IPC.Connection,
+        param: UInt32,
+        completionHandler: CompletionHandlers.TestWithSwiftConditionally.TestSyncMessageCompletionHandler
+    ) async {
+        do {
+            let reply = try await mayThrowInvalidMessage(
+                target.testSyncMessage(
+                    connection: connection,
+                    param: param
+                )
             )
+            completionHandler.pointee(reply)
         } catch {
             markMessageInvalid(error, on: connection)
             CompletionHandlers.TestWithSwiftConditionally.completeWithDefaultReply(completionHandler)
