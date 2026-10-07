@@ -4991,6 +4991,7 @@
 		2D1DE35B2AFA46BA00D955D4 /* FileSystemStorageError.serialization.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = FileSystemStorageError.serialization.in; sourceTree = "<group>"; };
 		2D222D3E2B04B363009F4ADD /* ScrollingTreePluginScrollingNodeIOS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScrollingTreePluginScrollingNodeIOS.h; sourceTree = "<group>"; };
 		2D222D3F2B04B364009F4ADD /* ScrollingTreePluginScrollingNodeIOS.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ScrollingTreePluginScrollingNodeIOS.mm; sourceTree = "<group>"; };
+		9B50762973C33EA928EE5669 /* DisplayBufferDisplayDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DisplayBufferDisplayDelegate.h; sourceTree = "<group>"; };
 		2D25F32825758E9000231A8B /* ImageBufferRemoteIOSurfaceBackend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImageBufferRemoteIOSurfaceBackend.h; sourceTree = "<group>"; };
 		2D25F32925758E9100231A8B /* ImageBufferRemoteIOSurfaceBackend.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImageBufferRemoteIOSurfaceBackend.cpp; sourceTree = "<group>"; };
 		2D279E1826955768004B3EEB /* PrototypeToolsSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PrototypeToolsSPI.h; sourceTree = "<group>"; };
@@ -15299,6 +15300,7 @@
 		727A7F3324078527004D2931 /* cocoa */ = {
 			isa = PBXGroup;
 			children = (
+				9B50762973C33EA928EE5669 /* DisplayBufferDisplayDelegate.h */,
 				2D25F32925758E9100231A8B /* ImageBufferRemoteIOSurfaceBackend.cpp */,
 				2D25F32825758E9000231A8B /* ImageBufferRemoteIOSurfaceBackend.h */,
 				727A7F342407857D004D2931 /* ImageBufferShareableMappedIOSurfaceBackend.cpp */,
