@@ -9614,6 +9614,10 @@ void WebPageProxy::broadcastFrameTreeSyncData(IPC::Connection& connection, Frame
     else if (auto* viewportInfo = std::get_if<WebCore::FrameViewportInfo>(&data.value))
         webFrameProxy->setFrameViewportInfo(*viewportInfo);
 
+    // The sender may not have seen site isolation being disabled yet.
+    if (!protect(preferences())->siteIsolationEnabled())
+        return;
+
     forEachWebContentProcess([&](auto& webProcess, auto pageID) {
         if (webProcess == process)
             return;
@@ -9630,6 +9634,10 @@ void WebPageProxy::broadcastAllFrameTreeSyncData(IPC::Connection& connection, Fr
         return;
 
     MESSAGE_CHECK(process, &webFrameProxy->process() == &process.get());
+
+    // The sender may not have seen site isolation being disabled yet.
+    if (!protect(preferences())->siteIsolationEnabled())
+        return;
 
     forEachWebContentProcess([&](auto& webProcess, auto pageID) {
         if (webProcess == process)
