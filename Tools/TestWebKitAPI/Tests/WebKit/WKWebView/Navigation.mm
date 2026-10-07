@@ -5804,3 +5804,66 @@ TEST(WKNavigation, BackForwardCacheRestoreAfterProcessSwapReportsRestoredDocumen
 {
     testBackForwardCacheRestoreReportsRestoredDocument(BackForwardCacheRestoreShape::CrossSite);
 }
+
+enum class PagehideBeaconNavigationShape : bool { SameOrigin, CrossSite };
+
+static void testBackForwardCacheRestoreAfterPagehideBeacon(PagehideBeaconNavigationShape shape)
+{
+    using namespace TestWebKitAPI;
+
+    HTTPServer server({
+        { "/first"_s, { "<script>addEventListener('pagehide', () => navigator.sendBeacon('/beacon', 'data'));</script><body>first</body>"_s } },
+        { "/beacon"_s, { HTTPResponse::Behavior::NeverSendResponse } },
+        { "/second"_s, { "<body>second</body>"_s } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate allowAnyTLSCertificate];
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+    webView.get().navigationDelegate = navigationDelegate.get();
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/first"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    [webView objectByEvaluatingJavaScript:@"window.marker = 'first document'"];
+
+    NSString *secondURL = shape == PagehideBeaconNavigationShape::CrossSite ? @"https://webkit.org/second" : @"https://example.com/second";
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:secondURL]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    // The beacon sent from the pagehide handler is still in flight when the page enters the back/forward cache.
+    EXPECT_TRUE(Util::waitFor([&] {
+        return server.totalRequests() >= 3;
+    }));
+
+    __block bool navigationDidEnd = false;
+    __block bool didFinishNavigation = false;
+    __block RetainPtr<NSError> navigationError;
+    navigationDelegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        didFinishNavigation = true;
+        navigationDidEnd = true;
+    };
+    navigationDelegate.get().didFailNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
+        navigationError = error;
+        navigationDidEnd = true;
+    };
+
+    [webView goBack];
+    EXPECT_TRUE(Util::runFor(&navigationDidEnd, 10_s));
+
+    // If this fails the page was reloaded rather than restored and the checks below are vacuous.
+    EXPECT_WK_STREQ("first document", [webView objectByEvaluatingJavaScript:@"String(window.marker)"]);
+
+    EXPECT_TRUE(didFinishNavigation);
+    EXPECT_NULL(navigationError.get()) << "didFailNavigation: " << navigationError.get().domain.UTF8String << " " << navigationError.get().code;
+}
+
+TEST(WKNavigation, BackForwardCacheRestoreAfterPagehideBeaconFinishesNavigation)
+{
+    testBackForwardCacheRestoreAfterPagehideBeacon(PagehideBeaconNavigationShape::SameOrigin);
+}
+
+TEST(WKNavigation, BackForwardCacheRestoreAfterProcessSwapAndPagehideBeaconFinishesNavigation)
+{
+    testBackForwardCacheRestoreAfterPagehideBeacon(PagehideBeaconNavigationShape::CrossSite);
+}

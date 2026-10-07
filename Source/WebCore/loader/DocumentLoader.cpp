@@ -388,11 +388,11 @@ void DocumentLoader::stopLoading()
         if (isLoadingMainResource()) {
             // Stop the main resource loader and let it send the cancelled message.
             cancelMainResourceLoad(frameLoader->cancelledError(m_request));
-        } else if (!m_subresourceLoaders.isEmpty() || !m_plugInStreamLoaders.isEmpty()) {
+        } else if (!m_plugInStreamLoaders.isEmpty() || std::ranges::any_of(m_subresourceLoaders, [](auto& loader) { return !loader->options().keepAlive; })) {
             // The main resource loader already finished loading. Set the cancelled error on the
             // document and let the subresourceLoaders and pluginLoaders send individual cancelled messages below.
             setMainDocumentError(frameLoader->cancelledError(m_request));
-        } else {
+        } else if (m_subresourceLoaders.isEmpty()) {
             // If there are no resource loaders, we need to manufacture a cancelled message.
             // (A back/forward navigation has no resource loaders because its resources are cached.)
             mainReceivedError(frameLoader->cancelledError(m_request));
