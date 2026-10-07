@@ -3458,6 +3458,31 @@ llintOpWithMetadata(op_iterator_next, OpIteratorNext, macro (size, get, dispatch
 
 .iteratorNextNotFastArray:
     bpneq t0, VM::m_fastStringSentinel[t1], .iteratorNextGeneric
+
+    loadVariable(get, m_iterable, t0)
+    loadp JSString::m_fiber[t0], t0
+    btpnz t0, isRopeInPointer, .iteratorNextFastStringSlow
+    btiz StringImpl::m_hashAndFlags[t0], HashFlags8BitBuffer, .iteratorNextFastStringSlow
+    biaeq t3, StringImpl::m_length[t0], .iteratorNextFastStringSlow
+    loadp StringImpl::m_data8[t0], t0
+    zxi2q t3, t3
+    loadb [t0, t3], t0
+    loadp VM::smallStrings + SmallStrings::m_singleCharacterStrings[t1, t0, 8], t1
+
+    metadata(t5, t0)
+    loadh OpIteratorNext::Metadata::m_iterationMetadata + IterationModeMetadata::seenModes[t5], t0
+    ori constexpr IterationMode::FastString, t0
+    storeh t0, OpIteratorNext::Metadata::m_iterationMetadata + IterationModeMetadata::seenModes[t5]
+    storeVariable(get, m_value, t1, t0)
+    valueProfile(size, OpIteratorNext, m_valueValueProfile, t1, t0)
+    move ValueFalse, t1
+    storeVariable(get, m_done, t1, t0)
+    addi 1, t3
+    orq numberTag, t3
+    storeVariable(get, m_next, t3, t0)
+    dispatch()
+
+.iteratorNextFastStringSlow:
     macro fastStringNarrow()
         callSlowPath(_iterator_next_fast_string_narrow)
     end

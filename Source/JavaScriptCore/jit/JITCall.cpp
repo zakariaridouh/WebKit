@@ -538,6 +538,31 @@ void JIT::emit_op_iterator_next(const JSInstruction* instruction)
 
     iteratorIsNotFastArraySentinel.link(this);
     genericCases.append(branchPtr(NotEqual, scratch1GPR, TrustedImmPtr(vm().fastStringSentinel())));
+
+    JumpList stringSlowCases;
+    emitGetVirtualRegister(bytecode.m_iterable, scratch1GPR);
+    loadPtr(Address(scratch1GPR, JSString::offsetOfValue()), scratch1GPR);
+    stringSlowCases.append(branchIfRopeStringImpl(scratch1GPR));
+    stringSlowCases.append(branchTest32(Zero, Address(scratch1GPR, StringImpl::flagsOffset()), TrustedImm32(StringImpl::flagIs8Bit())));
+    stringSlowCases.append(branch32(AboveOrEqual, indexGPR, Address(scratch1GPR, StringImpl::lengthMemoryOffset())));
+    loadPtr(Address(scratch1GPR, StringImpl::dataOffset()), scratch1GPR);
+    zeroExtend32ToWord(indexGPR, indexGPR);
+    load8(BaseIndex(scratch1GPR, indexGPR, TimesOne), valueGPR);
+    move(TrustedImmPtr(vm().smallStrings.singleCharacterStrings()), scratch1GPR);
+    loadPtr(BaseIndex(scratch1GPR, valueGPR, ScalePtr), valueGPR);
+
+    load16FromMetadata(bytecode, OpIteratorNext::Metadata::offsetOfIterationMetadata() + IterationModeMetadata::offsetOfSeenModes(), scratch1GPR);
+    or32(TrustedImm32(static_cast<uint16_t>(IterationMode::FastString)), scratch1GPR);
+    store16ToMetadata(scratch1GPR, bytecode, OpIteratorNext::Metadata::offsetOfIterationMetadata() + IterationModeMetadata::offsetOfSeenModes());
+    emitPutVirtualRegister(bytecode.m_value, valueGPR);
+    emitValueProfilingSite(bytecode, m_bytecodeIndex.withCheckpoint(OpIteratorNext::getValue), valueGPR);
+    storeTrustedValue(jsBoolean(false), addressFor(bytecode.m_done));
+    add32(TrustedImm32(1), indexGPR);
+    boxInt32(indexGPR, indexGPR);
+    emitPutVirtualRegister(bytecode.m_next, indexGPR);
+    doneCases.append(jump());
+
+    stringSlowCases.link(this);
     {
         using BaselineJITRegisters::IteratorNext::FastString::globalObjectGPR;
         using BaselineJITRegisters::IteratorNext::FastString::iterableGPR;
