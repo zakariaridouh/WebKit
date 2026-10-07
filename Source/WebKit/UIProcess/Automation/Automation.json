@@ -491,6 +491,15 @@
             "async": true
         },
         {
+            "name": "setPageZoomFactorOfBrowsingContext",
+            "description": "Sets the page zoom factor of the specified top-level browsing context, the same zoom applied by the browser's zoom in and zoom out commands. Text and layout reflow at the new size. This is not the page scale factor changed by pinch zooming.",
+            "parameters": [
+                { "name": "handle", "$ref": "BrowsingContextHandle", "description": "The handle for the browsing context whose page zoom factor should be set." },
+                { "name": "zoomFactor", "type": "number", "description": "The new page zoom factor, where <code>1.0</code> is 100%. Must be greater than zero." }
+            ],
+            "async": true
+        },
+        {
             "name": "maximizeWindowOfBrowsingContext",
             "description": "Causes the window of the specified browsing context to be maximized. This command implicitly exits fullscreen mode.",
             "parameters": [

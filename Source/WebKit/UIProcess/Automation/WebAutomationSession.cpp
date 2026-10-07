@@ -55,6 +55,7 @@
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/PointerEventTypeNames.h>
 #include <algorithm>
+#include <cmath>
 #include <wtf/Borrow.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/FileSystem.h>
@@ -687,6 +688,17 @@ void WebAutomationSession::setWindowFrameOfBrowsingContext(const Inspector::Prot
             });
         });
     });
+}
+
+void WebAutomationSession::setPageZoomFactorOfBrowsingContext(const Inspector::Protocol::Automation::BrowsingContextHandle& handle, double zoomFactor, CommandCallback<void>&& callback)
+{
+    ASYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS_IF(!std::isfinite(zoomFactor) || zoomFactor <= 0, InvalidParameter, "The 'zoomFactor' parameter must be a positive number."_s);
+
+    auto page = webPageProxyForHandle(handle);
+    ASYNC_FAIL_WITH_PREDEFINED_ERROR_IF(!page, WindowNotFound);
+
+    page->setPageZoomFactor(zoomFactor);
+    callback({ });
 }
 
 void WebAutomationSession::waitForNavigationToComplete(const Inspector::Protocol::Automation::BrowsingContextHandle& browsingContextHandle, const Inspector::Protocol::Automation::FrameHandle& optionalFrameHandle, std::optional<Inspector::Protocol::Automation::PageLoadStrategy>&& optionalPageLoadStrategy, std::optional<double>&& optionalPageLoadTimeout, CommandCallback<void>&& callback)
