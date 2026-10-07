@@ -47,7 +47,7 @@ public:
     Ref<const WebCore::DisplayList::DisplayList> takeDisplayList() { return m_recorder->takeDisplayList(); }
 
 private:
-    RemoteSnapshotRecorder(UniqueRef<WebCore::DisplayList::RecorderImpl>&&, RemoteSnapshotRecorderIdentifier, RemoteSnapshot&, RemoteRenderingBackend&);
+    RemoteSnapshotRecorder(Ref<WebCore::DisplayList::RecorderImpl>&&, RemoteSnapshotRecorderIdentifier, RemoteSnapshot&, RemoteRenderingBackend&);
     void startListeningForIPC();
 
     // RemoteGraphicsContext overrides.
@@ -57,7 +57,7 @@ private:
     void drawSnapshotFrame(WebCore::FrameIdentifier);
 
     const Ref<RemoteSnapshot> m_snapshot;
-    const UniqueRef<WebCore::DisplayList::RecorderImpl> m_recorder;
+    const Ref<WebCore::DisplayList::RecorderImpl> m_recorder;
     const RemoteSnapshotRecorderIdentifier m_identifier;
 };
 

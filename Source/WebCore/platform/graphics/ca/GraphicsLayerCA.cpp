@@ -2100,9 +2100,9 @@ void GraphicsLayerCA::recursiveCommitChanges(CommitState& commitState, const Tra
         TraceScope tracingScope(DisplayListRecordStart, DisplayListRecordEnd);
         m_displayList = nullptr;
         FloatRect initialClip(boundsOrigin(), size());
-        DisplayList::RecorderImpl context(initialClip);
+        Ref context = DisplayList::RecorderImpl::create(initialClip);
         paintGraphicsLayerContents(context, FloatRect(FloatPoint(), size()));
-        m_displayList = context.takeDisplayList();
+        m_displayList = context->takeDisplayList();
     }
 }
 

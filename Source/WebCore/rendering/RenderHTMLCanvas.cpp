@@ -153,12 +153,12 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
             auto initialState = context.state().clone(GraphicsContextState::Purpose::Initial);
             auto boundingRect = child->absoluteBoundingBoxRect();
             auto initialTransform = context.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale);
-            auto snapshotRecorder =  makeUniqueRef<DisplayList::RecorderImpl>(initialState, boundingRect, initialTransform, context.colorSpace());
+            Ref snapshotRecorder = DisplayList::RecorderImpl::create(initialState, boundingRect, initialTransform, context.colorSpace());
             snapshotRecorder->translate(-boundingRect.x(), -boundingRect.y());
             return snapshotRecorder;
         });
 
-        auto& snapshotRecorder = addResult.iterator->value.get();
+        Ref snapshotRecorder = addResult.iterator->value;
         childPaintInfo.setContext(snapshotRecorder);
         child->paint(childPaintInfo, paintOffset);
     }
@@ -166,7 +166,7 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
 
 std::optional<CanvasElementSnapshot> RenderHTMLCanvas::drawableRendererSnapshot(RenderElement& drawableRenderer) const
 {
-    if (auto* snapshotRecorder = m_drawableRendererSnapshotRecorderMap.get(drawableRenderer))
+    if (RefPtr snapshotRecorder = m_drawableRendererSnapshotRecorderMap.get(drawableRenderer))
         return { { snapshotRecorder->copyDisplayList(), snapshotRecorder->initialClip().size() } };
     return std::nullopt;
 }

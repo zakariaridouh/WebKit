@@ -247,13 +247,13 @@ RefPtr<const DisplayList::DisplayList> FontCascade::displayListForGlyphBuffer(Gr
     constexpr auto drawGlyphsMode = DisplayList::Recorder::DrawGlyphsMode::Deconstruct;
 #endif
 
-    DisplayList::RecorderImpl recordingContext(context.state().clone(GraphicsContextState::Purpose::Initial), { },
+    Ref recordingContext = DisplayList::RecorderImpl::create(context.state().clone(GraphicsContextState::Purpose::Initial), { },
         context.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale), context.colorSpace(), drawGlyphsMode);
 
     FloatPoint startPoint = toFloatPoint(WebCore::size(glyphBuffer.initialAdvance()));
     drawGlyphBuffer(recordingContext, glyphBuffer, startPoint, customFontNotReadyAction);
 
-    return recordingContext.takeDisplayList();
+    return recordingContext->takeDisplayList();
 }
 
 float FontCascade::widthOfTextRange(const TextRun& run, unsigned from, unsigned to, float& outWidthBeforeRange, float& outWidthAfterRange) const

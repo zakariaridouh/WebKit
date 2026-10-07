@@ -72,7 +72,7 @@ private:
     void styleDidChange(Style::Difference, const Style::ComputedStyle* oldStyle) override;
 
     SingleThreadWeakPtr<RenderBlock> m_innerRenderer;
-    HashMap<SingleThreadWeakRef<RenderElement>, UniqueRef<DisplayList::RecorderImpl>> m_drawableRendererSnapshotRecorderMap;
+    HashMap<SingleThreadWeakRef<RenderElement>, Ref<DisplayList::RecorderImpl>> m_drawableRendererSnapshotRecorderMap;
 };
 
 } // namespace WebCore
