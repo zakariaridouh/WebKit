@@ -2033,6 +2033,8 @@ http/wpt/webcodecs/encoder-decoder-vp9-I420.html [ Failure ]
 # VP9 profile 2 is not enabled in the GStreamer ports.
 http/wpt/webcodecs/vp9-codec-string-bit-depth-and-chroma.html [ Failure ]
 http/wpt/webcodecs/encoder-from-10-bit-frame.html [ Failure ]
+# Tests the libwebrtc AV1 encoder used by the Cocoa ports.
+http/wpt/webcodecs/av1-encoder-bit-depth.html [ Skip ]
 
 fast/mediacapturefromelement/CanvasCaptureMediaStream-capture-out-of-DOM-canvas-webgl.html [ Pass Failure ]
 
