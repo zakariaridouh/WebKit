@@ -176,10 +176,18 @@ static bool isAudioWorkletGlobalScope(JSC::JSGlobalObject& globalObject)
 }
 
 template<typename JSWrapper>
+static bool isInterfaceExposedInGlobalObject(JSC::JSGlobalObject& globalObject)
+{
+    auto* domGlobalObject = dynamicDowncast<JSDOMGlobalObject>(globalObject);
+    if (!domGlobalObject || !domGlobalObject->scriptExecutionContext())
+        return true;
+    return JSWrapper::isExposedInGlobalObject(*domGlobalObject);
+}
+
+template<typename JSWrapper>
 static bool isInterfaceExposed(JSC::JSGlobalObject& globalObject)
 {
-    // FIXME: Rely on JSWrapper::isExposedInGlobalObject() for every global object. This needs a null
-    // scriptExecutionContext() to be handled and JSIDBSerializationGlobalObject to be exempted.
+    // FIXME: Replace with isInterfaceExposedInGlobalObject() one serialization tag at a time.
     if (!isAudioWorkletGlobalScope(globalObject))
         return true;
     return JSWrapper::isExposedInGlobalObject(uncheckedDowncast<JSDOMGlobalObject>(globalObject));
@@ -237,7 +245,7 @@ static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, Seria
     case BlobTag:
         return isInterfaceExposed<JSBlob>(globalObject);
     case CryptoKeyTag:
-        return isInterfaceExposed<JSCryptoKey>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSCryptoKey>(globalObject);
     case DOMPointReadOnlyTag:
         return isInterfaceExposed<JSDOMPointReadOnly>(globalObject);
     case DOMPointTag:
@@ -3435,14 +3443,6 @@ public:
             return getJSValue(m_inMemoryMessagePorts[index].get());
         }
         case CryptoKeyTag: {
-            // FIXME: Remove once isInterfaceExposed() covers every global object.
-            if (auto* globalObject = dynamicDowncast<JSDOMGlobalObject>(m_globalObject)) {
-                if (RefPtr context = globalObject->scriptExecutionContext(); context && !context->isSecureContext()) {
-                    SERIALIZE_TRACE("FAIL deserialize");
-                    fail();
-                    return JSValue();
-                }
-            }
             Vector<uint8_t> wrappedKey;
             if (!read(wrappedKey)) {
                 SERIALIZE_TRACE("FAIL deserialize");
