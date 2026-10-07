@@ -133,10 +133,10 @@ public:
         : m_type(type)
     { }
 
-    void operator delete(Watchpoint*, std::destroying_delete_t);
+    JS_EXPORT_PRIVATE void operator delete(Watchpoint*, std::destroying_delete_t);
 
 protected:
-    ~Watchpoint();
+    JS_EXPORT_PRIVATE ~Watchpoint();
 
 private:
     friend class WatchpointSet;

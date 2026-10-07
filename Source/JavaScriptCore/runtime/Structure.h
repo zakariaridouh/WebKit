@@ -884,7 +884,7 @@ private:
     friend class LLIntOffsetsExtractor;
 
     JS_EXPORT_PRIVATE Structure(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType, unsigned inlineCapacity);
-    Structure(VM&, CreatingEarlyCellTag);
+    JS_EXPORT_PRIVATE Structure(VM&, CreatingEarlyCellTag);
 
     static Structure* create(VM&, Structure*, DeferredStructureTransitionWatchpointFire*);
 

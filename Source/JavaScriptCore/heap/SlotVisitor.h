@@ -177,7 +177,7 @@ public:
     
     void NODELETE optimizeForStoppedMutator();
     
-    void didRace(const VisitRaceKey&) final;
+    JS_EXPORT_PRIVATE void didRace(const VisitRaceKey&) final;
     inline void didRace(JSCell* cell, const char* reason); // Defined in SlotVisitorInlines.h
     
     void visitAsConstraint(const JSCell*) final;
