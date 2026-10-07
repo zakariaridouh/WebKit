@@ -294,6 +294,7 @@ void InputMethodFilter::preeditChanged()
 
     m_preedit.text = String::fromUTF8(newPreedit.span());
     m_preedit.cursorOffset = std::min(cursorOffset, m_preedit.text.length());
+    m_preedit.underlines.clear();
     if (underlines) {
         for (auto* it = underlines; it; it = g_list_next(it)) {
             auto* underline = static_cast<WebKitInputMethodUnderline*>(it->data);
