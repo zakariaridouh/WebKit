@@ -410,6 +410,15 @@ bool TestController::platformResetStateToConsistentValues(const TestOptions& opt
         [UIKeyboardImpl.sharedInstance prepareKeyboardInputModeFromPreferences:nil];
     }
 
+    // Tests synthesize hardware key events by HID usage, so the resulting characters depend on the current keyboard layout.
+    // Restore the default input mode in case it was changed by UIKit itself (e.g. by a keyboard shortcut that switches languages).
+    static NeverDestroyed<RetainPtr<UIKeyboardInputMode>> defaultKeyboardInputMode = [UIKeyboardInputMode keyboardInputModeWithIdentifier:@"en_US@sw=QWERTY;hw=US"];
+    RetainPtr<UIKeyboardInputModeController> inputModeController = [UIKeyboardInputModeController sharedInputModeController];
+    if (RetainPtr defaultInputMode = defaultKeyboardInputMode.get(); defaultInputMode && ![[inputModeController currentInputMode].identifier isEqualToString:[defaultInputMode identifier]]) {
+        [inputModeController setCurrentInputMode:defaultInputMode.get()];
+        [UIKeyboardImpl.sharedInstance prepareKeyboardInputModeFromPreferences:defaultInputMode.get()];
+    }
+
     m_presentPopoverSwizzlers.clear();
     if (!options.shouldPresentPopovers()) {
 #if USE(UICONTEXTMENU)
