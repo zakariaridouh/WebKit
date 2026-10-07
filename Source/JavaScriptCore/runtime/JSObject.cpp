@@ -2665,6 +2665,8 @@ bool JSObject::hasInstance(JSGlobalObject* globalObject, JSValue value, JSValue 
 
     TypeInfo info = structure()->typeInfo();
     if (info.implementsDefaultHasInstance()) {
+        if (!value.isObject())
+            return false;
         JSValue prototype = get(globalObject, vm.propertyNames->prototype);
         RETURN_IF_EXCEPTION(scope, false);
         RELEASE_AND_RETURN(scope, defaultHasInstance(globalObject, value, prototype));
