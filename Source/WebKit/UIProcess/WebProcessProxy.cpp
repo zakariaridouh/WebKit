@@ -62,6 +62,7 @@
 #include "TextChecker.h"
 #include "TextCheckerState.h"
 #include "UserData.h"
+#include "ValidationProcedures.h"
 #include "WebAutomationSession.h"
 #include "WebBackForwardCache.h"
 #include "WebBackForwardListFrameItem.h"
@@ -178,6 +179,9 @@
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, connection())
 #define MESSAGE_CHECK_URL(url) MESSAGE_CHECK_BASE(checkURLReceivedFromWebProcess(url), connection())
 #define MESSAGE_CHECK_COMPLETION(assertion, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, connection(), completion)
+
+#define EXTRACT_WITH_MESSAGE_CHECK(name, untrusted, ...) \
+    EXTRACT_WITH_MESSAGE_CHECK_BASE(connection(), name, untrusted, (void)0, __VA_ARGS__)
 
 #define WEBPROCESSPROXY_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [PID=%i] WebProcessProxy::" fmt, static_cast<const void*>(this), processID(), ##__VA_ARGS__)
 #define WEBPROCESSPROXY_RELEASE_LOG_WITH_THIS(channel, thisPtr, fmt, ...) RELEASE_LOG(channel, "%p - [PID=%i] WebProcessProxy::" fmt, static_cast<const void*>(WTF::getPtr(thisPtr)), thisPtr->processID(), ##__VA_ARGS__)
@@ -2773,16 +2777,14 @@ const MemoryCompactLookupOnlyRobinHoodHashSet<String>& WebProcessProxy::platform
 
 void WebProcessProxy::didCollectPrewarmInformation(IPC::Untrusted<WebCore::RegistrableDomain>&& untrustedDomain, const WebCore::PrewarmInformation& prewarmInformation)
 {
-    auto domain = WTF::move(untrustedDomain).unsafeExtractWithoutValidation(IPC::UnvalidatedReason::NeedsReview);
-
+    EXTRACT_WITH_MESSAGE_CHECK(domain, untrustedDomain, ProcessSpeaksForDomain { *this });
     MESSAGE_CHECK(!domain.isEmpty());
     protect(processPool())->didCollectPrewarmInformation(domain, prewarmInformation);
 }
 
 void WebProcessProxy::didCompleteAutofill(IPC::Untrusted<WebCore::Site>&& untrustedSite)
 {
-    auto site = WTF::move(untrustedSite).unsafeExtractWithoutValidation(IPC::UnvalidatedReason::NeedsReview);
-
+    EXTRACT_WITH_MESSAGE_CHECK(site, untrustedSite, ProcessSpeaksForDomain { *this });
     MESSAGE_CHECK(!site.isEmpty());
     if (RefPtr dataStore = websiteDataStore())
         protect(dataStore->isolatedSiteStore())->addSite(site, IsolatedSiteStore::Signal::Autofill);
@@ -2790,8 +2792,7 @@ void WebProcessProxy::didCompleteAutofill(IPC::Untrusted<WebCore::Site>&& untrus
 
 void WebProcessProxy::didObserveFirstPartyUserGesture(IPC::Untrusted<WebCore::Site>&& untrustedSite)
 {
-    auto site = WTF::move(untrustedSite).unsafeExtractWithoutValidation(IPC::UnvalidatedReason::NeedsReview);
-
+    EXTRACT_WITH_MESSAGE_CHECK(site, untrustedSite, ProcessParticipatesInPageWithSite { *this });
     MESSAGE_CHECK(!site.isEmpty());
     if (RefPtr dataStore = websiteDataStore())
         protect(dataStore->isolatedSiteStore())->addSite(site, IsolatedSiteStore::Signal::FirstPartyUserGesture);
@@ -3520,9 +3521,7 @@ WebProcessProxy::FirstPartyAccessResult WebProcessProxy::allowsFirstPartyAccess(
 
 void WebProcessProxy::setAppBadgeFromWorker(IPC::Untrusted<WebCore::SecurityOriginData>&& untrustedOrigin, std::optional<uint64_t> badge)
 {
-    auto origin = WTF::move(untrustedOrigin).unsafeExtractWithoutValidation(IPC::UnvalidatedReason::NeedsReview);
-
-    MESSAGE_CHECK(allowsFirstPartyAccess(WebCore::RegistrableDomain { origin }) == FirstPartyAccessResult::Pass);
+    EXTRACT_WITH_MESSAGE_CHECK(origin, untrustedOrigin, ProcessSpeaksForDomain { *this, ShouldCheckWithoutSiteIsolation::Yes });
     if (RefPtr dataStore = websiteDataStore())
         dataStore->workerUpdatedAppBadge(origin, badge);
 }
@@ -4158,6 +4157,7 @@ void WebProcessProxy::commitOffscreenCanvasPlaceholderFrame(WebCore::RemotePlace
 
 } // namespace WebKit
 
+#undef EXTRACT_WITH_MESSAGE_CHECK
 #undef MESSAGE_CHECK
 #undef MESSAGE_CHECK_URL
 #undef MESSAGE_CHECK_COMPLETION
