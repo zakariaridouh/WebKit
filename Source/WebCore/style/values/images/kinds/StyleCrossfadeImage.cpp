@@ -54,7 +54,7 @@ namespace WebCore {
 namespace Style {
 
 CrossfadeImage::CrossfadeImage(CrossfadeFunction&& function)
-    : GeneratedImage { Type::CrossfadeImage, CrossfadeImage::isFixedSize }
+    : GeneratedImage { Type::CrossfadeImage }
     , m_function { WTF::move(function) }
     , m_inputImagesAreReady { false }
 {
@@ -62,7 +62,7 @@ CrossfadeImage::CrossfadeImage(CrossfadeFunction&& function)
 }
 
 CrossfadeImage::CrossfadeImage(WebkitCrossfadeFunction&& function)
-    : GeneratedImage { Type::CrossfadeImage, CrossfadeImage::isFixedSize }
+    : GeneratedImage { Type::CrossfadeImage }
     , m_function { WTF::move(function) }
     , m_inputImagesAreReady { false }
 {
@@ -359,11 +359,6 @@ bool CrossfadeImage::canDrawAtSize(const RenderElement& renderer, const FloatSiz
             return input.image && protect(input.image)->canDrawAtSize(renderer, size);
         });
     });
-}
-
-FloatSize CrossfadeImage::fixedSize(const RenderElement&) const
-{
-    return { };
 }
 
 InterpolationQuality CrossfadeImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const void* layer, const LayoutSize& size) const

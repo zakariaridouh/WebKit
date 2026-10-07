@@ -114,7 +114,7 @@ void GradientImage::evictCachedGradient(FloatSize size)
 }
 
 GradientImage::GradientImage(Gradient&& gradient)
-    : GeneratedImage { Type::GradientImage, GradientImage::isFixedSize }
+    : GeneratedImage { Type::GradientImage }
     , m_gradient { WTF::move(gradient) }
     , m_knownCacheableBarringFilter { stopsAreCacheable(m_gradient) }
 {
@@ -238,11 +238,6 @@ ImageDrawResult GradientImage::drawAsPattern(GraphicsContext& context, const Ren
 bool GradientImage::knownToBeOpaque(const RenderElement& renderer) const
 {
     return isOpaque(m_gradient, renderer.style());
-}
-
-FloatSize GradientImage::fixedSize(const RenderElement&) const
-{
-    return { };
 }
 
 } // namespace Style

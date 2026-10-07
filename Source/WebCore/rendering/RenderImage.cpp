@@ -563,18 +563,6 @@ bool RenderImage::isMultiRepresentationHEIC() const
 }
 #endif
 
-FloatSize RenderImage::imageSizeAsRendered(const CachedImage& cachedImage, const RenderElement* renderer, float multiplier, CachedImage::SizeType sizeType, float density)
-{
-#if ENABLE(MULTI_REPRESENTATION_HEIC)
-    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(renderer); renderImage && renderImage->isMultiRepresentationHEIC() && cachedImage.hasImage() && !is<SVGImage>(*cachedImage.image())) {
-        auto size = renderImage->style().fontCascade().primaryFont().metricsForMultiRepresentationHEIC().size();
-        size.scale(multiplier * density);
-        return size;
-    }
-#endif
-    return cachedImage.imageSize(renderer ? renderer->imageOrientation() : ImageOrientation(ImageOrientation::Orientation::FromImage), multiplier, sizeType, density);
-}
-
 void RenderImage::paintIncompleteImageOutline(PaintInfo& paintInfo, LayoutPoint paintOffset, LayoutUnit borderWidth) const
 {
     auto contentSize = this->contentBoxSize();

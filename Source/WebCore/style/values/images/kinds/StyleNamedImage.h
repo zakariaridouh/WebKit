@@ -44,8 +44,6 @@ public:
     bool operator==(const Image&) const final;
     bool NODELETE equals(const NamedImage&) const;
 
-    static constexpr bool isFixedSize = false;
-
 private:
     explicit NamedImage(CustomIdent&&);
 
@@ -56,7 +54,6 @@ private:
     ImageDrawResult draw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions, bool isForFirstLine) const final;
     ImageDrawResult drawAsPattern(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions, bool isForFirstLine) const final;
     bool knownToBeOpaque(const RenderElement&) const final;
-    FloatSize fixedSize(const RenderElement&) const final;
     void didAddClient(RenderElement&) final { }
     void didRemoveClient(RenderElement&) final { }
 

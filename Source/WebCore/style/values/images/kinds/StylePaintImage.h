@@ -44,8 +44,6 @@ public:
     }
     virtual ~PaintImage();
 
-    static constexpr bool isFixedSize = false;
-
 private:
     explicit PaintImage(CustomIdent&&, Ref<CSSVariableData>&&);
 
@@ -60,7 +58,6 @@ private:
     bool knownToBeOpaque(const RenderElement&) const final;
     bool canDraw(const RenderElement&) const final;
     bool canDrawAtSize(const RenderElement&, const FloatSize&) const final;
-    FloatSize fixedSize(const RenderElement&) const final;
     void didAddClient(RenderElement&) final { }
     void didRemoveClient(RenderElement&) final { }
 

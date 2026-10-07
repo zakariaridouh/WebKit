@@ -464,7 +464,6 @@ bool BorderPainter::paintNinePieceImageImpl(const LayoutRect& rect, const Style:
     using Sizing = typename NinePieceImageSizingKind<T>::type;
 
     auto source = modelObject->calculateImageIntrinsicDimensions(*image, Sizing { destination.size() }, RenderBoxModelObject::ScaleByUsedZoom::No);
-    image->setContainerSizeForRenderer(m_renderer, source);
 
     NinePieceImagePainter::paint(ninePieceImage, m_paintInfo.context(), m_renderer, style, destination, source, deviceScaleFactor, options);
     return true;

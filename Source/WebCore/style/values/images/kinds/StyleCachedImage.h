@@ -74,9 +74,7 @@ public:
     void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
     bool isLoaded(const RenderElement*) const final;
     bool errorOccurred() const final;
-    FloatSize imageSize(const RenderElement*, float multiplier, WebCore::CachedImage::SizeType = WebCore::CachedImage::UsedSize) const final;
     NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const final;
-    void setContainerSizeForRenderer(const RenderElement&, const FloatSize&) final;
     ImageDrawingExtras drawingExtrasForRenderer(const RenderElement&) const final;
     void addClient(RenderElement&) final;
     void removeClient(RenderElement&) final;
@@ -132,7 +130,6 @@ private:
     mutable float m_scaleFactor { 1 };
     mutable CachedResourceHandle<WebCore::CachedImage> m_cachedImage;
     mutable std::optional<bool> m_isRenderSVGResource;
-    FloatSize m_containerSize;
 };
 
 } // namespace Style

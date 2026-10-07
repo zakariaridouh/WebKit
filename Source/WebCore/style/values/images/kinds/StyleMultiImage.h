@@ -70,9 +70,7 @@ private:
     bool isLoaded(const RenderElement*) const final;
     bool errorOccurred() const final;
     bool hasDecodedImage() const final;
-    FloatSize imageSize(const RenderElement*, float multiplier, WebCore::CachedImage::SizeType = WebCore::CachedImage::UsedSize) const final;
     NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const final;
-    void setContainerSizeForRenderer(const RenderElement&, const FloatSize&) override;
     ImageDrawingExtras drawingExtrasForRenderer(const RenderElement&) const override;
     void addClient(RenderElement&) final;
     void removeClient(RenderElement&) final;

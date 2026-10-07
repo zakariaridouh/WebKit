@@ -50,7 +50,7 @@ namespace WebCore {
 namespace Style {
 
 FilterImage::FilterImage(RefPtr<Image>&& image, Filter&& filter)
-    : GeneratedImage { Type::FilterImage, FilterImage::isFixedSize }
+    : GeneratedImage { Type::FilterImage }
     , m_image { WTF::move(image) }
     , m_filter { WTF::move(filter) }
     , m_inputImageIsReady { false }
@@ -225,13 +225,6 @@ DecodingMode FilterImage::decodingModeForImageDraw(const RenderBoxModelObject& r
 InterpolationQuality FilterImage::interpolationQualityForImageDraw(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize, const void* layer, const LayoutSize& size) const
 {
     return ImageQualityController::chooseInterpolationQualityForBitmapOfSize(context, renderer, calculateImageBufferBackendSize(size, 1), layer, size);
-}
-
-FloatSize FilterImage::fixedSize(const RenderElement& renderer) const
-{
-    if (RefPtr image = m_image)
-        return image->imageSize(&renderer, 1);
-    return { };
 }
 
 NaturalDimensions FilterImage::naturalDimensions(const RenderElement& renderer, const ImageSizingContext& context) const

@@ -38,7 +38,7 @@ namespace WebCore {
 namespace Style {
 
 NamedImage::NamedImage(CustomIdent&& name)
-    : GeneratedImage { Type::NamedImage, NamedImage::isFixedSize }
+    : GeneratedImage { Type::NamedImage }
     , m_name { WTF::move(name) }
 {
 }
@@ -106,11 +106,6 @@ ImageDrawResult NamedImage::drawAsPattern(GraphicsContext& context, const Render
 bool NamedImage::knownToBeOpaque(const RenderElement&) const
 {
     return false;
-}
-
-FloatSize NamedImage::fixedSize(const RenderElement&) const
-{
-    return { };
 }
 
 } // namespace Style

@@ -101,8 +101,6 @@ public:
 
     WEBCORE_EXPORT virtual RefPtr<ShareableBitmap> createShareableBitmap(const CreateShareableBitmapFromImageOptions& = { }) const;
 
-    WEBCORE_EXPORT static FloatSize imageSizeAsRendered(const CachedImage&, const RenderElement*, float multiplier = 1.0f, CachedImage::SizeType = CachedImage::UsedSize, float density = 1.0f);
-
     FloatSize preferredAspectRatioAsSize() const final;
 
 protected:

@@ -261,18 +261,6 @@ bool CachedImage::errorOccurred() const
     return m_cachedImage->errorOccurred();
 }
 
-FloatSize CachedImage::imageSize(const RenderElement* renderer, float multiplier, WebCore::CachedImage::SizeType sizeType) const
-{
-    if (isRenderSVGResource(renderer))
-        return m_containerSize;
-    if (!m_cachedImage)
-        return { };
-    float density = 1.0f;
-    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(renderer))
-        density = renderImage->imageDevicePixelRatio();
-    return WebCore::CachedImage::clampForZoom(RenderImage::imageSizeAsRendered(*protect(m_cachedImage), renderer, multiplier, sizeType, density), multiplier) / m_scaleFactor;
-}
-
 NaturalDimensions CachedImage::naturalDimensions(const RenderElement& renderer, const ImageSizingContext&) const
 {
     if (isRenderSVGResource(&renderer))
@@ -283,12 +271,6 @@ NaturalDimensions CachedImage::naturalDimensions(const RenderElement& renderer, 
         return NaturalDimensions::none();
 
     return cachedImage->naturalDimensions(cachedImage->allowsOrientationOverride() ? renderer.imageOrientation() : WebCore::ImageOrientation { WebCore::ImageOrientation::Orientation::FromImage });
-}
-
-void CachedImage::setContainerSizeForRenderer(const RenderElement&, const FloatSize& containerSize)
-{
-    // Only read back by imageSize() for an SVG paint server.
-    m_containerSize = containerSize;
 }
 
 ImageDrawingExtras CachedImage::drawingExtrasForRenderer(const RenderElement& renderer) const

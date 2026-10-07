@@ -125,13 +125,6 @@ bool MultiImage::hasDecodedImage() const
     return m_selectedImage && protect(m_selectedImage)->hasDecodedImage();
 }
 
-FloatSize MultiImage::imageSize(const RenderElement* renderer, float multiplier, WebCore::CachedImage::SizeType sizeType) const
-{
-    if (!m_selectedImage)
-        return { };
-    return protect(m_selectedImage)->imageSize(renderer, multiplier, sizeType);
-}
-
 NaturalDimensions MultiImage::naturalDimensions(const RenderElement& renderer, const ImageSizingContext& context) const
 {
     if (!m_selectedImage)
@@ -144,13 +137,6 @@ ImageDrawingExtras MultiImage::drawingExtrasForRenderer(const RenderElement& ren
     if (!m_selectedImage)
         return { };
     return protect(m_selectedImage)->drawingExtrasForRenderer(renderer);
-}
-
-void MultiImage::setContainerSizeForRenderer(const RenderElement& renderer, const FloatSize& containerSize)
-{
-    if (!m_selectedImage)
-        return;
-    protect(m_selectedImage)->setContainerSizeForRenderer(renderer, containerSize);
 }
 
 void MultiImage::addClient(RenderElement& renderer)

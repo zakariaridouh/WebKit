@@ -88,7 +88,6 @@ public:
     virtual bool hasClient(RenderElement&) const = 0;
 
     // Size / scale.
-    virtual FloatSize imageSize(const RenderElement*, float multiplier, WebCore::CachedImage::SizeType = WebCore::CachedImage::UsedSize) const = 0;
     virtual float imageScaleFactor() const { return 1; }
     virtual NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const = 0;
 
@@ -105,7 +104,6 @@ public:
 
     // Rendering.
     virtual bool canRender(const RenderElement*) const { return true; }
-    virtual void setContainerSizeForRenderer(const RenderElement&, const FloatSize&) { }
     virtual ImageDrawingExtras drawingExtrasForRenderer(const RenderElement&) const { return { }; }
     virtual bool knownToBeOpaque(const RenderElement&) const = 0;
     virtual bool canDraw(const RenderElement&) const { return true; }

@@ -43,7 +43,7 @@ namespace WebCore::Style {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CanvasImage);
 
 CanvasImage::CanvasImage(CustomIdent&& name)
-    : GeneratedImage { Type::CanvasImage, CanvasImage::isFixedSize }
+    : GeneratedImage { Type::CanvasImage }
     , m_name { WTF::move(name) }
 {
 }
@@ -146,13 +146,6 @@ InterpolationQuality CanvasImage::interpolationQualityForImageDraw(GraphicsConte
     if (!image)
         return Image::interpolationQualityForImageDraw(context, renderer, concreteObjectSize, layer, size);
     return ImageQualityController::chooseInterpolationQuality(context, renderer, *image, layer, size);
-}
-
-FloatSize CanvasImage::fixedSize(const RenderElement& renderer) const
-{
-    if (auto* element = this->element(protect(renderer.document())))
-        return FloatSize { element->size() };
-    return { };
 }
 
 NaturalDimensions CanvasImage::naturalDimensions(const RenderElement& renderer, const ImageSizingContext&) const

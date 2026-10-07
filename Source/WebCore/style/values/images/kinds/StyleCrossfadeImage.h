@@ -57,8 +57,6 @@ public:
     bool equals(const CrossfadeImage&) const;
     bool equalInputImages(const CrossfadeImage&) const;
 
-    static constexpr bool isFixedSize = false;
-
 private:
     explicit CrossfadeImage(CrossfadeFunction&&);
     explicit CrossfadeImage(WebkitCrossfadeFunction&&);
@@ -73,7 +71,6 @@ private:
     bool knownToBeOpaque(const RenderElement&) const final;
     bool canDrawAtSize(const RenderElement&, const FloatSize&) const final;
     InterpolationQuality interpolationQualityForImageDraw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const void* layer, const LayoutSize&) const final;
-    FloatSize fixedSize(const RenderElement&) const final;
     NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const final;
     void didAddClient(RenderElement&) final { }
     void didRemoveClient(RenderElement&) final { }

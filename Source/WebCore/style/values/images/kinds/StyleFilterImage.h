@@ -55,8 +55,6 @@ public:
     RefPtr<Image> inputImage() const { return m_image; }
     const Filter& filter() const LIFETIME_BOUND { return m_filter; }
 
-    static constexpr bool isFixedSize = true;
-
 private:
     explicit FilterImage(RefPtr<Image>&&, Filter&&);
 
@@ -72,7 +70,6 @@ private:
     bool canDrawAtSize(const RenderElement&, const FloatSize&) const final;
     DecodingMode decodingModeForImageDraw(const RenderBoxModelObject&, const PaintInfo&) const final;
     InterpolationQuality interpolationQualityForImageDraw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const void* layer, const LayoutSize&) const final;
-    FloatSize fixedSize(const RenderElement&) const final;
     NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const final;
     void didAddClient(RenderElement&) final { }
     void didRemoveClient(RenderElement&) final { }

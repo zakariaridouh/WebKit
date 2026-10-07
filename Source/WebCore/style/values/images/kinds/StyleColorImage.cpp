@@ -38,7 +38,7 @@ namespace WebCore {
 namespace Style {
 
 ColorImage::ColorImage(Color&& color)
-    : GeneratedImage { Type::ColorImage, ColorImage::isFixedSize }
+    : GeneratedImage { Type::ColorImage }
     , m_color { WTF::move(color) }
 {
 }
@@ -112,11 +112,6 @@ ImageDrawResult ColorImage::drawAsPattern(GraphicsContext& context, const Render
 bool ColorImage::knownToBeOpaque(const RenderElement& renderer) const
 {
     return resolvedColor(renderer).isOpaque();
-}
-
-FloatSize ColorImage::fixedSize(const RenderElement&) const
-{
-    return { };
 }
 
 WebCore::Color ColorImage::resolvedColor(const RenderElement& renderer) const

@@ -548,7 +548,6 @@ template<typename Layer> void BackgroundPainter::paintFillLayerImpl(const Color&
         auto geometry = calculateFillLayerImageGeometry(m_renderer, m_paintInfo.paintContainer, layer.layer, layer.zoom, paintOffset, imageRect, m_overrideOrigin);
 
         auto& clientForBackgroundImage = backgroundObject ? *backgroundObject : m_renderer;
-        bgImage->setContainerSizeForRenderer(clientForBackgroundImage, geometry.tileSizeWithoutPixelSnapping);
 
         geometry.clip(LayoutRect(pixelSnappedRect));
         bool isFirstLine = inlineBoxIterator && inlineBoxIterator->lineBox()->isFirst();
