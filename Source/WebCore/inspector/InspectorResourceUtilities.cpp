@@ -34,6 +34,7 @@
 #include "DocumentPage.h"
 #include "DocumentResourceLoader.h"
 #include "FetchOptions.h"
+#include "FormData.h"
 #include "FrameLoader.h"
 #include "HTTPHeaderMap.h"
 #include "InspectorResourceType.h"
@@ -46,6 +47,7 @@
 #include "MemoryCache.h"
 #include "NetworkLoadMetrics.h"
 #include "Page.h"
+#include "ResourceLoader.h"
 #include "ResourceLoaderOptions.h"
 #include "ResourceRequest.h"
 #include "ScriptExecutionContext.h"
@@ -103,6 +105,33 @@ Inspector::Protocol::Page::ResourceType resourceTypeToProtocol(Inspector::Resour
 #endif
     }
     return Inspector::Protocol::Page::ResourceType::Other;
+}
+
+static Inspector::Protocol::Network::ReferrerPolicy NODELETE referrerPolicyToProtocol(ReferrerPolicy referrerPolicy)
+{
+    switch (referrerPolicy) {
+    case ReferrerPolicy::EmptyString:
+        return Inspector::Protocol::Network::ReferrerPolicy::EmptyString;
+    case ReferrerPolicy::NoReferrer:
+        return Inspector::Protocol::Network::ReferrerPolicy::NoReferrer;
+    case ReferrerPolicy::NoReferrerWhenDowngrade:
+        return Inspector::Protocol::Network::ReferrerPolicy::NoReferrerWhenDowngrade;
+    case ReferrerPolicy::SameOrigin:
+        return Inspector::Protocol::Network::ReferrerPolicy::SameOrigin;
+    case ReferrerPolicy::Origin:
+        return Inspector::Protocol::Network::ReferrerPolicy::Origin;
+    case ReferrerPolicy::StrictOrigin:
+        return Inspector::Protocol::Network::ReferrerPolicy::StrictOrigin;
+    case ReferrerPolicy::OriginWhenCrossOrigin:
+        return Inspector::Protocol::Network::ReferrerPolicy::OriginWhenCrossOrigin;
+    case ReferrerPolicy::StrictOriginWhenCrossOrigin:
+        return Inspector::Protocol::Network::ReferrerPolicy::StrictOriginWhenCrossOrigin;
+    case ReferrerPolicy::UnsafeUrl:
+        return Inspector::Protocol::Network::ReferrerPolicy::UnsafeUrl;
+    }
+
+    ASSERT_NOT_REACHED();
+    return Inspector::Protocol::Network::ReferrerPolicy::EmptyString;
 }
 
 [[nodiscard]] static bool decodeBuffer(std::span<const uint8_t> buffer, const String& textEncodingName, String* result)
@@ -716,6 +745,45 @@ Ref<Inspector::Protocol::Network::Initiator> buildInitiatorObject(const Initiato
         initiatorObject->setNodeId(*data.nodeId);
 
     return initiatorObject;
+}
+
+RequestExtras copyRequestExtras(const ResourceRequest& request, const ResourceLoader* resourceLoader)
+{
+    RequestExtras requestExtras;
+
+    if (RefPtr body = request.httpBody(); body && !body->isEmpty()) {
+        // FIXME: <https://webkit.org/b/326621> Cap the size of postData.
+        // flatten() omits files, so a non-empty body can yield no bytes. Keep postData non-null for it.
+        auto bytes = body->flatten();
+        requestExtras.postData = bytes.isEmpty() ? emptyString() : String::fromUTF8WithLatin1Fallback(bytes.span());
+    }
+
+    if (resourceLoader) {
+        requestExtras.referrerPolicy = resourceLoader->options().referrerPolicy;
+        requestExtras.integrity = resourceLoader->options().integrity;
+    }
+
+    return requestExtras;
+}
+
+Ref<Inspector::Protocol::Network::Request> buildObjectForResourceRequest(const ResourceRequest& request, const RequestExtras& requestExtras)
+{
+    auto requestObject = Inspector::Protocol::Network::Request::create()
+        .setUrl(request.url().string())
+        .setMethod(request.httpMethod())
+        .setHeaders(buildObjectForHeaders(request.httpHeaderFields()))
+        .release();
+
+    if (!requestExtras.postData.isNull())
+        requestObject->setPostData(requestExtras.postData);
+
+    if (requestExtras.referrerPolicy)
+        requestObject->setReferrerPolicy(referrerPolicyToProtocol(*requestExtras.referrerPolicy));
+
+    if (!requestExtras.integrity.isEmpty())
+        requestObject->setIntegrity(requestExtras.integrity);
+
+    return requestObject;
 }
 
 } // namespace ResourceUtilities

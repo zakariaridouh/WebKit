@@ -29,6 +29,7 @@
 #include <WebCore/CachedResource.h>
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/InspectorResourceType.h>
+#include <WebCore/ReferrerPolicy.h>
 #include <WebCore/ResourceLoaderIdentifier.h>
 #include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <cstdint>
@@ -49,6 +50,7 @@ class InstrumentingAgents;
 class LocalFrame;
 class NetworkLoadMetrics;
 class Page;
+class ResourceLoader;
 class ScriptExecutionContext;
 class TextResourceDecoder;
 }
@@ -162,6 +164,13 @@ struct InitiatorData {
     bool isAttributed() const { return type != InitiatorType::Other || nodeId.has_value(); }
 };
 
+// Request data the inspector needs that doesn't travel with ResourceRequest over IPC.
+struct RequestExtras {
+    String postData; // Null when the request has no body.
+    std::optional<WebCore::ReferrerPolicy> referrerPolicy;
+    String integrity;
+};
+
 namespace ResourceUtilities {
 
 WEBCORE_EXPORT bool sharedBufferContent(RefPtr<WebCore::FragmentedSharedBuffer>&&, const String& textEncodingName, bool withBase64Encode, String* result);
@@ -210,6 +219,9 @@ WEBCORE_EXPORT Ref<Inspector::Protocol::Network::ResourceTiming> buildObjectForT
 WEBCORE_EXPORT InitiatorData copyInitiatorData(WebCore::Document*, const WebCore::ResourceRequest*, const WebCore::InstrumentingAgents&);
 
 WEBCORE_EXPORT Ref<Inspector::Protocol::Network::Initiator> buildInitiatorObject(const InitiatorData&);
+
+WEBCORE_EXPORT RequestExtras copyRequestExtras(const WebCore::ResourceRequest&, const WebCore::ResourceLoader*);
+WEBCORE_EXPORT Ref<Inspector::Protocol::Network::Request> buildObjectForResourceRequest(const WebCore::ResourceRequest&, const RequestExtras&);
 
 // Loads url in the given context on behalf of the inspector, bypassing cross-origin checks (Network.loadResource).
 WEBCORE_EXPORT void loadResource(WebCore::ScriptExecutionContext&, const String& url, LoadResourceCompletionHandler&&);
