@@ -973,6 +973,21 @@ bool Page::userDidInteractWithPage() const
     return m_topDocumentSyncData->userDidInteractWithPage;
 }
 
+void Page::setTopDocumentHasHadUserInteraction(bool hasHadUserInteraction)
+{
+    if (m_topDocumentSyncData->hasHadUserInteraction == hasHadUserInteraction)
+        return;
+
+    m_topDocumentSyncData->hasHadUserInteraction = hasHadUserInteraction;
+    if (settings().siteIsolationEnabled())
+        documentSyncClient().broadcastHasHadUserInteractionToOtherProcesses(hasHadUserInteraction);
+}
+
+bool Page::topDocumentHasHadUserInteraction() const
+{
+    return m_topDocumentSyncData->hasHadUserInteraction;
+}
+
 void Page::setAutofocusProcessed()
 {
     if (m_topDocumentSyncData->isAutofocusProcessed)
@@ -1013,6 +1028,7 @@ void Page::updateTopDocumentSyncData(const DocumentSyncSerializationData& data)
     switch (static_cast<DocumentSyncDataType>(data.value.index())) {
     case DocumentSyncDataType::DocumentClasses:
     case DocumentSyncDataType::DocumentSecurityOrigin:
+    case DocumentSyncDataType::HasHadUserInteraction:
     case DocumentSyncDataType::HasInjectedUserScript:
     case DocumentSyncDataType::IsAutofocusProcessed:
     case DocumentSyncDataType::IsClosing:

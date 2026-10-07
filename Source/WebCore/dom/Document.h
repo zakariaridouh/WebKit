@@ -1574,6 +1574,7 @@ public:
 
     MonotonicTime lastHandledUserGestureTimestamp() const { return m_lastHandledUserGestureTimestamp; }
     bool hasHadUserInteraction() const { return static_cast<bool>(m_lastHandledUserGestureTimestamp); }
+    bool mainFrameDocumentHasHadUserInteraction() const;
     WEBCORE_EXPORT void updateLastHandledUserGestureTimestamp(MonotonicTime);
     bool processingUserGestureForMedia() const;
 
@@ -2343,8 +2344,6 @@ private:
 
     inline Ref<DocumentSyncData> syncData();
     void NODELETE populateDocumentSyncDataForNewlyConstructedDocument(DocumentSyncDataType);
-
-    bool mainFrameDocumentHasHadUserInteraction() const;
 
     RegionFixedPair absoluteEventRegionForNode(Node&);
 

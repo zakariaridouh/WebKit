@@ -8900,6 +8900,70 @@ TEST(SiteIsolation, AutoplayPolicyInRemoteFrameFollowsMainFrame)
     waitForBoth(@"main:autoplayed", @"iframe:autoplayed");
 }
 
+#if PLATFORM(MAC)
+TEST(SiteIsolation, RemoteFrameMediaInheritsUserGestureFromMainFrame)
+{
+    auto mainFrameHTML = "<script>"
+        "window.onmessage = (event) => window.webkit.messageHandlers.testHandler.postMessage(event.data);"
+        "function playSubframeVideo() { document.querySelector('iframe').contentWindow.postMessage('play', '*'); }"
+        "</script>"
+        "<iframe src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<script>"
+        "window.onmessage = () => {"
+        "    var video = document.getElementById('video');"
+        "    video.addEventListener('play', () => window.parent.postMessage('played', '*'), { once: true });"
+        "    video.play().catch((error) => window.parent.postMessage(error.name, '*'));"
+        "};"
+        "</script>"
+        "<video id='video' webkit-playsinline preload='auto' src='/video-with-audio.mp4'"
+        "    onloadeddata='window.parent.postMessage(\"loaded\", \"*\")' onerror='window.parent.postMessage(\"error\", \"*\")'></video>"_s;
+
+    RetainPtr videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+        { "/video-with-audio.mp4"_s, { videoData.get() } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    WKPreferencesSetMediaUserGestureInheritsFromDocument((__bridge WKPreferencesRef)[configuration preferences], true);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration, CGRectMake(0, 0, 800, 600));
+    [webView _setWindowOcclusionDetectionEnabled:NO];
+    [navigationDelegate setDecidePolicyForNavigationActionWithPreferences:^(WKNavigationAction *, WKWebpagePreferences *preferences, void (^completionHandler)(WKNavigationActionPolicy, WKWebpagePreferences *)) {
+        [preferences _setAutoplayPolicy:_WKWebsiteAutoplayPolicyAllowWithoutSound];
+        completionHandler(WKNavigationActionPolicyAllow, preferences);
+    }];
+
+    __block RetainPtr<NSString> lastMessage;
+    [webView performAfterReceivingAnyMessage:^(NSString *message) {
+        lastMessage = message;
+    }];
+    auto waitForMessage = ^{
+        while (!lastMessage)
+            Util::spinRunLoop();
+        return std::exchange(lastMessage, nil);
+    };
+    auto playSubframeVideo = [&] {
+        [webView _evaluateJavaScriptWithoutUserGesture:@"playSubframeVideo()" completionHandler:nil];
+        return waitForMessage();
+    };
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    EXPECT_WK_STREQ(waitForMessage().get(), "loaded");
+    EXPECT_NE([webView mainFrame].info._processIdentifier, [webView firstChildFrame]._processIdentifier);
+
+    EXPECT_WK_STREQ(playSubframeVideo().get(), "NotAllowedError");
+
+    CGPoint outsideSubframe = [webView convertPoint:CGPointMake(400, 400) toView:nil];
+    [webView mouseDownAtPoint:outsideSubframe simulatePressure:NO];
+    [webView mouseUpAtPoint:outsideSubframe];
+
+    EXPECT_WK_STREQ(playSubframeVideo().get(), "played");
+}
+#endif
+
 TEST(SiteIsolation, FrameServerTrust)
 {
     HTTPServer plaintextServer({

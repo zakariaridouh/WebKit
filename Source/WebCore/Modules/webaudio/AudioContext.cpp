@@ -94,8 +94,7 @@ static bool shouldDocumentAllowWebAudioToAutoPlay(const Document& document)
 {
     if (document.isCapturing())
         return true;
-    RefPtr mainDocument = document.mainFrameDocument();
-    if (document.quirks().shouldAutoplayWebAudioForArbitraryUserGesture() && mainDocument && mainDocument->hasHadUserInteraction())
+    if (document.quirks().shouldAutoplayWebAudioForArbitraryUserGesture() && document.mainFrameDocumentHasHadUserInteraction())
         return true;
     RefPtr window = document.window();
     return window && window->hasTransientActivation();

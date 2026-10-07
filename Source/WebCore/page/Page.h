@@ -465,6 +465,8 @@ public:
 #endif
     void setUserDidInteractWithPage(bool);
     bool NODELETE userDidInteractWithPage() const;
+    void setTopDocumentHasHadUserInteraction(bool);
+    bool NODELETE topDocumentHasHadUserInteraction() const;
     void NODELETE setUserDidInteractWithPageExcludingForcedUserGestures(bool didInteract) { m_userHasInteractedSinceLastPageLoadExcludingForcedUserGestures = didInteract; }
     void setAutofocusProcessed();
     bool NODELETE autofocusProcessed() const;

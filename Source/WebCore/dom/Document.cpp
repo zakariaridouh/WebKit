@@ -784,6 +784,7 @@ void Document::populateDocumentSyncDataForNewlyConstructedDocument(DocumentSyncD
     // or are populated other ways even on newly constructed documents.
     case DocumentSyncDataType::DocumentSecurityOrigin:
     case DocumentSyncDataType::DocumentURL:
+    case DocumentSyncDataType::HasHadUserInteraction:
     case DocumentSyncDataType::HasInjectedUserScript:
     case DocumentSyncDataType::IsClosing:
     case DocumentSyncDataType::IsAutofocusProcessed:
@@ -9761,14 +9762,19 @@ void Document::updateLastHandledUserGestureTimestamp(MonotonicTime time)
     // DOM Timer alignment may depend on the user having interacted with the document.
     didChangeTimerAlignmentInterval();
 
+    if (isTopDocument()) {
+        if (RefPtr page = this->page())
+            page->setTopDocumentHasHadUserInteraction(static_cast<bool>(time));
+    }
+
     if (RefPtr element = ownerElement())
         protect(element->document())->updateLastHandledUserGestureTimestamp(time);
 }
 
 bool Document::mainFrameDocumentHasHadUserInteraction() const
 {
-    RefPtr mainFrameDocument = this->mainFrameDocument();
-    return mainFrameDocument && mainFrameDocument->hasHadUserInteraction();
+    RefPtr page = this->page();
+    return page && page->topDocumentHasHadUserInteraction();
 }
 
 bool Document::processingUserGestureForMedia() const
