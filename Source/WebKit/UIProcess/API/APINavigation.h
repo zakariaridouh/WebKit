@@ -88,14 +88,14 @@ public:
         return adoptRef(*new Navigation(processID, WTF::move(currentAndTargetItem)));
     }
 
-    static Ref<Navigation> create(WebCore::ProcessIdentifier processID, Ref<WebKit::WebBackForwardListFrameItem>&& targetFrameItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType backForwardFrameLoadType)
+    static Ref<Navigation> create(WebCore::ProcessIdentifier processID, Ref<WebKit::WebBackForwardListFrameItem>&& targetFrameItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType backForwardFrameLoadType, std::optional<WebCore::NavigationIdentifier> navigationID = std::nullopt)
     {
-        return adoptRef(*new Navigation(processID, WTF::move(targetFrameItem), WTF::move(fromItem), backForwardFrameLoadType));
+        return adoptRef(*new Navigation(processID, WTF::move(targetFrameItem), WTF::move(fromItem), backForwardFrameLoadType, navigationID));
     }
 
-    static Ref<Navigation> create(WebCore::ProcessIdentifier processID, WebCore::ResourceRequest&& request, RefPtr<WebKit::WebBackForwardListItem>&& fromItem)
+    static Ref<Navigation> create(WebCore::ProcessIdentifier processID, WebCore::ResourceRequest&& request, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, std::optional<WebCore::NavigationIdentifier> navigationID = std::nullopt)
     {
-        return adoptRef(*new Navigation(processID, WTF::move(request), WTF::move(fromItem)));
+        return adoptRef(*new Navigation(processID, WTF::move(request), WTF::move(fromItem), navigationID));
     }
 
     static Ref<Navigation> create(WebCore::ProcessIdentifier processID, std::unique_ptr<SubstituteData>&& substituteData)
@@ -222,8 +222,8 @@ public:
 private:
     Navigation(WebCore::ProcessIdentifier);
     Navigation(WebCore::ProcessIdentifier, RefPtr<WebKit::WebBackForwardListItem>&&);
-    Navigation(WebCore::ProcessIdentifier, WebCore::ResourceRequest&&, RefPtr<WebKit::WebBackForwardListItem>&& fromItem);
-    Navigation(WebCore::ProcessIdentifier, Ref<WebKit::WebBackForwardListFrameItem>&& targetItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType);
+    Navigation(WebCore::ProcessIdentifier, WebCore::ResourceRequest&&, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, std::optional<WebCore::NavigationIdentifier>);
+    Navigation(WebCore::ProcessIdentifier, Ref<WebKit::WebBackForwardListFrameItem>&& targetItem, RefPtr<WebKit::WebBackForwardListItem>&& fromItem, WebCore::FrameLoadType, std::optional<WebCore::NavigationIdentifier>);
     Navigation(WebCore::ProcessIdentifier, std::unique_ptr<SubstituteData>&&);
     Navigation(WebCore::ProcessIdentifier, WebCore::ResourceRequest&&, std::unique_ptr<SubstituteData>&&, RefPtr<WebKit::WebBackForwardListItem>&& fromItem);
 

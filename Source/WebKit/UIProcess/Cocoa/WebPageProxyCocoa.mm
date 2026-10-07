@@ -319,7 +319,7 @@ void WebPageProxy::beginSafeBrowsingCheck(const URL& url, API::Navigation& navig
 
             navigation->setSafeBrowsingCheckOngoing(redirectChainIndex, false);
             if (error) {
-                RELEASE_LOG(Loading, "beginSafeBrowsingCheck: error navigationID=%" PRIu64, navigation->navigationID().toUInt64());
+                RELEASE_LOG(Loading, "beginSafeBrowsingCheck: error navigationID=%" PRIu64, navigation->navigationID().object().toUInt64());
                 if (!navigation->safeBrowsingCheckOngoing())
                     navigation->fireSafeBrowsingCheckCompletionCallbacks();
                 if (protectedThis->m_committedMainFrameNavigationID == navigation->navigationID())
@@ -337,7 +337,7 @@ void WebPageProxy::beginSafeBrowsingCheck(const URL& url, API::Navigation& navig
             for (SSBServiceLookupResult *lookupResult in [result serviceLookupResults]) {
                 SAFE_BROWSING_LOOKUP_RESULT_ADDITIONS(lookupResult);
                 if (lookupResult.isPhishing || lookupResult.isMalware || lookupResult.isUnwantedSoftware || SAFE_BROWSING_RESULT_CHECK_ADDITIONS) {
-                    RELEASE_LOG(Loading, "beginSafeBrowsingCheck: threat found navigationID=%" PRIu64 ", type=%s", navigation->navigationID().toUInt64(), lookupResult.isPhishing ? "phishing" : lookupResult.isMalware ? "malware" : "unwanted");
+                    RELEASE_LOG(Loading, "beginSafeBrowsingCheck: threat found navigationID=%" PRIu64 ", type=%s", navigation->navigationID().object().toUInt64(), lookupResult.isPhishing ? "phishing" : lookupResult.isMalware ? "malware" : "unwanted");
                     navigation->setSafeBrowsingWarning(BrowsingWarning::create(url, forMainFrameNavigation, BrowsingWarning::SafeBrowsingWarningData { lookupResult }));
                     break;
                 }
@@ -349,7 +349,7 @@ void WebPageProxy::beginSafeBrowsingCheck(const URL& url, API::Navigation& navig
             navigation->fireSafeBrowsingCheckCompletionCallbacks();
 
             if (navigation->safeBrowsingWarning()) {
-                RELEASE_LOG(Loading, "beginSafeBrowsingCheck: showing warning navigationID=%" PRIu64, navigation->navigationID().toUInt64());
+                RELEASE_LOG(Loading, "beginSafeBrowsingCheck: showing warning navigationID=%" PRIu64, navigation->navigationID().object().toUInt64());
                 if (navigation->safeBrowsingWarning()->forMainFrameNavigation()) {
                     RefPtr safeBrowsingWarning = navigation->safeBrowsingWarning();
                     navigation->setSafeBrowsingWarning(nullptr);
@@ -364,7 +364,7 @@ void WebPageProxy::beginSafeBrowsingCheck(const URL& url, API::Navigation& navig
                     protectedThis->showBrowsingWarning(WTF::move(safeBrowsingWarning));
                 }
             } else {
-                RELEASE_LOG(Loading, "beginSafeBrowsingCheck: no threat, completing navigationID=%" PRIu64, navigation->navigationID().toUInt64());
+                RELEASE_LOG(Loading, "beginSafeBrowsingCheck: no threat, completing navigationID=%" PRIu64, navigation->navigationID().object().toUInt64());
                 if (protectedThis->m_committedMainFrameNavigationID == navigation->navigationID())
                     protectedThis->completeSafeBrowsingCheckForModals(true);
             }

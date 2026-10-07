@@ -2501,7 +2501,7 @@ void FrameLoader::setState(FrameState newState)
 
 void FrameLoader::clearProvisionalLoad()
 {
-    FRAMELOADER_RELEASE_LOG_FORWARDABLE(FrameLoaderClearProvisionalLoad, m_provisionalDocumentLoader && m_provisionalDocumentLoader->navigationID() ? m_provisionalDocumentLoader->navigationID()->toUInt64() : 0);
+    FRAMELOADER_RELEASE_LOG_FORWARDABLE(FrameLoaderClearProvisionalLoad, m_provisionalDocumentLoader && m_provisionalDocumentLoader->navigationID() ? m_provisionalDocumentLoader->navigationID()->object().toUInt64() : 0);
     setProvisionalDocumentLoader(nullptr);
     if (CheckedPtr progressTracker = m_progressTracker.get())
         progressTracker->progressCompleted(FrameProgressTracker::LoadCompletionStatus::Failure);

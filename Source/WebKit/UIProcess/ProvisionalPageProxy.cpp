@@ -78,8 +78,8 @@ namespace WebKit {
 
 using namespace WebCore;
 
-#define PROVISIONALPAGEPROXY_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", PID=%i, navigationID=%" PRIu64 "] ProvisionalPageProxy::" fmt, this, m_page ? m_page->identifier().toUInt64() : 0, m_webPageID.toUInt64(), process().processID(), m_navigationID.toUInt64(), ##__VA_ARGS__)
-#define PROVISIONALPAGEPROXY_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", PID=%i, navigationID=%" PRIu64 "] ProvisionalPageProxy::" fmt, this, m_page ? m_page->identifier().toUInt64() : 0, m_webPageID.toUInt64(), process().processID(), m_navigationID.toUInt64(), ##__VA_ARGS__)
+#define PROVISIONALPAGEPROXY_RELEASE_LOG(channel, fmt, ...) RELEASE_LOG(channel, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", PID=%i, navigationID=%" PRIu64 "] ProvisionalPageProxy::" fmt, this, m_page ? m_page->identifier().toUInt64() : 0, m_webPageID.toUInt64(), process().processID(), m_navigationID.object().toUInt64(), ##__VA_ARGS__)
+#define PROVISIONALPAGEPROXY_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", PID=%i, navigationID=%" PRIu64 "] ProvisionalPageProxy::" fmt, this, m_page ? m_page->identifier().toUInt64() : 0, m_webPageID.toUInt64(), process().processID(), m_navigationID.object().toUInt64(), ##__VA_ARGS__)
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ProvisionalPageProxy);
 

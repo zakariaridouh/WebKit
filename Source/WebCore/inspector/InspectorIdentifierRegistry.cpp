@@ -131,10 +131,10 @@ Protocol::Network::LoaderId BackendIdentifierRegistry::loaderId(WebCore::Documen
     // Derive the id from the loader's navigationID, which is assigned at provisional-load start and
     // stays fixed for the load. The Network stream computes this at the main resource's
     // willSendRequest (before commit) and the Page stream at frameNavigated (after commit); anchoring
-    // on navigationID makes both arrive at the same string. It is process-local, so qualify it with
-    // the hosting process.
+    // on navigationID makes both arrive at the same string. It is qualified with the process that
+    // minted it, which may be the UIProcess or this process.
     if (auto navigationID = loader->navigationID())
-        return makeString("loader-"_s, WebCore::Process::identifier().toUInt64(), '.', navigationID->toUInt64());
+        return makeString("loader-"_s, navigationID->processIdentifier().toUInt64(), '.', navigationID->object().toUInt64());
 
     // Fallback only when no navigationID exists yet (early instrumentation / non-navigation loads):
     // keep a stable per-loader id. This produces a legacy-format ID.

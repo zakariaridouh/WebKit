@@ -97,7 +97,7 @@ struct Result;
 }
 
 using FrameIdentifier = ObjectIdentifier<FrameIdentifierType>;
-using NavigationIdentifier = ObjectIdentifier<NavigationIdentifierType>;
+using NavigationIdentifier = ProcessQualified<ObjectIdentifier<NavigationIdentifierType>>;
 using NodeIdentifier = ObjectIdentifier<NodeIdentifierType>;
 using SandboxFlags = OptionSet<SandboxFlag>;
 using WebProcessJSHandleIdentifier = ObjectIdentifier<JSHandleIdentifierType>;

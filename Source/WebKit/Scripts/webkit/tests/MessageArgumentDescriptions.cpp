@@ -540,7 +540,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebCore::MediaSessionIdentifier"_s,
         "WebCore::ModelPlayerIdentifier"_s,
         "WebCore::MediaUniqueIdentifier"_s,
-        "WebCore::NavigationIdentifier"_s,
+        "WebCore::NavigationIdentifierID"_s,
         "WebCore::OpaqueOriginIdentifier"_s,
         "WebCore::PendingNavigateEventIdentifier"_s,
         "WebCore::PageIdentifier"_s,
