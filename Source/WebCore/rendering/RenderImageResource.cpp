@@ -149,7 +149,7 @@ NaturalDimensions RenderImageResource::naturalDimensions() const
         return NaturalDimensions::none();
 
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
-    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(m_renderer.get()); renderImage && renderImage->isMultiRepresentationHEIC())
+    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(m_renderer); renderImage && renderImage->isMultiRepresentationHEIC())
         return NaturalDimensions::fixed(renderImage->style().fontCascade().primaryFont().metricsForMultiRepresentationHEIC().size());
 #endif
 
@@ -177,7 +177,7 @@ std::optional<FloatSize> RenderImageResource::usedImageSize(FloatSize containerS
 
 float RenderImageResource::density() const
 {
-    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(m_renderer.get()))
+    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(m_renderer))
         return renderImage->imageDevicePixelRatio();
     return 1;
 }
