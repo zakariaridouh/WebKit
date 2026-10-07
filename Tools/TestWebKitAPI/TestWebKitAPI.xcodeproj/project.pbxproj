@@ -599,7 +599,6 @@
 				WebKit/WKWebView/SiteIsolationNavigationTests.swift,
 				WebKit/WKWebView/TextExtractionTests.swift,
 				WebKit/WKWebView/TextFragments.swift,
-				WebKit/WKWebView/TextManipulation.swift,
 				WebKit/WKWebView/TextPlaceholderTests.swift,
 				WebKit/WKWebView/TextSize.swift,
 				WebKit/WKWebView/TextWidth.swift,
