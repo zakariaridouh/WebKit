@@ -14160,6 +14160,33 @@ void SpeculativeJIT::compileDefineDataProperty(Node* node)
         callOperation(operationDefineDataPropertySymbol, LinkableConstant::globalObject(*this, node), baseGPR, propertyGPR, valueGPR, attributesGPR);
         break;
     }
+    case Int32Use: {
+        SpeculateInt32Operand property(this, propertyEdge);
+        GPRTemporary boxedProperty(this);
+        GPRReg propertyGPR = boxedProperty.gpr();
+        boxInt32(property.gpr(), propertyGPR);
+
+        speculateObject(baseEdge, baseGPR);
+
+        useChildren(node);
+
+        flushRegisters();
+        callOperation(operationDefineDataProperty, LinkableConstant::globalObject(*this, node), baseGPR, propertyGPR, valueGPR, attributesGPR);
+        break;
+    }
+    case NumberUse: {
+        speculateNumber(propertyEdge);
+        JSValueOperand property(this, propertyEdge, ManualOperandSpeculation);
+        GPRReg propertyGPR = property.gpr();
+
+        speculateObject(baseEdge, baseGPR);
+
+        useChildren(node);
+
+        flushRegisters();
+        callOperation(operationDefineDataProperty, LinkableConstant::globalObject(*this, node), baseGPR, propertyGPR, valueGPR, attributesGPR);
+        break;
+    }
     case UntypedUse: {
         JSValueOperand property(this, propertyEdge);
         GPRReg propertyGPR = property.gpr();
@@ -14240,6 +14267,33 @@ void SpeculativeJIT::compileDefineAccessorProperty(Node* node)
         callOperation(operationDefineAccessorPropertySymbol, LinkableConstant::globalObject(*this, node), baseGPR, propertyGPR, getterGPR, setterGPR, attributesGPR);
         break;
     }
+    case Int32Use: {
+        SpeculateInt32Operand property(this, propertyEdge);
+        GPRTemporary boxedProperty(this);
+        GPRReg propertyGPR = boxedProperty.gpr();
+        boxInt32(property.gpr(), propertyGPR);
+
+        speculateObject(baseEdge, baseGPR);
+
+        useChildren(node);
+
+        flushRegisters();
+        callOperation(operationDefineAccessorProperty, LinkableConstant::globalObject(*this, node), baseGPR, propertyGPR, getterGPR, setterGPR, attributesGPR);
+        break;
+    }
+    case NumberUse: {
+        speculateNumber(propertyEdge);
+        JSValueOperand property(this, propertyEdge, ManualOperandSpeculation);
+        GPRReg propertyGPR = property.gpr();
+
+        speculateObject(baseEdge, baseGPR);
+
+        useChildren(node);
+
+        flushRegisters();
+        callOperation(operationDefineAccessorProperty, LinkableConstant::globalObject(*this, node), baseGPR, propertyGPR, getterGPR, setterGPR, attributesGPR);
+        break;
+    }
     case UntypedUse: {
         JSValueOperand property(this, propertyEdge);
         GPRReg propertyGPR = property.gpr();
@@ -14262,18 +14316,60 @@ void SpeculativeJIT::compileDefineAccessorProperty(Node* node)
 void SpeculativeJIT::compileObjectDefineProperty(Node* node)
 {
     SpeculateCellOperand target(this, node->child1());
-    JSValueOperand key(this, node->child2());
     SpeculateCellOperand descriptor(this, node->child3());
 
     GPRReg targetGPR = target.gpr();
-    GPRReg keyGPR = key.gpr();
     GPRReg descriptorGPR = descriptor.gpr();
 
     speculateObject(node->child1(), targetGPR);
     speculateObject(node->child3(), descriptorGPR);
 
-    flushRegisters();
-    callOperation(operationObjectDefineProperty, LinkableConstant::globalObject(*this, node), targetGPR, keyGPR, descriptorGPR);
+    Edge keyEdge = node->child2();
+    switch (keyEdge.useKind()) {
+    case StringUse:
+    case SymbolUse: {
+        SpeculateCellOperand key(this, keyEdge);
+        GPRReg keyGPR = key.gpr();
+        if (keyEdge.useKind() == StringUse)
+            speculateString(keyEdge, keyGPR);
+        else
+            speculateSymbol(keyEdge, keyGPR);
+
+        flushRegisters();
+        callOperation(operationObjectDefineProperty, LinkableConstant::globalObject(*this, node), targetGPR, keyGPR, descriptorGPR);
+        break;
+    }
+    case Int32Use: {
+        SpeculateInt32Operand key(this, keyEdge);
+        GPRTemporary boxedKey(this);
+        GPRReg keyGPR = boxedKey.gpr();
+        boxInt32(key.gpr(), keyGPR);
+
+        flushRegisters();
+        callOperation(operationObjectDefineProperty, LinkableConstant::globalObject(*this, node), targetGPR, keyGPR, descriptorGPR);
+        break;
+    }
+    case NumberUse: {
+        speculateNumber(keyEdge);
+        JSValueOperand key(this, keyEdge, ManualOperandSpeculation);
+        GPRReg keyGPR = key.gpr();
+
+        flushRegisters();
+        callOperation(operationObjectDefineProperty, LinkableConstant::globalObject(*this, node), targetGPR, keyGPR, descriptorGPR);
+        break;
+    }
+    case UntypedUse: {
+        JSValueOperand key(this, keyEdge);
+        GPRReg keyGPR = key.gpr();
+
+        flushRegisters();
+        callOperation(operationObjectDefineProperty, LinkableConstant::globalObject(*this, node), targetGPR, keyGPR, descriptorGPR);
+        break;
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
     noResult(node);
 }
 
@@ -14284,35 +14380,79 @@ void SpeculativeJIT::compileObjectDefinePropertyFromFields(Node* node)
 
     // Children layout:
     //   [0] target (ObjectUse)
-    //   [1] key (UntypedUse)
+    //   [1] key (StringUse, SymbolUse, Int32Use, NumberUse, or UntypedUse)
     //   [2..7] descriptor slots, indexed by Node::DescriptorSlot
     //          (UntypedUse or JSConstant(empty) if absent).
     SpeculateCellOperand target(this, m_graph.varArgChild(node, 0));
-    JSValueOperand key(this, m_graph.varArgChild(node, 1));
-    GPRTemporary buffer(this);
-
     GPRReg targetGPR = target.gpr();
-    GPRReg keyGPR = key.gpr();
-    GPRReg bufferGPR = buffer.gpr();
-
     speculateObject(m_graph.varArgChild(node, 0), targetGPR);
 
-    constexpr size_t scratchSize = sizeof(EncodedJSValue) * Node::numberOfDescriptorSlots;
-    ScratchBuffer* scratchBuffer = vm().scratchBufferForSize(scratchSize);
-    EncodedJSValue* scratchData = static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer());
+    Edge keyEdge = m_graph.varArgChild(node, 1);
+    auto lower = [&](GPRReg keyGPR, const auto& useKey) {
+        GPRTemporary buffer(this);
+        GPRReg bufferGPR = buffer.gpr();
 
-    move(TrustedImmPtr(scratchData), bufferGPR);
-    for (unsigned slot = 0; slot < Node::numberOfDescriptorSlots; ++slot) {
-        JSValueOperand operand(this, m_graph.varArgChild(node, slot + 2));
-        storeValue(operand.gpr(), Address(bufferGPR, sizeof(EncodedJSValue) * slot));
-        operand.use();
+        constexpr size_t scratchSize = sizeof(EncodedJSValue) * Node::numberOfDescriptorSlots;
+        ScratchBuffer* scratchBuffer = vm().scratchBufferForSize(scratchSize);
+        EncodedJSValue* scratchData = static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer());
+
+        move(TrustedImmPtr(scratchData), bufferGPR);
+        for (unsigned slot = 0; slot < Node::numberOfDescriptorSlots; ++slot) {
+            JSValueOperand operand(this, m_graph.varArgChild(node, slot + 2));
+            storeValue(operand.gpr(), Address(bufferGPR, sizeof(EncodedJSValue) * slot));
+            operand.use();
+        }
+
+        target.use();
+        useKey();
+
+        flushRegisters();
+        callOperation(operationObjectDefinePropertyFromFields, LinkableConstant::globalObject(*this, node), targetGPR, keyGPR, bufferGPR);
+    };
+
+    switch (keyEdge.useKind()) {
+    case StringUse:
+    case SymbolUse: {
+        SpeculateCellOperand key(this, keyEdge);
+        GPRReg keyGPR = key.gpr();
+        if (keyEdge.useKind() == StringUse)
+            speculateString(keyEdge, keyGPR);
+        else
+            speculateSymbol(keyEdge, keyGPR);
+        lower(keyGPR, [&] {
+            key.use();
+        });
+        break;
     }
-
-    target.use();
-    key.use();
-
-    flushRegisters();
-    callOperation(operationObjectDefinePropertyFromFields, LinkableConstant::globalObject(*this, node), targetGPR, keyGPR, bufferGPR);
+    case Int32Use: {
+        SpeculateInt32Operand key(this, keyEdge);
+        GPRTemporary boxedKey(this);
+        GPRReg keyGPR = boxedKey.gpr();
+        boxInt32(key.gpr(), keyGPR);
+        lower(keyGPR, [&] {
+            key.use();
+        });
+        break;
+    }
+    case NumberUse: {
+        speculateNumber(keyEdge);
+        JSValueOperand key(this, keyEdge, ManualOperandSpeculation);
+        lower(key.gpr(), [&] {
+            key.use();
+        });
+        break;
+    }
+    case UntypedUse: {
+        JSValueOperand key(this, keyEdge);
+        lower(key.gpr(), [&] {
+            key.use();
+        });
+        break;
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
     noResult(node, UseChildrenCalledExplicitly);
 }
 

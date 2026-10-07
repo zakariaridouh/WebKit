@@ -5600,6 +5600,17 @@ private:
             vmCall(Void, operationDefineDataPropertySymbol, weakPointer(globalObject), base, property, value, attributes);
             break;
         }
+        case Int32Use: {
+            LValue property = boxInt32(lowInt32(propertyEdge));
+            vmCall(Void, operationDefineDataProperty, weakPointer(globalObject), base, property, value, attributes);
+            break;
+        }
+        case NumberUse: {
+            LValue property = lowJSValue(propertyEdge, ManualOperandSpeculation);
+            FTL_TYPE_CHECK(jsValueValue(property), propertyEdge, SpecBytecodeNumber, isNotNumber(property, provenType(propertyEdge)));
+            vmCall(Void, operationDefineDataProperty, weakPointer(globalObject), base, property, value, attributes);
+            break;
+        }
         case UntypedUse: {
             LValue property = lowJSValue(propertyEdge);
             vmCall(Void, operationDefineDataProperty, weakPointer(globalObject), base, property, value, attributes);
@@ -5610,11 +5621,33 @@ private:
         }
     }
 
+    LValue lowEncodedPropertyKey(Edge edge)
+    {
+        switch (edge.useKind()) {
+        case StringUse:
+            return lowString(edge);
+        case SymbolUse:
+            return lowSymbol(edge);
+        case Int32Use:
+            return boxInt32(lowInt32(edge));
+        case NumberUse: {
+            LValue key = lowJSValue(edge, ManualOperandSpeculation);
+            FTL_TYPE_CHECK(jsValueValue(key), edge, SpecBytecodeNumber, isNotNumber(key, provenType(edge)));
+            return key;
+        }
+        case UntypedUse:
+            return lowJSValue(edge);
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return nullptr;
+        }
+    }
+
     void compileObjectDefineProperty()
     {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
         LValue target = lowObject(m_node->child1());
-        LValue key = lowJSValue(m_node->child2());
+        LValue key = lowEncodedPropertyKey(m_node->child2());
         LValue descriptor = lowObject(m_node->child3());
         vmCall(Void, operationObjectDefineProperty, weakPointer(globalObject), target, key, descriptor);
     }
@@ -5625,7 +5658,7 @@ private:
         ASSERT(m_node->op() == ObjectDefinePropertyFromFields);
         ASSERT(m_graph.varArgNumChildren(m_node) == 8);
         LValue target = lowObject(m_graph.varArgChild(m_node, 0));
-        LValue key = lowJSValue(m_graph.varArgChild(m_node, 1));
+        LValue key = lowEncodedPropertyKey(m_graph.varArgChild(m_node, 1));
 
         constexpr size_t scratchSize = sizeof(EncodedJSValue) * Node::numberOfDescriptorSlots;
         ScratchBuffer* scratchBuffer = vm().scratchBufferForSize(scratchSize);
@@ -5658,6 +5691,17 @@ private:
         case SymbolUse: {
             LValue property = lowSymbol(propertyEdge);
             vmCall(Void, operationDefineAccessorPropertySymbol, weakPointer(globalObject), base, property, getter, setter, attributes);
+            break;
+        }
+        case Int32Use: {
+            LValue property = boxInt32(lowInt32(propertyEdge));
+            vmCall(Void, operationDefineAccessorProperty, weakPointer(globalObject), base, property, getter, setter, attributes);
+            break;
+        }
+        case NumberUse: {
+            LValue property = lowJSValue(propertyEdge, ManualOperandSpeculation);
+            FTL_TYPE_CHECK(jsValueValue(property), propertyEdge, SpecBytecodeNumber, isNotNumber(property, provenType(propertyEdge)));
+            vmCall(Void, operationDefineAccessorProperty, weakPointer(globalObject), base, property, getter, setter, attributes);
             break;
         }
         case UntypedUse: {

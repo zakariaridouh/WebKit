@@ -3425,7 +3425,18 @@ private:
 
         case ObjectDefineProperty: {
             fixEdge<ObjectUse>(node->child1()); // target
-            fixEdge<UntypedUse>(node->child2()); // key
+            if (m_graph.hasExitSite(node->origin.semantic, BadType))
+                fixEdge<UntypedUse>(node->child2());
+            else if (node->child2()->shouldSpeculateString())
+                fixEdge<StringUse>(node->child2());
+            else if (node->child2()->shouldSpeculateSymbol())
+                fixEdge<SymbolUse>(node->child2());
+            else if (node->child2()->shouldSpeculateInt32())
+                fixEdge<Int32Use>(node->child2());
+            else if (isBytecodeNumberSpeculation(node->child2()->prediction()))
+                fixEdge<NumberUse>(node->child2());
+            else
+                fixEdge<UntypedUse>(node->child2());
             fixEdge<ObjectUse>(node->child3()); // descriptor
             break;
         }
