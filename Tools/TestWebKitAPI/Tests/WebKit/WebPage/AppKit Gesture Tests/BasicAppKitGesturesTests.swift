@@ -708,7 +708,7 @@ extension AppKitGesturesTests.Basic {
         let log = try await page.callJavaScript(returning: [String].self) { "return window.eventLog;" }
         #expect(log.first == "pointerdown:0")
         #expect(log.contains { $0.hasPrefix("pointercancel") })
-        #expect(!log.contains("pointerup:0"))
+        #expect(log.contains("pointerup:0") == false)
     }
 
     @Test
@@ -1552,7 +1552,7 @@ extension AppKitGesturesTests.Basic {
 
         #expect(Self.pdfDocumentText.hasPrefix(extended))
         #expect(extended.hasPrefix("one\nTwo tWo\ntHree "))
-        #expect(!extended.contains("threE"))
+        #expect(extended.contains("threE") == false)
     }
 
     @Test
@@ -1574,7 +1574,7 @@ extension AppKitGesturesTests.Basic {
 
         #expect(Self.pdfDocumentText.hasSuffix(extended))
         #expect(extended.hasSuffix("tHree THREE threE"))
-        #expect(!extended.hasPrefix("one"))
+        #expect(extended.hasPrefix("one") == false)
     }
 
     @Test
@@ -1597,7 +1597,7 @@ extension AppKitGesturesTests.Basic {
 
         #expect(Self.pdfDocumentText.hasPrefix(extended))
         #expect(extended.hasPrefix("one"))
-        #expect(!extended.contains("Two"))
+        #expect(extended.contains("Two") == false)
     }
 
     @Test(arguments: [true, false])
@@ -2629,7 +2629,7 @@ extension AppKitGesturesTests.Basic {
         }
 
         await page.waitForNextPresentationUpdate()
-        #expect(!isDataListDropdownShowing())
+        #expect(isDataListDropdownShowing() == false)
 
         let (activeElementID, blurCount) = try await page.callJavaScript(returning: (String, Int).self) {
             """

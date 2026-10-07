@@ -2408,7 +2408,7 @@ struct WKWebExtensionAPIWebRequestTests {
             "tabId": 100,
         ])
         #expect(filter.matchesRequestForResource(of: type, url: url, tabID: 100, windowID: 1))
-        #expect(!filter.matchesRequestForResource(of: type, url: url, tabID: 200, windowID: 1))
+        #expect(filter.matchesRequestForResource(of: type, url: url, tabID: 200, windowID: 1) == false)
     }
 
     @Test
@@ -2432,7 +2432,7 @@ struct WKWebExtensionAPIWebRequestTests {
             "windowId": 100,
         ])
         #expect(filter.matchesRequestForResource(of: type, url: url, tabID: 1, windowID: 100))
-        #expect(!filter.matchesRequestForResource(of: type, url: url, tabID: 1, windowID: 200))
+        #expect(filter.matchesRequestForResource(of: type, url: url, tabID: 1, windowID: 200) == false)
     }
 
     @Test
@@ -2451,18 +2451,18 @@ struct WKWebExtensionAPIWebRequestTests {
             "urls": ["http://example.com/*"]
         ])
         #expect(filter.matchesRequestForResource(of: type, url: url, tabID: 1, windowID: 1))
-        #expect(!filter.matchesRequestForResource(of: type, url: otherURL, tabID: 1, windowID: 1))
+        #expect(filter.matchesRequestForResource(of: type, url: otherURL, tabID: 1, windowID: 1) == false)
 
         filter = try makeFilter(with: [
             "urls": ["http://not-example.com/*", "http://not-some-other-website.biz/*"]
         ])
-        #expect(!filter.matchesRequestForResource(of: type, url: url, tabID: 1, windowID: 1))
+        #expect(filter.matchesRequestForResource(of: type, url: url, tabID: 1, windowID: 1) == false)
 
         filter = try makeFilter(with: [
             "urls": ["http://example.com/*", "http://not-some-other-website.biz/*"]
         ])
         #expect(filter.matchesRequestForResource(of: type, url: url, tabID: 1, windowID: 1))
-        #expect(!filter.matchesRequestForResource(of: type, url: otherURL, tabID: 1, windowID: 1))
+        #expect(filter.matchesRequestForResource(of: type, url: otherURL, tabID: 1, windowID: 1) == false)
 
         filter = try makeFilter(with: [
             "urls": ["http://example.com/*/b", "http://example.com/a/*"]
@@ -2493,7 +2493,7 @@ struct WKWebExtensionAPIWebRequestTests {
             "types": ["image"],
         ])
         #expect(filter.matchesRequestForResource(of: .image, url: url, tabID: 1, windowID: 1))
-        #expect(!filter.matchesRequestForResource(of: .script, url: url, tabID: 1, windowID: 1))
+        #expect(filter.matchesRequestForResource(of: .script, url: url, tabID: 1, windowID: 1) == false)
 
         filter = try makeFilter(with: [
             "urls": [],
@@ -2501,7 +2501,7 @@ struct WKWebExtensionAPIWebRequestTests {
         ])
         #expect(filter.matchesRequestForResource(of: .image, url: url, tabID: 1, windowID: 1))
         #expect(filter.matchesRequestForResource(of: .script, url: url, tabID: 1, windowID: 1))
-        #expect(!filter.matchesRequestForResource(of: .websocket, url: url, tabID: 1, windowID: 1))
+        #expect(filter.matchesRequestForResource(of: .websocket, url: url, tabID: 1, windowID: 1) == false)
     }
 }
 

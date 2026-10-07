@@ -60,12 +60,12 @@ struct WKWebExtensionContextTests {
         var testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .unknown)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .unknown)
@@ -81,12 +81,12 @@ struct WKWebExtensionContextTests {
         testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .requestedExplicitly)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .requestedExplicitly)
@@ -102,12 +102,12 @@ struct WKWebExtensionContextTests {
         testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .requestedExplicitly)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .requestedImplicitly)
@@ -123,12 +123,12 @@ struct WKWebExtensionContextTests {
         testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .requestedExplicitly)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .requestedImplicitly)
@@ -146,12 +146,12 @@ struct WKWebExtensionContextTests {
         testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .unknown)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .unknown)
@@ -168,12 +168,12 @@ struct WKWebExtensionContextTests {
         testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .requestedExplicitly)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .requestedExplicitly)
@@ -189,12 +189,12 @@ struct WKWebExtensionContextTests {
         testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .requestedExplicitly)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .requestedImplicitly)
@@ -210,12 +210,12 @@ struct WKWebExtensionContextTests {
         testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .requestedExplicitly)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .requestedImplicitly)
@@ -240,12 +240,12 @@ struct WKWebExtensionContextTests {
         let testContext = WKWebExtensionContext(for: testExtension)
 
         #expect(testExtension.errors.isEmpty)
-        #expect(!testContext.hasPermission(.tabs))
-        #expect(!testContext.hasPermission(.cookies))
+        #expect(testContext.hasPermission(.tabs) == false)
+        #expect(testContext.hasPermission(.cookies) == false)
         #expect(!testContext.hasAccessToAllURLs)
         #expect(!testContext.hasAccessToAllHosts)
-        #expect(!testContext.hasAccess(to: exampleURL))
-        #expect(!testContext.hasAccess(to: webkitURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
+        #expect(testContext.hasAccess(to: webkitURL) == false)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.tabs) == .requestedExplicitly)
         #expect(testContext.permissionStatus(for: WKWebExtension.Permission.cookies) == .unknown)
         #expect(testContext.permissionStatus(for: exampleURL) == .requestedExplicitly)
@@ -308,7 +308,7 @@ struct WKWebExtensionContextTests {
 
         #expect(testContext.grantedPermissionMatchPatterns.count == 1)
         #expect(testContext.deniedPermissionMatchPatterns.count == 1)
-        #expect(!testContext.hasAccess(to: exampleURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
         #expect(testContext.permissionStatus(for: exampleURL) == .deniedExplicitly)
         #expect(testContext.permissionStatus(for: webkitURL) == .grantedImplicitly)
 
@@ -328,7 +328,7 @@ struct WKWebExtensionContextTests {
         // Mass deny with the permission setter.
         testContext.deniedPermissions = [.tabs: .distantFuture]
 
-        #expect(!testContext.hasPermission(.tabs))
+        #expect(testContext.hasPermission(.tabs) == false)
         #expect(testContext.deniedPermissions.count == 1)
         #expect(testContext.grantedPermissions.count == 0)
 
@@ -352,7 +352,7 @@ struct WKWebExtensionContextTests {
         testContext.deniedPermissionMatchPatterns = [WKWebExtension.MatchPattern.allURLs(): .distantFuture]
 
         #expect(!testContext.hasAccessToAllURLs)
-        #expect(!testContext.hasAccess(to: exampleURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
         #expect(testContext.deniedPermissionMatchPatterns.count == 1)
         #expect(testContext.grantedPermissionMatchPatterns.count == 0)
 
@@ -392,7 +392,7 @@ struct WKWebExtensionContextTests {
         try await Task.sleep(for: .seconds(3))
 
         #expect(!testContext.hasAccessToAllURLs)
-        #expect(!testContext.hasAccess(to: exampleURL))
+        #expect(testContext.hasAccess(to: exampleURL) == false)
         #expect(testContext.permissionStatus(for: exampleURL) == .requestedExplicitly)
         #expect(testContext.grantedPermissionMatchPatterns.count == 0)
 
@@ -409,7 +409,7 @@ struct WKWebExtensionContextTests {
         // Sleep until after the permission expires.
         try await Task.sleep(for: .seconds(3))
 
-        #expect(!testContext.hasPermission(.tabs))
+        #expect(testContext.hasPermission(.tabs) == false)
         #expect(testContext.grantedPermissions.count == 0)
     }
 
@@ -438,7 +438,7 @@ struct WKWebExtensionContextTests {
         #expect(testExtension.errors.isEmpty)
         #expect(testContext.hasInjectedContent)
         #expect(testContext.hasInjectedContent(for: webkitURL))
-        #expect(!testContext.hasInjectedContent(for: exampleURL))
+        #expect(testContext.hasInjectedContent(for: exampleURL) == false)
 
         testManifestDictionary["content_scripts"] = [
             ["js": ["test.js", 1, ""], "css": [false, "test.css", ""], "matches": ["*://*.example.com/"]]
@@ -448,7 +448,7 @@ struct WKWebExtensionContextTests {
 
         #expect(testExtension.errors.isEmpty)
         #expect(testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
         #expect(testContext.hasInjectedContent(for: exampleURL))
 
         testManifestDictionary["content_scripts"] = [["js": ["test.js"], "matches": ["*://*.example.com/"], "world": "MAIN"]]
@@ -457,7 +457,7 @@ struct WKWebExtensionContextTests {
 
         #expect(testExtension.errors.isEmpty)
         #expect(testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
         #expect(testContext.hasInjectedContent(for: exampleURL))
 
         testManifestDictionary["content_scripts"] = [
@@ -468,7 +468,7 @@ struct WKWebExtensionContextTests {
 
         #expect(testExtension.errors.isEmpty)
         #expect(testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
         #expect(testContext.hasInjectedContent(for: exampleURL))
 
         testManifestDictionary["content_scripts"] = [
@@ -479,7 +479,7 @@ struct WKWebExtensionContextTests {
 
         #expect(testExtension.errors.isEmpty)
         #expect(testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
         #expect(testContext.hasInjectedContent(for: exampleURL))
 
         // Invalid cases
@@ -490,8 +490,8 @@ struct WKWebExtensionContextTests {
 
         #expect(!testExtension.errors.isEmpty)
         #expect(!testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
-        #expect(!testContext.hasInjectedContent(for: exampleURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
+        #expect(testContext.hasInjectedContent(for: exampleURL) == false)
 
         testManifestDictionary["content_scripts"] = ["invalid": true]
         testExtension = try #require(WKWebExtension(manifestDictionary: testManifestDictionary))
@@ -499,8 +499,8 @@ struct WKWebExtensionContextTests {
 
         #expect(!testExtension.errors.isEmpty)
         #expect(!testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
-        #expect(!testContext.hasInjectedContent(for: exampleURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
+        #expect(testContext.hasInjectedContent(for: exampleURL) == false)
 
         testManifestDictionary["content_scripts"] = [["js": ["test.js"], "matches": []]]
         testExtension = try #require(WKWebExtension(manifestDictionary: testManifestDictionary))
@@ -508,8 +508,8 @@ struct WKWebExtensionContextTests {
 
         #expect(!testExtension.errors.isEmpty)
         #expect(!testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
-        #expect(!testContext.hasInjectedContent(for: exampleURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
+        #expect(testContext.hasInjectedContent(for: exampleURL) == false)
 
         testManifestDictionary["content_scripts"] = [["js": ["test.js"], "matches": ["*://*.example.com/"], "run_at": "invalid"]]
         testExtension = try #require(WKWebExtension(manifestDictionary: testManifestDictionary))
@@ -517,7 +517,7 @@ struct WKWebExtensionContextTests {
 
         #expect(!testExtension.errors.isEmpty)
         #expect(testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
         #expect(testContext.hasInjectedContent(for: exampleURL))
 
         testManifestDictionary["content_scripts"] = [["js": ["test.js"], "matches": ["*://*.example.com/"], "world": "INVALID"]]
@@ -526,7 +526,7 @@ struct WKWebExtensionContextTests {
 
         #expect(!testExtension.errors.isEmpty)
         #expect(testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
         #expect(testContext.hasInjectedContent(for: exampleURL))
 
         testManifestDictionary["content_scripts"] = [
@@ -537,7 +537,7 @@ struct WKWebExtensionContextTests {
 
         #expect(!testExtension.errors.isEmpty)
         #expect(testContext.hasInjectedContent)
-        #expect(!testContext.hasInjectedContent(for: webkitURL))
+        #expect(testContext.hasInjectedContent(for: webkitURL) == false)
         #expect(testContext.hasInjectedContent(for: exampleURL))
     }
 
@@ -1634,7 +1634,7 @@ struct WKWebExtensionContextTests {
             topOrigin: oldOriginURL,
             type: WKWebsiteDataTypeServiceWorkerRegistrations
         )
-        #expect(!FileManager.default.fileExists(atPath: oldServiceWorkerDirectoryPath))
+        #expect(FileManager.default.fileExists(atPath: oldServiceWorkerDirectoryPath) == false)
 
         try manager.controller.unload(context)
         manager.context = nil
@@ -1656,11 +1656,11 @@ struct WKWebExtensionContextTests {
         manager.context = newContext
         try await manager.waitForTestMessage("Migrated")
 
-        #expect(!FileManager.default.fileExists(atPath: oldLocalStorageDirectoryPath))
-        #expect(!FileManager.default.fileExists(atPath: oldServiceWorkerDirectoryPath))
+        #expect(FileManager.default.fileExists(atPath: oldLocalStorageDirectoryPath) == false)
+        #expect(FileManager.default.fileExists(atPath: oldServiceWorkerDirectoryPath) == false)
 
         let oldOriginDirectory = (oldLocalStorageDirectoryPath as NSString).deletingLastPathComponent
-        #expect(!FileManager.default.fileExists(atPath: oldOriginDirectory))
+        #expect(FileManager.default.fileExists(atPath: oldOriginDirectory) == false)
     }
 }
 

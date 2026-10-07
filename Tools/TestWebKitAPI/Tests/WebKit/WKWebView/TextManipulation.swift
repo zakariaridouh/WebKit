@@ -3685,7 +3685,7 @@ struct TextManipulationTests {
 
         let description = token.description
         #expect(description.contains("foo_is_the_identifier"))
-        #expect(!description.contains("bar_is_the_content"))
+        #expect(description.contains("bar_is_the_content") == false)
 
         let debugDescription = token.debugDescription
         #expect(debugDescription.contains("foo_is_the_identifier"))
@@ -3698,13 +3698,13 @@ struct TextManipulationTests {
         tokenA.identifier = "A"
         tokenA.content = "A"
 
-        #expect(!tokenA.isEqual(to: nil, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: nil, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: nil, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: nil, includingContentEquality: false) == false)
 
         tokenA.identifier = nil
         tokenA.content = nil
-        #expect(!tokenA.isEqual(to: nil, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: nil, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: nil, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: nil, includingContentEquality: false) == false)
     }
 
     @Test
@@ -3720,7 +3720,7 @@ struct TextManipulationTests {
         // Same identifiers, different content.
         token1.content = "1"
         token2.content = "2"
-        #expect(!token1.isEqual(to: token2, includingContentEquality: true))
+        #expect(token1.isEqual(to: token2, includingContentEquality: true) == false)
         #expect(token1.isEqual(to: token2, includingContentEquality: false))
 
         // Same identifiers, different exclusion.
@@ -3728,14 +3728,14 @@ struct TextManipulationTests {
         token2.isExcluded = true
         token1.content = nil
         token2.content = nil
-        #expect(!token1.isEqual(to: token2, includingContentEquality: true))
-        #expect(!token1.isEqual(to: token2, includingContentEquality: false))
+        #expect(token1.isEqual(to: token2, includingContentEquality: true) == false)
+        #expect(token1.isEqual(to: token2, includingContentEquality: false) == false)
 
         // Same identifiers, different exclusion and different content.
         token1.content = "1"
         token2.content = "2"
-        #expect(!token1.isEqual(to: token2, includingContentEquality: true))
-        #expect(!token1.isEqual(to: token2, includingContentEquality: false))
+        #expect(token1.isEqual(to: token2, includingContentEquality: true) == false)
+        #expect(token1.isEqual(to: token2, includingContentEquality: false) == false)
     }
 
     @Test
@@ -3745,28 +3745,28 @@ struct TextManipulationTests {
         let tokenB = _WKTextManipulationToken()
         tokenB.identifier = "B"
 
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
 
         // Different identifiers, same content.
         tokenA.content = "content"
         tokenB.content = "content"
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
 
         // Different identifiers, same exclusion.
         tokenA.content = nil
         tokenB.content = nil
         tokenA.isExcluded = true
         tokenB.isExcluded = true
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
 
         // Different identifiers, same content and same exclusion.
         tokenA.content = "content"
         tokenB.content = "content"
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
     }
 
     @Test
@@ -3778,8 +3778,8 @@ struct TextManipulationTests {
         let tokenC = _WKTextManipulationToken()
         #expect(tokenC.identifier == nil)
 
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: true))
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: false))
 
@@ -3787,8 +3787,8 @@ struct TextManipulationTests {
         tokenA.content = "content"
         tokenB.content = "content"
         tokenC.content = "content"
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: true))
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: false))
 
@@ -3796,9 +3796,9 @@ struct TextManipulationTests {
         tokenA.content = "contentA"
         tokenB.content = "contentB"
         tokenC.content = "contentC"
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
-        #expect(!tokenA.isEqual(to: tokenC, includingContentEquality: true))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
+        #expect(tokenA.isEqual(to: tokenC, includingContentEquality: true) == false)
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: false))
     }
 
@@ -3811,8 +3811,8 @@ struct TextManipulationTests {
         let tokenC = _WKTextManipulationToken()
         tokenC.identifier = ""
 
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: true))
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: false))
 
@@ -3820,8 +3820,8 @@ struct TextManipulationTests {
         tokenA.content = "content"
         tokenB.content = "content"
         tokenC.content = "content"
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: true))
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: false))
 
@@ -3829,9 +3829,9 @@ struct TextManipulationTests {
         tokenA.content = "contentA"
         tokenB.content = "contentB"
         tokenC.content = "contentC"
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: false))
-        #expect(!tokenA.isEqual(to: tokenC, includingContentEquality: true))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false) == false)
+        #expect(tokenA.isEqual(to: tokenC, includingContentEquality: true) == false)
         #expect(tokenA.isEqual(to: tokenC, includingContentEquality: false))
     }
 
@@ -3848,11 +3848,11 @@ struct TextManipulationTests {
         #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false))
 
         tokenB.content = ""
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
         #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false))
 
         tokenB.content = "B"
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
         #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false))
     }
 
@@ -3869,11 +3869,11 @@ struct TextManipulationTests {
         #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false))
 
         tokenB.content = nil
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
         #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false))
 
         tokenB.content = "B"
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
         #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false))
     }
 
@@ -3914,7 +3914,7 @@ struct TextManipulationTests {
         tokenB.identifier = "A"
         tokenB.content = "content "
 
-        #expect(!tokenA.isEqual(to: tokenB, includingContentEquality: true))
+        #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true) == false)
         #expect(tokenA.isEqual(to: tokenB, includingContentEquality: false))
     }
 
@@ -3944,8 +3944,8 @@ struct TextManipulationTests {
         #expect(tokenA.isEqual(to: tokenB, includingContentEquality: true))
         #expect(tokenA.isEqual(tokenB))
 
-        #expect(!tokenA.isEqual(to: tokenC, includingContentEquality: true))
-        #expect(!tokenA.isEqual(tokenC))
+        #expect(tokenA.isEqual(to: tokenC, includingContentEquality: true) == false)
+        #expect(tokenA.isEqual(tokenC) == false)
     }
 
     @Test
@@ -3955,8 +3955,8 @@ struct TextManipulationTests {
         token.content = "content"
         let string = "content"
 
-        #expect(!token.isEqual(string))
-        #expect(!token.isEqual(nil))
+        #expect(token.isEqual(string) == false)
+        #expect(token.isEqual(nil) == false)
     }
 
     @Test
@@ -3975,8 +3975,8 @@ struct TextManipulationTests {
         let description = item.description
         #expect(description.contains("public_identifier_A"))
         #expect(description.contains("public_identifier_B"))
-        #expect(!description.contains("private_content_A"))
-        #expect(!description.contains("private_content_B"))
+        #expect(description.contains("private_content_A") == false)
+        #expect(description.contains("private_content_B") == false)
         #expect(description.contains("public_item_identifier"))
     }
 
@@ -3984,8 +3984,8 @@ struct TextManipulationTests {
     func textManipulationItemEqualityToNilItem() {
         let item = _WKTextManipulationItem(identifier: "A", tokens: [])
 
-        #expect(!item.isEqual(to: nil, includingContentEquality: true))
-        #expect(!item.isEqual(to: nil, includingContentEquality: false))
+        #expect(item.isEqual(to: nil, includingContentEquality: true) == false)
+        #expect(item.isEqual(to: nil, includingContentEquality: false) == false)
     }
 
     @Test
@@ -4030,7 +4030,7 @@ struct TextManipulationTests {
         let itemA = _WKTextManipulationItem(identifier: "A", tokens: [token1])
         let itemB = _WKTextManipulationItem(identifier: "A", tokens: [token2])
 
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: true))
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: true) == false)
         #expect(itemA.isEqual(to: itemB, includingContentEquality: false))
     }
 
@@ -4044,8 +4044,8 @@ struct TextManipulationTests {
         let itemA = _WKTextManipulationItem(identifier: "A", tokens: [tokenA1, tokenA2])
         let itemB = _WKTextManipulationItem(identifier: "A", tokens: [tokenB2, tokenB1])
 
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: true))
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: false))
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: true) == false)
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: false) == false)
     }
 
     @Test
@@ -4084,11 +4084,11 @@ struct TextManipulationTests {
         let itemA = _WKTextManipulationItem(identifier: "A", tokens: [tokenA1, tokenA2, tokenA3])
         let itemB = _WKTextManipulationItem(identifier: "A", tokens: [tokenB1, tokenB2])
 
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: true))
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: false))
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: true) == false)
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: false) == false)
 
-        #expect(!itemB.isEqual(to: itemA, includingContentEquality: true))
-        #expect(!itemB.isEqual(to: itemA, includingContentEquality: false))
+        #expect(itemB.isEqual(to: itemA, includingContentEquality: true) == false)
+        #expect(itemB.isEqual(to: itemA, includingContentEquality: false) == false)
     }
 
     @Test
@@ -4098,8 +4098,8 @@ struct TextManipulationTests {
         let itemA = _WKTextManipulationItem(identifier: "A", tokens: [tokenA])
         let itemB = _WKTextManipulationItem(identifier: "A", tokens: [tokenB])
 
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: true))
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: false))
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: true) == false)
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: false) == false)
     }
 
     @Test
@@ -4119,8 +4119,8 @@ struct TextManipulationTests {
         let itemA = _WKTextManipulationItem(identifier: "A", tokens: [tokenA])
         let itemB = _WKTextManipulationItem(identifier: "A", tokens: [tokenB])
 
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: true))
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: false))
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: true) == false)
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: false) == false)
     }
 
     @Test
@@ -4139,9 +4139,9 @@ struct TextManipulationTests {
 
         tokenB2.content = "something else"
 
-        #expect(!itemA.isEqual(to: itemB, includingContentEquality: true))
+        #expect(itemA.isEqual(to: itemB, includingContentEquality: true) == false)
         #expect(itemA.isEqual(to: itemB, includingContentEquality: false))
-        #expect(!itemA.isEqual(itemB))
+        #expect(itemA.isEqual(itemB) == false)
     }
 
     @Test
@@ -4150,7 +4150,7 @@ struct TextManipulationTests {
         _ = _WKTextManipulationItem(identifier: "A", tokens: [token])
         let string = "content"
 
-        #expect(!token.isEqual(string))
-        #expect(!token.isEqual(nil))
+        #expect(token.isEqual(string) == false)
+        #expect(token.isEqual(nil) == false)
     }
 }

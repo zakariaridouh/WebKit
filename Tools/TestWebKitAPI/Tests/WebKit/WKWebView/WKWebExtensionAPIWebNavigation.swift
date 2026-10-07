@@ -866,8 +866,8 @@ struct WKWebExtensionAPIWebNavigationTests {
         let httpsExampleURL = try #require(URL(string: "https://example.com"))
 
         #expect(filter.matchesURL(httpsAppleURL))
-        #expect(!filter.matchesURL(httpAppleURL))
-        #expect(!filter.matchesURL(httpsExampleURL))
+        #expect(filter.matchesURL(httpAppleURL) == false)
+        #expect(filter.matchesURL(httpsExampleURL) == false)
     }
 
     @Test
@@ -892,8 +892,8 @@ struct WKWebExtensionAPIWebNavigationTests {
 
         #expect(filter.matchesURL(httpAppleURL))
         #expect(filter.matchesURL(httpExampleURL))
-        #expect(!filter.matchesURL(aboutBlankURL))
-        #expect(!filter.matchesURL(devNullURL))
+        #expect(filter.matchesURL(aboutBlankURL) == false)
+        #expect(filter.matchesURL(devNullURL) == false)
     }
 
     @Test

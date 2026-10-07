@@ -128,7 +128,7 @@ extension AppKitGesturesTests.Quirks {
             "return window.events;"
         }
         #expect(events.contains("contextmenu"))
-        #expect(!events.contains("click"))
+        #expect(events.contains("click") == false)
     }
 }
 
