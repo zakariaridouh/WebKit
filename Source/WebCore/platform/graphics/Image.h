@@ -89,7 +89,8 @@ public:
     virtual bool renderingTaintsOrigin() const { return false; }
 
     WEBCORE_EXPORT static Image& nullImage();
-    bool isNull() const { return size().isEmpty(); }
+
+    virtual bool hasSomethingToDraw() const = 0;
 
     virtual FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const = 0;
     virtual bool hasDensityCorrectedSize() const { return false; }

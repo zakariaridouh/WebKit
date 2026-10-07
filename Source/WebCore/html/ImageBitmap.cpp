@@ -1095,7 +1095,7 @@ void ImageBitmap::createFromBuffer(ScriptExecutionContext& scriptExecutionContex
     auto observer = ImageBitmapImageObserver::create(mimeType, expectedContentLength, sourceURL);
     auto image = BitmapImage::create(observer.ptr());
     auto result = image->setData(sharedBuffer.copyRef(), true);
-    if (result != EncodedDataStatus::Complete || image->isNull()) {
+    if (result != EncodedDataStatus::Complete || !image->hasSomethingToDraw()) {
         completionHandler(Exception { ExceptionCode::InvalidStateError, "Cannot decode the data in the argument to createImageBitmap"_s });
         return;
     }

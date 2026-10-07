@@ -259,7 +259,7 @@ void Image::dump(TextStream& ts) const
     if (isAnimated())
         ts.dumpProperty("animated"_s, isAnimated());
 
-    if (isNull())
+    if (!hasSomethingToDraw())
         ts.dumpProperty("is-null-image"_s, true);
 
     ts.dumpProperty("size"_s, size());

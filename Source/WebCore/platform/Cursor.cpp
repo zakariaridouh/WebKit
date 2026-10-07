@@ -39,7 +39,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(Cursor);
 
 IntPoint determineHotSpot(Image* image, const IntPoint& specifiedHotSpot)
 {
-    if (image->isNull())
+    if (!image->hasSomethingToDraw())
         return IntPoint();
 
     // Hot spot must be inside cursor rectangle.

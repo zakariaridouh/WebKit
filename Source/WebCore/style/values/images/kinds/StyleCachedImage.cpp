@@ -387,7 +387,7 @@ ImageDrawResult CachedImage::draw(GraphicsContext& context, const RenderElement&
         return drawSVGResource(context, referenced, destination, source, options);
 
     RefPtr image = resolvedImage();
-    if (!image || image->isNull())
+    if (!image || !image->hasSomethingToDraw())
         return ImageDrawResult::DidNothing;
 
     return drawResolved(context, renderer, *image, concreteObjectSize, destination, source, options);
@@ -470,7 +470,7 @@ bool CachedImage::canDraw(const RenderElement& renderer) const
     if (renderSVGResource(&renderer) || legacyRenderSVGResource(&renderer))
         return true;
     RefPtr image = m_cachedImage ? protect(m_cachedImage)->image() : nullptr;
-    return image && !image->isNull();
+    return image && image->hasSomethingToDraw();
 }
 
 bool CachedImage::canDrawAtSize(const RenderElement& renderer, const FloatSize& size) const

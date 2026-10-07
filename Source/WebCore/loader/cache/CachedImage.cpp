@@ -123,7 +123,7 @@ void CachedImage::didAddClient(CachedResourceClient& client)
     }
 
     ASSERT(client.resourceClientType() == CachedImageClient::expectedType());
-    if (m_image && !protect(m_image)->isNull())
+    if (m_image && protect(m_image)->hasSomethingToDraw())
         downcast<CachedImageClient>(client).imageChanged(this);
 
     if (RefPtr image = m_image)
@@ -448,7 +448,7 @@ void CachedImage::updateBufferInternal(const FragmentedSharedBuffer& data)
     if (encodedDataStatus > EncodedDataStatus::Error && encodedDataStatus < EncodedDataStatus::SizeAvailable)
         return;
 
-    if (encodedDataStatus == EncodedDataStatus::Error || protect(m_image)->isNull()) {
+    if (encodedDataStatus == EncodedDataStatus::Error || !protect(m_image)->hasSomethingToDraw()) {
         // Image decoding failed. Either we need more image data or the image data is malformed.
         error(errorOccurred() ? status() : DecodeError);
         if (inCache())
@@ -518,7 +518,7 @@ void CachedImage::finishLoading(const FragmentedSharedBuffer* data, const Networ
 
     EncodedDataStatus encodedDataStatus = updateImageData(true);
 
-    if (encodedDataStatus == EncodedDataStatus::Error || protect(m_image)->isNull()) {
+    if (encodedDataStatus == EncodedDataStatus::Error || !protect(m_image)->hasSomethingToDraw()) {
         // Image decoding failed; the image data is malformed.
         error(errorOccurred() ? status() : DecodeError);
         if (inCache())

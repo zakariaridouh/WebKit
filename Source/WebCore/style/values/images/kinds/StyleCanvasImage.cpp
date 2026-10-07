@@ -90,7 +90,7 @@ ImageDrawResult CanvasImage::draw(GraphicsContext& context, const RenderElement&
         return ImageDrawResult::DidNothing;
 
     RefPtr image = resolvedImage(renderer);
-    if (!image || image->isNull())
+    if (!image || !image->hasSomethingToDraw())
         return ImageDrawResult::DidNothing;
 
     return drawResolved(context, renderer, *image, concreteObjectSize, destination, source, options);
@@ -132,7 +132,7 @@ bool CanvasImage::knownToBeOpaque(const RenderElement&) const
 bool CanvasImage::canDraw(const RenderElement& renderer) const
 {
     RefPtr image = resolvedImage(renderer);
-    return image && !image->isNull();
+    return image && image->hasSomethingToDraw();
 }
 
 bool CanvasImage::canDrawAtSize(const RenderElement& renderer, const FloatSize& size) const

@@ -72,6 +72,8 @@ private:
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const override;
     NaturalDimensions unorientedNaturalDimensions() const override;
 
+    bool hasSomethingToDraw() const final { return !size().isEmpty(); }
+
     bool shouldDrawFromCachedSubimage(GraphicsContext&) const override;
     bool mustDrawFromCachedSubimage(GraphicsContext&) const override;
 

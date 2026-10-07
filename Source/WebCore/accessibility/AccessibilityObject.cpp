@@ -3402,7 +3402,7 @@ FloatSize AccessibilityObject::imageDataSize() const
 RefPtr<SharedBuffer> AccessibilityObject::imageData(const AXImageDataParameters& parameters) const
 {
     RefPtr image = imageFromRenderer(renderer());
-    if (!image || image->isNull())
+    if (!image || !image->hasSomethingToDraw())
         return nullptr;
 
     auto nativeSize = image->size();

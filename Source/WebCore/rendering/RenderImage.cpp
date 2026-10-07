@@ -552,7 +552,7 @@ void RenderImage::paintMissingImageState(PaintInfo& paintInfo, const LayoutPoint
     RefPtr image = cachedImage ? cachedImage->image() : nullptr;
     auto& context = paintInfo.context();
 
-    if (shouldDisplayBrokenImageIcon() && image && !image->isNull() && usableSize.width() >= image->width() && usableSize.height() >= image->height()) {
+    if (shouldDisplayBrokenImageIcon() && image && image->hasSomethingToDraw() && usableSize.width() >= image->width() && usableSize.height() >= image->height()) {
         // Call brokenImage() explicitly to ensure we get the broken image icon at the appropriate resolution.
         auto brokenImageAndImageScaleFactor = CachedImage::brokenImage(deviceScaleFactor);
         RefPtr brokenImage = brokenImageAndImageScaleFactor.first.get();

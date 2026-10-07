@@ -266,7 +266,7 @@ RefPtr<FilterEffect> SVGFEImageElement::createFilterEffect(const FilterEffectVec
 {
     if (RefPtr cachedImage = m_cachedImage) {
         RefPtr image = cachedImage->image();
-        if (!image || image->isNull())
+        if (!image || !image->hasSomethingToDraw())
             return nullptr;
 
         RefPtr nativeImage = image->currentPreTransformedNativeImage(ConcreteObjectSize::fixed(image->size()));

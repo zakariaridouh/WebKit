@@ -58,6 +58,8 @@ public:
 
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const final { return m_intrinsicSize; }
 
+    bool hasSomethingToDraw() const final { return !m_intrinsicSize.isEmpty(); }
+
     bool renderingTaintsOrigin() const final;
 
     void startAnimation() final;
