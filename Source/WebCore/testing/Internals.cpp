@@ -6926,6 +6926,7 @@ void Internals::markContextAsInsecure()
         return;
 
     document->securityOrigin().setIsPotentiallyTrustworthy(false);
+    document->markAsInsecureContextForTesting();
 }
 
 void Internals::postTask(Ref<VoidCallback>&& callback)

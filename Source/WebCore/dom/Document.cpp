@@ -8552,6 +8552,8 @@ void Document::initSecurityContext()
         setBaseURLOverride(parentDocument->baseURL());
     }
 
+    m_isSecureContext = computeIsSecureContext();
+
     if (!SecurityPolicy::shouldInheritSecurityOriginFromOwner(m_url))
         return;
 
@@ -8576,6 +8578,7 @@ void Document::initSecurityContext()
     setCrossOriginEmbedderPolicy(ownerFrame->document()->crossOriginEmbedderPolicy());
     setDocumentIsolationPolicy(ownerFrame->document()->documentIsolationPolicy());
     setIsOriginKeyed(ownerFrame->document()->isOriginKeyed());
+    m_isSecureContext = ownerFrame->document()->m_isSecureContext;
 
     // https://html.spec.whatwg.org/multipage/browsers.html#creating-a-new-browsing-context (Step 12)
     // If creator is non-null and creator's origin is same origin with creator's relevant settings object's top-level origin, then set coop
@@ -8683,39 +8686,35 @@ static inline bool isDocumentSecure(const Document& document)
     return document.securityOrigin().isPotentiallyTrustworthy();
 }
 
-static bool isFrameDocumentSecure(const Frame& frame)
-{
-    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame))
-        return isDocumentSecure(*protect(localFrame->document()));
-    RefPtr securityOrigin = frame.frameDocumentSecurityOrigin();
-    return !securityOrigin || securityOrigin->isPotentiallyTrustworthy();
-}
-
-// https://w3c.github.io/webappsec-secure-contexts/#is-settings-object-contextually-secure
 void Document::setLoadSourceOriginOverrideForTesting(RefPtr<SecurityOrigin>&& origin)
 {
     m_loadSourceOriginOverrideForTesting = WTF::move(origin);
 }
 
+// https://w3c.github.io/webappsec-secure-contexts/#is-settings-object-contextually-secure
+bool Document::computeIsSecureContext() const
+{
+    // A provisional frame is not in the frame tree yet.
+    RefPtr parentFrame = m_frame->tree().parent();
+    if (!parentFrame)
+        parentFrame = m_frame->loader().client().provisionalParentFrame();
+    if (!parentFrame)
+        return isDocumentSecure(*this);
+
+    auto parentSecurityPolicy = parentFrame->frameDocumentSecurityPolicy();
+    if (!parentSecurityPolicy || parentSecurityPolicy->isSecureContext == IsSecureContext::No)
+        return false;
+
+    return isDocumentSecure(*this);
+}
+
 bool Document::isSecureContext() const
 {
-    if (!m_frame)
-        return true;
     if (!settings().secureContextChecksEnabled())
         return true;
     if (page() && page()->isServiceWorkerPage())
         return true;
-
-    for (Ref frame : ancestorFrames(*m_frame)) {
-        if (!isFrameDocumentSecure(frame))
-            return false;
-    }
-
-    // FIXME: Determine this once per navigation instead. A provisional frame is not in the frame tree yet.
-    if (!m_frame->isMainFrame() && !m_frame->tree().parent() && !isFrameDocumentSecure(m_frame->mainFrame()))
-        return false;
-
-    return isDocumentSecure(*this);
+    return m_isSecureContext;
 }
 
 bool Document::isInCrossOriginIsolatedAgentCluster() const

@@ -190,6 +190,10 @@ WebFrameProxy::WebFrameProxy(WebPageProxy& page, FrameProcess& process, FrameIde
         frameLoadState().setURL(WTF::move(*previousURL));
 
     updateDocumentSecurityOrigin(parent ? parent : opener, ForInitialization::Yes);
+
+    // The initial about:blank document is as secure as its creator.
+    if (RefPtr creator = parent ? parent : opener; creator && creator->m_documentSecurityPolicy)
+        m_documentSecurityPolicy = DocumentSecurityPolicy { { }, { }, creator->m_documentSecurityPolicy->isSecureContext };
 }
 
 WebFrameProxy::~WebFrameProxy()

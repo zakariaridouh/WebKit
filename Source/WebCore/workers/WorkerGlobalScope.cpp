@@ -121,6 +121,7 @@ WorkerGlobalScope::WorkerGlobalScope(WorkerThreadType type, const WorkerParamete
     , m_userAgent(params.userAgent)
     , m_isOnline(params.isOnline)
     , m_shouldBypassMainWorldContentSecurityPolicy(params.shouldBypassMainWorldContentSecurityPolicy)
+    , m_isSecureContext(params.isSecureContext == IsSecureContext::Yes)
     , m_topOrigin(WTF::move(topOrigin))
     , m_connectionProxy(connectionProxy)
     , m_socketProvider(socketProvider)
@@ -206,7 +207,7 @@ bool WorkerGlobalScope::isSecureContext() const
     if (!settingsValues().secureContextChecksEnabled)
         return true;
 
-    return m_topOrigin->isPotentiallyTrustworthy();
+    return m_isSecureContext;
 }
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#parse-a-url

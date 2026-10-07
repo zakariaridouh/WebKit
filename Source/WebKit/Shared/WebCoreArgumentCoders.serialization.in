@@ -7232,9 +7232,12 @@ enum class WebCore::ShouldGoToHistoryItem : uint8_t {
     ItemUnknown
 };
 
+enum class WebCore::IsSecureContext : bool;
+
 struct WebCore::DocumentSecurityPolicy {
     WebCore::CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;
     WebCore::CrossOriginOpenerPolicy crossOriginOpenerPolicy;
+    WebCore::IsSecureContext isSecureContext;
 };
 
 header: <WebCore/ProcessSwapDisposition.h>

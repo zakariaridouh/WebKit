@@ -78,7 +78,8 @@ WorkerParameters WorkerParameters::isolatedCopy() const
         advancedPrivacyProtections,
         noiseInjectionHashSalt,
         agentClusterID.isolatedCopy(),
-        networkLoadPolicy.isolatedCopy()
+        networkLoadPolicy.isolatedCopy(),
+        isSecureContext
     };
 }
 

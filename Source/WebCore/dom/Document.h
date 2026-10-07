@@ -636,6 +636,8 @@ public:
     bool shouldPreventEnteringBackForwardCacheForTesting() const { return m_shouldPreventEnteringBackForwardCacheForTesting; }
     void preventEnteringBackForwardCacheForTesting() { m_shouldPreventEnteringBackForwardCacheForTesting = true; }
 
+    void markAsInsecureContextForTesting() { m_isSecureContext = false; }
+
     SecurityOrigin* loadSourceOriginOverrideForTesting() const { return m_loadSourceOriginOverrideForTesting.get(); }
     WEBCORE_EXPORT void setLoadSourceOriginOverrideForTesting(RefPtr<SecurityOrigin>&&);
 
@@ -2294,6 +2296,8 @@ private:
 
     bool shouldEnforceHTTP09Sandbox() const;
 
+    bool computeIsSecureContext() const;
+
     void NODELETE platformSuspendOrStopActiveDOMObjects();
 
     void collectHighlightRangesFromRegister(Vector<WeakPtr<HighlightRange>>&, const HighlightRegistry&);
@@ -2821,6 +2825,7 @@ private:
     bool m_isNonRenderedPlaceholder : 1 { false };
     bool m_sawElementsInKnownNamespaces : 1 { false };
     bool m_isSrcdocDocument : 1 { false };
+    bool m_isSecureContext : 1 { true };
     bool m_hasUnpartitionedStorageAccess : 1 { false };
     bool m_hasPreparedForDestruction : 1 { false };
     bool m_hasStyleWithViewportUnits : 1 { false };

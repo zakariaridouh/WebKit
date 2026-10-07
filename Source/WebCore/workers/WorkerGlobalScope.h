@@ -232,6 +232,7 @@ private:
 
     bool m_isOnline;
     bool m_shouldBypassMainWorldContentSecurityPolicy;
+    bool m_isSecureContext;
 
     const Ref<SecurityOrigin> m_topOrigin;
 
