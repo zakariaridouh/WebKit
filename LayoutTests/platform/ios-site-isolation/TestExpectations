@@ -11,7 +11,6 @@ imported/w3c/web-platform-tests/content-security-policy/inheritance/history.sub.
 http/tests/resourceLoadStatistics/add-blocking-to-redirect.html [ Timeout ]
 http/tests/resourceLoadStatistics/strip-referrer-to-origin-for-third-party-redirects.html [ Timeout ]
 http/tests/resourceLoadStatistics/strip-referrer-to-origin-for-third-party-requests.html [ Timeout ]
-http/tests/security/strip-referrer-to-origin-for-third-party-redirects-in-private-mode.html [ Timeout ]
 http/tests/workers/service/resultingClientId.https.html [ Timeout ]
 platform/ios/ios/plugin/youtube-flash-plugin-iframe.html [ Timeout ]
 http/tests/navigation/cross-site-iframe-nav-with-bfcache.html [ Timeout ]
