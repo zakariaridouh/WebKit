@@ -10334,6 +10334,9 @@ fast/text-extraction/debug-text-extraction-max-depth-no-crash.html [ Timeout ]
 fast/text-extraction/debug-text-extraction-offscreen-password-fields.html [ Timeout ]
 fast/text-extraction/debug-text-extraction-shorten-urls.html [ Timeout ]
 fast/text-extraction/text-extraction-scroll-to-next-page.html [ Timeout ]
+fast/text-extraction/debug-text-extraction-autofilled-attributes.html [ Timeout ]
+fast/text-extraction/debug-text-extraction-highlight-text.html [ Timeout ]
+fast/text-extraction/debug-text-extraction-offscreen-button.html [ Timeout ]
 
 webkit.org/b/325809 fast/scrolling/ios/overflow-scrolling-touch-enabled-stacking.html [ Pass ImageOnlyFailure ]
 
