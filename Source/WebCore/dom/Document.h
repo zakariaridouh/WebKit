@@ -1551,8 +1551,8 @@ public:
     unsigned requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
     void cancelAnimationFrame(unsigned id);
 
-    int requestIdleCallback(Ref<IdleRequestCallback>&&, Seconds timeout);
-    void cancelIdleCallback(int id);
+    unsigned requestIdleCallback(Ref<IdleRequestCallback>&&, Seconds timeout);
+    void cancelIdleCallback(unsigned id);
     bool NODELETE hasPendingIdleCallback() const;
     IdleCallbackController* idleCallbackController() const { return m_idleCallbackController.get(); }
 

@@ -263,8 +263,8 @@ public:
     unsigned webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
     void cancelAnimationFrame(unsigned id);
 
-    int requestIdleCallback(Ref<IdleRequestCallback>&&, const IdleRequestOptions&);
-    void cancelIdleCallback(int id);
+    unsigned requestIdleCallback(Ref<IdleRequestCallback>&&, const IdleRequestOptions&);
+    void cancelIdleCallback(unsigned id);
 
     // ImageBitmap
     void createImageBitmap(ImageBitmap::Source&&, ImageBitmapOptions&&, ImageBitmap::Promise&&);
