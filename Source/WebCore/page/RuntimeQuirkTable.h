@@ -1,6 +1,4 @@
 /*
- * <%= @warning %>
- *
  * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,40 +25,31 @@
 
 #pragma once
 
+#include <WebCore/QuirkMatchPattern.h>
+#include <WebCore/QuirkTable.h>
 #include <WebCore/QuirksData.h>
-#include <wtf/Forward.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/WeakPtr.h>
+#include <optional>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class Document;
-class Element;
-class Node;
-class WeakPtrImplWithEventTargetData;
+struct RuntimeQuirk {
+    Vector<QuirkMatchPattern> matches;
+    Vector<QuirkMatchPattern> embeddedMatches;
+    Vector<QuirkMatchPattern> excludeMatches;
+    String queryContains;
+    String fragmentContains;
+    std::optional<URLEnvironment> environment;
 
-// The accessors QuirkBehaviors.yaml describes fully. Quirks derives from this and adds the custom ones.
-class QuirksAccessors {
-    WTF_MAKE_NONCOPYABLE(QuirksAccessors);
-public:
-<%- @behaviors.select(&:hasGeneratedAccessor?).each do |behavior| -%>
-    <%= behavior.declaration %>
-<%- end -%>
+    Vector<RuntimeQuirkBehavior> behaviors;
 
-    WEBCORE_EXPORT static bool elementMatchesSelectorCondition(const String& selector, const Node*);
-    WEBCORE_EXPORT static RefPtr<Element> firstElementMatchingSelectorCondition(const String& selector, Document&);
+    WEBCORE_EXPORT bool appliesTo(const URLMatchContext& topContext, const URLMatchContext& documentContext, IsTopDocument) const;
+    void apply(QuirksData&) const;
+};
 
-protected:
-    explicit QuirksAccessors(Document&);
-    ~QuirksAccessors();
-
-    bool needsQuirks() const;
-    bool behaviorAppliesToNode(QuirkBehaviorID, const Node*) const;
-    bool behaviorAppliesToDocument(QuirkBehaviorID) const;
-    RefPtr<Element> elementMatchingDocumentSelectorCondition(QuirkBehaviorID) const;
-
-    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
-    mutable QuirksData m_quirksData;
+struct RuntimeQuirkTable {
+    Vector<RuntimeQuirk> quirks;
 };
 
 } // namespace WebCore

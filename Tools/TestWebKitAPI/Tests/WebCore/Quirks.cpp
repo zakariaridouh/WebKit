@@ -33,6 +33,7 @@
 #include <WebCore/QuirkTable.h>
 #include <WebCore/Quirks.h>
 #include <WebCore/ResourceRequest.h>
+#include <WebCore/RuntimeQuirkTable.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/Settings.h>
 #include <array>
@@ -68,21 +69,31 @@ static WebCore::QuirksData resolveQuirksForTopURL(ASCIILiteral urlString)
     return WebCore::resolveTopURLQuirks(URL { urlString });
 }
 
-static bool matchesTopURL(const WebCore::QuirkURLMatch& match, ASCIILiteral urlString)
+static Vector<WebCore::QuirkMatchPattern> patterns(const Vector<ASCIILiteral>& strings)
 {
-    return match.matches(WebCore::URLMatchContext { URL { urlString } }, WebCore::URLMatchContext { URL { urlString } }, WebCore::IsTopDocument::Yes);
+    return WTF::map(strings, [](ASCIILiteral string) {
+        auto pattern = WebCore::QuirkMatchPattern::parse(string);
+        EXPECT_TRUE(pattern) << string.characters();
+        return *pattern;
+    });
 }
 
-static bool matchesEmbeddedDocument(const WebCore::QuirkURLMatch& match, ASCIILiteral topURLString, ASCIILiteral documentURLString)
+static bool matchesTopURL(const WebCore::RuntimeQuirk& quirk, ASCIILiteral urlString)
 {
-    return match.matches(WebCore::URLMatchContext { URL { topURLString } }, WebCore::URLMatchContext { URL { documentURLString } }, WebCore::IsTopDocument::No);
+    return quirk.appliesTo(WebCore::URLMatchContext { URL { urlString } }, WebCore::URLMatchContext { URL { urlString } }, WebCore::IsTopDocument::Yes);
 }
 
-static constexpr std::array youTubeEmbedDomains { "youtube.com"_s, "youtube-nocookie.com"_s };
+static bool matchesEmbeddedDocument(const WebCore::RuntimeQuirk& quirk, ASCIILiteral topURLString, ASCIILiteral documentURLString)
+{
+    return quirk.appliesTo(WebCore::URLMatchContext { URL { topURLString } }, WebCore::URLMatchContext { URL { documentURLString } }, WebCore::IsTopDocument::No);
+}
+
+static const Vector<ASCIILiteral> youTubeEmbedPatterns { "*://*.youtube.com/*"_s, "*://*.youtube-nocookie.com/*"_s };
 
 TEST_F(QuirksTest, TopURLMatchIgnoresTheDocumentURL)
 {
-    WebCore::QuirkURLMatch match = WebCore::URLMatch::domain("theguardian.com"_s);
+    WebCore::RuntimeQuirk match { };
+    match.matches = patterns({ "*://*.theguardian.com/*"_s });
 
     EXPECT_TRUE(matchesTopURL(match, "https://www.theguardian.com/film"_s));
 
@@ -93,7 +104,8 @@ TEST_F(QuirksTest, TopURLMatchIgnoresTheDocumentURL)
 
 TEST_F(QuirksTest, EmbeddedDocumentMatchesTheDocumentURLNotTheTopURL)
 {
-    auto match = WebCore::QuirkURLMatch::embeddedDocument(WebCore::URLMatch::domain(youTubeEmbedDomains));
+    WebCore::RuntimeQuirk match { };
+    match.embeddedMatches = patterns(youTubeEmbedPatterns);
 
     EXPECT_TRUE(matchesEmbeddedDocument(match, "https://www.theguardian.com/film"_s, "https://www.youtube.com/embed/abc"_s));
     EXPECT_TRUE(matchesEmbeddedDocument(match, "https://www.example.com/"_s, "https://www.youtube-nocookie.com/embed/abc"_s));
@@ -108,7 +120,9 @@ TEST_F(QuirksTest, EmbeddedDocumentMatchesTheDocumentURLNotTheTopURL)
 
 TEST_F(QuirksTest, EmbeddedDocumentInTopMatchRequiresBothURLsToMatch)
 {
-    auto match = WebCore::QuirkURLMatch::embeddedDocumentInTopMatch(WebCore::URLMatch::anyTopLevelDomain("theguardian"_s), WebCore::URLMatch::domain(youTubeEmbedDomains));
+    WebCore::RuntimeQuirk match { };
+    match.matches = patterns({ "*://*.theguardian.*/*"_s });
+    match.embeddedMatches = patterns(youTubeEmbedPatterns);
 
     EXPECT_TRUE(matchesEmbeddedDocument(match, "https://www.theguardian.com/film"_s, "https://www.youtube.com/embed/abc"_s));
     EXPECT_TRUE(matchesEmbeddedDocument(match, "https://www.theguardian.co.uk/film"_s, "https://www.youtube-nocookie.com/embed/abc"_s));
@@ -120,7 +134,9 @@ TEST_F(QuirksTest, EmbeddedDocumentInTopMatchRequiresBothURLsToMatch)
 
 TEST_F(QuirksTest, EmbeddedMatchesNeverApplyToTheTopDocument)
 {
-    auto match = WebCore::QuirkURLMatch::embeddedDocumentInTopMatch(WebCore::URLMatch::anyURL(), WebCore::URLMatch::domain("youtube.com"_s));
+    WebCore::RuntimeQuirk match { };
+    match.matches = patterns({ "*://*/*"_s });
+    match.embeddedMatches = patterns({ "*://*.youtube.com/*"_s });
 
     EXPECT_TRUE(matchesEmbeddedDocument(match, "https://www.example.com/"_s, "https://www.youtube.com/embed/abc"_s));
     EXPECT_FALSE(matchesTopURL(match, "https://www.youtube.com/watch?v=abc"_s));
@@ -144,6 +160,22 @@ TEST_F(QuirksTest, EmbeddedQuirksResolveFromTheDocumentURL)
 }
 #endif
 
+TEST_F(QuirksTest, EveryCompiledPatternParses)
+{
+    auto expectEveryPatternParses = [](WebCore::URLPatternList patterns) {
+        for (auto pattern : patterns.span())
+            EXPECT_TRUE(WebCore::QuirkMatchPattern::parse(pattern)) << "invalid pattern in the compiled quirk table: " << pattern.characters();
+    };
+
+    for (auto& quirk : WebCore::compiledQuirks()) {
+        expectEveryPatternParses(quirk.matches);
+        expectEveryPatternParses(quirk.embeddedMatches);
+        expectEveryPatternParses(quirk.excludeMatches);
+        for (auto& behavior : quirk.behaviors.span())
+            expectEveryPatternParses(behavior.conditions.secondaryURL);
+    }
+}
+
 TEST_F(QuirksTest, SiteSpecificQuirksResolveWithoutADocument)
 {
     EXPECT_TRUE(resolveQuirksForTopURL("https://www.airindiaexpress.com/"_s).isBehaviorEnabled(WebCore::QuirkBehaviorID::NeedsAirIndiaExpressLayeringQuirk));
@@ -158,11 +190,8 @@ static Vector<String> scriptsForScriptURL(const WebCore::QuirksData& quirks, ASC
     WebCore::URLMatchContext scriptURLContext { URL { scriptURLString } };
 
     for (const auto& behavior : quirks.behaviors()) {
-        if (!behavior.parameters)
-            continue;
-
-        if (behavior.parameters->script.length() && behavior.secondaryURLConditionMatches(scriptURLContext))
-            scripts.append(behavior.parameters->script);
+        if (!behavior.script.isEmpty() && behavior.secondaryURLConditionMatches(scriptURLContext))
+            scripts.append(behavior.script);
     }
 
     return scripts;
@@ -215,8 +244,8 @@ TEST_F(QuirksTest, ParametersAreOnlyReturnedForTheBehaviorThatSuppliedThem)
 TEST_F(QuirksTest, OneQuirkCanCarryDifferentParametersForDifferentScriptURLs)
 {
     using namespace WebCore::QuirkBehaviorConditions;
-    static constexpr auto firstScriptURL = WebCore::URLMatch::host("first.example.com"_s);
-    static constexpr auto secondScriptURL = WebCore::URLMatch::host("second.example.com"_s);
+    static constexpr auto firstScriptURL = "*://first.example.com/*"_s;
+    static constexpr auto secondScriptURL = "*://second.example.com/*"_s;
 
     static constexpr auto behaviors = WTF::toArray({
         WebCore::QuirkBehaviors::needsScriptToEvaluateBeforeRunningScriptFromURLQuirk(WebCore::QuirkParameters::fromScript("firstScript"_s)).when(secondaryURLMatches(firstScriptURL)),
@@ -244,7 +273,7 @@ TEST_F(QuirksTest, OneQuirkCanCarryDifferentParametersForDifferentScriptURLs)
 TEST_F(QuirksTest, EveryMatchingRowContributesWhenSeveralSupplyTheSameBehavior)
 {
     using namespace WebCore::QuirkBehaviorConditions;
-    static constexpr auto anyScriptURL = WebCore::URLMatch::anyURL();
+    static constexpr auto anyScriptURL = "*://*/*"_s;
 
     static constexpr auto behaviors = WTF::toArray({
         WebCore::QuirkBehaviors::needsScriptToEvaluateBeforeRunningScriptFromURLQuirk(WebCore::QuirkParameters::fromScript("firstScript"_s)).when(secondaryURLMatches(anyScriptURL)),
@@ -262,7 +291,7 @@ TEST_F(QuirksTest, EveryMatchingRowContributesWhenSeveralSupplyTheSameBehavior)
 TEST_F(QuirksTest, IdenticalBehaviorsWithParametersAreRecordedOnce)
 {
     using namespace WebCore::QuirkBehaviorConditions;
-    static constexpr auto anyScriptURL = WebCore::URLMatch::anyURL();
+    static constexpr auto anyScriptURL = "*://*/*"_s;
     static constexpr auto behavior = WebCore::QuirkBehaviors::needsScriptToEvaluateBeforeRunningScriptFromURLQuirk(WebCore::QuirkParameters::fromScript("script"_s)).when(secondaryURLMatches(anyScriptURL));
 
     WebCore::QuirksData quirks;
@@ -298,8 +327,8 @@ TEST_F(QuirksTest, AnIdenticalBehaviorFromSeveralRowsIsRecordedOnce)
 static Vector<String> elementSelectorsFor(const WebCore::QuirksData& quirks, WebCore::QuirkBehaviorID id)
 {
     return WTF::compactMap(quirks.behaviors(), [&](const auto& behavior) -> std::optional<String> {
-        if (behavior.id == id && behavior.conditions.elementSelector)
-            return *behavior.conditions.elementSelector;
+        if (behavior.id == id && !behavior.elementSelector.isNull())
+            return behavior.elementSelector;
         return std::nullopt;
     });
 }
@@ -317,17 +346,18 @@ TEST_F(QuirksTest, AnElementSelectorConditionIsRecordedOnTheBehavior)
 TEST_F(QuirksTest, ASecondaryURLConditionIsRecordedOnTheBehavior)
 {
     using namespace WebCore::QuirkBehaviorConditions;
-    static constexpr auto scriptURL = WebCore::URLMatch::host("cdn.example.com"_s);
+    static constexpr auto scriptURL = "*://cdn.example.com/*"_s;
     static constexpr auto behavior = WebCore::QuirkBehaviors::needsScriptToEvaluateBeforeRunningScriptFromURLQuirk(WebCore::QuirkParameters::fromScript("script"_s)).when(secondaryURLMatches(scriptURL));
 
     ASSERT_TRUE(behavior.parameters.has_value());
-    ASSERT_TRUE(behavior.conditions.secondaryURL.has_value());
-    EXPECT_TRUE(behavior.secondaryURLConditionMatches(WebCore::URLMatchContext { URL { "https://cdn.example.com/a.js"_s } }));
-    EXPECT_FALSE(behavior.secondaryURLConditionMatches(WebCore::URLMatchContext { URL { "https://other.example.com/a.js"_s } }));
+    ASSERT_FALSE(behavior.conditions.secondaryURL.isEmpty());
+    auto resolved = WebCore::RuntimeQuirkBehavior::from(behavior);
+    EXPECT_TRUE(resolved.secondaryURLConditionMatches(WebCore::URLMatchContext { URL { "https://cdn.example.com/a.js"_s } }));
+    EXPECT_FALSE(resolved.secondaryURLConditionMatches(WebCore::URLMatchContext { URL { "https://other.example.com/a.js"_s } }));
 
     static constexpr auto unscoped = WebCore::QuirkBehaviors::needsScriptToEvaluateBeforeRunningScriptFromURLQuirk(WebCore::QuirkParameters::fromScript("script"_s));
-    EXPECT_FALSE(unscoped.conditions.secondaryURL.has_value());
-    EXPECT_TRUE(unscoped.secondaryURLConditionMatches(WebCore::URLMatchContext { URL { "https://other.example.com/a.js"_s } }));
+    EXPECT_TRUE(unscoped.conditions.secondaryURL.isEmpty());
+    EXPECT_TRUE(WebCore::RuntimeQuirkBehavior::from(unscoped).secondaryURLConditionMatches(WebCore::URLMatchContext { URL { "https://other.example.com/a.js"_s } }));
 }
 
 TEST_F(QuirksTest, BehaviorAppliesToURLRequiresTheBehaviorToBeEnabled)
@@ -380,13 +410,9 @@ TEST_F(QuirksTest, LogoutCookieCleanupCarriesTheCookiesToDelete)
 {
     auto behaviors = resolveQuirksForTopURL("https://claude.ai/"_s).behaviorsMatching(WebCore::QuirkBehaviorID::NeedsLogoutCookieCleanupQuirk);
     ASSERT_EQ(behaviors.size(), 1u);
-    ASSERT_TRUE(behaviors[0].parameters.has_value());
 
-    auto cookieNames = WTF::map(behaviors[0].parameters->cookieNames, [](auto name) {
-        return String { name };
-    });
     Vector<String> expected { "__ssid"_str, "__cf_bm"_str, "anthropic-device-id"_str, "lastActiveOrg"_str, "activitySessionId"_str };
-    EXPECT_EQ(cookieNames, expected);
+    EXPECT_EQ(behaviors[0].cookieNames, expected);
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -602,8 +628,8 @@ TEST_F(QuirksTest, TheSameSelectorIsEvaluatedPerDocument)
 static Vector<String> documentSelectorsFor(const WebCore::QuirksData& quirks, WebCore::QuirkBehaviorID id)
 {
     return WTF::compactMap(quirks.behaviors(), [&](const auto& behavior) -> std::optional<String> {
-        if (behavior.id == id && behavior.conditions.documentSelector)
-            return *behavior.conditions.documentSelector;
+        if (behavior.id == id && !behavior.documentSelector.isNull())
+            return behavior.documentSelector;
         return std::nullopt;
     });
 }

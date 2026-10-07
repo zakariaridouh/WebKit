@@ -24,10 +24,11 @@
  */
 
 #include "config.h"
-#include "URLMatch.h"
+#include "QuirkMatchPattern.h"
 
 #include "PublicSuffixStore.h"
 #include "RegistrableDomain.h"
+#include <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include <pal/system/ios/UserInterfaceIdiom.h>
@@ -88,88 +89,65 @@ bool evaluateURLEnvironment(URLEnvironment environment)
     return false;
 }
 
-bool URLMatch::RefinementSet::matchesPathPattern(const URL& url) const
+QuirkMatchPattern::QuirkMatchPattern(String&& string, UserContentURLPattern&& pattern, bool matchesAnyPublicSuffix)
+    : m_string(WTF::move(string))
+    , m_pattern(WTF::move(pattern))
+    , m_matchesAnyPublicSuffix(matchesAnyPublicSuffix)
 {
-    switch (pathComparison) {
-    case PathComparison::PathContains:
-        return url.path().contains(pathPattern);
-    case PathComparison::PathStartsWith:
-        return url.path().startsWith(pathPattern);
-    case PathComparison::PathStartsWithComponent: {
-        auto path = url.path();
-        if (!path.startsWith('/'))
-            return false;
-        auto components = path.substring(1);
-        if (!components.startsWith(pathPattern))
-            return false;
-        return components.length() == pathPattern.length() || components[pathPattern.length()] == '/';
-    }
-    case PathComparison::PathIs:
-        return url.path() == pathPattern;
-    case PathComparison::LastPathComponentIs:
-        return url.lastPathComponent() == pathPattern;
-    case PathComparison::LastPathComponentEndsWith:
-        return url.lastPathComponent().endsWith(pathPattern);
-    }
-
-    ASSERT_NOT_REACHED();
-    return false;
 }
 
-bool URLMatch::RefinementSet::matches(const URLMatchContext& context) const
+std::optional<QuirkMatchPattern> QuirkMatchPattern::parse(StringView string)
 {
-    if (!pathPattern.isNull() && !matchesPathPattern(context.url()))
-        return false;
+    static constexpr auto anyPublicSuffixAndPathStart = ".*/"_s;
 
-    if (!queryPattern.isNull() && !context.url().query().contains(queryPattern))
-        return false;
+    UserContentURLPattern pattern { string };
 
-    if (!fragmentPattern.isNull() && !context.url().fragmentIdentifier().contains(fragmentPattern))
-        return false;
-
-    if (environment && !evaluateURLEnvironment(*environment))
-        return false;
-
-    if (!hosts.isEmpty() && !hosts.contains(context.host()))
-        return false;
-
-    return true;
-}
-
-bool URLMatch::matchesURL(const URLMatchContext& context) const
-{
-    switch (m_kind) {
-    case Kind::Domain:
-        return m_patterns.contains(context.registrableDomain());
-    case Kind::Host:
-        return m_patterns.contains(context.host());
-    case Kind::HostOrSubdomainOf:
-        return m_patterns.containsMatching([&](ASCIILiteral pattern) {
-            return context.url().isMatchingDomain(pattern);
-        });
-    case Kind::AnyTopLevelDomain:
-        return m_patterns.contains(context.domainWithoutPublicSuffix());
-    case Kind::Any:
-        // about:, data:, and other URLs without a host are never matched.
-        return !context.host().isEmpty();
+    bool matchesAnyPublicSuffix = false;
+    if (pattern.error() == UserContentURLPattern::Error::InvalidHost) {
+        auto suffixStart = string.find(anyPublicSuffixAndPathStart);
+        if (suffixStart == notFound)
+            return std::nullopt;
+        pattern = UserContentURLPattern { makeString(string.left(suffixStart), string.substring(suffixStart + 2)) };
+        matchesAnyPublicSuffix = true;
     }
 
-    ASSERT_NOT_REACHED();
-    return false;
+    if (!pattern.isValid())
+        return std::nullopt;
+
+    auto& scheme = pattern.scheme();
+    if (scheme != "*"_s && scheme != "http"_s && scheme != "https"_s)
+        return std::nullopt;
+
+    if (pattern.host().isEmpty() && !pattern.matchAllHosts())
+        return std::nullopt;
+
+    if (matchesAnyPublicSuffix && (pattern.host().isEmpty() || pattern.host().contains('.') || pattern.host().startsWith('[')))
+        return std::nullopt;
+
+    return QuirkMatchPattern { string.toString(), WTF::move(pattern), matchesAnyPublicSuffix };
 }
 
-bool URLMatch::matches(const URLMatchContext& context) const
+static bool matchesPathAndQuery(const UserContentURLPattern& pattern, const URL& url)
 {
-    if (!matchesURL(context)) [[likely]]
+    return matchesWildcardPattern(pattern.path(), url.viewWithoutFragmentIdentifier().substring(url.pathStart()).toStringWithoutCopying());
+}
+
+bool QuirkMatchPattern::matches(const URLMatchContext& context) const
+{
+    auto& url = context.url();
+    if (!m_pattern.matchesScheme(url))
         return false;
 
-    if (!m_refinements.matches(context))
+    if (!m_matchesAnyPublicSuffix)
+        return m_pattern.matchesHost(url) && matchesPathAndQuery(m_pattern, url);
+
+    if (!matchesPathAndQuery(m_pattern, url))
         return false;
 
-    if (m_exception && m_exception->matches(context))
+    if (!equalIgnoringASCIICase(context.domainWithoutPublicSuffix(), m_pattern.host()))
         return false;
 
-    return true;
+    return m_pattern.matchSubdomains() || context.host() == context.registrableDomain();
 }
 
 } // namespace WebCore

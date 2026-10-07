@@ -1,6 +1,4 @@
 /*
- * <%= @warning %>
- *
  * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,42 +23,39 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#include <WebCore/QuirksData.h>
-#include <wtf/Forward.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/WeakPtr.h>
+#include "config.h"
+#include "RuntimeQuirkTable.h"
 
 namespace WebCore {
 
-class Document;
-class Element;
-class Node;
-class WeakPtrImplWithEventTargetData;
+bool RuntimeQuirk::appliesTo(const URLMatchContext& topContext, const URLMatchContext& documentContext, IsTopDocument isTopDocument) const
+{
+    bool isEmbedded = !embeddedMatches.isEmpty();
+    if (isEmbedded) {
+        if (isTopDocument == IsTopDocument::Yes || !anyPatternMatches(embeddedMatches, documentContext))
+            return false;
+        if (!matches.isEmpty() && !anyPatternMatches(matches, topContext))
+            return false;
+    } else if (!anyPatternMatches(matches, topContext))
+        return false;
 
-// The accessors QuirkBehaviors.yaml describes fully. Quirks derives from this and adds the custom ones.
-class QuirksAccessors {
-    WTF_MAKE_NONCOPYABLE(QuirksAccessors);
-public:
-<%- @behaviors.select(&:hasGeneratedAccessor?).each do |behavior| -%>
-    <%= behavior.declaration %>
-<%- end -%>
+    auto& subject = isEmbedded ? documentContext : topContext;
+    if (anyPatternMatches(excludeMatches, subject))
+        return false;
 
-    WEBCORE_EXPORT static bool elementMatchesSelectorCondition(const String& selector, const Node*);
-    WEBCORE_EXPORT static RefPtr<Element> firstElementMatchingSelectorCondition(const String& selector, Document&);
+    if (!queryContains.isNull() && !subject.url().query().contains(queryContains))
+        return false;
 
-protected:
-    explicit QuirksAccessors(Document&);
-    ~QuirksAccessors();
+    if (!fragmentContains.isNull() && !subject.url().fragmentIdentifier().contains(fragmentContains))
+        return false;
 
-    bool needsQuirks() const;
-    bool behaviorAppliesToNode(QuirkBehaviorID, const Node*) const;
-    bool behaviorAppliesToDocument(QuirkBehaviorID) const;
-    RefPtr<Element> elementMatchingDocumentSelectorCondition(QuirkBehaviorID) const;
+    return !environment || evaluateURLEnvironment(*environment);
+}
 
-    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
-    mutable QuirksData m_quirksData;
-};
+void RuntimeQuirk::apply(QuirksData& quirksData) const
+{
+    for (auto& behavior : behaviors)
+        quirksData.addBehavior(behavior);
+}
 
 } // namespace WebCore

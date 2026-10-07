@@ -26,12 +26,46 @@
 #pragma once
 
 #include <WebCore/QuirkBehaviorID.h>
-#include <WebCore/URLMatch.h>
-#include <wtf/BitSet.h>
+#include <array>
+#include <span>
+#include <wtf/Assertions.h>
 #include <wtf/OptionSet.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
+
+class URLPatternList {
+public:
+    constexpr URLPatternList() = default;
+
+    constexpr URLPatternList(ASCIILiteral pattern)
+        : m_single(pattern)
+    {
+        RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(!pattern.isNull());
+    }
+
+    template<size_t size> constexpr URLPatternList(const std::array<ASCIILiteral, size>& patterns LIFETIME_BOUND)
+        : m_multiple(patterns)
+    {
+        static_assert(size, "A URL pattern list must name at least one pattern.");
+    }
+
+    constexpr bool isEmpty() const { return m_single.isNull() && m_multiple.empty(); }
+
+    constexpr std::span<const ASCIILiteral> span() const LIFETIME_BOUND
+    {
+        if (!m_multiple.empty())
+            return m_multiple;
+        if (m_single.isNull())
+            return { };
+        return singleElementSpan(m_single);
+    }
+
+private:
+    ASCIILiteral m_single;
+    std::span<const ASCIILiteral> m_multiple;
+};
 
 namespace BuildCondition {
 
@@ -161,9 +195,9 @@ constexpr bool webRTC = false;
 } // namespace BuildCondition
 
 struct QuirkParameters {
-    ASCIILiteral script = ""_s;
-    ASCIILiteral userAgent = ""_s;
-    ASCIILiteral chromeCompatibilityVersion = ""_s;
+    ASCIILiteral script { };
+    ASCIILiteral userAgent { };
+    ASCIILiteral chromeCompatibilityVersion { };
     std::span<const ASCIILiteral> cookieNames { };
 
     static consteval QuirkParameters fromScript(ASCIILiteral script)
@@ -193,14 +227,6 @@ struct QuirkParameters {
             .cookieNames = cookieNames
         };
     }
-
-    friend bool operator==(const QuirkParameters& a, const QuirkParameters& b)
-    {
-        return a.script == b.script
-            && a.userAgent == b.userAgent
-            && a.chromeCompatibilityVersion == b.chromeCompatibilityVersion
-            && std::ranges::equal(a.cookieNames, b.cookieNames);
-    }
 };
 
 enum class QuirkParametersNeeded : uint8_t {
@@ -222,7 +248,7 @@ struct ElementMatchesSelector {
 };
 
 struct SecondaryURLMatches {
-    URLMatch match;
+    URLPatternList patterns;
 };
 
 struct DocumentHasElementMatching {
@@ -234,9 +260,9 @@ constexpr ElementMatchesSelector elementMatchesSelector(ASCIILiteral selector)
     return ElementMatchesSelector { selector };
 }
 
-constexpr SecondaryURLMatches secondaryURLMatches(URLMatch match)
+constexpr SecondaryURLMatches secondaryURLMatches(URLPatternList patterns)
 {
-    return SecondaryURLMatches { match };
+    return SecondaryURLMatches { patterns };
 }
 
 constexpr DocumentHasElementMatching documentHasElementMatching(ASCIILiteral selector)
@@ -248,10 +274,8 @@ constexpr DocumentHasElementMatching documentHasElementMatching(ASCIILiteral sel
 
 struct QuirkConditions {
     std::optional<ASCIILiteral> elementSelector { std::nullopt };
-    std::optional<URLMatch> secondaryURL { std::nullopt };
+    URLPatternList secondaryURL { };
     std::optional<ASCIILiteral> documentSelector { std::nullopt };
-
-    friend bool operator==(const QuirkConditions&, const QuirkConditions&) = default;
 };
 
 struct QuirkBehavior {
@@ -262,13 +286,6 @@ struct QuirkBehavior {
     OptionSet<QuirkConditionsSupported> quirkConditionsNeeded { };
     QuirkConditions conditions { };
     std::optional<QuirkParameters> parameters { std::nullopt };
-
-    bool secondaryURLConditionMatches(const URLMatchContext& context) const
-    {
-        return !conditions.secondaryURL || conditions.secondaryURL->matches(context);
-    }
-
-    friend bool operator==(const QuirkBehavior&, const QuirkBehavior&) = default;
 
     consteval QuirkBehavior operator()(QuirkParameters params) const
     {
@@ -296,8 +313,8 @@ struct QuirkBehavior {
     consteval void applyCondition(QuirkBehavior& behavior, QuirkBehaviorConditions::SecondaryURLMatches secondaryURLMatches) const
     {
         RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(behavior.quirkConditionsSupported.contains(QuirkConditionsSupported::SecondaryURL));
-        RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(!behavior.conditions.secondaryURL);
-        behavior.conditions.secondaryURL = secondaryURLMatches.match;
+        RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(behavior.conditions.secondaryURL.isEmpty());
+        behavior.conditions.secondaryURL = secondaryURLMatches.patterns;
     }
 
     consteval void applyCondition(QuirkBehavior& behavior, QuirkBehaviorConditions::DocumentHasElementMatching documentHasElementMatching) const

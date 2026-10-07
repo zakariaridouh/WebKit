@@ -338,6 +338,7 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/PublicSuffix.cpp
         Tests/WebCore/PushDatabase.cpp
         Tests/WebCore/PushMessageCrypto.cpp
+        Tests/WebCore/QuirkMatchPattern.cpp
         Tests/WebCore/Quirks.cpp
         Tests/WebCore/RegionTests.cpp
         Tests/WebCore/RegistrableDomain.cpp
@@ -361,7 +362,6 @@ if (ENABLE_WEBCORE)
         Tests/WebCore/TimeRanges.cpp
         Tests/WebCore/TransformationMatrix.cpp
         Tests/WebCore/U2fCommandConstructorTest.cpp
-        Tests/WebCore/URLMatch.cpp
         Tests/WebCore/URLParserTextEncoding.cpp
         Tests/WebCore/URLPatternTests.cpp
         Tests/WebCore/WebCodecsBufferTransfer.cpp

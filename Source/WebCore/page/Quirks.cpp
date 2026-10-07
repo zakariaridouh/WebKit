@@ -809,20 +809,20 @@ std::optional<String> Quirks::needsCustomUserAgentOverride(const URL& url, const
 
     std::optional<String> userAgent;
     for (const auto& behavior : quirksData.behaviorsMatching(QuirkBehaviorID::NeedsUserAgentStringOverrideQuirk)) {
-        if (behavior.parameters && !behavior.parameters->userAgent.isEmpty()) {
-            userAgent = String { behavior.parameters->userAgent };
+        if (!behavior.userAgent.isEmpty()) {
+            userAgent = behavior.userAgent;
             break;
         }
     }
 
 #if PLATFORM(COCOA)
     for (const auto& behavior : quirksData.behaviorsMatching(QuirkBehaviorID::NeedsChromeCompatibilityUserAgentQuirk)) {
-        if (!behavior.parameters || behavior.parameters->chromeCompatibilityVersion.isEmpty())
+        if (behavior.chromeCompatibilityVersion.isEmpty())
             continue;
 
         if (!userAgent)
             userAgent = currentUserAgent.isEmpty() ? standardUserAgentWithApplicationName(applicationNameForUserAgent) : currentUserAgent;
-        auto chromeCompatibilityToken = makeString("like Gecko, like Chrome/"_s, behavior.parameters->chromeCompatibilityVersion, '.');
+        auto chromeCompatibilityToken = makeString("like Gecko, like Chrome/"_s, behavior.chromeCompatibilityVersion, '.');
         return makeStringByReplacingAll(*userAgent, "like Gecko"_s, chromeCompatibilityToken);
     }
 #else
@@ -945,13 +945,13 @@ Vector<String, 1> Quirks::scriptsToEvaluateBeforeRunningScriptFromURL(const URL&
     const auto matchingBehaviors = m_quirksData.behaviorsMatching(id);
 
     for (const auto& behavior : matchingBehaviors) {
-        if (!behavior.parameters || behavior.parameters->script.isEmpty())
+        if (behavior.script.isEmpty())
             continue;
 
         if (!behavior.secondaryURLConditionMatches(scriptURLContext))
             continue;
 
-        scripts.append(behavior.parameters->script);
+        scripts.append(behavior.script);
     }
 
     return scripts;
@@ -1144,10 +1144,10 @@ void Quirks::clearLogoutSurvivingIdentityCookiesIfNeeded(const URL& fetchURL, in
     auto& documentURL = document->url();
     URLMatchContext fetchURLContext { fetchURL };
     for (const auto& behavior : m_quirksData.behaviors()) {
-        if (behavior.id != id || !behavior.parameters || !behavior.secondaryURLConditionMatches(fetchURLContext))
+        if (behavior.id != id || !behavior.secondaryURLConditionMatches(fetchURLContext))
             continue;
 
-        for (auto cookieName : behavior.parameters->cookieNames)
+        for (auto& cookieName : behavior.cookieNames)
             page->cookieJar().deleteCookie(*document, documentURL, cookieName, [] { });
     }
 }
