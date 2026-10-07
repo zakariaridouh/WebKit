@@ -67,7 +67,7 @@ void WebLockRegistryProxy::requestLock(IPC::Untrusted<WebCore::ClientOrigin>&& u
     MESSAGE_CHECK(lockIdentifier.processIdentifier() == m_process->coreProcessIdentifier());
     MESSAGE_CHECK(clientID.processIdentifier() == m_process->coreProcessIdentifier());
     MESSAGE_CHECK(name.length() <= WebCore::WebLock::maxNameLength);
-    EXTRACT_WITH_MESSAGE_CHECK(clientOrigin, untrustedClientOrigin, ProcessCommittedClientOrigin { m_process.get() });
+    EXTRACT_WITH_MESSAGE_CHECK(clientOrigin, untrustedClientOrigin, ProcessCommittedStorageClientOrigin { m_process.get() });
     m_hasEverRequestedLocks = true;
 
     RefPtr dataStore = m_process->websiteDataStore();
@@ -89,7 +89,7 @@ void WebLockRegistryProxy::releaseLock(IPC::Untrusted<WebCore::ClientOrigin>&& u
 {
     MESSAGE_CHECK(lockIdentifier.processIdentifier() == m_process->coreProcessIdentifier());
     MESSAGE_CHECK(clientID.processIdentifier() == m_process->coreProcessIdentifier());
-    EXTRACT_WITH_MESSAGE_CHECK(clientOrigin, untrustedClientOrigin, ProcessCommittedClientOrigin { m_process.get() });
+    EXTRACT_WITH_MESSAGE_CHECK(clientOrigin, untrustedClientOrigin, ProcessCommittedStorageClientOrigin { m_process.get() });
     Ref process = m_process.get();
     RefPtr dataStore = process->websiteDataStore();
     if (!dataStore)
@@ -102,7 +102,7 @@ void WebLockRegistryProxy::abortLockRequest(IPC::Untrusted<WebCore::ClientOrigin
 {
     MESSAGE_CHECK_COMPLETION(lockIdentifier.processIdentifier() == m_process->coreProcessIdentifier(), completionHandler(false));
     MESSAGE_CHECK_COMPLETION(clientID.processIdentifier() == m_process->coreProcessIdentifier(), completionHandler(false));
-    EXTRACT_WITH_MESSAGE_CHECK_COMPLETION(clientOrigin, untrustedClientOrigin, completionHandler(false), ProcessCommittedClientOrigin { m_process.get() });
+    EXTRACT_WITH_MESSAGE_CHECK_COMPLETION(clientOrigin, untrustedClientOrigin, completionHandler(false), ProcessCommittedStorageClientOrigin { m_process.get() });
     RefPtr dataStore = m_process->websiteDataStore();
     if (!dataStore) {
         completionHandler(false);
@@ -114,7 +114,7 @@ void WebLockRegistryProxy::abortLockRequest(IPC::Untrusted<WebCore::ClientOrigin
 
 void WebLockRegistryProxy::snapshot(IPC::Untrusted<WebCore::ClientOrigin>&& untrustedClientOrigin, CompletionHandler<void(WebCore::WebLockManagerSnapshot&&)>&& completionHandler)
 {
-    EXTRACT_WITH_MESSAGE_CHECK_COMPLETION(clientOrigin, untrustedClientOrigin, completionHandler(WebCore::WebLockManagerSnapshot { }), ProcessCommittedClientOrigin { m_process.get() });
+    EXTRACT_WITH_MESSAGE_CHECK_COMPLETION(clientOrigin, untrustedClientOrigin, completionHandler(WebCore::WebLockManagerSnapshot { }), ProcessCommittedStorageClientOrigin { m_process.get() });
 
     RefPtr dataStore = m_process->websiteDataStore();
     if (!dataStore) {
@@ -128,7 +128,7 @@ void WebLockRegistryProxy::snapshot(IPC::Untrusted<WebCore::ClientOrigin>&& untr
 void WebLockRegistryProxy::clientIsGoingAway(IPC::Untrusted<WebCore::ClientOrigin>&& untrustedClientOrigin, WebCore::ScriptExecutionContextIdentifier clientID)
 {
     MESSAGE_CHECK(clientID.processIdentifier() == m_process->coreProcessIdentifier());
-    EXTRACT_WITH_MESSAGE_CHECK(clientOrigin, untrustedClientOrigin, ProcessCommittedClientOrigin { m_process.get() });
+    EXTRACT_WITH_MESSAGE_CHECK(clientOrigin, untrustedClientOrigin, ProcessCommittedStorageClientOrigin { m_process.get() });
     if (RefPtr dataStore = WebsiteDataStore::existingDataStoreForSessionID(m_process->sessionID()))
         dataStore->webLockRegistry().clientIsGoingAway(m_process->sessionID(), WTF::move(clientOrigin), clientID);
 }

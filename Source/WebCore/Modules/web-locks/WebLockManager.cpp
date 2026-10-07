@@ -59,7 +59,7 @@ static std::optional<ClientOrigin> clientOriginFromContext(ScriptExecutionContex
     RefPtr origin = context->securityOrigin();
     if (!origin || origin->isOpaque())
         return std::nullopt;
-    return { { context->topOrigin().data(), origin->data() } };
+    return context->storageClientOrigin();
 }
 
 struct WebLockManager::LockRequest {

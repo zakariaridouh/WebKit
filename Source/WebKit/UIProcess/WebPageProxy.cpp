@@ -9337,6 +9337,12 @@ void WebPageProxy::didCommitLoadForFrame(IPC::Connection& connection, FrameIdent
 
     frame->didCommitLoad(mimeType, containsPluginDocument, WTF::move(documentSecurityPolicy), WTF::move(cspOriginsThatUpgradeInsecureNavigations), frameInfo.securityOrigin, navigation && webArchiveSourceForNavigation(*navigation) ? LoadedWebArchive::Yes : LoadedWebArchive::No);
 
+    if (RefPtr subframeNavigation = !frame->isMainFrame() && navigationID ? m_navigationState->navigation(*navigationID) : nullptr) {
+        auto documentOrigin = frame->documentSecurityOriginData();
+        if (auto& unpartitionedStorageSite = subframeNavigation->unpartitionedStorageSite(); unpartitionedStorageSite && unpartitionedStorageSite->matches(documentOrigin))
+            protect(frame->process())->didCommitStorageClientOrigin({ documentOrigin, documentOrigin });
+    }
+
     if (frame->isMainFrame()) {
         std::optional<WebCore::PrivateClickMeasurement> privateClickMeasurement;
         if (internals().privateClickMeasurement)

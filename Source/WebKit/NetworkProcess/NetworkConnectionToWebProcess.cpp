@@ -613,7 +613,7 @@ void NetworkConnectionToWebProcess::scheduleResourceLoad(NetworkResourceLoadPara
 
     if (CheckedPtr session = networkSession()) {
         Ref server = session->ensureSWServer();
-        auto topOrigin = loadParameters.topOriginForServiceWorkers(loadParameters.request.url());
+        auto topOrigin = loadParameters.topOriginForServiceWorkers(loadParameters.request);
         if (!server->isImportCompletedForOrigin(topOrigin)) {
             CONNECTION_RELEASE_LOG(Loading, "scheduleResourceLoad: Deferring resource load until service worker registrations for origin are imported");
             server->importRegistrationsForOrigin(topOrigin, [this, protectedThis = Ref { *this }, loadParameters = WTF::move(loadParameters), existingLoaderToResume]() mutable {

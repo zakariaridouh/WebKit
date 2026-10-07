@@ -66,7 +66,7 @@ static HashMap<BroadcastChannelIdentifier, ScriptExecutionContextIdentifier>& NO
 
 static PartitionedSecurityOrigin partitionedSecurityOriginFromContext(ScriptExecutionContext& context)
 {
-    return { context.topOrigin(), protect(context.securityOrigin()).releaseNonNull() };
+    return { context.storageTopOrigin(), protect(context.securityOrigin()).releaseNonNull() };
 }
 
 class BroadcastChannel::MainThreadBridge : public ThreadSafeRefCounted<MainThreadBridge, WTF::DestructionThread::Main>, public Identified<BroadcastChannelIdentifier> {

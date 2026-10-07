@@ -30,6 +30,7 @@
 
 #include "CSSValuePool.h"
 #include "CachedScript.h"
+#include "ClientOrigin.h"
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
 #include "ContextDestructionObserverInlines.h"
@@ -938,6 +939,11 @@ void ScriptExecutionContext::postTaskToResponsibleDocument(Function<void(Documen
         callback(document.releaseNonNull());
 }
 
+ClientOrigin ScriptExecutionContext::storageClientOrigin() const
+{
+    return { storageTopOrigin().data(), securityOrigin()->data() };
+}
+
 static bool NODELETE isOriginEquivalentToLocal(const SecurityOrigin& origin)
 {
     return origin.isLocal() && !origin.needsStorageAccessFromFileURLsQuirk() && !origin.hasUniversalAccess();
@@ -964,7 +970,7 @@ ScriptExecutionContext::HasResourceAccess ScriptExecutionContext::canAccessResou
     case ResourceType::SessionStorage:
         if (m_storageBlockingPolicy == StorageBlockingPolicy::BlockAll)
             return HasResourceAccess::No;
-        if ((m_storageBlockingPolicy == StorageBlockingPolicy::BlockThirdParty) && !protect(topOrigin())->isSameOriginAs(*origin) && !origin->hasUniversalAccess())
+        if ((m_storageBlockingPolicy == StorageBlockingPolicy::BlockThirdParty) && !protect(storageTopOrigin())->isSameOriginAs(*origin) && !origin->hasUniversalAccess())
             return HasResourceAccess::DefaultForThirdParty;
         return HasResourceAccess::Yes;
     }

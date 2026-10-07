@@ -95,6 +95,7 @@ public:
     String agentClusterID;
     NetworkLoadPolicy networkLoadPolicy;
     IsSecureContext isSecureContext;
+    bool hasUnpartitionedStorageAccess { false };
 
     WorkerParameters isolatedCopy() const;
 };

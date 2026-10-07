@@ -56,7 +56,7 @@ struct NetworkResourceLoadParameters {
 
     RefPtr<WebCore::SecurityOrigin> NODELETE parentOrigin() const;
     NetworkLoadParameters networkLoadParameters() const;
-    WebCore::SecurityOriginData topOriginForServiceWorkers(const URL& requestURL) const;
+    WebCore::SecurityOriginData topOriginForServiceWorkers(const WebCore::ResourceRequest&) const;
 
     WebPageProxyIdentifier webPageProxyID;
     WebCore::PageIdentifier webPageID;
@@ -133,6 +133,7 @@ struct NetworkResourceLoadParameters {
 
     bool isInitiatorPrefetch { false };
     bool isInitiatedByDedicatedWorker { false };
+    bool hasUnpartitionedStorageAccess { false };
     bool globalPrivacyControlEnabled { false };
     bool shouldConsiderEnhancedSecurityForInsecureResponse { false };
     MonotonicTime originalNavigationStartTime { };

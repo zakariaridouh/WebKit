@@ -160,7 +160,7 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
     options.serviceWorkersMode = serviceWorkerMode;
     if (scriptExecutionContext.settingsValues().serviceWorkersEnabled && clientIdentifier) {
         ASSERT(m_destination == FetchOptions::Destination::Worker || m_destination == FetchOptions::Destination::Sharedworker);
-        m_topOriginForServiceWorkerRegistration = SecurityOriginData { scriptExecutionContext.topOrigin().data() };
+        m_topOriginForServiceWorkerRegistration = SecurityOriginData { scriptExecutionContext.storageTopOrigin().data() };
         options.clientIdentifier = scriptExecutionContext.identifier().object();
         options.resultingClientIdentifier = clientIdentifier->object();
         Ref serviceWorkerDataManager = ServiceWorkerDataManager::create(*clientIdentifier);

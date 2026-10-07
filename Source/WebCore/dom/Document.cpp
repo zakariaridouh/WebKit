@@ -11790,12 +11790,12 @@ void Document::updateServiceWorkerClientData()
     if (!serviceWorkerConnection)
         return;
 
-    Ref topOrigin = this->topOrigin();
-    if (!topOrigin->isHTTPFamily() && !LegacySchemeRegistry::shouldTreatURLSchemeAsAllowingServiceWorkerClients(topOrigin->protocol()) && !(page() && page()->isServiceWorkerPage()))
+    Ref storageTopOrigin = this->storageTopOrigin();
+    if (!storageTopOrigin->isHTTPFamily() && !LegacySchemeRegistry::shouldTreatURLSchemeAsAllowingServiceWorkerClients(storageTopOrigin->protocol()) && !(page() && page()->isServiceWorkerPage()))
         return;
 
     auto controllingServiceWorkerRegistrationIdentifier = activeServiceWorker() ? std::make_optional<ServiceWorkerRegistrationIdentifier>(activeServiceWorker()->registrationIdentifier()) : std::nullopt;
-    serviceWorkerConnection->registerServiceWorkerClient(clientOrigin(), ServiceWorkerClientData::from(*this), controllingServiceWorkerRegistrationIdentifier, userAgent(url()));
+    serviceWorkerConnection->registerServiceWorkerClient(storageClientOrigin(), ServiceWorkerClientData::from(*this), controllingServiceWorkerRegistrationIdentifier, userAgent(url()));
 }
 
 void Document::navigateFromServiceWorker(const URL& url, CompletionHandler<void(ScheduleLocationChangeResult)>&& callback)

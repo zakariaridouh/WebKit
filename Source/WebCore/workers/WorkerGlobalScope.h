@@ -143,6 +143,7 @@ public:
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&) final;
 
     SecurityOrigin& topOrigin() const final { return m_topOrigin.get(); }
+    bool hasUnpartitionedStorageAccess() const final { return m_hasUnpartitionedStorageAccess; }
 
     Crypto& crypto();
     Performance& NODELETE performance() const;
@@ -233,6 +234,7 @@ private:
     bool m_isOnline;
     bool m_shouldBypassMainWorldContentSecurityPolicy;
     bool m_isSecureContext;
+    const bool m_hasUnpartitionedStorageAccess;
 
     const Ref<SecurityOrigin> m_topOrigin;
 

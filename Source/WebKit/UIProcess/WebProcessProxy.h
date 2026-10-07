@@ -337,6 +337,8 @@ public:
 
     bool hasCommittedClientOrigin(const WebCore::ClientOrigin&) const;
     void didCommitLoadClientOrigin(WebCore::ClientOrigin&&);
+    bool hasCommittedStorageClientOrigin(const WebCore::ClientOrigin&) const;
+    void didCommitStorageClientOrigin(WebCore::ClientOrigin&&);
     void didBecomeRemoteWorkerHostForSite(const WebCore::Site&);
 
     void addVisitedLinkStoreUser(VisitedLinkStore&, WebPageProxyIdentifier);
@@ -900,6 +902,7 @@ private:
     uint64_t m_frameProcessCount { 0 };
 
     HashSet<WebCore::ClientOrigin> m_committedClientOrigins; // Only grows because WebProcess can navigate back to an old origin in a history item.
+    HashSet<WebCore::ClientOrigin> m_committedStorageClientOrigins; // Storage keys of frames with unpartitioned storage access. Only grows, like m_committedClientOrigins.
     HashSet<WebCore::Site> m_remoteWorkerSites; // Only grows so that messages sent by a remote worker that is going away remain valid.
 
     // A single page can register with a store more than once for the same process, e.g. when a

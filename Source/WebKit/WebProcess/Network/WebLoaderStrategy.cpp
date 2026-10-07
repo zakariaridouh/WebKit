@@ -563,8 +563,10 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
             loadParameters.topOrigin = resourceLoader.documentLoader()->triggeringAction().requester()->topOrigin.ptr();
         else
             loadParameters.topOrigin = SecurityOrigin::create(request.url());
-    } else if (document)
+    } else if (document) {
         loadParameters.topOrigin = document->topOrigin();
+        loadParameters.hasUnpartitionedStorageAccess = document->hasUnpartitionedStorageAccess();
+    }
 
     if (document)
         loadParameters.documentURL = document->url();

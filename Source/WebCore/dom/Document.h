@@ -1711,7 +1711,7 @@ public:
 
     SecurityOrigin& securityOrigin() const { return *SecurityContext::securityOrigin(); }
     WEBCORE_EXPORT SecurityOrigin& topOrigin() const final;
-    bool hasUnpartitionedStorageAccess() const { return m_hasUnpartitionedStorageAccess; }
+    bool hasUnpartitionedStorageAccess() const final { return m_hasUnpartitionedStorageAccess; }
     void updateHasUnpartitionedStorageAccess(const DocumentLoader*);
     URL topURL() const;
     inline ClientOrigin clientOrigin() const;

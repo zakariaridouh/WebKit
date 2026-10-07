@@ -1279,6 +1279,16 @@ void WebProcessProxy::didCommitLoadClientOrigin(WebCore::ClientOrigin&& clientOr
     m_committedClientOrigins.add(WTF::move(clientOrigin));
 }
 
+bool WebProcessProxy::hasCommittedStorageClientOrigin(const WebCore::ClientOrigin& clientOrigin) const
+{
+    return m_committedStorageClientOrigins.contains(clientOrigin) || hasCommittedClientOrigin(clientOrigin);
+}
+
+void WebProcessProxy::didCommitStorageClientOrigin(WebCore::ClientOrigin&& clientOrigin)
+{
+    m_committedStorageClientOrigins.add(WTF::move(clientOrigin));
+}
+
 void WebProcessProxy::didBecomeRemoteWorkerHostForSite(const WebCore::Site& site)
 {
     m_remoteWorkerSites.add(site);

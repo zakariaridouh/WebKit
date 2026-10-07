@@ -79,7 +79,8 @@ WorkerParameters WorkerParameters::isolatedCopy() const
         noiseInjectionHashSalt,
         agentClusterID.isolatedCopy(),
         networkLoadPolicy.isolatedCopy(),
-        isSecureContext
+        isSecureContext,
+        hasUnpartitionedStorageAccess
     };
 }
 

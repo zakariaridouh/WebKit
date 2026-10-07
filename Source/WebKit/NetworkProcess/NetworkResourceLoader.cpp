@@ -2088,7 +2088,7 @@ void NetworkResourceLoader::continueWillSendRequest(ResourceRequest&& newRequest
     }
 
     if (shouldTryToMatchRegistrationOnRedirection(parameters().options, !!m_serviceWorkerFetchTask)) {
-        auto topOrigin = parameters().topOriginForServiceWorkers(newRequest.url());
+        auto topOrigin = parameters().topOriginForServiceWorkers(newRequest);
         if (CheckedPtr session = protect(connectionToWebProcess())->networkSession()) {
             if (RefPtr server = session->swServer(); server && !server->isImportCompletedForOrigin(topOrigin)) {
                 server->importRegistrationsForOrigin(topOrigin, [this, protectedThis = Ref { *this }, newRequest = WTF::move(newRequest), isAllowedToAskUserForCredentials, completionHandler = WTF::move(completionHandler)]() mutable {

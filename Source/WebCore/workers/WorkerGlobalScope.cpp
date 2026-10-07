@@ -122,6 +122,7 @@ WorkerGlobalScope::WorkerGlobalScope(WorkerThreadType type, const WorkerParamete
     , m_isOnline(params.isOnline)
     , m_shouldBypassMainWorldContentSecurityPolicy(params.shouldBypassMainWorldContentSecurityPolicy)
     , m_isSecureContext(params.isSecureContext == IsSecureContext::Yes)
+    , m_hasUnpartitionedStorageAccess(params.hasUnpartitionedStorageAccess)
     , m_topOrigin(WTF::move(topOrigin))
     , m_connectionProxy(connectionProxy)
     , m_socketProvider(socketProvider)
@@ -777,7 +778,7 @@ void WorkerGlobalScope::updateServiceWorkerClientData()
 
     ASSERT(type() == WebCore::WorkerGlobalScope::Type::DedicatedWorker || type() == WebCore::WorkerGlobalScope::Type::SharedWorker);
     auto controllingServiceWorkerRegistrationIdentifier = activeServiceWorker() ? std::make_optional<ServiceWorkerRegistrationIdentifier>(activeServiceWorker()->registrationIdentifier()) : std::nullopt;
-    swClientConnection().registerServiceWorkerClient(clientOrigin(), ServiceWorkerClientData::from(*this), controllingServiceWorkerRegistrationIdentifier, String { m_userAgent });
+    swClientConnection().registerServiceWorkerClient(storageClientOrigin(), ServiceWorkerClientData::from(*this), controllingServiceWorkerRegistrationIdentifier, String { m_userAgent });
 }
 
 void WorkerGlobalScope::enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEventInit&& eventInit)

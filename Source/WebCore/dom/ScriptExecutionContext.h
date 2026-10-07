@@ -111,6 +111,7 @@ enum class ReasonForSuspension : uint8_t;
 enum class ScriptTrackingPrivacyCategory : uint8_t;
 enum class StorageBlockingPolicy : uint8_t;
 enum class TaskSource : uint8_t;
+struct ClientOrigin;
 struct CryptoKeyData;
 struct NetworkLoadPolicy;
 struct SettingsValues;
@@ -195,6 +196,9 @@ public:
     virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0) = 0;
 
     virtual SecurityOrigin& topOrigin() const = 0;
+    virtual bool hasUnpartitionedStorageAccess() const { return false; }
+    SecurityOrigin& storageTopOrigin() const { return hasUnpartitionedStorageAccess() ? *securityOrigin() : topOrigin(); }
+    ClientOrigin storageClientOrigin() const;
 
     virtual bool shouldBypassMainWorldContentSecurityPolicy() const { return false; }
 
