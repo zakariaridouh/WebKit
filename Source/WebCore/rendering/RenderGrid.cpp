@@ -1997,7 +1997,7 @@ std::optional<LayoutUnit> RenderGrid::firstLineBaseline() const
         // mode root. This would also fix some cases where the grid is orthogonal to its container.
         auto gridWritingMode = style().writingMode();
         auto dominantBaseline = BaselineAlignment::dominantBaseline(gridWritingMode);
-        auto direction = isHorizontalWritingMode() ? LineDirection::Horizontal : LineDirection::Vertical;
+        auto direction = isHorizontalWritingMode() ? BoxAxis::Horizontal : BoxAxis::Vertical;
         baseline = BaselineAlignment::synthesizedBaseline(*baselineGridItem, dominantBaseline, gridWritingMode, direction, BaselineSynthesisEdge::BorderBox);
     }
     return logicalTopForChild(*baselineGridItem) + *baseline;
@@ -2017,7 +2017,7 @@ std::optional<LayoutUnit> RenderGrid::lastLineBaseline() const
         baseline = baselineGridItem->lastLineBaseline();
 
     if (!baseline) {
-        auto direction = isHorizontalWritingMode() ? LineDirection::Horizontal : LineDirection::Vertical;
+        auto direction = isHorizontalWritingMode() ? BoxAxis::Horizontal : BoxAxis::Vertical;
         auto gridWritingMode = style().writingMode();
         auto dominantBaseline = BaselineAlignment::dominantBaseline(gridWritingMode);
         baseline = BaselineAlignment::synthesizedBaseline(*baselineGridItem, dominantBaseline, gridWritingMode, direction, BaselineSynthesisEdge::BorderBox);

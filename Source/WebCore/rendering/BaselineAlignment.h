@@ -32,8 +32,8 @@
 namespace WebCore {
 
 enum class BaselineSynthesisEdge : uint8_t;
+enum class BoxAxis : uint8_t;
 enum class FontBaseline : uint8_t;
-enum class LineDirection : bool;
 class RenderBox;
 
 // Stateless CSS Box Alignment baseline helpers, used both while building baseline-sharing groups and by
@@ -42,7 +42,7 @@ class RenderBox;
 struct BaselineAlignment {
     static FontBaseline NODELETE dominantBaseline(WritingMode);
     static WritingMode usedWritingModeForBaselineAlignment(LogicalBoxAxis alignmentContextAxis, WritingMode alignmentContainerWritingMode, WritingMode alignmentSubjectWritingMode);
-    static LayoutUnit synthesizedBaseline(const RenderBox&, FontBaseline baselineType, WritingMode writingModeForSynthesis, LineDirection, BaselineSynthesisEdge);
+    static LayoutUnit synthesizedBaseline(const RenderBox&, FontBaseline baselineType, WritingMode writingModeForSynthesis, BoxAxis lineDirection, BaselineSynthesisEdge);
 };
 
 // These classes are used to implement the Baseline Alignment logic, as described in the CSS Box Alignment
