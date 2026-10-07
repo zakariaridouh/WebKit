@@ -1810,8 +1810,6 @@ private:
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression tryParseArgumentsDotLengthForFastPath(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parsePrimaryExpression(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseArrayLiteral(TreeBuilder&);
-    template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseArrayElement(TreeBuilder&);
-    template <class TreeBuilder> ALWAYS_INLINE void parseSimpleArrayElementsAfterComma(TreeBuilder&, typename TreeBuilder::ElementList& tail);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseObjectLiteral(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeClassExpression parseClassExpression(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseFunctionExpression(TreeBuilder&);

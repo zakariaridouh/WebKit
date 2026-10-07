@@ -2668,6 +2668,8 @@ start:
                     ++ptr;
                 }
 
+                // The limit is 1 << (52 - 1) = 2251799813685248
+                const int numberOfDigitsForSafeInt52 = 15;
                 if (ptr < m_codeEnd && (*ptr != '.' && cannotBeIdentStart(*ptr)) && (ptr - start) <= numberOfDigitsForSafeInt52) {
                     tokenData->doubleValue = result;
                     token = INTEGER;

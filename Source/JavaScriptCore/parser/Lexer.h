@@ -30,7 +30,6 @@
 #include <wtf/ASCIICType.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
-#include <wtf/text/FastCharacterComparison.h>
 #include <wtf/unicode/CharacterNames.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -70,8 +69,6 @@ public:
     }
 
     bool hasLineTerminatorBeforeToken() const { return m_hasLineTerminatorBeforeToken; }
-    bool nextCharacterIsCommaOrCloseBracket() const { return m_current == ',' || m_current == ']'; }
-    ALWAYS_INLINE JSTokenType scanSimpleArrayElementFollowedByComma(double& value);
     JSTokenType scanRegExp(JSToken*, char16_t patternPrefix = 0);
     enum class RawStringsBuildMode { BuildRawStrings, DontBuildRawStrings };
     JSTokenType scanTemplateString(JSToken*, RawStringsBuildMode);
@@ -191,8 +188,6 @@ private:
     void fillTokenInfo(JSToken*, JSTextPosition endPosition);
 
     static constexpr size_t initialReadBufferCapacity = 32;
-    // The limit is 1 << (52 - 1) = 2251799813685248
-    static constexpr unsigned numberOfDigitsForSafeInt52 = 15;
 
     // Fields up to m_sourceURLDirective are arranged according to access frequency
     // and affinity; do not rearrange without careful analysis.
@@ -299,39 +294,6 @@ ALWAYS_INLINE JSTokenType Lexer<T>::lex(JSToken* tokenRecord, OptionSet<LexerFla
 {
     m_hasLineTerminatorBeforeToken = false;
     return lexWithoutClearingLineTerminator(tokenRecord, lexerFlags, strictMode);
-}
-
-// Consumes a decimal integer literal or `null` immediately followed by ',' (including the ',') and returns the
-// literal's token type. Otherwise consumes nothing and returns ERRORTOK.
-template <typename T>
-ALWAYS_INLINE JSTokenType Lexer<T>::scanSimpleArrayElementFollowedByComma(double& value)
-{
-    const T* start = m_code;
-    const T* ptr = start;
-    JSTokenType type;
-    if (ptr < m_codeEnd && isASCIIDigit(*ptr)) {
-        uint64_t result = *ptr++ - '0';
-        if (result) {
-            while (ptr < m_codeEnd && isASCIIDigit(*ptr))
-                result = result * 10 + (*ptr++ - '0');
-            if (ptr - start > numberOfDigitsForSafeInt52)
-                return ERRORTOK;
-        }
-        value = result;
-        type = INTEGER;
-    } else if (m_codeEnd - ptr >= 4 &&  compareCharacters(ptr, 'n', 'u', 'l', 'l')) {
-        ptr += 4;
-        type = NULLTOKEN;
-    } else
-        return ERRORTOK;
-
-    if (ptr >= m_codeEnd || *ptr != ',')
-        return ERRORTOK;
-
-    m_code = ptr + 1;
-    m_current = m_code < m_codeEnd ? *m_code : 0;
-    m_hasLineTerminatorBeforeToken = false;
-    return type;
 }
 
 } // namespace JSC
