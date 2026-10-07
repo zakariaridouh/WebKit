@@ -85,7 +85,10 @@ static ImageWrapper crossfadeBlend(Ref<CachedImage>&& fromImage, Ref<CachedImage
         return ImageWrapper { WTF::move(toImage) };
     if (!fromImage->cachedImage() || !toImage->cachedImage())
         return ImageWrapper { WTF::move(toImage) };
-    return ImageWrapper { CrossfadeImage::create(WTF::move(fromImage), WTF::move(toImage), context.progress, false) };
+    CommaSeparatedVector<CrossfadeComponent> components;
+    components.value.append({ .image = { WTF::move(fromImage) }, .percentage = CrossfadeComponent::Percentage { 100 * (1 - context.progress) } });
+    components.value.append({ .image = { WTF::move(toImage) }, .percentage = CrossfadeComponent::Percentage { 100 * context.progress } });
+    return ImageWrapper { CrossfadeImage::create(CrossfadeFunction { .parameters = { .components = WTF::move(components) } }) };
 }
 
 static ImageWrapper filterBlend(RefPtr<Image> inputImage, const Filter& from, const Filter& to, const Style::ComputedStyle& fromStyle, const Style::ComputedStyle& toStyle, const BlendingContext& context)

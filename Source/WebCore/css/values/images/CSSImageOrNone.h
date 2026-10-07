@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,39 +25,51 @@
 
 #pragma once
 
-#include "CSSCrossfade.h"
-#include "CSSValue.h"
-#include <wtf/Function.h>
+#include "CSSImageWrapper.h"
+#include <wtf/PointerComparison.h>
 
 namespace WebCore {
+namespace CSS {
 
-namespace Style {
-class BuilderState;
-class Image;
-}
+struct ImageOrNone {
+    ImageOrNone(CSS::Keyword::None)
+    {
+    }
 
-class CSSCrossfadeValue final : public CSSValue {
-public:
-    static Ref<CSSCrossfadeValue> create(CSS::CrossfadeFunction&&);
-    static Ref<CSSCrossfadeValue> create(CSS::WebkitCrossfadeFunction&&);
+    ImageOrNone(ImageWrapper&& image)
+        : m_value { WTF::move(image.value) }
+    {
+    }
 
-    ~CSSCrossfadeValue();
+    ImageOrNone(RefPtr<CSSValue>&& image)
+        : m_value { WTF::move(image) }
+    {
+    }
 
-    bool equals(const CSSCrossfadeValue&) const;
+    bool isNone() const { return !m_value; }
+    bool isImage() const { return !!m_value; }
 
-    String customCSSText(const CSS::SerializationContext&) const;
+    std::optional<ImageWrapper> tryImage() const { return m_value ? std::make_optional(ImageWrapper { *m_value }) : std::nullopt; }
 
-    RefPtr<Style::Image> createStyleImage(const Style::BuilderState&) const;
+    template<typename... F> decltype(auto) switchOn(NOESCAPE F&&... f) const
+    {
+        auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
 
-    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
+        if (isNone())
+            return visitor(CSS::Keyword::None { });
+        return visitor(ImageWrapper { *m_value });
+    }
+
+    bool operator==(const ImageOrNone& other) const
+    {
+        return arePointingToEqualData(m_value, other.m_value);
+    }
 
 private:
-    explicit CSSCrossfadeValue(CSS::CrossfadeFunction&&);
-    explicit CSSCrossfadeValue(CSS::WebkitCrossfadeFunction&&);
-
-    Variant<CSS::CrossfadeFunction, CSS::WebkitCrossfadeFunction> m_function;
+    RefPtr<CSSValue> m_value { };
 };
 
+} // namespace CSS
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSCrossfadeValue, isCrossfadeValue())
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::CSS::ImageOrNone)

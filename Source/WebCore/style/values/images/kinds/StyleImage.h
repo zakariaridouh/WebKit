@@ -92,6 +92,9 @@ public:
     virtual float imageScaleFactor() const { return 1; }
     virtual NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const = 0;
 
+    // https://drafts.csswg.org/css-images-3/#object-negotiation
+    ConcreteObjectSize negotiate(const RenderElement&, const ImageSizingContext&) const;
+
     // Platform Image.
     virtual WebCore::CachedImage* cachedImage() const { return nullptr; }
     virtual bool currentFrameIsComplete(const RenderElement*) const { return true; }

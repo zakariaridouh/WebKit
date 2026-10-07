@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,39 +25,27 @@
 
 #pragma once
 
-#include "CSSCrossfade.h"
-#include "CSSValue.h"
-#include <wtf/Function.h>
+#include <WebCore/ImageSizingContext.h>
 
-namespace WebCore {
+namespace WebCore::Style {
 
-namespace Style {
-class BuilderState;
-class Image;
-}
-
-class CSSCrossfadeValue final : public CSSValue {
+// https://drafts.csswg.org/css-images-4/#cross-fade-painting
+//
+//   Specified size:      none
+//   Default object size: the cross-fade()'s concrete object size
+//   Algorithm:           the default sizing algorithm
+class CrossfadeInputSizing final : public ImageSizingContext {
 public:
-    static Ref<CSSCrossfadeValue> create(CSS::CrossfadeFunction&&);
-    static Ref<CSSCrossfadeValue> create(CSS::WebkitCrossfadeFunction&&);
-
-    ~CSSCrossfadeValue();
-
-    bool equals(const CSSCrossfadeValue&) const;
-
-    String customCSSText(const CSS::SerializationContext&) const;
-
-    RefPtr<Style::Image> createStyleImage(const Style::BuilderState&) const;
-
-    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
+    explicit CrossfadeInputSizing(ConcreteObjectSize crossfadeSize)
+        : m_crossfadeSize(crossfadeSize)
+    {
+    }
 
 private:
-    explicit CSSCrossfadeValue(CSS::CrossfadeFunction&&);
-    explicit CSSCrossfadeValue(CSS::WebkitCrossfadeFunction&&);
+    ObjectSizeNegotiation::SpecifiedSize specifiedSize() const final { return ObjectSizeNegotiation::SpecifiedSize::none(); }
+    FloatSize defaultObjectSize() const final { return m_crossfadeSize.size(); }
 
-    Variant<CSS::CrossfadeFunction, CSS::WebkitCrossfadeFunction> m_function;
+    ConcreteObjectSize m_crossfadeSize;
 };
 
-} // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSCrossfadeValue, isCrossfadeValue())
+} // namespace WebCore::Style

@@ -4579,7 +4579,6 @@ imported/w3c/web-platform-tests/css/css-images/cross-fade-basic.html [ ImageOnly
 imported/w3c/web-platform-tests/css/css-images/cross-fade-cross-origin-orientation.sub.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-images/cross-fade-natural-size.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-images/cross-fade-premultiplied-alpha.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-images/cross-fade-target-alpha.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-images/image-color-cross-fade.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-images/gradient/gradient-eval-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-images/gradient/gradient-none-interpolation.html [ ImageOnlyFailure ]

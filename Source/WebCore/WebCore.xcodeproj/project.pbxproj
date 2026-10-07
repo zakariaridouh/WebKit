@@ -19433,6 +19433,7 @@
 		BC1777692F42418A00E318C5 /* StyleCanvasImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StyleCanvasImage.h; sourceTree = "<group>"; };
 		BC17776A2F42418A00E318C5 /* StyleCanvasImage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StyleCanvasImage.cpp; sourceTree = "<group>"; };
 		BC17776B2F42418A00E318C5 /* StyleCrossfadeImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StyleCrossfadeImage.h; sourceTree = "<group>"; };
+		0B4FEFB4727FDD443264A072 /* StyleCrossfadeInputSizing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StyleCrossfadeInputSizing.h; sourceTree = "<group>"; };
 		BC17776C2F42418A00E318C5 /* StyleCrossfadeImage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StyleCrossfadeImage.cpp; sourceTree = "<group>"; };
 		BC17776D2F42418A00E318C5 /* StyleCursorImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StyleCursorImage.h; sourceTree = "<group>"; };
 		BC17776E2F42418A00E318C5 /* StyleCursorImage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StyleCursorImage.cpp; sourceTree = "<group>"; };
@@ -20058,6 +20059,9 @@
 		BC64B4D40CB4298A005F2B62 /* CSSFontSelector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSSFontSelector.h; sourceTree = "<group>"; };
 		BC6616652FBE180C006B8E8E /* CSSPrimitiveNumericTypes+DeprecatedCSSOMValueCreation.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CSSPrimitiveNumericTypes+DeprecatedCSSOMValueCreation.h"; sourceTree = "<group>"; };
 		BC6616662FBE21CF006B8E8E /* StylePrimitiveNumericTypes+DeprecatedCSSOMValueCreation.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "StylePrimitiveNumericTypes+DeprecatedCSSOMValueCreation.h"; sourceTree = "<group>"; };
+		BCA85BD33075564D007121DF /* CSSCrossfade.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSCrossfade.h; sourceTree = "<group>"; };
+		BCA85BD530755C72007121DF /* CSSImageOrNone.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSImageOrNone.h; sourceTree = "<group>"; };
+		BCA85BD830755FF7007121DF /* StyleCrossfade.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StyleCrossfade.h; sourceTree = "<group>"; };
 		BC6616682FBF63CA006B8E8E /* CSSImageWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSImageWrapper.h; sourceTree = "<group>"; };
 		BC6616692FBF64BB006B8E8E /* CSSImageWrapper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CSSImageWrapper.cpp; sourceTree = "<group>"; };
 		BC66166F2FBF6B62006B8E8E /* DeprecatedCSSOMCounter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DeprecatedCSSOMCounter.h; sourceTree = "<group>"; };
@@ -37900,6 +37904,7 @@
 				4958F0332FC90497008AF649 /* StyleColorImage.h */,
 				BC17776C2F42418A00E318C5 /* StyleCrossfadeImage.cpp */,
 				BC17776B2F42418A00E318C5 /* StyleCrossfadeImage.h */,
+				0B4FEFB4727FDD443264A072 /* StyleCrossfadeInputSizing.h */,
 				BC17776E2F42418A00E318C5 /* StyleCursorImage.cpp */,
 				BC17776D2F42418A00E318C5 /* StyleCursorImage.h */,
 				BC1777702F42418A00E318C5 /* StyleFilterImage.cpp */,
@@ -39436,9 +39441,11 @@
 		BCB271A12CBD7D4C00265123 /* images */ = {
 			isa = PBXGroup;
 			children = (
+				BCA85BD33075564D007121DF /* CSSCrossfade.h */,
 				BCB271A02CBD7D4C00265123 /* CSSGradient.cpp */,
 				BCB2719F2CBD7D4C00265123 /* CSSGradient.h */,
 				CD3E02EE2F57BBC300BDA3F0 /* CSSGradientInlines.h */,
+				BCA85BD530755C72007121DF /* CSSImageOrNone.h */,
 				BC6616692FBF64BB006B8E8E /* CSSImageWrapper.cpp */,
 				BC6616682FBF63CA006B8E8E /* CSSImageWrapper.h */,
 			);
@@ -39474,6 +39481,7 @@
 			isa = PBXGroup;
 			children = (
 				BC1777802F42418A00E318C5 /* kinds */,
+				BCA85BD830755FF7007121DF /* StyleCrossfade.h */,
 				BCB271B42CBD7D6B00265123 /* StyleGradient.cpp */,
 				BCB271B32CBD7D6B00265123 /* StyleGradient.h */,
 				BC715EE1306AC4DA007C4D0C /* StyleImageDrawingExtras.cpp */,

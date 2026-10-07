@@ -28,6 +28,7 @@
 
 #include "GraphicsContext.h"
 #include "ImagePaintingOptions.h"
+#include "ImageSizingContext.h"
 #include "NinePieceGeometry.h"
 #include "RenderElement.h"
 #include "StyleComputedStyle+GettersInlines.h"
@@ -382,6 +383,11 @@ ImageDrawResult Image::drawNinePiece(GraphicsContext& context, const RenderEleme
     }, [&](GraphicsContext& context, ConcreteObjectSize pieceConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing) {
         return drawAsPattern(context, renderer, pieceConcreteObjectSize, destination, tile, patternTransform, phase, spacing, { options.compositeOperator(), options.interpolationQuality() }, false);
     }, ConcreteObjectSize::fixed(size), geometry);
+}
+
+ConcreteObjectSize Image::negotiate(const RenderElement& renderer, const ImageSizingContext& context) const
+{
+    return context.resolve(naturalDimensions(renderer, context));
 }
 
 } // namespace Style

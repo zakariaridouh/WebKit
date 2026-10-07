@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -975,34 +975,74 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumeConicGradient(CSSParser
     );
 }
 
-// MARK: <cross-fade()>
+// MARK: <-webkit-cross-fade()>
 
-static RefPtr<CSSValue> consumeCrossFade(CSSParserTokenRange& args, CSS::PropertyParserState& state, CSSValueID functionId)
+static RefPtr<CSSValue> consumeWebkitCrossfade(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
-    // FIXME: The current CSS Images spec has a pretty different construction than is being parsed here:
-    //
-    //    cross-fade() = cross-fade( <cf-image># )
-    //    <cf-image> = <percentage [0,100]>? && [ <image> | <color> ]
-    //
-    //  https://drafts.csswg.org/css-images-4/#funcdef-cross-fade
+    // <-webkit-cross-fade()> = -webkit-cross-fade( [ <image> | none ] , [ <image> | none ] , [ <number [0,1]> | <percentage [0,100]> ] )
 
-    auto fromImageValueOrNone = consumeImageOrNone(args, state);
-    if (!fromImageValueOrNone || !consumeCommaIncludingWhitespace(args))
+    auto from = consumeUnresolvedImageOrNone(args, state);
+    if (!from || !consumeCommaIncludingWhitespace(args))
         return nullptr;
-    auto toImageValueOrNone = consumeImageOrNone(args, state);
-    if (!toImageValueOrNone || !consumeCommaIncludingWhitespace(args))
+    auto to = consumeUnresolvedImageOrNone(args, state);
+    if (!to || !consumeCommaIncludingWhitespace(args))
+        return nullptr;
+    auto progress = MetaConsumer<CSS::Number<CSS::ClosedUnitRangeClampBoth>, CSS::Percentage<CSS::ClosedPercentageRangeClampBoth>>::consume(args, state);
+    if (!progress)
         return nullptr;
 
-    auto numberOrPercentage = MetaConsumer<CSS::Number<CSS::ClosedUnitRangeClampBoth>, CSS::Percentage<CSS::ClosedPercentageRangeClampBoth>>::consume(args, state);
-    if (!numberOrPercentage)
+    return CSSCrossfadeValue::create(CSS::WebkitCrossfadeFunction {
+        .parameters = CSS::WebkitCrossfade {
+            .from = WTF::move(*from),
+            .to = WTF::move(*to),
+            .progress = CSS::WebkitCrossfade::Progress { WTF::move(*progress) },
+        }
+    });
+}
+
+static std::optional<CSS::Crossfade::Component> consumeCrossfadeComponent(CSSParserTokenRange& args, CSS::PropertyParserState& state)
+{
+    // <cross-fade-component> = [ <image> | <color> ] && <percentage [0,100]>?
+    // https://drafts.csswg.org/css-images-4/#funcdef-cross-fade
+
+    // FIXME: Add support for <color> parameter.
+
+    auto percentage = MetaConsumer<CSS::Crossfade::Component::Percentage>::consume(args, state);
+
+    RefPtr image = consumeImage(args, state);
+    if (!image)
+        return std::nullopt;
+
+    if (!percentage)
+        percentage = MetaConsumer<CSS::Crossfade::Component::Percentage>::consume(args, state);
+
+    return CSS::Crossfade::Component {
+        .image = { image.releaseNonNull() },
+        .percentage = WTF::move(percentage)
+    };
+}
+
+static RefPtr<CSSValue> consumeCrossfade(CSSParserTokenRange& args, CSS::PropertyParserState& state)
+{
+    // <cross-fade()> = cross-fade( <cross-fade-component># )
+    // https://drafts.csswg.org/css-images-4/#funcdef-cross-fade
+
+    CommaSeparatedVector<CSS::Crossfade::Component> components;
+    do {
+        auto component = consumeCrossfadeComponent(args, state);
+        if (!component)
+            return nullptr;
+        components.value.append(WTF::move(*component));
+    } while (consumeCommaIncludingWhitespace(args));
+
+    if (!args.atEnd())
         return nullptr;
 
-    return CSSCrossfadeValue::create(
-        fromImageValueOrNone.releaseNonNull(),
-        toImageValueOrNone.releaseNonNull(),
-        WTF::move(*numberOrPercentage),
-        functionId == CSSValueWebkitCrossFade
-    );
+    return CSSCrossfadeValue::create(CSS::CrossfadeFunction {
+        .parameters = CSS::Crossfade {
+            .components = WTF::move(components)
+        }
+    });
 }
 
 // MARK: <-webkit-canvas()>
@@ -1244,9 +1284,9 @@ RefPtr<CSSValue> consumeImage(CSSParserTokenRange& range, CSS::PropertyParserSta
         case CSSValueRepeatingConicGradient:
             return consumeGeneratedImage([&](auto& args) { return consumeConicGradient<CSSValueRepeatingConicGradient>(args, state); });
         case CSSValueWebkitCrossFade:
-            return consumeGeneratedImage([&](auto& args) { return consumeCrossFade(args, state, functionId); });
+            return consumeGeneratedImage([&](auto& args) { return consumeWebkitCrossfade(args, state); });
         case CSSValueCrossFade:
-            return consumeGeneratedImage([&](auto& args) { return consumeCrossFade(args, state, functionId); });
+            return consumeGeneratedImage([&](auto& args) { return consumeCrossfade(args, state); });
         case CSSValueWebkitCanvas:
             return consumeGeneratedImage([&](auto& args) { return consumeWebkitCanvas(args); });
         case CSSValueWebkitNamedImage:
@@ -1283,6 +1323,18 @@ RefPtr<CSSValue> consumeImageOrNone(CSSParserTokenRange& range, CSS::PropertyPar
     if (range.peek().id() == CSSValueNone && allowedImageTypes.contains(AllowedImageType::GeneratedImage))
         return consumeIdent(range);
     return consumeImage(range, state, allowedImageTypes);
+}
+
+std::optional<CSS::ImageOrNone> consumeUnresolvedImageOrNone(CSSParserTokenRange& range, CSS::PropertyParserState& state, OptionSet<AllowedImageType> allowedImageTypes)
+{
+    if (range.peek().id() == CSSValueNone && allowedImageTypes.contains(AllowedImageType::GeneratedImage)) {
+        range.consumeIncludingWhitespace();
+        return CSS::ImageOrNone { CSS::Keyword::None { } };
+    }
+    RefPtr image = consumeImage(range, state, allowedImageTypes);
+    if (!image)
+        return std::nullopt;
+    return CSS::ImageOrNone { CSS::ImageWrapper { image.releaseNonNull() } };
 }
 
 } // namespace CSSPropertyParserHelpers
