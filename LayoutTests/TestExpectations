@@ -90,6 +90,7 @@ http/tests/site-isolation/magnify-gesture-over-cross-origin-pdf-iframe.html [ Sk
 # expectations.
 http/tests/site-isolation/magnify-gesture-coordinates.html [ Skip ]
 fast/viewport/ios [ Skip ]
+fast/quirks/ios [ Skip ]
 fast/visual-viewport/ios/ [ Skip ]
 http/tests/visual-viewport/ios/ [ Skip ]
 fast/device-orientation [ Skip ]

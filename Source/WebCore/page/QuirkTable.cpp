@@ -177,10 +177,6 @@ static constexpr Quirk fullTable[] = {
     { .match = URLMatch::anyTopLevelDomain("apple"_s).when(pathContains("/retail"_s)),
         .behaviors = { shouldDisableScrollAnchoringQuirk } },
 
-    // as.com: rdar://121014613
-    { .match = URLMatch::domain("as.com"_s).when(smallScreen()),
-        .behaviors = { shouldDisableElementFullscreenQuirk } },
-
     // studio.atomm.com rdar://157636545
     { .match = URLMatch::host("studio.atomm.com"_s),
         .behaviors = { needsUserAgentStringOverrideQuirk(QuirkParameters::fromUserAgent(chromeUserAgent152)) } },
@@ -327,10 +323,6 @@ static constexpr Quirk fullTable[] = {
     // digiposte.fr rdar://177229829
     { .match = URLMatch::domain("digiposte.fr"_s),
         .behaviors = { needsUserAgentStringOverrideQuirk(QuirkParameters::fromUserAgent(chromeUserAgent152)) } },
-
-    // digitaltrends.com rdar://121014613
-    { .match = URLMatch::domain("digitaltrends.com"_s).when(smallScreen()),
-        .behaviors = { shouldDisableElementFullscreenQuirk } },
 
     // discord.com rdar://162719481
     { .match = URLMatch::domain("discord.com"_s),
@@ -576,10 +568,6 @@ static constexpr Quirk fullTable[] = {
             // instagram.com: rdar://174936655
             shouldSendFakeTouchForceChangeEvent,
         } },
-
-    // instagram.com rdar://121014613
-    { .match = URLMatch::domain("instagram.com"_s),
-        .behaviors = { shouldDisableElementFullscreenQuirk } },
 
     // invideo.io rdar://171741842 https://webkit.org/b/311602
     { .match = URLMatch::domain("invideo.io"_s),
@@ -936,10 +924,6 @@ static constexpr Quirk fullTable[] = {
             blocksReturnToFullscreenFromPictureInPictureQuirk,
         } },
 
-    // rdar://116531089
-    { .match = URLMatch::domain("vimeo.com"_s).when(smallScreen()),
-        .behaviors = { shouldDisableElementFullscreenQuirk } },
-
     // walmart.com: rdar://123734840
     { .match = URLMatch::domain("walmart.com"_s),
         .behaviors = {
@@ -1051,18 +1035,6 @@ static constexpr Quirk fullTable[] = {
     // Embedded youtube.com players need the caption quirk regardless of the embedding site.
     { .match = QuirkURLMatch::embeddedDocument(URLMatch::domain(youTubeEmbedDomains)),
         .behaviors = { needsYouTubeCaptionQuirk } },
-
-    // YouTube.com does not provide AirPlay controls in fullscreen
-    // (Ref: rdar://121471373)
-    { .match = URLMatch::domain("youtube.com"_s).when(smallScreen()),
-        .behaviors = { shouldDisableElementFullscreenQuirk } },
-
-    // tiny. (Ref: rdar://121471373, rdar://121473410)
-    { .match = QuirkURLMatch::embeddedDocument(URLMatch::domain(youTubeEmbedDomains).when(smallScreen())),
-        .behaviors = { shouldDisableElementFullscreenQuirk } },
-
-    { .match = QuirkURLMatch::embeddedDocument(URLMatch::domain("x.com"_s)),
-        .behaviors = { shouldDisableElementFullscreenQuirk } },
 
     // youtube.com rdar://49582231
     { .match = URLMatch::host("www.youtube.com"_s),

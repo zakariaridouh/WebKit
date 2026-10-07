@@ -109,6 +109,10 @@
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
+#if PLATFORM(IOS_FAMILY)
+#include <pal/system/ios/UserInterfaceIdiom.h>
+#endif
+
 #define QUIRKS_EARLY_RETURN_IF_DISABLED_WITH_VALUE(returnValue) \
     if (!needsQuirks()) [[unlikely]] \
         return returnValue
@@ -1295,6 +1299,19 @@ void Quirks::determineRelevantQuirks()
 
     // rdar://133423460
     m_quirksData.setEnabled(QuirkBehaviors::shouldPreventOrientationMediaQueryFromEvaluatingToLandscapeQuirk, shouldPreventOrientationMediaQueryFromEvaluatingToLandscapeInternal(quirksURL));
+
+#if PLATFORM(IOS)
+    // Use the opt-in Document tracks while parsing and freezes afterwards, rather than the live
+    // viewport arguments: a page that rewrites its own <meta name="viewport"> once loaded does not
+    // actually get the safe area insets honored, so it must not be able to toggle this quirk either.
+    // This is deliberately the local document's own opt-in, not the main frame's, so that embedded
+    // content (a YouTube embed, say) can declare that it handles safe area insets independently of
+    // whatever its embedder did. Note a subframe's viewport-fit has no effect on the insets the
+    // platform actually reports, so for a subframe this is a declaration of intent rather than a
+    // description of the platform state.
+    if (PAL::currentUserInterfaceIdiomIsSmallScreen())
+        m_quirksData.setEnabled(QuirkBehaviors::shouldDisableElementFullscreenQuirk, document->safeAreaInsetOptIn() == Document::SafeAreaInsetOptIn::NotOptedIn);
+#endif
 }
 
 void Quirks::urlsDidChange()

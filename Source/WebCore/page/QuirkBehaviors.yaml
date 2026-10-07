@@ -466,16 +466,6 @@ ShouldDisableDataURLPaddingValidation:
 ShouldDisableDOMAudioSession:
   accessor: shouldDisableDOMAudioSessionQuirk
 
-# Vimeo.com has incorrect layout on iOS on certain videos with wider
-# aspect ratios than the device's screen in landscape mode.
-# (Ref: rdar://116531089)
-# Instagram.com stories flow under the notch and status bar
-# (Ref: rdar://121014613)
-# x.com (Twitter) video embeds have controls that are too tiny and
-# show page behind fullscreen.
-# (Ref: rdar://121473410)
-# YouTube.com does not provide AirPlay controls in fullscreen
-# (Ref: rdar://121471373)
 ShouldDisableElementFullscreenQuirk:
   available: iOSFamily
 
