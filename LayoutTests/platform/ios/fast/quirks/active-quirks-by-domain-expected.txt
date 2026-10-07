@@ -326,6 +326,7 @@ https://www.thesaurus.com/
     NeedsScriptToEvaluateBeforeRunningScriptFromURLQuirk
 https://www.tiktok.com/
     NeedsChromeCompatibilityUserAgentQuirk
+    NeedsTikTokCaptchaSliderTouchActionQuirk
     NeedsTikTokCommentsOverflowingContentQuirk
     NeedsTikTokVideoOverflowingContentQuirk
     NeedsUserAgentStringOverrideQuirk

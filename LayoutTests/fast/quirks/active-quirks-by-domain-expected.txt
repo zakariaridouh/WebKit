@@ -302,6 +302,7 @@ https://www.thesaurus.com/
     NeedsAnchorToBeMouseFocusableQuirk
 https://www.tiktok.com/
     NeedsChromeCompatibilityUserAgentQuirk
+    NeedsTikTokCaptchaSliderTouchActionQuirk
     NeedsTikTokCommentsOverflowingContentQuirk
     NeedsTikTokVideoOverflowingContentQuirk
     NeedsUserAgentStringOverrideQuirk
