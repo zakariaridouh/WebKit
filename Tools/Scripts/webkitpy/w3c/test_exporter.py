@@ -49,7 +49,7 @@ WEBKIT_WPT_DIR = 'LayoutTests/imported/w3c/web-platform-tests'
 WPT_PR_URL = f'{WPT_GH_URL}/pull/'
 WEBKIT_EXPORT_PR_LABEL = 'webkit-export'
 
-EXCLUDED_FILE_SUFFIXES = ['-expected.txt', '-expected.html', '-expected.xht', '-expected-mismatch.html', '.worker.html', '.any.html', '.any.worker.html', '.any.serviceworker.html', '.any.sharedworker.html', 'w3c-import.log']
+EXCLUDED_FILE_SUFFIXES = ['-expected.txt', '-expected.html', '-expected.htm', '-expected.xht', '-expected.xhtml', '-expected.xml', '-expected.svg', '-expected-mismatch.html', '-expected-mismatch.xht', '-expected-mismatch.xhtml', '-expected-mismatch.svg', '.worker.html', '.any.html', '.any.worker.html', '.any.serviceworker.html', '.any.sharedworker.html', 'w3c-import.log']
 
 REVIEW_RE = re.compile(r'^(Reviewed by |Unreviewed\b)')
 TESTS_RE = re.compile(r'^Tests?:')

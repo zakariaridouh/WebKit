@@ -1201,6 +1201,35 @@ diff --git a/LayoutTests/imported/w3c/web-platform-tests/css/css-counter-styles/
             exporter = WebPlatformTestExporter(host, options)
         self.assertFalse(exporter.has_wpt_changes())
 
+    def test_ignore_changes_to_expected_files_with_other_extensions(self):
+        host = TestExporterTest.MyMockHost()
+        host.filesystem.maybe_make_directory(self.path)
+        host._mockSCM.mock_format_patch_result = b"""
+Subversion Revision: 231920
+diff --git a/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/textpath-side-001-expected.svg b/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/textpath-side-001-expected.svg
+
++change to expected svg
+
+diff --git a/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/textpath-side-001-expected-mismatch.svg b/LayoutTests/imported/w3c/web-platform-tests/svg/text/reftests/textpath-side-001-expected-mismatch.svg
+
++change to expected-mismatch svg
+
+diff --git a/LayoutTests/imported/w3c/web-platform-tests/css/css-text/white-space/white-space-001-expected.xhtml b/LayoutTests/imported/w3c/web-platform-tests/css/css-text/white-space/white-space-001-expected.xhtml
+
++change to expected xhtml
+"""
+        options = parse_args(['test_exporter.py', '-g', 'HEAD', '-c', '-n', 'USER', '-t', 'TOKEN', '-d', self.path])
+        with mocks.local.Git(self.path) as git_mock, patch(
+            'webkitpy.common.webkit_finder.WebKitFinder.webkit_base', return_value=self.path,
+        ), patch(
+            'webkitbugspy.Tracker._trackers', [bugzilla.Tracker(self.BUGZILLA_URL)],
+        ), patch(
+            'webkitpy.w3c.test_exporter.WPTLinter', autospec=True, spec_set=True,
+        ):
+            git_mock.head.message = f'Test\n{self.BUGZILLA_URL}/show_bug.cgi?id=1\n'
+            exporter = WebPlatformTestExporter(host, options)
+        self.assertFalse(exporter.has_wpt_changes())
+
     def test_ignore_changes_to_w3c_import_log(self):
         host = TestExporterTest.MyMockHost()
         host.filesystem.maybe_make_directory(self.path)
