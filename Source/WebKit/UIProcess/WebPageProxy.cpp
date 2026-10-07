@@ -16608,26 +16608,6 @@ void WebPageProxy::updateWebsitePolicies(const API::WebsitePolicies& policies)
     });
 }
 
-void WebPageProxy::convertPointToMainFrameCoordinates(WebCore::FloatPoint point, std::optional<WebCore::FrameIdentifier> frameID, CompletionHandler<void(std::optional<WebCore::FloatPoint>)>&& completionHandler)
-{
-    // FIXME: This method returns a point in main frame content coordinates when site isolation is disabled,
-    // but returns a point in root view coordinates when site isolation is enabled.
-    RefPtr frame = WebFrameProxy::webFrame(frameID);
-    if (!frame)
-        return completionHandler(std::nullopt);
-
-    RefPtr parent = frame->parentFrame();
-    if (!parent)
-        return completionHandler(point);
-
-    sendWithAsyncReplyToProcessContainingFrame(parent->frameID(), Messages::WebPage::ContentsToRootViewPoint(frame->frameID(), point), [weakThis = WeakPtr { *this }, completionHandler = WTF::move(completionHandler), nextFrameID = parent->rootFrame()->frameID()](FloatPoint convertedPoint) mutable {
-        RefPtr protectedThis = weakThis.get();
-        if (!protectedThis)
-            return completionHandler(std::nullopt);
-        protectedThis->convertPointToMainFrameCoordinates(convertedPoint, nextFrameID, WTF::move(completionHandler));
-    });
-}
-
 void WebPageProxy::convertRectToMainFrameCoordinates(WebCore::FloatRect rect, std::optional<WebCore::FrameIdentifier> frameID, CompletionHandler<void(std::optional<WebCore::FloatRect>)>&& completionHandler)
 {
     RefPtr frame = WebFrameProxy::webFrame(frameID);
