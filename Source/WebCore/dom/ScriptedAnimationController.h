@@ -63,7 +63,7 @@ public:
     void addThrottlingReason(ThrottlingReason reason) { m_throttlingReasons.add(reason); }
     void removeThrottlingReason(ThrottlingReason reason) { m_throttlingReasons.remove(reason); }
 
-    using CallbackId = int;
+    using CallbackId = unsigned;
     CallbackId registerCallback(Ref<RequestAnimationFrameCallback>&&);
     void cancelCallback(CallbackId);
     void serviceRequestAnimationFrameCallbacks(ReducedResolutionSeconds);

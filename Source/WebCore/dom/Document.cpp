@@ -9381,7 +9381,7 @@ void Document::didPaintText(const RenderBlockFlow& formattingContextRoot, FloatR
     largestContentfulPaintData().didPaintText(formattingContextRoot, localRect, isOnlyTextBoxForElement);
 }
 
-int Document::requestAnimationFrame(Ref<RequestAnimationFrameCallback>&& callback)
+unsigned Document::requestAnimationFrame(Ref<RequestAnimationFrameCallback>&& callback)
 {
     if (!m_scriptedAnimationController) {
         m_scriptedAnimationController = ScriptedAnimationController::create(*this);
@@ -9399,7 +9399,7 @@ int Document::requestAnimationFrame(Ref<RequestAnimationFrameCallback>&& callbac
     return m_scriptedAnimationController->registerCallback(WTF::move(callback));
 }
 
-void Document::cancelAnimationFrame(int id)
+void Document::cancelAnimationFrame(unsigned id)
 {
     if (!m_scriptedAnimationController)
         return;

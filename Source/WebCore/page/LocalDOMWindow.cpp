@@ -1993,13 +1993,13 @@ void LocalDOMWindow::clearInterval(int timeoutId)
         DOMTimer::removeById(*context, timeoutId);
 }
 
-int LocalDOMWindow::requestAnimationFrame(Ref<RequestAnimationFrameCallback>&& callback)
+unsigned LocalDOMWindow::requestAnimationFrame(Ref<RequestAnimationFrameCallback>&& callback)
 {
     RefPtr document = this->document();
     return document ? document->requestAnimationFrame(WTF::move(callback)) : 0;
 }
 
-int LocalDOMWindow::webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&& callback)
+unsigned LocalDOMWindow::webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&& callback)
 {
     static bool firstTime = true;
     if (firstTime && document()) {
@@ -2009,7 +2009,7 @@ int LocalDOMWindow::webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallbac
     return requestAnimationFrame(WTF::move(callback));
 }
 
-void LocalDOMWindow::cancelAnimationFrame(int id)
+void LocalDOMWindow::cancelAnimationFrame(unsigned id)
 {
     if (RefPtr document = this->document())
         document->cancelAnimationFrame(id);

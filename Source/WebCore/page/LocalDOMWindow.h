@@ -259,9 +259,9 @@ public:
     ExceptionOr<int> setInterval(std::unique_ptr<ScheduledAction>, int timeout, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments);
     void clearInterval(int timeoutId);
 
-    int requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
-    int webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
-    void cancelAnimationFrame(int id);
+    unsigned requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
+    unsigned webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
+    void cancelAnimationFrame(unsigned id);
 
     int requestIdleCallback(Ref<IdleRequestCallback>&&, const IdleRequestOptions&);
     void cancelIdleCallback(int id);

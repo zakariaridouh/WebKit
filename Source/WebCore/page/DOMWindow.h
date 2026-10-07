@@ -187,9 +187,9 @@ public:
     ExceptionOr<void> captureEvents();
     ExceptionOr<void> releaseEvents();
     ExceptionOr<bool> find(const String&, bool caseSensitive, bool backwards, bool wrap, bool wholeWord, bool searchInFrames, bool showDialog) const;
-    ExceptionOr<int> requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
-    ExceptionOr<int> webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
-    ExceptionOr<void> cancelAnimationFrame(int id);
+    ExceptionOr<unsigned> requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
+    ExceptionOr<unsigned> webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
+    ExceptionOr<void> cancelAnimationFrame(unsigned id);
     ExceptionOr<int> requestIdleCallback(Ref<IdleRequestCallback>&&, const IdleRequestOptions&);
     ExceptionOr<void> cancelIdleCallback(int id);
     ExceptionOr<void> createImageBitmap(ImageBitmap::Source&&, ImageBitmapOptions&&, ImageBitmap::Promise&&);
