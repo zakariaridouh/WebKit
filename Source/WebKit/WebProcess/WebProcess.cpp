@@ -1261,8 +1261,8 @@ std::optional<WebCore::UserGestureTokenIdentifier> WebProcess::userGestureTokenI
     if (!token || !token->processingUserGesture())
         return std::nullopt;
 
-    auto result = m_userGestureTokens.ensure(*token, [] {
-        return UserGestureTokenIdentifier::generate();
+    auto result = m_userGestureTokens.ensure(*token, [&] {
+        return token->identifier();
     });
     if (result.isNewEntry) {
         Ref { result.iterator->key }->addDestructionObserver([pageID] (UserGestureToken& tokenBeingDestroyed) {

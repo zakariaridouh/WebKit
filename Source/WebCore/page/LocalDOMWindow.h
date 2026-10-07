@@ -36,6 +36,7 @@
 #include <WebCore/PerformanceEventTimingCandidate.h>
 #include <WebCore/PushSubscriptionOwner.h>
 #include <WebCore/Supplementable.h>
+#include <WebCore/UserGestureTokenIdentifier.h>
 #include <WebCore/WindowOrWorkerGlobalScope.h>
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/FixedVector.h>
@@ -59,6 +60,7 @@ class CloseWatcherManager;
 class JSDOMGlobalObject;
 class SecurityOriginData;
 struct ScrollToOptions;
+class UserGestureToken;
 struct UserGestureTokenData;
 struct WindowPostMessageOptions;
 
@@ -142,16 +144,14 @@ public:
     Navigator* optionalNavigator() const { return m_navigator.get(); }
 
     WEBCORE_EXPORT static void NODELETE overrideTransientActivationDurationForTesting(std::optional<Seconds>&&);
-    void updateActivation(MonotonicTime activationTime)
-    {
-        m_lastActivationTimestamp = activationTime;
-        m_hasStickyActivation = true;
-        m_hasHistoryActionActivation = true;
-    }
-    WEBCORE_EXPORT void NODELETE consumeLastActivationIfNecessary();
+    // If forcedActivationToken is set, the activation was granted by the forced user gesture (e.g. evaluateJavaScript:)
+    // with that token, and is taken back once that gesture ends.
+    WEBCORE_EXPORT void updateActivation(MonotonicTime activationTime, std::optional<UserGestureTokenIdentifier> forcedActivationToken = std::nullopt);
+    WEBCORE_EXPORT void consumeLastActivationIfNecessary();
     void consumeHistoryActionActivation() { m_hasHistoryActionActivation = false; }
-    MonotonicTime lastActivationTimestamp() const { return m_lastActivationTimestamp; }
-    void notifyActivated(MonotonicTime);
+    MonotonicTime lastActivationTimestamp() const;
+    WEBCORE_EXPORT void revokeForcedActivation(UserGestureTokenIdentifier);
+    void notifyActivated(UserGestureToken&);
     WEBCORE_EXPORT bool hasTransientActivation() const;
     bool hasStickyActivation() const;
     WEBCORE_EXPORT bool consumeTransientActivation();
@@ -506,12 +506,18 @@ private:
 
     std::optional<ReducedResolutionSeconds> m_frozenNowTimestamp;
 
-    // User activation data model. m_lastActivationTimestamp drives transient
+    // User activation data model. lastActivationTimestamp() drives transient
     // activation only. m_hasStickyActivation and m_hasHistoryActionActivation
     // replace the published spec's timestamp-derived states per the proposed
     // whatwg/html#11454 (https://github.com/whatwg/html/pull/11454): sticky is
     // monotonic (set once, never cleared), history-action is consumable.
     MonotonicTime m_lastActivationTimestamp { MonotonicTime::infinity() };
+
+    struct ForcedActivation {
+        UserGestureTokenIdentifier grantingToken;
+        MonotonicTime timestamp;
+    };
+    Vector<ForcedActivation> m_forcedActivations;
 
     std::optional<ClickEventData> m_lastUserClickEvent;
 

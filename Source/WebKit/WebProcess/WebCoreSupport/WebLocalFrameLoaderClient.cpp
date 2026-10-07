@@ -1179,14 +1179,19 @@ void WebLocalFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(Frame
     WebFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(WTF::move(data));
 }
 
-void WebLocalFrameLoaderClient::didNotifyUserActivation(MonotonicTime activationTime)
+void WebLocalFrameLoaderClient::didNotifyUserActivation(MonotonicTime activationTime, std::optional<WebCore::UserGestureTokenIdentifier> forcedActivationToken)
 {
-    WebFrameLoaderClient::didNotifyUserActivation(activationTime);
+    WebFrameLoaderClient::didNotifyUserActivation(activationTime, forcedActivationToken);
 }
 
 void WebLocalFrameLoaderClient::didConsumeUserActivation()
 {
     WebFrameLoaderClient::didConsumeUserActivation();
+}
+
+void WebLocalFrameLoaderClient::didRevokeForcedUserActivation(WebCore::UserGestureTokenIdentifier forcedActivationToken)
+{
+    WebFrameLoaderClient::didRevokeForcedUserActivation(forcedActivationToken);
 }
 
 void WebLocalFrameLoaderClient::didHandleFirstUserGesture(MonotonicTime gestureTime)

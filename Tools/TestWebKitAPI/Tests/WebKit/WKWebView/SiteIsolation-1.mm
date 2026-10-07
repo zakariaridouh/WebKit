@@ -1906,6 +1906,113 @@ TEST(SiteIsolation, ModifierKeyChangeOverLinkInCrossOriginIframe)
 
 #endif // PLATFORM(MAC)
 
+static void evaluateJavaScriptInFrame(TestWKWebView *webView, NSString *script, WKFrameInfo *frame, BOOL withUserGesture)
+{
+    __block bool done = false;
+    [webView _evaluateJavaScript:script withSourceURL:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld withUserGesture:withUserGesture completionHandler:^(id, NSError *error) {
+        EXPECT_NULL(error);
+        done = true;
+    }];
+    Util::run(&done);
+}
+
+// Evaluates without a user gesture, so that querying the state neither grants nor removes activation.
+static bool hasTransientActivationInFrame(TestWKWebView *webView, WKFrameInfo *frame)
+{
+    __block bool done = false;
+    __block bool hasActivation = false;
+    [webView _evaluateJavaScript:@"internals.hasTransientActivation()" withSourceURL:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld withUserGesture:NO completionHandler:^(id result, NSError *error) {
+        EXPECT_NULL(error);
+        hasActivation = [result isEqual:@YES];
+        done = true;
+    }];
+    Util::run(&done);
+    return hasActivation;
+}
+
+TEST(SiteIsolation, TransientActivationFromForcedUserGestureInCrossOriginIframeIsRevoked)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { mainFrameTextWithCrossOriginIframe } },
+        { "/iframe"_s, { "iframe text"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configurationWithInternals(server), CGRectMake(0, 0, 800, 600));
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    RetainPtr childFrame = [webView firstChildFrame];
+
+    EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), nil));
+
+    // The pending timer keeps the forced user gesture in the iframe alive. Its activation is also given to
+    // the main frame, which is in another process.
+    evaluateJavaScriptInFrame(webView.get(), @"window.pendingTimer = setTimeout(() => { }, 100000); 1", childFrame.get(), YES);
+    EXPECT_TRUE(hasTransientActivationInFrame(webView.get(), childFrame.get()));
+    EXPECT_TRUE(hasTransientActivationInFrame(webView.get(), nil));
+
+    evaluateJavaScriptInFrame(webView.get(), @"clearTimeout(window.pendingTimer)", childFrame.get(), NO);
+    EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), childFrame.get()));
+    EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), nil));
+}
+
+TEST(SiteIsolation, TransientActivationFromForcedUserGesturePostedToCrossOriginIframeIsRevoked)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { mainFrameTextWithCrossOriginIframe } },
+        { "/iframe"_s, { "<script>addEventListener('message', () => window.webkit.messageHandlers.testHandler.postMessage(navigator.userActivation.isActive ? 'active' : 'inactive'))</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configurationWithInternals(server), CGRectMake(0, 0, 800, 600));
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    RetainPtr childFrame = [webView firstChildFrame];
+
+    // The forced user gesture is forwarded with the message, so the iframe has activation while it handles it.
+    __block bool receivedMessage = false;
+    [webView performAfterReceivingMessage:@"active" action:^{
+        receivedMessage = true;
+    }];
+    evaluateJavaScriptInFrame(webView.get(), @"frames[0].postMessage('hello', '*'); 1", nil, YES);
+    Util::run(&receivedMessage);
+
+    // Querying the iframe first makes sure that it has finished handling the message, and that the main frame's
+    // process received the revocation of the activation that it gave the main frame.
+    EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), childFrame.get()));
+    EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), nil));
+}
+
+#if PLATFORM(MAC)
+
+TEST(SiteIsolation, TransientActivationFromUserGestureIsPreservedAfterForcedUserGestureInCrossOriginIframe)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<script>addEventListener('click', () => window.webkit.messageHandlers.testHandler.postMessage('gesture'))</script><iframe id='iframe' style='width: 400px; height: 300px; border: none;' src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "iframe text"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configurationWithInternals(server), CGRectMake(0, 0, 800, 600));
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    RetainPtr childFrame = [webView firstChildFrame];
+
+    // Click the main frame, beside the iframe.
+    __block bool receivedGesture = false;
+    [webView performAfterReceivingMessage:@"gesture" action:^{
+        receivedGesture = true;
+    }];
+    [webView sendClickAtPoint:NSMakePoint(600, 100)];
+    Util::run(&receivedGesture);
+    EXPECT_TRUE(hasTransientActivationInFrame(webView.get(), nil));
+
+    evaluateJavaScriptInFrame(webView.get(), @"1", childFrame.get(), YES);
+
+    // Taking back the activation the forced user gesture in the iframe gave the main frame must not also
+    // take away the activation the user's gesture gave it.
+    EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), childFrame.get()));
+    EXPECT_TRUE(hasTransientActivationInFrame(webView.get(), nil));
+}
+
+#endif // PLATFORM(MAC)
 
 #if PLATFORM(MAC)
 

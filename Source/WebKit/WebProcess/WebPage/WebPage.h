@@ -70,6 +70,7 @@
 #include <WebCore/SubstituteData.h>
 #include <WebCore/URLKeepingBlobAlive.h>
 #include <WebCore/UserContentTypes.h>
+#include <WebCore/UserGestureTokenIdentifier.h>
 #include <WebCore/UserScriptTypes.h>
 #include <WebCore/WebCoreKeyboardUIMode.h>
 #include <WebCore/WebKitJSHandle.h>
@@ -899,8 +900,9 @@ public:
 
     void updateRemoteIntersectionObservers();
 
-    void updateUserActivationState(const Vector<WebCore::FrameIdentifier>&, MonotonicTime);
+    void updateUserActivationState(const Vector<WebCore::FrameIdentifier>&, MonotonicTime, std::optional<WebCore::UserGestureTokenIdentifier>);
     void consumeUserActivations(const Vector<WebCore::FrameIdentifier>&);
+    void revokeForcedUserActivation(WebCore::UserGestureTokenIdentifier);
     void updateLastHandledUserGestureTimestamp(const Vector<WebCore::FrameIdentifier>&, MonotonicTime);
 
     std::optional<WebCore::SimpleRange> currentSelectionAsRange();

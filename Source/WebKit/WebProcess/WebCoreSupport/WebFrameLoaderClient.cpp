@@ -286,16 +286,22 @@ void WebFrameLoaderClient::broadcastFrameTreeSyncDataToOtherProcesses(FrameTreeS
         webPage->send(Messages::WebPageProxy::BroadcastFrameTreeSyncData(m_frame->frameID(), WTF::move(data)));
 }
 
-void WebFrameLoaderClient::didNotifyUserActivation(MonotonicTime activationTime)
+void WebFrameLoaderClient::didNotifyUserActivation(MonotonicTime activationTime, std::optional<WebCore::UserGestureTokenIdentifier> forcedActivationToken)
 {
     if (RefPtr webPage = m_frame->page())
-        webPage->send(Messages::WebPageProxy::DidNotifyUserActivation(m_frame->frameID(), activationTime));
+        webPage->send(Messages::WebPageProxy::DidNotifyUserActivation(m_frame->frameID(), activationTime, forcedActivationToken));
 }
 
 void WebFrameLoaderClient::didConsumeUserActivation()
 {
     if (RefPtr webPage = m_frame->page())
         webPage->send(Messages::WebPageProxy::DidConsumeUserActivation(m_frame->frameID()));
+}
+
+void WebFrameLoaderClient::didRevokeForcedUserActivation(WebCore::UserGestureTokenIdentifier forcedActivationToken)
+{
+    if (RefPtr webPage = m_frame->page())
+        webPage->send(Messages::WebPageProxy::DidRevokeForcedUserActivation(m_frame->frameID(), forcedActivationToken));
 }
 
 void WebFrameLoaderClient::didHandleFirstUserGesture(MonotonicTime gestureTime)

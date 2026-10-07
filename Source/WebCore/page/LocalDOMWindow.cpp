@@ -1589,7 +1589,19 @@ void LocalDOMWindow::overrideTransientActivationDurationForTesting(std::optional
 bool LocalDOMWindow::hasTransientActivation() const
 {
     auto now = MonotonicTime::now();
-    return now >= m_lastActivationTimestamp && now < (m_lastActivationTimestamp + transientActivationDuration());
+    auto lastActivationTimestamp = this->lastActivationTimestamp();
+    return now >= lastActivationTimestamp && now < (lastActivationTimestamp + transientActivationDuration());
+}
+
+MonotonicTime LocalDOMWindow::lastActivationTimestamp() const
+{
+    auto timestamp = m_lastActivationTimestamp;
+    for (auto& forcedActivation : m_forcedActivations) {
+        // Per spec, positive infinity means that the window has never been activated.
+        if (timestamp == MonotonicTime::infinity() || forcedActivation.timestamp > timestamp)
+            timestamp = forcedActivation.timestamp;
+    }
+    return timestamp;
 }
 
 // https://html.spec.whatwg.org/multipage/interaction.html#sticky-activation
@@ -1617,11 +1629,11 @@ bool LocalDOMWindow::consumeTransientActivation()
         return false;
 
     RefPtr thisFrame = this->frame();
-    for (auto* frame = thisFrame ? &thisFrame->tree().top() : nullptr; frame; frame = frame->tree().traverseNext()) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    for (RefPtr frame = thisFrame ? &thisFrame->tree().top() : nullptr; frame; frame = frame->tree().traverseNext()) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
-        if (auto* window = localFrame->window())
+        if (RefPtr window = localFrame->window())
             window->consumeLastActivationIfNecessary();
     }
 
@@ -1631,10 +1643,39 @@ bool LocalDOMWindow::consumeTransientActivation()
     return true;
 }
 
+void LocalDOMWindow::updateActivation(MonotonicTime activationTime, std::optional<UserGestureTokenIdentifier> forcedActivationToken)
+{
+    // Clean up forced activations that have expired. This can prevent buildup if another process
+    // sent us an UpdateUserActivationState message with a forced user activation without sending us
+    // a corresponding DidRevokeForcedUserActivation message (e.g. due to unexpected process death).
+    if (!m_forcedActivations.isEmpty()) [[unlikely]] {
+        auto now = MonotonicTime::now();
+        m_forcedActivations.removeAllMatching([&](auto& forcedActivation) {
+            return now >= forcedActivation.timestamp + transientActivationDuration();
+        });
+    }
+
+    if (forcedActivationToken)
+        m_forcedActivations.append({ *forcedActivationToken, activationTime });
+    else
+        m_lastActivationTimestamp = activationTime;
+
+    m_hasStickyActivation = true;
+    m_hasHistoryActionActivation = true;
+}
+
 void LocalDOMWindow::consumeLastActivationIfNecessary()
 {
+    m_forcedActivations.clear();
     if (!m_lastActivationTimestamp.isInfinity())
         m_lastActivationTimestamp = -MonotonicTime::infinity();
+}
+
+void LocalDOMWindow::revokeForcedActivation(UserGestureTokenIdentifier grantingToken)
+{
+    m_forcedActivations.removeFirstMatching([&](auto& forcedActivation) {
+        return forcedActivation.grantingToken == grantingToken;
+    });
 }
 
 // https://html.spec.whatwg.org/multipage/interaction.html#consume-history-action-user-activation
@@ -1667,25 +1708,29 @@ std::optional<LocalDOMWindow::ClickEventData> LocalDOMWindow::consumeLastUserCli
     return std::exchange(m_lastUserClickEvent, std::nullopt);
 }
 
-static void updateActivationTimestampAndNotify(LocalDOMWindow& window, MonotonicTime activationTime, bool closeWatcherEnabled)
+static void updateActivationTimestampAndNotify(LocalDOMWindow& window, UserGestureToken& token, bool closeWatcherEnabled)
 {
-    window.updateActivation(activationTime);
+    if (token.removesTransientActivation()) {
+        window.updateActivation(token.startTime(), token.identifier());
+        token.didGrantForcedActivation(window);
+    } else
+        window.updateActivation(token.startTime());
     if (closeWatcherEnabled)
         window.closeWatcherManager().notifyAboutUserActivation();
 }
 
 // https://html.spec.whatwg.org/multipage/interaction.html#activation-notification
-void LocalDOMWindow::notifyActivated(MonotonicTime activationTime)
+void LocalDOMWindow::notifyActivated(UserGestureToken& token)
 {
     RefPtr frame = this->frame();
     bool closeWatcherEnabled = frame && frame->settings().closeWatcherEnabled();
-    updateActivationTimestampAndNotify(*this, activationTime, closeWatcherEnabled);
+    updateActivationTimestampAndNotify(*this, token, closeWatcherEnabled);
     if (!frame)
         return;
 
     for (Ref localAncestor : ancestorFrames<LocalFrame>(*frame)) {
         if (RefPtr window = localAncestor->window())
-            updateActivationTimestampAndNotify(*window, activationTime, closeWatcherEnabled);
+            updateActivationTimestampAndNotify(*window, token, closeWatcherEnabled);
     }
 
     RefPtr securityOrigin = this->securityOrigin();
@@ -1705,11 +1750,16 @@ void LocalDOMWindow::notifyActivated(MonotonicTime activationTime)
         if (!descendantSecurityOrigin || !descendantSecurityOrigin->isSameOriginAs(*securityOrigin))
             continue;
 
-        updateActivationTimestampAndNotify(*descendantWindow, activationTime, closeWatcherEnabled);
+        updateActivationTimestampAndNotify(*descendantWindow, token, closeWatcherEnabled);
     }
 
-    if (RefPtr page = frame->page(); page && page->mainFrame().tree().containsRemoteFrame())
-        frame->loader().client().didNotifyUserActivation(activationTime);
+    if (RefPtr page = frame->page(); page && page->mainFrame().tree().containsRemoteFrame()) {
+        if (token.removesTransientActivation()) {
+            frame->loader().client().didNotifyUserActivation(token.startTime(), token.identifier());
+            token.didGrantForcedActivationInOtherProcesses(*frame);
+        } else
+            frame->loader().client().didNotifyUserActivation(token.startTime(), std::nullopt);
+    }
 }
 
 StyleMedia& LocalDOMWindow::styleMedia()

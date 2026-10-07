@@ -9627,21 +9627,35 @@ void WebPageProxy::broadcastAllFrameTreeSyncData(IPC::Connection& connection, Fr
     });
 }
 
-void WebPageProxy::didNotifyUserActivation(IPC::Connection& connection, FrameIdentifier sourceFrameID, MonotonicTime activationTime)
+RefPtr<WebProcessProxy> WebPageProxy::validatedUserActivationSenderProcess(IPC::Connection& connection, FrameIdentifier sourceFrameID, std::optional<UserGestureTokenIdentifier> forcedActivationToken)
 {
     Ref senderProcess = WebProcessProxy::fromConnection(connection);
 
     RefPtr sourceFrame = WebFrameProxy::webFrame(sourceFrameID);
     if (!sourceFrame)
-        return;
+        return nullptr;
 
     if (&sourceFrame->process() != senderProcess.ptr())
+        return nullptr;
+
+    if (forcedActivationToken && forcedActivationToken->processIdentifier() != senderProcess->coreProcessIdentifier())
+        return nullptr;
+
+    return senderProcess;
+}
+
+void WebPageProxy::didNotifyUserActivation(IPC::Connection& connection, FrameIdentifier sourceFrameID, MonotonicTime activationTime, std::optional<UserGestureTokenIdentifier> forcedActivationToken)
+{
+    RefPtr senderProcess = validatedUserActivationSenderProcess(connection, sourceFrameID, forcedActivationToken);
+    if (!senderProcess)
         return;
+
+    RefPtr sourceFrame = WebFrameProxy::webFrame(sourceFrameID);
 
     HashMap<Ref<WebProcessProxy>, Vector<FrameIdentifier>> framesByProcess;
     auto addFrame = [&](WebFrameProxy& frame) {
         Ref process = frame.process();
-        if (process.ptr() == senderProcess.ptr())
+        if (process.ptr() == senderProcess.get())
             return;
         framesByProcess.add(process, Vector<FrameIdentifier> { }).iterator->value.append(frame.frameID());
     };
@@ -9657,7 +9671,7 @@ void WebPageProxy::didNotifyUserActivation(IPC::Connection& connection, FrameIde
 
     for (auto& [process, frameIDs] : framesByProcess) {
         Ref protectedProcess = process;
-        protectedProcess->send(Messages::WebPage::UpdateUserActivationState(frameIDs, activationTime), webPageIDInProcess(protectedProcess));
+        protectedProcess->send(Messages::WebPage::UpdateUserActivationState(frameIDs, activationTime, forcedActivationToken), webPageIDInProcess(protectedProcess));
     }
 }
 
@@ -9713,6 +9727,18 @@ void WebPageProxy::didConsumeUserActivation(IPC::Connection& connection, FrameId
         Ref protectedProcess = process;
         protectedProcess->send(Messages::WebPage::ConsumeUserActivations(frameIDs), webPageIDInProcess(protectedProcess));
     }
+}
+
+void WebPageProxy::didRevokeForcedUserActivation(IPC::Connection& connection, FrameIdentifier sourceFrameID, UserGestureTokenIdentifier forcedActivationToken)
+{
+    RefPtr senderProcess = validatedUserActivationSenderProcess(connection, sourceFrameID, forcedActivationToken);
+    if (!senderProcess)
+        return;
+
+    forEachWebContentProcess([&](auto& process, auto pageID) {
+        if (&process != senderProcess.get())
+            process.send(Messages::WebPage::RevokeForcedUserActivation(forcedActivationToken), pageID);
+    });
 }
 
 void WebPageProxy::didFinishLoadForFrame(IPC::Connection& connection, FrameIdentifier frameID, FrameInfoData&& frameInfo, ResourceRequest&& request, std::optional<WebCore::NavigationIdentifier> navigationID, const UserData& userData, WallTime timestamp)

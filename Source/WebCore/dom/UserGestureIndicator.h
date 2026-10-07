@@ -27,6 +27,7 @@
 
 #include <JavaScriptCore/CrossTaskToken.h>
 #include <WebCore/DOMPasteAccess.h>
+#include <WebCore/UserGestureTokenIdentifier.h>
 #include <wtf/CanMakeWeakPtr.h>
 #include <wtf/Function.h>
 #include <wtf/MonotonicTime.h>
@@ -42,6 +43,8 @@ class VM;
 namespace WebCore {
 
 class Document;
+class LocalDOMWindow;
+class LocalFrame;
 class WeakPtrImplWithEventTargetData;
 
 enum class IsProcessingUserGesture : uint8_t { No, Yes, Potentially };
@@ -50,6 +53,7 @@ enum class CanRequestDOMPaste : bool { No, Yes };
 enum class UserGestureType : uint8_t { EscapeKey, ActivationTriggering, Other };
 enum class ProcessInteractionStyle { Immediate, Delayed, Never };
 enum class GestureScope : bool { All, MediaOnly };
+enum class RemoveTransientActivation : bool;
 
 struct UserGestureTokenData {
     IsProcessingUserGesture isProcessingUserGesture { IsProcessingUserGesture::No };
@@ -59,6 +63,7 @@ struct UserGestureTokenData {
     MonotonicTime startTime { MonotonicTime::now() };
     DOMPasteAccessPolicy domPasteAccessPolicy { DOMPasteAccessPolicy::NotRequestedYet };
     GestureScope scope { GestureScope::All };
+    bool removesTransientActivation { false };
 
     bool hasExpired(Seconds expirationInterval) const
     {
@@ -74,7 +79,7 @@ public:
     static const Seconds& NODELETE maximumIntervalForUserGestureForwardingForFetch();
     WEBCORE_EXPORT static void NODELETE setMaximumIntervalForUserGestureForwardingForFetchForTesting(Seconds);
 
-    static Ref<UserGestureToken> create(IsProcessingUserGesture, UserGestureType, Document*, std::optional<WTF::UUID> authorizationToken, CanRequestDOMPaste, MonotonicTime, DOMPasteAccessPolicy, GestureScope);
+    static Ref<UserGestureToken> create(IsProcessingUserGesture, UserGestureType, Document*, std::optional<WTF::UUID> authorizationToken, CanRequestDOMPaste, MonotonicTime, DOMPasteAccessPolicy, GestureScope, RemoveTransientActivation);
 
     WEBCORE_EXPORT ~UserGestureToken();
 
@@ -118,6 +123,11 @@ public:
     }
 
     MonotonicTime startTime() const { return m_data.startTime; }
+    UserGestureTokenIdentifier identifier() const { return m_identifier; }
+
+    bool removesTransientActivation() const { return m_data.removesTransientActivation; }
+    void didGrantForcedActivation(LocalDOMWindow&);
+    void didGrantForcedActivationInOtherProcesses(LocalFrame&);
 
     std::optional<WTF::UUID> authorizationToken() const { return m_data.authorizationToken; }
 
@@ -125,18 +135,19 @@ public:
 
     bool NODELETE isValidForDocument(const Document&) const;
 
-    void forEachImpactedDocument(NOESCAPE const Function<void(Document&)>&);
-
     RefPtr<JSC::MicrotaskDispatcher> createMicrotaskDispatcher(JSC::VM&, JSC::JSGlobalObject*) override;
 
     const UserGestureTokenData& data() const { return m_data; }
 
 private:
-    UserGestureToken(IsProcessingUserGesture, UserGestureType, Document*, std::optional<WTF::UUID> authorizationToken, CanRequestDOMPaste, MonotonicTime, DOMPasteAccessPolicy, GestureScope);
+    UserGestureToken(IsProcessingUserGesture, UserGestureType, Document*, std::optional<WTF::UUID> authorizationToken, CanRequestDOMPaste, MonotonicTime, DOMPasteAccessPolicy, GestureScope, RemoveTransientActivation);
 
+    const UserGestureTokenIdentifier m_identifier { UserGestureTokenIdentifier::generate() };
     UserGestureTokenData m_data;
     Vector<Function<void(UserGestureToken&)>> m_destructionObservers;
     WeakHashSet<Document, WeakPtrImplWithEventTargetData> m_documentsImpactedByUserGesture;
+    WeakHashSet<LocalDOMWindow, WeakPtrImplWithEventTargetData> m_windowsWithForcedActivation;
+    WeakPtr<LocalFrame> m_frameWithForcedActivationInOtherProcesses;
 };
 
 class UserGestureIndicator {
@@ -152,12 +163,15 @@ public:
     using ProcessInteractionStyle = WebCore::ProcessInteractionStyle;
     WEBCORE_EXPORT explicit UserGestureIndicator(const UserGestureTokenData&, Document*);
     WEBCORE_EXPORT explicit UserGestureIndicator(std::optional<IsProcessingUserGesture>, Document* = nullptr, UserGestureType = UserGestureType::ActivationTriggering, ProcessInteractionStyle = ProcessInteractionStyle::Immediate, std::optional<WTF::UUID> authorizationToken = std::nullopt, CanRequestDOMPaste = CanRequestDOMPaste::Yes, MonotonicTime startTime = MonotonicTime::now(), DOMPasteAccessPolicy = DOMPasteAccessPolicy::NotRequestedYet, GestureScope = GestureScope::All);
+    UserGestureIndicator(std::optional<IsProcessingUserGesture>, Document*, UserGestureType, ProcessInteractionStyle, RemoveTransientActivation);
     WEBCORE_EXPORT explicit UserGestureIndicator(RefPtr<UserGestureToken>, UserGestureToken::GestureScope = UserGestureToken::GestureScope::All, UserGestureToken::ShouldPropagateToMicroTask = UserGestureToken::ShouldPropagateToMicroTask::No);
     WEBCORE_EXPORT ~UserGestureIndicator();
 
     WEBCORE_EXPORT std::optional<WTF::UUID> authorizationToken() const;
 
 private:
+    UserGestureIndicator(std::optional<IsProcessingUserGesture>, Document*, UserGestureType, ProcessInteractionStyle, std::optional<WTF::UUID> authorizationToken, CanRequestDOMPaste, MonotonicTime startTime, DOMPasteAccessPolicy, GestureScope, RemoveTransientActivation);
+
     RefPtr<UserGestureToken> m_previousToken;
 };
 

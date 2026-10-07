@@ -7547,4 +7547,5 @@ header: <WebCore/UserGestureIndicator.h>
     MonotonicTime startTime;
     WebCore::DOMPasteAccessPolicy domPasteAccessPolicy;
     WebCore::GestureScope scope;
+    bool removesTransientActivation;
 };
