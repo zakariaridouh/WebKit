@@ -172,10 +172,11 @@ private:
     // from each commit's MainFrameData::pageScaleFactor.
     std::optional<WebCore::FloatPoint> m_delegatedZoomOriginInVisibleRect;
 
-    // Captured when a zoom gesture begins, to anchor the origin:
-    // newScroll = initialScroll + origin * (1/initialScale - 1/scale).
+    // Captured when a zoom gesture begins, to keep the content under the initial origin under the current one:
+    // newScroll = initialScroll + initialOrigin / initialScale - origin / scale.
     std::optional<double> m_delegatedZoomInitialScale;
     WebCore::FloatPoint m_delegatedZoomInitialScrollPosition;
+    WebCore::FloatPoint m_delegatedZoomInitialOriginInVisibleRect;
 
     // Where the commit in progress was told to land, in unscaled content coordinates. Only zooms that pick their
     // own destination up front, like smart magnify, set it; a gesture has an origin to anchor instead, so this

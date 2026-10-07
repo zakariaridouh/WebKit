@@ -171,6 +171,7 @@ public:
 
 #if PLATFORM(MAC)
     void handleMagnificationGesture(double scale, WebEventPhase, WebCore::FloatPoint originInViewCoordinates, WebEventInputSource = WebEventInputSource::UserDriven);
+    void moveMagnificationOrigin(WebCore::FloatPoint originInViewCoordinates);
     void handleSmartMagnificationGesture(WebCore::FloatPoint gestureLocationInViewCoordinates);
 
     void setCustomSwipeViews(Vector<RetainPtr<NSView>> views) { m_customSwipeViews = WTF::move(views); }

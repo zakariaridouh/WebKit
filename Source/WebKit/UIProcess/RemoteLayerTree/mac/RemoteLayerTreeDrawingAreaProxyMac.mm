@@ -595,14 +595,14 @@ FloatPoint RemoteLayerTreeDrawingAreaProxyMac::scrollPositionAnchoringGestureOri
     if (!m_delegatedZoomInitialScale || scale <= 0 || *m_delegatedZoomInitialScale <= 0)
         return currentScrollPosition;
 
-    // Solve (p - scroll) * scale == origin for scroll, where p is the content point that was under the cursor
-    // when the gesture started. Unscaled content coordinates, like the rest of the scrolling tree.
-    auto anchorOffset = originInVisibleRect;
-    anchorOffset.scale(1.0f / *m_delegatedZoomInitialScale - 1.0f / scale);
+    // Solve (p - scroll) * scale == origin for scroll, where p is the content point under the initial origin.
+    // Unscaled content coordinates. The origin follows the gesture's centroid, so a moving pinch also pans.
+    auto contentPointUnderInitialOrigin = m_delegatedZoomInitialScrollPosition + toFloatSize(m_delegatedZoomInitialOriginInVisibleRect.scaled(1.0f / *m_delegatedZoomInitialScale));
+    auto scrollPosition = contentPointUnderInitialOrigin - toFloatSize(originInVisibleRect.scaled(1.0f / scale));
 
     // This positions the scrolled-contents layer and is also what sendVisibleContentRectUpdate() gives the
     // scrolling tree and the web process
-    return constrainScrollPositionForScale(scale, m_delegatedZoomInitialScrollPosition + toFloatSize(anchorOffset));
+    return constrainScrollPositionForScale(scale, scrollPosition);
 }
 
 FloatSize RemoteLayerTreeDrawingAreaProxyMac::unobscuredViewportSize() const
@@ -875,6 +875,7 @@ void RemoteLayerTreeDrawingAreaProxyMac::adjustTransientZoom(double scale, Float
             if (treeScrollPosition != m_delegatedZoomCommittedTreeScrollPosition)
                 committedScrollPosition = std::nullopt;
             m_delegatedZoomInitialScrollPosition = committedScrollPosition.value_or(treeScrollPosition);
+            m_delegatedZoomInitialOriginInVisibleRect = originInVisibleRect;
         }
 
         applyDelegatedZoomToLayer(scale, originInVisibleRect);
@@ -944,9 +945,10 @@ void RemoteLayerTreeDrawingAreaProxyMac::commitDelegatedZoom(double scale, Float
     // multiply in viewScaleFactor() again and bake the scale back into the render tree.
     sendVisibleContentRectUpdate(scale, IsStableState::Yes);
 
-    // The gesture is over; the next one captures its own starting scale and scroll position.
+    // The gesture is over; the next one captures its own starting scale, scroll position and origin.
     m_delegatedZoomInitialScale = { };
     m_delegatedZoomInitialScrollPosition = { };
+    m_delegatedZoomInitialOriginInVisibleRect = { };
 
     if (!rootScrollingNodeID)
         return;

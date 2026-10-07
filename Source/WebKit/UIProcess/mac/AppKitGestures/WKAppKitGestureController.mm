@@ -1945,6 +1945,14 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     if (std::exchange(_suppressNextPanScrollDelta, false))
         gestureDelta = { };
 
+    if (RefPtr page = [webView _protectedPage]; page->delegatesScalingToUIProcess()) {
+        CheckedPtr impl = [webView _impl];
+        if (RefPtr gestureController = impl->gestureController(); gestureController && gestureController->hasActiveMagnificationGesture()) {
+            gestureDelta = { };
+            gestureController->moveMagnificationOrigin(locationInView);
+        }
+    }
+
     auto pinnedState = [webView _protectedPage]->pinnedStateIncludingAncestorsAtPoint(locationInView);
     bool prefersUnlockedScroll = [self prefersUnlockedScroll:_panGestureRecognizer];
     bool canScrollHorizontally = [_panGestureRecognizer _canPanHorizontally] && !(pinnedState.left() && pinnedState.right());
