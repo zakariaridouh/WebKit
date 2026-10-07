@@ -144,6 +144,9 @@ static RefPtr<Protocol::Network::Response> buildObjectForResourceResponse(const 
         responseObject->setTiming(ResourceUtilities::buildObjectForTiming(metrics ? *metrics : NetworkLoadMetrics::emptyMetrics(), *resourceLoadStartTime, monotonicTimeToProtocolSeconds));
     }
 
+    if (auto& certificateInfo = response.certificateInfo())
+        responseObject->setSecurity(ResourceUtilities::buildObjectForSecurity(*certificateInfo));
+
     return responseObject;
 }
 

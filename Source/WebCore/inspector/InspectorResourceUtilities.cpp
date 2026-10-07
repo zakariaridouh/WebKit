@@ -29,6 +29,8 @@
 #include "CachedCSSStyleSheet.h"
 #include "CachedResourceLoader.h"
 #include "CachedScript.h"
+#include "CertificateInfo.h"
+#include "CertificateSummary.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "DocumentPage.h"
@@ -601,6 +603,41 @@ Ref<Inspector::Protocol::Network::ResourceTiming> buildObjectForTiming(const Net
         .setResponseStart(millisecondsSinceFetchStart(timing.responseStart))
         .setResponseEnd(millisecondsSinceFetchStart(timing.responseEnd))
         .release();
+}
+
+Ref<Inspector::Protocol::Security::Security> buildObjectForSecurity(const CertificateInfo& certificateInfo)
+{
+    auto securityPayload = Inspector::Protocol::Security::Security::create()
+        .release();
+
+    if (auto certificateSummaryInfo = certificateInfo.summary()) {
+        auto certificatePayload = Inspector::Protocol::Security::Certificate::create()
+            .release();
+
+        certificatePayload->setSubject(certificateSummaryInfo.value().subject);
+
+        if (auto validFrom = certificateSummaryInfo.value().validFrom)
+            certificatePayload->setValidFrom(validFrom.seconds());
+
+        if (auto validUntil = certificateSummaryInfo.value().validUntil)
+            certificatePayload->setValidUntil(validUntil.seconds());
+
+        auto dnsNamesPayload = JSON::ArrayOf<String>::create();
+        for (auto& dnsName : certificateSummaryInfo.value().dnsNames)
+            dnsNamesPayload->addItem(dnsName);
+        if (dnsNamesPayload->length())
+            certificatePayload->setDnsNames(WTF::move(dnsNamesPayload));
+
+        auto ipAddressesPayload = JSON::ArrayOf<String>::create();
+        for (auto& ipAddress : certificateSummaryInfo.value().ipAddresses)
+            ipAddressesPayload->addItem(ipAddress);
+        if (ipAddressesPayload->length())
+            certificatePayload->setIpAddresses(WTF::move(ipAddressesPayload));
+
+        securityPayload->setCertificate(WTF::move(certificatePayload));
+    }
+
+    return securityPayload;
 }
 
 static Vector<InitiatorCallFrame> copyCallFrames(const ScriptCallStack& callStack)

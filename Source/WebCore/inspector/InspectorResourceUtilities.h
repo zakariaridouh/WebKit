@@ -43,6 +43,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+class CertificateInfo;
 class DocumentLoader;
 class FragmentedSharedBuffer;
 class HTTPHeaderMap;
@@ -205,6 +206,8 @@ WEBCORE_EXPORT Ref<Inspector::Protocol::Network::Metrics> buildObjectForMetrics(
 // monotonicToProtocolSeconds to express them in whichever timebase its target reports on. The
 // remaining fields are milliseconds relative to fetchStart and need no conversion.
 WEBCORE_EXPORT Ref<Inspector::Protocol::Network::ResourceTiming> buildObjectForTiming(const WebCore::NetworkLoadMetrics&, MonotonicTime loadStartTime, NOESCAPE const Function<double(MonotonicTime)>& monotonicToProtocolSeconds);
+
+WEBCORE_EXPORT Ref<Inspector::Protocol::Security::Security> buildObjectForSecurity(const WebCore::CertificateInfo&);
 
 // Captures what caused the load being started right now. Must be called synchronously from the
 // load-initiating instrumentation hook, since it reads the live JS stack to decide whether a script

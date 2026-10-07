@@ -25,7 +25,6 @@ imported/w3c/web-platform-tests/css/compositing/mix-blend-mode/mix-blend-mode-vi
 ########################
 http/tests/inspector/network/resource-sizes-network.html [ Pass Failure Timeout ]
 http/tests/inspector/network/fetch-response-body-304.html [ Failure ]
-http/tests/inspector/network/resource-certificate-subject-format.html [ Failure ]
 webkit.org/b/318430 http/tests/inspector/network/clear-non-buffered-resource-data-on-navigate.html [ Failure ]
 http/tests/media/media-stream/speech-recognition-iframe-allow-attribute.html [ Failure ]
 http/tests/site-isolation/inspector/page/override-setting-cross-origin-iframe.html [ Failure ]

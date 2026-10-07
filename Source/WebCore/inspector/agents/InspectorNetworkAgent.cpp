@@ -38,7 +38,6 @@
 #include "CachedResourceRequestInitiatorTypes.h"
 #include "CachedScript.h"
 #include "CertificateInfo.h"
-#include "CertificateSummary.h"
 #include "CookieJar.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
@@ -194,39 +193,8 @@ RefPtr<Inspector::Protocol::Network::Response> InspectorNetworkAgent::buildObjec
         responseObject->setTiming(buildObjectForTiming(metrics ? *metrics : NetworkLoadMetrics::emptyMetrics(), *resourceLoader));
     }
 
-    if (auto& certificateInfo = response.certificateInfo()) {
-        auto securityPayload = Inspector::Protocol::Security::Security::create()
-            .release();
-
-        if (auto certificateSummaryInfo = certificateInfo.value().summary()) {
-            auto certificatePayload = Inspector::Protocol::Security::Certificate::create()
-                .release();
-
-            certificatePayload->setSubject(certificateSummaryInfo.value().subject);
-
-            if (auto validFrom = certificateSummaryInfo.value().validFrom)
-                certificatePayload->setValidFrom(validFrom.seconds());
-
-            if (auto validUntil = certificateSummaryInfo.value().validUntil)
-                certificatePayload->setValidUntil(validUntil.seconds());
-
-            auto dnsNamesPayload = JSON::ArrayOf<String>::create();
-            for (auto& dnsName : certificateSummaryInfo.value().dnsNames)
-                dnsNamesPayload->addItem(dnsName);
-            if (dnsNamesPayload->length())
-                certificatePayload->setDnsNames(WTF::move(dnsNamesPayload));
-
-            auto ipAddressesPayload = JSON::ArrayOf<String>::create();
-            for (auto& ipAddress : certificateSummaryInfo.value().ipAddresses)
-                ipAddressesPayload->addItem(ipAddress);
-            if (ipAddressesPayload->length())
-                certificatePayload->setIpAddresses(WTF::move(ipAddressesPayload));
-
-            securityPayload->setCertificate(WTF::move(certificatePayload));
-        }
-
-        responseObject->setSecurity(WTF::move(securityPayload));
-    }
+    if (auto& certificateInfo = response.certificateInfo())
+        responseObject->setSecurity(ResourceUtilities::buildObjectForSecurity(*certificateInfo));
 
     return responseObject;
 }
