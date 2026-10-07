@@ -395,7 +395,7 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
         }
 
         RefPtr<Node> rightContents;
-        if (&endContainer() != commonRoot && commonRoot->contains(originalEnd.container())) {
+        if (&originalEnd.container() != commonRoot && commonRoot->contains(originalEnd.container())) {
             auto firstResult = processContentsBetweenOffsets(action, nullptr, protect(originalEnd.container()).ptr(), 0, originalEnd.offset());
             auto secondResult = processAncestorsAndTheirSiblings(action, protect(originalEnd.container()).ptr(), ProcessContentsBackward, WTF::move(firstResult), commonRoot.get());
             // FIXME: A bit peculiar that we silently ignore the exception here, but we do have at least some regression tests that rely on this behavior.
