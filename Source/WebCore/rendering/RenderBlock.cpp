@@ -353,12 +353,11 @@ void RenderBlock::styleDidChange(Style::Difference diff, const Style::ComputedSt
 
     // It's possible for our border/padding to change, but for the overall logical width of the block to
     // end up being the same. We keep track of this change so in layoutBlock, we can know to set relayoutChildren=true.
-    auto shouldForceRelayoutChildren = false;
     if (oldStyle && diff == Style::DifferenceResult::Layout && needsLayout()) {
         // Out-of-flow boxes anchored to the padding box.
-        shouldForceRelayoutChildren = contentBoxLogicalWidthChanged(*oldStyle, style()) || (outOfFlowBoxes() && paddingBoxLogicalHeightChanged(*oldStyle, style()));
+        if (contentBoxLogicalWidthChanged(*oldStyle, style()) || (outOfFlowBoxes() && paddingBoxLogicalHeightChanged(*oldStyle, style())))
+            setShouldForceRelayoutChildren(true);
     }
-    setShouldForceRelayoutChildren(shouldForceRelayoutChildren);
 }
 
 bool RenderBlock::childrenPreventSelfCollapsing() const
