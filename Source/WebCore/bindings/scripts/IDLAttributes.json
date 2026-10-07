@@ -565,8 +565,7 @@
             "contextsAllowed": ["interface"],
             "standard": {
                 "url": "https://html.spec.whatwg.org/multipage/structured-data.html#serializable"
-            },
-            "unsupported": true
+            }
         },
         "SetterCallWith": {
             "contextsAllowed": ["attribute"],
@@ -592,8 +591,7 @@
             "contextsAllowed": ["interface"],
             "standard": {
                 "url": "https://html.spec.whatwg.org/multipage/structured-data.html#transferable"
-            },
-            "unsupported": true
+            }
         },
         "URL": {
             "contextsAllowed": ["attribute"]

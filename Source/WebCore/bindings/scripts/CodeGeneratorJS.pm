@@ -2099,6 +2099,12 @@ sub AttributeShouldBeOnInstance
     return 0;
 }
 
+sub IsSerializableOrTransferable
+{
+    my $interface = shift;
+    return $interface->extendedAttributes->{Serializable} || $interface->extendedAttributes->{Transferable};
+}
+
 sub IsAlwaysExposedOnInterface
 {
     my ($interfaceExposures, $contextExposures) = @_;
@@ -3429,6 +3435,8 @@ sub GenerateHeader
         push(@headerContent, "    static JSC::JSValue getLegacyFactoryFunction(JSC::VM&, JSC::JSGlobalObject*);\n") if $interface->extendedAttributes->{LegacyFactoryFunction};
     }
 
+    push(@headerContent, "    static bool isExposedInGlobalObject(JSDOMGlobalObject&);\n") if IsSerializableOrTransferable($interface);
+
     if ($interface->extendedAttributes->{GenerateForEachEventHandlerContentAttribute}) {
         push(@headerContent, "    static void forEachEventHandlerContentAttribute(NOESCAPE const Function<void(const AtomString& attributeName, const AtomString& eventName)>&);\n\n");
     }
@@ -4379,7 +4387,7 @@ sub GenerateRuntimeEnableConditionalStringForExposeScope
       $wrapperType = "JSWorkletGlobalScopeBase";
     } elsif ($exposed eq "AudioWorklet") {
       $wrapperType = "JSWorkletGlobalScopeBase";
-      $sideCondition = "global->scriptExecutionContext()->isAudioWorkletGlobalScope()";
+      $sideCondition = "global->wrapped().isAudioWorkletGlobalScope()";
     } else {
       assert("Unrecognized value '" . Dumper($context->extendedAttributes->{Exposed}) . "' for the Exposed extended attribute on '" . ref($context) . "'.");
     }
@@ -4584,10 +4592,10 @@ sub GenerateRuntimeEnableConditionalString
 
     if ($context->extendedAttributes->{EnabledForContext}) {
         assert("Must not specify value for EnabledForContext.") unless $context->extendedAttributes->{EnabledForContext} eq "VALUE_IS_MISSING";
-        assert("EnabledForContext must be an interface or constructor attribute.") unless $codeGenerator->IsConstructorType($context->type);
+        assert("EnabledForContext must be an interface or constructor attribute.") unless $context == $interface || $codeGenerator->IsConstructorType($context->type);
 
         my $contextRef = "*" . $jsDOMGlobalObjectExpr . "->scriptExecutionContext()";
-        my $name = $context->name;
+        my $name = $context == $interface ? $interface->type->name : $context->name;
         # The ${name}::enabledForContext(...) call needs the implementation type
         # complete at the call site. Bring in JS${name}.h, which transitively
         # provides ${name}.h. This used to flow in via the constructor-getter
@@ -5404,6 +5412,19 @@ sub GenerateImplementation
             push(@implContent, "    return getDOMConstructor<${className}LegacyFactoryFunction, DOMConstructorID::${interfaceName}LegacyFactory>(vm, *uncheckedDowncast<JSDOMGlobalObject>(globalObject));\n");
             push(@implContent, "}\n\n");
         }
+    }
+
+    if (IsSerializableOrTransferable($interface)) {
+        my $exposedConditionalString = GenerateRuntimeEnableConditionalString($interface, $interface, "(&globalObject)", 1);
+        push(@implContent, "bool ${className}::isExposedInGlobalObject(JSDOMGlobalObject& globalObject)\n");
+        push(@implContent, "{\n");
+        if ($exposedConditionalString) {
+            push(@implContent, "    return ${exposedConditionalString};\n");
+        } else {
+            push(@implContent, "    UNUSED_PARAM(globalObject);\n");
+            push(@implContent, "    return true;\n");
+        }
+        push(@implContent, "}\n\n");
     }
 
     if (!$hasParent || $codeGenerator->InheritsExtendedAttribute($interface, "Exception")) {

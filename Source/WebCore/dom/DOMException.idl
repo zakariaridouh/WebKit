@@ -28,10 +28,12 @@
 
 // https://webidl.spec.whatwg.org/#idl-DOMException
 
+// FIXME: This should be Exposed=*.
 [
     DoNotCheckConstants,
     Exposed=(Window,Worker),
-    Exception
+    Exception,
+    Serializable
 ] interface DOMException {
     constructor(optional DOMString message = "", optional DOMString name = "Error");
 

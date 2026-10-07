@@ -49,6 +49,8 @@ typedef (HTMLImageElement
     Exposed=(Window,DedicatedWorker),
     InterfaceName=VideoFrame,
     ReportExtraMemoryCost,
+    Serializable,
+    Transferable,
 ] interface WebCodecsVideoFrame {
     [CallWith=CurrentScriptExecutionContext] constructor(CanvasImageSource image, optional VideoFrameInit init = {});
     [CallWith=CurrentScriptExecutionContext] constructor(AllowSharedBufferSource data, VideoFrameBufferInit init);

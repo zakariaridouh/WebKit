@@ -20,27 +20,25 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "ExposedStar.h"
-#include "JSEventTarget.h"
+#include "TestSerializable.h"
 #include <WebCore/JSDOMWrapper.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-class JSExposedStar : public JSEventTarget {
+class JSTestSerializable : public JSDOMWrapper<TestSerializable> {
 public:
-    using Base = JSEventTarget;
-    using DOMWrapped = ExposedStar;
-    static JSExposedStar* create(JSC::Structure*, JSDOMGlobalObject*, Ref<ExposedStar>&&);
+    using Base = JSDOMWrapper<TestSerializable>;
+    static JSTestSerializable* create(JSC::Structure*, JSDOMGlobalObject*, Ref<TestSerializable>&&);
 
     static JSC::JSObject* createPrototype(JSC::VM&, JSDOMGlobalObject&);
     static JSC::JSObject* prototype(JSC::VM&, JSDOMGlobalObject&);
-    static ExposedStar* toWrapped(JSC::VM&, JSC::JSValue);
+    static TestSerializable* toWrapped(JSC::VM&, JSC::JSValue);
+    static void destroy(JSC::JSCell*);
 
     DECLARE_INFO;
 
     static JSC::Structure* createStructure(JSC::VM&, JSC::JSGlobalObject*, JSC::JSValue);
-    static JSC::JSValue getConstructor(JSC::VM&, const JSC::JSGlobalObject*);
     static bool isExposedInGlobalObject(JSDOMGlobalObject&);
     template<typename, JSC::SubspaceAccess mode> static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
     {
@@ -50,24 +48,40 @@ public:
     }
     static JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm);
     static void analyzeHeap(JSCell*, JSC::HeapAnalyzer&);
-    ExposedStar& wrapped() const
-    {
-        return static_cast<ExposedStar&>(Base::wrapped());
-    }
-
 protected:
-    JSExposedStar(JSC::Structure*, JSDOMGlobalObject&, Ref<ExposedStar>&&);
+    JSTestSerializable(JSC::Structure*, JSDOMGlobalObject&, Ref<TestSerializable>&&);
 
     DECLARE_DEFAULT_FINISH_CREATION;
 };
 
-JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, ExposedStar&);
-JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject*, Ref<ExposedStar>&&);
-ALWAYS_INLINE JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, ExposedStar& impl) { return toJSNewlyCreated(lexicalGlobalObject, globalObject, Ref { impl }); }
+class JSTestSerializableOwner final : public JSC::WeakHandleOwner {
+public:
+    JSTestSerializableOwner() = default;
+    bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::AbstractSlotVisitor&, ASCIILiteral*) final;
+    void finalize(JSC::Handle<JSC::Unknown>, void* context) final;
 
-template<> struct JSDOMWrapperConverterTraits<ExposedStar> {
-    using WrapperClass = JSExposedStar;
-    using ToWrappedReturnType = ExposedStar*;
+private:
+    explicit JSTestSerializableOwner(ClangVTableWorkaroundTag);
+};
+
+inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestSerializable*)
+{
+    static NeverDestroyed<JSTestSerializableOwner> owner;
+    return &owner.get();
+}
+
+inline void* wrapperKey(TestSerializable* wrappableObject)
+{
+    return wrappableObject;
+}
+
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, TestSerializable&);
+JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject*, Ref<TestSerializable>&&);
+ALWAYS_INLINE JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, TestSerializable& impl) { return toJSNewlyCreated(lexicalGlobalObject, globalObject, Ref { impl }); }
+
+template<> struct JSDOMWrapperConverterTraits<TestSerializable> {
+    using WrapperClass = JSTestSerializable;
+    using ToWrappedReturnType = TestSerializable*;
 };
 
 } // namespace WebCore

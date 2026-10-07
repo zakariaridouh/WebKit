@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,13 +24,12 @@
  */
 
 [
-    Exposed=(Window,Worker),
-    ReportExtraMemoryCost,
-    Serializable,
-    Transferable
-] interface ImageBitmap {
-    readonly attribute unsigned long width;
-    readonly attribute unsigned long height;
-    undefined close();
+    EnabledBySetting=TestSettingEnabled,
+    EnabledForContext,
+    Exposed=(Window,DedicatedWorker),
+    LegacyNoInterfaceObject,
+    SecureContext,
+    Serializable
+] interface TestSerializable {
 };
 

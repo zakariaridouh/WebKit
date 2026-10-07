@@ -28,6 +28,7 @@
     EnabledBySetting=WebCodecsVideoEnabled,
     Exposed=(Window,DedicatedWorker),
     InterfaceName=EncodedVideoChunk,
+    Serializable,
 ] interface WebCodecsEncodedVideoChunk {
   [CallWith=CurrentGlobalObject] constructor(WebCodecsEncodedVideoChunkInit init);
   readonly attribute WebCodecsEncodedVideoChunkType type;

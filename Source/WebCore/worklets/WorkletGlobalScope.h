@@ -60,9 +60,7 @@ public:
     virtual ~WorkletGlobalScope();
 
     virtual bool isPaintWorkletGlobalScope() const { return false; }
-#if ENABLE(WEB_AUDIO)
     virtual bool isAudioWorkletGlobalScope() const { return false; }
-#endif
 
     WEBCORE_EXPORT static unsigned NODELETE numberOfWorkletGlobalScopes();
 
