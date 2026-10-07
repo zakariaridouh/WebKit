@@ -497,7 +497,6 @@ class WebUndoStep;
 class WebUserContentController;
 class WebWheelEvent;
 
-enum class ContentAsStringIncludesChildFrames : bool;
 enum class DragControllerAction : uint8_t;
 #if ENABLE(TILED_CA_DRAWING_AREA)
 enum class DrawingAreaType : bool;
@@ -2515,7 +2514,8 @@ private:
     void viewWillStartLiveResize();
     void viewWillEndLiveResize();
 
-    void getContentsAsString(ContentAsStringIncludesChildFrames, CompletionHandler<void(const String&)>&&);
+    void getContentsAsString(CompletionHandler<void(const String&)>&&);
+    void getContentsOfAllFramesAsString(CompletionHandler<void(HashMap<WebCore::FrameIdentifier, String>&&)>&&);
 #if PLATFORM(COCOA)
     void getContentsAsAttributedString(CompletionHandler<void(const WebCore::AttributedString&)>&&);
 #endif
