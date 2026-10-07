@@ -747,7 +747,6 @@ void NetworkConnectionToWebProcess::browsingContextRemoved(WebPageProxyIdentifie
             cache->browsingContextRemoved(webPageProxyID, webPageID, webFrameID);
     }
     m_lastRootActivityCompletionCodesForTesting.remove(webPageID);
-    m_localNetworkAccessFrameRecords.remove(webFrameID);
 }
 
 void NetworkConnectionToWebProcess::recordLocalNetworkAccessFrame(FrameIdentifier frameID, LocalNetworkAccessFrameRecord&& record)
@@ -2148,6 +2147,7 @@ void NetworkConnectionToWebProcess::destroyWebTransportSession(WebTransportSessi
 
 void NetworkConnectionToWebProcess::clearFrameLoadRecordsForStorageAccess(WebCore::FrameIdentifier frameID)
 {
+    m_localNetworkAccessFrameRecords.remove(frameID);
     if (CheckedPtr session = networkSession()) {
         if (RefPtr resourceLoadStatistics = session->resourceLoadStatistics())
             resourceLoadStatistics->clearFrameLoadRecordsForStorageAccess(frameID);
