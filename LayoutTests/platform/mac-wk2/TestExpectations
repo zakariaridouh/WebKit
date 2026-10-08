@@ -2605,7 +2605,6 @@ webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/express
 [ GoldenGate Debug ] http/tests/inspector/network/resource-sizes-network.html [ Failure ]
 [ GoldenGate Debug ] http/tests/ipc/createnewpage-file-body-sandbox-extension.html [ Failure ]
 [ GoldenGate Debug ] http/tests/media/media-source/media-source-video-fit-fill.html [ Failure ]
-[ GoldenGate Debug ] http/tests/websocket/tests/hybi/inspector/handshake-error.html [ Failure ]
 [ GoldenGate Debug ] http/tests/xmlhttprequest/abort-should-cancel-load.html [ Failure ]
 [ GoldenGate Debug ] http/wpt/background-fetch/background-fetch-click.window.html [ Failure ]
 [ GoldenGate Debug ] http/wpt/webauthn/public-key-credential-get-success-hid.https.html [ Failure ]
@@ -2663,3 +2662,4 @@ webkit.org/b/322505 fast/visual-viewport/zoomed-scroll-into-view-fixed.html [ Sk
 
 webkit.org/b/326746 [ Sequoia x86 Debug ] media/modern-media-controls/icon-service/icon-service-bundle-load.html [ Pass Timeout ]
 webkit.org/b/326748 [ Debug ] media/modern-media-controls/macos-fullscreen-media-controls/macos-fullscreen-rtl-volume-button-no-overlap.html [ Pass Timeout ]
+webkit.org/b/326894 [ Sequoia+ ] http/tests/websocket/tests/hybi/inspector/handshake-error.html [ Pass Failure ]
