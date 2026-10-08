@@ -286,9 +286,11 @@ CSSSelectorList CSSParser::parsePageSelector(CSSParserTokenRange range, StyleShe
     if (!range.atEnd())
         return { }; // Parse error; extra tokens in @page selector
 
+    auto& defaultNamespace = styleSheet ? styleSheet->defaultNamespace() : starAtom();
+
     std::unique_ptr<MutableCSSSelector> selector;
     if (!typeSelector.isNull() && pseudo.isNull())
-        selector = makeUnique<MutableCSSSelector>(QualifiedName(nullAtom(), typeSelector, styleSheet->defaultNamespace()));
+        selector = makeUnique<MutableCSSSelector>(QualifiedName(nullAtom(), typeSelector, defaultNamespace));
     else {
         selector = makeUnique<MutableCSSSelector>();
         if (!pseudo.isNull()) {
@@ -297,7 +299,7 @@ CSSSelectorList CSSParser::parsePageSelector(CSSParserTokenRange range, StyleShe
                 return { };
         }
         if (!typeSelector.isNull())
-            selector->appendTagInComplexSelector(QualifiedName(nullAtom(), typeSelector, styleSheet->defaultNamespace()));
+            selector->appendTagInComplexSelector(QualifiedName(nullAtom(), typeSelector, defaultNamespace));
     }
 
     selector->setForPage();
