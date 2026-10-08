@@ -3409,6 +3409,75 @@ TEST(SiteIsolation, DragAndDropWithoutNavigation)
 }
 #endif
 
+#if ENABLE(DRAG_SUPPORT) && PLATFORM(MAC)
+TEST(SiteIsolation, DropInSameSiteGrandchildOfOffsetRemoteFrame)
+{
+    // a.com embeds b.com, which embeds a.com. The drag starts in the main frame and the drop
+    // happens in the grandchild, so the drop point is transformed into b.com's coordinates
+    // and then into the grandchild's coordinates.
+    auto mainframeHTML = "<!DOCTYPE html>"
+    "<body style='margin: 0'>"
+    "<div id='draggable' draggable='true' style='width: 100px; height: 100px; background-color: pink'>Apples</div>"
+    "<iframe src='https://b.com/child' style='position: absolute; left: 50px; top: 200px; width: 400px; height: 350px; border: 0'></iframe>"
+    "<script>"
+    "window.addEventListener('message', e => { window.grandchildLoaded = e.data == 'grandchild loaded' });"
+    "</script>"
+    "</body>"_s;
+
+    auto childHTML = "<!DOCTYPE html>"
+    "<body style='margin: 0'>"
+    "<iframe src='https://a.com/grandchild' style='position: absolute; left: 30px; top: 40px; width: 300px; height: 250px; border: 0'></iframe>"
+    "</body>"_s;
+
+    auto grandchildHTML = "<!DOCTYPE html>"
+    "<body style='margin: 0'>"
+    "<div id='dropzone' style='width: 250px; height: 150px; background-color: green'>Drop here</div>"
+    "<script>"
+    "window.events = [];"
+    "const dropzone = document.getElementById('dropzone');"
+    "dropzone.addEventListener('dragenter', e => { e.preventDefault(); window.events.push('dragenter') });"
+    "dropzone.addEventListener('dragover', e => { e.preventDefault(); if (window.events.at(-1) != 'dragover') window.events.push('dragover') });"
+    "dropzone.addEventListener('dragleave', e => window.events.push('dragleave'));"
+    "dropzone.addEventListener('drop', e => { e.preventDefault(); window.events.push(`drop:${e.clientX},${e.clientY}`) });"
+    "top.postMessage('grandchild loaded', '*');"
+    "</script>"
+    "</body>"_s;
+
+    HTTPServer server({
+        { "/mainframe"_s, { mainframeHTML } },
+        { "/child"_s, { childHTML } },
+        { "/grandchild"_s, { grandchildHTML } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate allowAnyTLSCertificate];
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    enableSiteIsolation(configuration.get());
+    RetainPtr simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+
+    RetainPtr webView = [simulator webView];
+    [webView setNavigationDelegate:navigationDelegate.get()];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://a.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    while (![[webView objectByEvaluatingJavaScript:@"!!window.grandchildLoaded"] boolValue])
+        Util::spinRunLoop();
+    [webView waitForNextPresentationUpdate];
+
+    // (150, 300) in the main frame is (100, 100) in b.com and (70, 60) in the grandchild.
+    [simulator runFrom:CGPointMake(50, 50) to:CGPointMake(150, 300)];
+
+    __block bool done = false;
+    __block RetainPtr<WKFrameInfo> grandchildFrame;
+    [webView _frames:^(_WKFrameTreeNode *mainFrame) {
+        grandchildFrame = mainFrame.childFrames.firstObject.childFrames.firstObject.info;
+        done = true;
+    }];
+    Util::run(&done);
+
+    EXPECT_WK_STREQ([webView objectByEvaluatingJavaScript:@"window.events.join(',')" inFrame:grandchildFrame.get()], "dragenter,dragover,drop:70,60");
+}
+#endif
+
 TEST(SiteIsolation, ShutDownFrameProcessesAfterNavigationBFCacheEnabled)
 {
     HTTPServer server({

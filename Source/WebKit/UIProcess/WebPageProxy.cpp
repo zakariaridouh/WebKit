@@ -4423,7 +4423,8 @@ void WebPageProxy::dragExited(DragData& dragData)
 #if PLATFORM(COCOA)
 void WebPageProxy::propagateDragAndDrop(DragEventForwardingData&& forwardingData, const String& dragStorageName, DragData&& dragData)
 {
-    auto targetFrameID = forwardingData.targetFrameID;
+    auto targetFrameID = forwardingData.remoteUserInputEventData.targetFrameID;
+    dragData.setClientPosition(roundedIntPoint(forwardingData.remoteUserInputEventData.transformedPoint));
 
     RefPtr frame = WebFrameProxy::webFrame(targetFrameID);
     if (!frame) {
@@ -4450,11 +4451,11 @@ void WebPageProxy::propagateDragAndDrop(DragEventForwardingData&& forwardingData
 
             DragData dragDataCopy(dragData);
 
-            protectedThis->sendWithAsyncReplyToProcessContainingFrame(forwardingData.targetFrameID, Messages::WebPage::PerformDragOperation(forwardingData.targetFrameID, WTF::move(dragData), WTF::move(forwardingData.sandboxExtensionHandle), WTF::move(forwardingData.sandboxExtensionsForUpload)), [protectedThis, frameID = forwardingData.targetFrameID, dragDataCopy = WTF::move(dragDataCopy), dragStorageName] (DragOperationResult dragOperationResult) mutable {
+            protectedThis->sendWithAsyncReplyToProcessContainingFrame(forwardingData.remoteUserInputEventData.targetFrameID, Messages::WebPage::PerformDragOperation(forwardingData.remoteUserInputEventData.targetFrameID, WTF::move(dragData), WTF::move(forwardingData.sandboxExtensionHandle), WTF::move(forwardingData.sandboxExtensionsForUpload)), [protectedThis, frameID = forwardingData.remoteUserInputEventData.targetFrameID, dragDataCopy = WTF::move(dragDataCopy), dragStorageName](DragOperationResult dragOperationResult) mutable {
                 WTF::switchOn(dragOperationResult, [&](bool handled) {
                     protect(protectedThis->pageClient())->didPerformDragOperation(handled);
                 }, [&](DragEventForwardingData& forwardingData) mutable {
-                    if (forwardingData.targetFrameID != frameID)
+                    if (forwardingData.remoteUserInputEventData.targetFrameID != frameID)
                         protectedThis->propagateDragAndDrop(WTF::move(forwardingData), dragStorageName, WTF::move(dragDataCopy));
                 });
             });
@@ -4508,7 +4509,7 @@ void WebPageProxy::performDragOperation(DragData& dragData, const String& dragSt
             WTF::switchOn(dragOperationResult, [&](bool handled) {
                 protect(protectedThis->pageClient())->didPerformDragOperation(handled);
             }, [&](DragEventForwardingData& forwardingData) {
-                if (forwardingData.targetFrameID != frameID)
+                if (forwardingData.remoteUserInputEventData.targetFrameID != frameID)
                     protectedThis->propagateDragAndDrop(WTF::move(forwardingData), dragStorageName, WTF::move(dragDataCopy));
             });
         });

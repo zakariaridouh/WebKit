@@ -59,7 +59,7 @@ struct PromisedAttachmentInfo;
 struct RemoteUserInputEventData;
 
 enum class DragEventHandled : bool;
-using DragEventTargetData = Variant<DragEventHandled, FrameIdentifier>;
+using DragEventTargetData = Variant<DragEventHandled, RemoteUserInputEventData>;
 
 class DragController : public CanMakeSingleThreadWeakPtr<DragController> {
     WTF_MAKE_TZONE_ALLOCATED(DragController);
