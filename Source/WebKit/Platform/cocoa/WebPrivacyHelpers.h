@@ -42,9 +42,6 @@
 #if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
 #import <WebCore/LinkDecorationFilteringData.h>
 #import <WebCore/OrganizationStorageAccessPromptQuirk.h>
-#ifdef __OBJC__
-#import <pal/spi/cocoa/WebPrivacySPI.h>
-#endif
 #endif
 
 OBJC_CLASS WKWebPrivacyNotificationListener;
@@ -164,10 +161,6 @@ private:
     void updateList(CompletionHandler<void()>&&) final;
     void didUpdateCachedListData() final;
     unsigned resourceTypeValue() const final;
-#ifdef __OBJC__
-    // FIXME: Remove when WebPrivacyHelpersAdditions.mm no longer depends on it.
-    WPResourceType NODELETE resourceType() const;
-#endif
 };
 
 class RestrictedOpenerDomainsController {

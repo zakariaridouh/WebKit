@@ -39,6 +39,7 @@
 #import <numeric>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <pal/spi/cocoa/NetworkSPI.h>
+#import <pal/spi/cocoa/WebPrivacySPI.h>
 #import <time.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/MonotonicTime.h>
@@ -51,10 +52,6 @@
 #import <wtf/posix/SocketPOSIX.h>
 #import <wtf/text/MakeString.h>
 #import <pal/cocoa/WebPrivacySoftLink.h>
-
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebPrivacyHelpersAdditions.mm>)
-#import <WebKitAdditions/WebPrivacyHelpersAdditions.mm>
-#endif
 
 @interface WKWebPrivacyNotificationListener : NSObject
 
@@ -1013,11 +1010,6 @@ void ScriptTrackingPrivacyController::updateList(CompletionHandler<void()>&& com
 #else
     RunLoop::mainSingleton().dispatch(WTF::move(completion));
 #endif
-}
-
-WPResourceType ScriptTrackingPrivacyController::resourceType() const
-{
-    return WPResourceTypeFingerprintingScripts;
 }
 
 unsigned ScriptTrackingPrivacyController::resourceTypeValue() const
