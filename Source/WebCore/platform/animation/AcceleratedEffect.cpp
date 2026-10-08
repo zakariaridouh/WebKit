@@ -670,6 +670,28 @@ const OptionSet<AcceleratedEffectProperty> AcceleratedEffect::composedProperties
     return additiveOrAccumulativeProperties | propertiesWithImplicitFromValue | propertiesWithImplicitToValue;
 }
 
+TextStream& operator<<(TextStream& ts, const AcceleratedEffect& effect)
+{
+    ts << indent << "(effect, " << effect.timing() << ", keyframes:";
+    {
+        TextStream::IndentScope indentScope(ts);
+        for (auto& keyframe : effect.keyframes()) {
+            ts << "\n" << indent << "(offset: " << keyframe.offset();
+            if (auto compositeOperation = keyframe.compositeOperation())
+                ts << ", composite: " << *compositeOperation;
+            if (RefPtr timingFunction = keyframe.timingFunction())
+                ts << ", easing: " << *timingFunction;
+
+            auto& values = keyframe.values();
+            for (auto property : keyframe.animatedProperties())
+                ts << ", " << values.dumpProperty(property);
+            ts << ")";
+        }
+    }
+    ts << ")";
+    return ts;
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(THREADED_ANIMATIONS)

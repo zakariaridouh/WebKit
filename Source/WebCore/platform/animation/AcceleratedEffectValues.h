@@ -38,6 +38,7 @@
 #include <WebCore/FilterOperations.h>
 #include <WebCore/TransformOperationData.h>
 #include <WebCore/TransformOperations.h>
+#include <WebCore/WebAnimationTypes.h>
 
 namespace WebCore {
 
@@ -93,6 +94,8 @@ struct AcceleratedEffectValues {
 
     WEBCORE_EXPORT AcceleratedEffectValues clone() const;
     WEBCORE_EXPORT TransformationMatrix computedTransformationMatrix(const FloatRect&) const;
+
+    String dumpProperty(AcceleratedEffectProperty) const;
 };
 
 } // namespace WebCore

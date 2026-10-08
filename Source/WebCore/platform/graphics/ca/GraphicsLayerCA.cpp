@@ -4898,6 +4898,11 @@ void GraphicsLayerCA::dumpAdditionalProperties(TextStream& textStream, OptionSet
             textStream << ")\n";
         }
 
+#if ENABLE(THREADED_ANIMATIONS)
+        if (RefPtr effectStack = acceleratedEffectStack())
+            textStream << *effectStack;
+#endif
+
         dumpAnimations(textStream, "animations"_s, m_animations);
         dumpAnimations(textStream, "base value animations"_s, m_baseValueTransformAnimations);
         dumpAnimations(textStream, "animation groups"_s, m_animationGroups);

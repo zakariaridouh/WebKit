@@ -139,6 +139,8 @@ private:
     std::optional<WebAnimationTime> m_holdTime;
 };
 
+TextStream& operator<<(TextStream&, const AcceleratedEffect&);
+
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_KEYFRAME_INTERPOLATION_KEYFRAME(AcceleratedEffect::Keyframe, isAcceleratedEffectKeyframe());

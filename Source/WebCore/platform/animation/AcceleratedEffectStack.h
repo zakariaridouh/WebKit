@@ -57,6 +57,8 @@ protected:
     AcceleratedEffects m_backdropLayerEffects;
 };
 
+TextStream& operator<<(TextStream&, const AcceleratedEffectStack&);
+
 } // namespace WebCore
 
 #endif // ENABLE(THREADED_ANIMATIONS)

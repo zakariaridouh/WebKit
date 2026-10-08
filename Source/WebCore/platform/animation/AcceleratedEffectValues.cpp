@@ -196,6 +196,70 @@ TransformationMatrix AcceleratedEffectValues::computedTransformationMatrix(const
     return matrix;
 }
 
+String AcceleratedEffectValues::dumpProperty(AcceleratedEffectProperty property) const
+{
+    TextStream ts;
+    switch (property) {
+    case AcceleratedEffectProperty::Opacity:
+        ts << "opacity: " << opacity.value;
+        break;
+    case AcceleratedEffectProperty::Transform:
+        if (transform.isEmpty())
+            ts << "transform: none";
+        else
+            ts << "transform: " << transform;
+        break;
+    case AcceleratedEffectProperty::Translate:
+        if (RefPtr translate = this->translate)
+            ts << "translate: " << *translate;
+        else
+            ts << "translate: none";
+        break;
+    case AcceleratedEffectProperty::Rotate:
+        if (RefPtr rotate = this->rotate)
+            ts << "rotate: " << *rotate;
+        else
+            ts << "rotate: none";
+        break;
+    case AcceleratedEffectProperty::Scale:
+        if (RefPtr scale = this->scale)
+            ts << "scale: " << *scale;
+        else
+            ts << "scale: none";
+        break;
+    case AcceleratedEffectProperty::OffsetPath:
+        ts << "offset-path: n/a";
+        break;
+    case AcceleratedEffectProperty::OffsetDistance:
+        ts << "offset-distance: n/a";
+        break;
+    case AcceleratedEffectProperty::OffsetPosition:
+        ts << "offset-position: n/a";
+        break;
+    case AcceleratedEffectProperty::OffsetAnchor:
+        ts << "offset-anchor: n/a";
+        break;
+    case AcceleratedEffectProperty::OffsetRotate:
+        ts << "offset-rotate: n/a";
+        break;
+    case AcceleratedEffectProperty::Filter:
+        if (filter.isEmpty())
+            ts << "filter: none";
+        else
+            ts << "filter: " << filter;
+        break;
+    case AcceleratedEffectProperty::BackdropFilter:
+        if (backdropFilter.isEmpty())
+            ts << "backdrop-filter: none";
+        else
+            ts << "backdrop-filter: " << backdropFilter;
+        break;
+    default:
+        break;
+    }
+    return ts.release();
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(THREADED_ANIMATIONS)
