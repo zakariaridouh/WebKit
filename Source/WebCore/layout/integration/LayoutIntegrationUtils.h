@@ -45,13 +45,13 @@ public:
     IntegrationUtils(const LayoutState&);
 
     void layoutWithFormattingContextForBox(const ElementBox&, std::optional<LayoutUnit> overridingBorderBoxLogicalWidth = { }, std::optional<LayoutUnit> overridingBorderBoxLogicalHeight = { }) const;
-    std::pair<LayoutUnit, LayoutUnit> borderAndPaddingForGridItem(const ElementBox&, LayoutUnit gridAreaInlineSize) const;
+    std::pair<LayoutUnit, LayoutUnit> borderAndPaddingForGridItem(const ElementBox&, std::optional<LayoutUnit> gridAreaInlineSize) const;
     void layoutGridItem(const ElementBox&, std::optional<LayoutUnit> overridingBorderBoxLogicalWidth, std::optional<LayoutUnit> overridingBorderBoxLogicalHeight, LayoutUnit gridAreaInlineSize) const;
     LayoutUnit maxContentWidth(const ElementBox&) const;
-    LayoutUnit maxContentWidthForGridItem(const ElementBox&, LayoutUnit gridAreaInlineSize) const;
+    LayoutUnit maxContentWidthForGridItem(const ElementBox&, std::optional<LayoutUnit> gridAreaInlineSize) const;
     LayoutUnit minContentWidth(const ElementBox&) const;
     LayoutUnit minContentHeight(const ElementBox&) const;
-    LayoutUnit minContentWidthForGridItem(const ElementBox&, LayoutUnit gridAreaInlineSize) const;
+    LayoutUnit minContentWidthForGridItem(const ElementBox&, std::optional<LayoutUnit> gridAreaInlineSize) const;
     LayoutUnit minContentHeightForGridItem(const ElementBox&, LayoutUnit gridAreaInlineSize) const;
     LayoutUnit maxContentHeightForGridItem(const ElementBox&, LayoutUnit gridAreaInlineSize) const;
     LayoutUnit minContentContributionHeightForGridItem(const ElementBox&, LayoutUnit gridAreaInlineSize) const;

@@ -101,8 +101,7 @@ TrackSizes GridSizer::sizeColumnTracks(const PlacedGridItems& placedGridItems, c
     auto rowSizesForFirstColumnSizing = rowSizesForFirstIterationColumnSizing(rowTrackSizingFunctionsList, blockAxisAvailableSpace);
 
     auto columnTrackSizingItems = placedGridItems.map([&](const PlacedGridItem& gridItem) -> TrackSizingItem {
-        // The inline grid area is indefinite while sizing columns, so the item's cyclic percentage padding resolves against zero.
-        auto usedInlineBorderAndPadding = formattingContext().integrationUtils().borderAndPaddingForGridItem(gridItem.layoutBox(), 0_lu).first;
+        auto usedInlineBorderAndPadding = formattingContext().integrationUtils().borderAndPaddingForGridItem(gridItem.layoutBox(), { }).first;
         auto gridAreaBlockSize = GridLayoutUtils::gridAreaDimensionSize(gridItem.rowStartLine(), gridItem.rowEndLine(), rowSizesForFirstColumnSizing, layoutState.usedRowGap);
         return { gridItem, gridItem.inlineAxisSizes(), usedInlineBorderAndPadding,
             { gridItem.columnStartLine(), gridItem.columnEndLine() }, gridAreaBlockSize };
