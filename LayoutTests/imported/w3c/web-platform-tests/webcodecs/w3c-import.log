@@ -67,6 +67,8 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/webcodecs/pattern.png
 /LayoutTests/imported/w3c/web-platform-tests/webcodecs/per-frame-qp-encoding.https.any.js
 /LayoutTests/imported/w3c/web-platform-tests/webcodecs/reconfiguring-encoder.https.any.js
+/LayoutTests/imported/w3c/web-platform-tests/webcodecs/serialization-to-shared-and-service-workers-helper.js
+/LayoutTests/imported/w3c/web-platform-tests/webcodecs/serialization-to-shared-and-service-workers.https.html
 /LayoutTests/imported/w3c/web-platform-tests/webcodecs/serialization.crossAgentCluster.serviceworker.js
 /LayoutTests/imported/w3c/web-platform-tests/webcodecs/sfx-aac.mp4
 /LayoutTests/imported/w3c/web-platform-tests/webcodecs/sfx-alaw.wav

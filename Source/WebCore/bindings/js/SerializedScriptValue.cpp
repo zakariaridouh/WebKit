@@ -285,29 +285,29 @@ static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, Seria
         return isInterfaceExposed<JSQuotaExceededError>(globalObject);
 #if ENABLE(WEB_CODECS)
     case WebCodecsEncodedVideoChunkTag:
-        return isInterfaceExposed<JSWebCodecsEncodedVideoChunk>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSWebCodecsEncodedVideoChunk>(globalObject);
     case WebCodecsVideoFrameTag:
-        return isInterfaceExposed<JSWebCodecsVideoFrame>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSWebCodecsVideoFrame>(globalObject);
     case WebCodecsEncodedAudioChunkTag:
-        return isInterfaceExposed<JSWebCodecsEncodedAudioChunk>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSWebCodecsEncodedAudioChunk>(globalObject);
     case WebCodecsAudioDataTag:
-        return isInterfaceExposed<JSWebCodecsAudioData>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSWebCodecsAudioData>(globalObject);
 #endif
 #if ENABLE(MEDIA_STREAM)
     case MediaStreamTrackTag:
-        return isInterfaceExposed<JSMediaStreamTrack>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSMediaStreamTrack>(globalObject);
     case MediaStreamTrackHandleTag:
-        return isInterfaceExposed<JSMediaStreamTrackHandle>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSMediaStreamTrackHandle>(globalObject);
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     case MediaSourceHandleTransferTag:
-        return isInterfaceExposed<JSMediaSourceHandle>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSMediaSourceHandle>(globalObject);
 #endif
 #if ENABLE(WEB_RTC)
     case RTCEncodedAudioFrameTag:
-        return isInterfaceExposed<JSRTCEncodedAudioFrame>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSRTCEncodedAudioFrame>(globalObject);
     case RTCEncodedVideoFrameTag:
-        return isInterfaceExposed<JSRTCEncodedVideoFrame>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSRTCEncodedVideoFrame>(globalObject);
 #endif
     case ReadableStreamTag:
     case WritableStreamTag:
