@@ -86,7 +86,14 @@ namespace WebCore {
 
 SVGImage::SVGImage(ImageObserver* observer)
     : Image(observer)
-    , m_appliedLinkParameters(CSS::Keyword::None { })
+    , m_appliedDocumentState {
+        .containerSize = IntSize { },
+        .fragmentURL = URL { },
+        .linkParameters = CSS::Keyword::None { },
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+        .invertContent { false },
+#endif
+      }
     , m_startAnimationTimer(*this, &SVGImage::startAnimationTimerFired)
 {
 }
@@ -192,42 +199,59 @@ IntSize SVGImage::containerSize() const
     return IntSize(currentSize);
 }
 
-void SVGImage::applyFragmentURL(const URL& fragmentURL)
+auto SVGImage::documentStateForDraw(ConcreteObjectSize concreteObjectSize, ImagePaintingOptions options, const ImageDrawingExtras* extras) const -> DocumentState
 {
-    protect(frameView())->scrollToFragment(fragmentURL);
-}
+    auto state = m_appliedDocumentState;
+    state.containerSize = roundedIntSize(concreteObjectSize.size());
 
-void SVGImage::applyLinkParameters(const Style::LinkParameters& parameters)
-{
-    // FIXME: webkit.org/b/322833 - the resource document holds one container's parameters at a time,
-    // so this restyles it once per draw in the container.
-    if (m_appliedLinkParameters == parameters)
-        return;
-
-    RefPtr document = protect(frameView())->frame().document();
-    if (!document)
-        return;
-
-    document->styleScope().environmentVariables().setLinkParameters(parameters);
-    m_appliedLinkParameters = parameters;
-}
+    if (auto* styleExtras = dynamicDowncast<Style::ImageDrawingExtras>(extras)) {
+        state.fragmentURL = styleExtras->fragmentURL();
+        state.linkParameters = styleExtras->linkParameters();
+    }
 
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
-void SVGImage::applyInvertContent(InvertContent invert)
+    auto invert = options.invertContent();
+    state.invertContent = invert == InvertContent::FromResource ? m_fallbackInvertContent : invert == InvertContent::Yes;
+#else
+    UNUSED_PARAM(options);
+#endif
+
+    return state;
+}
+
+void SVGImage::applyDocumentState(Document& document, LocalFrameView& view, const DocumentState& state)
 {
-    RefPtr page = m_page;
-    if (!page)
+    setContainerSize(state.containerSize);
+
+    if (state == m_appliedDocumentState)
         return;
 
-    bool shouldInvert = invert == InvertContent::FromResource ? m_fallbackInvertContent : invert == InvertContent::Yes;
-    page->settings().setAxCustomColorModeEnabled(shouldInvert);
+    bool updateStyle = false;
 
-    if (RefPtr document = page->localTopDocument()) {
-        ScriptDisallowedScope::DisableAssertionsInScope disabledScope;
-        document->updateStyleIfNeeded();
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    if (state.invertContent != m_appliedDocumentState.invertContent) {
+        protect(m_page)->settings().setAxCustomColorModeEnabled(state.invertContent);
+        updateStyle = true;
     }
-}
 #endif
+
+    // FIXME: webkit.org/b/322833 - the resource document holds one container's parameters at a time,
+    // so this restyles it once per draw in the container.
+    if (state.linkParameters != m_appliedDocumentState.linkParameters) {
+        protect(document)->styleScope().environmentVariables().setLinkParameters(state.linkParameters);
+        updateStyle = true;
+    }
+
+    if (updateStyle) {
+        ScriptDisallowedScope::DisableAssertionsInScope disabledScope;
+        protect(document)->updateStyleIfNeeded();
+    }
+
+    if (state.fragmentURL != m_appliedDocumentState.fragmentURL)
+        protect(view)->scrollToFragment(state.fragmentURL);
+
+    m_appliedDocumentState = state;
+}
 
 bool SVGImage::hasHDRContent() const
 {
@@ -319,34 +343,29 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, ConcreteObjectSize conc
     if (!m_page)
         return ImageDrawResult::DidNothing;
 
+    RefPtr document = protect(m_page)->localTopDocument();
+    if (!document)
+        return ImageDrawResult::DidNothing;
+
+    auto concreteSize = concreteObjectSize.size();
+    if (concreteSize.isEmpty())
+        return ImageDrawResult::DidNothing;
+
     // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
     ImageObserverDisableScope imageObserverDisabler(*this);
 
-#if ENABLE(AX_CUSTOM_COLOR_MODE)
-    // Decided per use; a draw that doesn't say gets the resource-wide decision.
-    applyInvertContent(options.invertContent());
-#endif
-
-    auto adjustedSrcRect = srcRect;
-    if (auto concreteSize = concreteObjectSize.size(); !concreteSize.isEmpty()) {
-        auto roundedContainerSize = roundedIntSize(concreteSize);
-        setContainerSize(roundedContainerSize);
-
-        adjustedSrcRect.scale(1 / concreteObjectSize.zoom());
-
-        // Compensate for the container size rounding by adjusting the source rect.
-        auto adjustedSrcSize = adjustedSrcRect.size();
-        adjustedSrcSize.scale(roundedContainerSize.width() / concreteSize.width(), roundedContainerSize.height() / concreteSize.height());
-        adjustedSrcRect.setSize(adjustedSrcSize);
-    }
-
-    if (auto* styleExtras = dynamicDowncast<Style::ImageDrawingExtras>(extras)) {
-        applyLinkParameters(styleExtras->linkParameters());
-        applyFragmentURL(styleExtras->fragmentURL());
-    }
-
     RefPtr view = frameView();
     ASSERT(view);
+
+    applyDocumentState(*document, *view, documentStateForDraw(concreteObjectSize, options, extras));
+
+    auto adjustedSrcRect = srcRect;
+    adjustedSrcRect.scale(1 / concreteObjectSize.zoom());
+
+    // Compensate for the container size rounding by adjusting the source rect.
+    auto adjustedSrcSize = adjustedSrcRect.size();
+    adjustedSrcSize.scale(m_appliedDocumentState.containerSize.width() / concreteSize.width(), m_appliedDocumentState.containerSize.height() / concreteSize.height());
+    adjustedSrcRect.setSize(adjustedSrcSize);
 
     GraphicsContextStateSaver stateSaver(context);
     context.setCompositeOperation(options.compositeOperator(), options.blendMode());
@@ -549,6 +568,7 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
                 m_page->settings().setDownloadableBinaryFontTrustedTypes(parentSettings->downloadableBinaryFontTrustedTypes());
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
                 m_fallbackInvertContent = AXCustomColorModeController::shouldAdjustSVGImages(m_page);
+                m_appliedDocumentState.invertContent = m_fallbackInvertContent;
                 m_page->settings().setAxCustomColorModeEnabled(m_fallbackInvertContent);
                 m_page->settings().setAxCustomColorModeAppearanceDetectionEnabled(false);
 #endif

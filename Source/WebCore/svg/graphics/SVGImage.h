@@ -75,6 +75,7 @@ public:
 private:
     friend class SVGImageChromeClient;
 
+    WEBCORE_EXPORT explicit SVGImage(ImageObserver*);
     virtual ~SVGImage();
 
     String filenameExtension() const final;
@@ -101,20 +102,28 @@ private:
 
     void startAnimationTimerFired();
 
-    WEBCORE_EXPORT explicit SVGImage(ImageObserver*);
     ImageDrawResult draw(GraphicsContext&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { }, const ImageDrawingExtras* = nullptr) final;
     void drawPattern(GraphicsContext&, ConcreteObjectSize, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }, const ImageDrawingExtras* = nullptr) final;
 
-    void applyFragmentURL(const URL&);
-    void applyLinkParameters(const Style::LinkParameters&);
+    // FIXME: This should also hold the variable state dataChanged() sets on the Page and its Settings.
+    struct DocumentState {
+        IntSize containerSize;
+        URL fragmentURL;
+        Style::LinkParameters linkParameters;
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
-    void applyInvertContent(InvertContent);
+        bool invertContent { false };
 #endif
+
+        bool operator==(const DocumentState&) const = default;
+    };
+
+    DocumentState documentStateForDraw(ConcreteObjectSize, ImagePaintingOptions, const ImageDrawingExtras*) const;
+    void applyDocumentState(Document&, LocalFrameView&, const DocumentState&);
 
     RefPtr<Page> m_page;
     FloatSize m_intrinsicSize;
 
-    Style::LinkParameters m_appliedLinkParameters;
+    DocumentState m_appliedDocumentState;
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
     bool m_fallbackInvertContent { false };
 #endif
