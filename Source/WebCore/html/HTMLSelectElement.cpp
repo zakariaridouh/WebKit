@@ -1542,6 +1542,12 @@ void HTMLSelectElement::setRecalcListItems()
     }
 
     Ref document = this->document();
+    // A RenderListBox paints the list items itself, so the render tree does not report changes to them.
+    if (CheckedPtr renderListBox = dynamicDowncast<RenderListBox>(this->renderer())) {
+        if (CheckedPtr cache = document->existingAXObjectCache())
+            cache->childrenChanged(*renderListBox);
+    }
+
     if (this == document->focusedElement()) {
         if (RefPtr page = document->page())
             page->chrome().client().focusedSelectElementDidChangeOptions(*this);
