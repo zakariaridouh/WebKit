@@ -4497,6 +4497,7 @@
 		A52460D32FF48CE4003567A5 /* ExplicitGridResolver.h in Headers */ = {isa = PBXBuildFile; fileRef = A52460D12FF48CE4003567A5 /* ExplicitGridResolver.h */; };
 		94AB35CEF142463CAD7A2493 /* AutoRepeatResolver.h in Headers */ = {isa = PBXBuildFile; fileRef = EBD4AFB8325542EAA0BF5C81 /* AutoRepeatResolver.h */; };
 		A52460D52FF48CE4003567A5 /* ExplicitGridTrackSizes.h in Headers */ = {isa = PBXBuildFile; fileRef = A52460D42FF48CE4003567A5 /* ExplicitGridTrackSizes.h */; };
+		A548A1C92E83713A00F42040 /* ExtraSpaceDistributor.h in Headers */ = {isa = PBXBuildFile; fileRef = A548A1C72E83713400F42040 /* ExtraSpaceDistributor.h */; };
 		A52B348F1FA3BDA6008B6246 /* ServiceWorkerDebuggable.h in Headers */ = {isa = PBXBuildFile; fileRef = A52B348C1FA3BD79008B6246 /* ServiceWorkerDebuggable.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A52B34961FA3E290008B6246 /* ServiceWorkerInspectorProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = A52B34931FA3E286008B6246 /* ServiceWorkerInspectorProxy.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A52B349E1FA41703008B6246 /* WorkerDebuggerProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = A52B349C1FA416F8008B6246 /* WorkerDebuggerProxy.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -17833,6 +17834,8 @@
 		4179E8F9F9DB4C0D8709B48B /* AutoRepeatResolver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AutoRepeatResolver.cpp; sourceTree = "<group>"; };
 		EBD4AFB8325542EAA0BF5C81 /* AutoRepeatResolver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AutoRepeatResolver.h; sourceTree = "<group>"; };
 		A52460D42FF48CE4003567A5 /* ExplicitGridTrackSizes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ExplicitGridTrackSizes.h; sourceTree = "<group>"; };
+		A548A1C72E83713400F42040 /* ExtraSpaceDistributor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ExtraSpaceDistributor.h; sourceTree = "<group>"; };
+		A548A1C82E83713400F42040 /* ExtraSpaceDistributor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ExtraSpaceDistributor.cpp; sourceTree = "<group>"; };
 		A52B348C1FA3BD79008B6246 /* ServiceWorkerDebuggable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ServiceWorkerDebuggable.h; sourceTree = "<group>"; };
 		A52B348E1FA3BD79008B6246 /* ServiceWorkerDebuggable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ServiceWorkerDebuggable.cpp; sourceTree = "<group>"; };
 		A52B34931FA3E286008B6246 /* ServiceWorkerInspectorProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ServiceWorkerInspectorProxy.h; sourceTree = "<group>"; };
@@ -34994,6 +34997,8 @@
 				A52460D22FF48CE4003567A5 /* ExplicitGridResolver.cpp */,
 				A52460D12FF48CE4003567A5 /* ExplicitGridResolver.h */,
 				A52460D42FF48CE4003567A5 /* ExplicitGridTrackSizes.h */,
+				A548A1C82E83713400F42040 /* ExtraSpaceDistributor.cpp */,
+				A548A1C72E83713400F42040 /* ExtraSpaceDistributor.h */,
 				A5FA57652E85F40600EF058F /* GridAreaLines.h */,
 				A585CC3E2E566A7800A69390 /* GridFormattingContext.cpp */,
 				A585CC3D2E566A7800A69390 /* GridFormattingContext.h */,
@@ -46117,6 +46122,7 @@
 				FE0BCF3427C0661000BFB2DB /* ExtendedDOMIsoSubspaces.h in Headers */,
 				E47E276516036ED200EE2AFB /* ExtensionStyleSheets.h in Headers */,
 				8ACAA394299184E80075D05C /* EXTPolygonOffsetClamp.h in Headers */,
+				A548A1C92E83713A00F42040 /* ExtraSpaceDistributor.h in Headers */,
 				8A14769A2A7284540019051E /* EXTRenderSnorm.h in Headers */,
 				5C4304B1191AC908000E2BC0 /* EXTShaderTextureLOD.h in Headers */,
 				8A8AFFF1283BE241005221FE /* EXTTextureCompressionBPTC.h in Headers */,

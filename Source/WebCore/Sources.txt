@@ -2101,6 +2101,7 @@ layout/formattingContexts/flex/FlexFormattingUtils.cpp @header:RenderStyleGetter
 layout/formattingContexts/flex/FlexLineBreaker.cpp
 layout/formattingContexts/grid/AutoRepeatResolver.cpp
 layout/formattingContexts/grid/ExplicitGridResolver.cpp @header:RenderStyleGetters
+layout/formattingContexts/grid/ExtraSpaceDistributor.cpp
 layout/formattingContexts/grid/GridFormattingContext.cpp @header:RenderStyleGetters
 layout/formattingContexts/grid/GridItemPlacer.cpp @header:RenderStyleGetters
 layout/formattingContexts/grid/GridItemSizingFunctions.cpp
