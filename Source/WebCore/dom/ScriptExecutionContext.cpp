@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2026 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -654,10 +654,9 @@ bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int 
 
 int ScriptExecutionContext::circularSequentialID()
 {
-    ++m_circularSequentialID;
-    if (m_circularSequentialID <= 0)
-        m_circularSequentialID = 1;
-    return m_circularSequentialID;
+    if (m_circularSequentialID == std::numeric_limits<int>::max())
+        m_circularSequentialID = 0;
+    return ++m_circularSequentialID;
 }
 
 PublicURLManager& ScriptExecutionContext::publicURLManager()
