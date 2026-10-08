@@ -1,6 +1,4 @@
 Modules/mediastream/libwebrtc/LibWebRTCObservers.h
-bindings/js/JSEventTargetCustom.h
-bindings/js/JSLazyEventListener.cpp
 css/CSSPrimitiveValue.h
 css/CSSRule.h
 css/CSSRuleList.h

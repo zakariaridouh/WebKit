@@ -176,7 +176,7 @@ JSC::Identifier ScriptModuleLoader::resolve(JSC::JSGlobalObject* jsGlobalObject,
 
 static void rejectToPropagateNetworkError(ScriptExecutionContext& context, Ref<DeferredPromise>&& deferred, ModuleFetchFailureKind failureKind, ASCIILiteral message)
 {
-    context.eventLoop().queueTask(TaskSource::Networking, [deferred = WTF::move(deferred), failureKind, message]() {
+    protect(context.eventLoop())->queueTask(TaskSource::Networking, [deferred = WTF::move(deferred), failureKind, message] {
         deferred->rejectWithCallback([&] (JSDOMGlobalObject& jsGlobalObject) {
             // We annotate exception with special private symbol. It allows us to distinguish these errors from the user thrown ones.
             JSC::VM& vm = jsGlobalObject.vm();
@@ -193,7 +193,7 @@ static void rejectToPropagateNetworkError(ScriptExecutionContext& context, Ref<D
 static void rejectWithFetchError(ScriptExecutionContext& context, Ref<DeferredPromise>&& deferred, ExceptionCode ec, String&& message)
 {
     // Used to signal to the promise client that the failure was from a fetch, but not one that was propagated from another context.
-    context.eventLoop().queueTask(TaskSource::Networking, [deferred = WTF::move(deferred), ec, message = WTF::move(message)]() {
+    protect(context.eventLoop())->queueTask(TaskSource::Networking, [deferred = WTF::move(deferred), ec, message = WTF::move(message)] {
         deferred->rejectWithCallback([&] (JSDOMGlobalObject& jsGlobalObject) {
             JSC::VM& vm = jsGlobalObject.vm();
             JSC::JSObject* error = downcast<JSC::JSObject>(createDOMException(&jsGlobalObject, ec, message));
@@ -333,7 +333,7 @@ JSC::JSValue ScriptModuleLoader::evaluate(JSC::JSGlobalObject* jsGlobalObject, J
         RELEASE_AND_RETURN(scope, moduleRecord->evaluate(m_shadowRealmGlobal, awaitedValue, resumeMode));
     else if (m_ownerType == OwnerType::Document) {
         if (RefPtr frame = downcast<Document>(*m_context).frame())
-            RELEASE_AND_RETURN(scope, frame->script().evaluateModule(sourceURL, *moduleRecord, awaitedValue, resumeMode));
+            RELEASE_AND_RETURN(scope, protect(frame->script())->evaluateModule(sourceURL, *moduleRecord, awaitedValue, resumeMode));
     } else {
         if (CheckedPtr script = downcast<WorkerOrWorkletGlobalScope>(*m_context).script())
             RELEASE_AND_RETURN(scope, script->evaluateModule(sourceURL, *moduleRecord, awaitedValue, resumeMode));
@@ -442,7 +442,7 @@ JSC::JSPromise* ScriptModuleLoader::importModule(JSC::JSGlobalObject* jsGlobalOb
 
     if (!baseURL.isValid()) {
         scope.release();
-        return rejectPromise(*m_context, globalObject, ExceptionCode::TypeError, "Cannot import a module from a document with no base URL."_s);
+        return rejectPromise(*protect(m_context), globalObject, ExceptionCode::TypeError, "Cannot import a module from a document with no base URL."_s);
     }
 
     ASSERT(scriptFetcher);

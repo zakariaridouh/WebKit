@@ -762,8 +762,8 @@ public:
     const Settings& settings() const { return m_settings.get(); }
     EditingBehavior NODELETE editingBehavior() const;
 
-    inline Quirks& quirks(); // Defined in DocumentQuirks.h
-    inline const Quirks& quirks() const; // Defined in DocumentQuirks.h
+    inline Quirks& NODELETE quirks(); // Defined in DocumentQuirks.h
+    inline const Quirks& NODELETE quirks() const; // Defined in DocumentQuirks.h
     void urlsAffectingQuirksDidChange();
 
     WEBCORE_EXPORT float NODELETE deviceScaleFactor() const;
@@ -2193,7 +2193,7 @@ private:
 
     ExceptionOr<void> write(Document* entryDocument, FixedVector<Variant<Ref<TrustedHTML>, String>>&&, ASCIILiteral lineFeed);
 
-    WEBCORE_EXPORT Quirks& ensureQuirks();
+    WEBCORE_EXPORT Quirks& NODELETE ensureQuirks();
     WEBCORE_EXPORT CachedResourceLoader& ensureCachedResourceLoader();
     WEBCORE_EXPORT ExtensionStyleSheets& ensureExtensionStyleSheets();
     WEBCORE_EXPORT DocumentMarkerController& ensureMarkers();

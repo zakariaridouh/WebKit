@@ -351,7 +351,7 @@ void ScriptController::initScriptForWindowProxy(JSWindowProxy& windowProxy)
     }
 
     if (RefPtr page = m_frame->page()) {
-        windowProxy.attachDebugger(m_frame->debugger());
+        windowProxy.attachDebugger(protect(m_frame)->debugger());
         windowProxy.window()->setProfileGroup(page->group().identifier());
     }
 
@@ -584,7 +584,7 @@ void ScriptController::collectIsolatedContexts(Vector<std::pair<JSC::JSGlobalObj
 {
     for (auto& jsWindowProxy : protect(windowProxy())->jsWindowProxiesAsVector()) {
         auto* lexicalGlobalObject = jsWindowProxy->window();
-        RefPtr origin = protect(downcast<LocalDOMWindow>(jsWindowProxy->wrapped()))->document()->securityOrigin();
+        RefPtr origin = protect(protect(downcast<LocalDOMWindow>(jsWindowProxy->wrapped()))->document())->securityOrigin();
         result.append(std::make_pair(lexicalGlobalObject, WTF::move(origin)));
     }
 }

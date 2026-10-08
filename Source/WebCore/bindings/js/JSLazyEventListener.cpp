@@ -48,7 +48,7 @@ using namespace JSC;
 struct JSLazyEventListener::CreationArguments {
     const QualifiedName& attributeName;
     const AtomString& attributeValue;
-    Document& document;
+    Ref<Document> document;
     WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> node;
     JSObject* wrapper;
     bool shouldUseSVGEventName;
@@ -193,11 +193,12 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(CreationArguments&& argu
     // FIXME: We should be able to provide source information for frameless documents too (e.g. for importing nodes from XMLHttpRequest.responseXML).
     TextPosition position;
     URL sourceURL;
-    if (RefPtr frame = arguments.document.frame()) {
-        if (!frame->script().canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToCreateEventListener))
+    if (RefPtr frame = arguments.document->frame()) {
+        CheckedRef script = frame->script();
+        if (!script->canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToCreateEventListener))
             return nullptr;
-        position = frame->script().eventHandlerPosition();
-        sourceURL = arguments.document.url();
+        position = script->eventHandlerPosition();
+        sourceURL = arguments.document->url();
     }
 
     JSLockHolder locker(protect(arguments.document)->vm());

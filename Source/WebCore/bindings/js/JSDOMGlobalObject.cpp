@@ -262,7 +262,7 @@ JSC_DEFINE_HOST_FUNCTION(isAbortSignal, (JSGlobalObject*, CallFrame* callFrame))
 JSC_DEFINE_HOST_FUNCTION(createAbortSignal, (JSGlobalObject* globalObject, CallFrame*))
 {
     auto* jsDOMGlobalObject = downcast<JSDOMGlobalObject>(globalObject);
-    return JSValue::encode(toJS(globalObject, jsDOMGlobalObject, AbortSignal::create(jsDOMGlobalObject->scriptExecutionContext())));
+    return JSValue::encode(toJS(globalObject, jsDOMGlobalObject, AbortSignal::create(protect(jsDOMGlobalObject->scriptExecutionContext()))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(signalAbort, (JSGlobalObject*, CallFrame* callFrame))
@@ -811,7 +811,7 @@ JSC::JSGlobalObject* JSDOMGlobalObject::deriveShadowRealmGlobalObject(JSC::JSGlo
                 break;
 
             document = candidateDocument;
-            domGlobalObject = candidateDocument->frame()->script().globalObject(originalWorld);
+            domGlobalObject = protect(candidateDocument->frame()->script())->globalObject(originalWorld);
         }
     }
 
@@ -864,7 +864,7 @@ JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext& context, DOMWrapp
         return toJSDOMWindow(protect(document->frame()), world);
 
     if (auto* globalScope = dynamicDowncast<WorkerOrWorkletGlobalScope>(context))
-        return globalScope->script()->globalScopeWrapper();
+        return protect(globalScope->script())->globalScopeWrapper();
 
     ASSERT_NOT_REACHED();
     return nullptr;

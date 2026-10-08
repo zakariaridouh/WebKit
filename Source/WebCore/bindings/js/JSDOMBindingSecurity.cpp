@@ -44,7 +44,7 @@ void printErrorMessageForFrame(LocalFrame* frame, const String& message)
 {
     if (!frame)
         return;
-    protect(frame)->document()->window()->printErrorMessage(message);
+    protect(protect(frame)->document()->window())->printErrorMessage(message);
 }
 
 static String remoteFrameAccessError(JSC::JSGlobalObject* lexicalGlobalObject, DOMWindow& targetWindow)
@@ -77,7 +77,7 @@ static inline bool canAccessTargetOrigin(JSC::JSGlobalObject* lexicalGlobalObjec
 {
     Ref active = activeDOMWindow(*lexicalGlobalObject);
 
-    if (protect(active->document()->securityOrigin())->isSameOriginDomain(targetSecurityOrigin))
+    if (protect(protect(active->document())->securityOrigin())->isSameOriginDomain(targetSecurityOrigin))
         return true;
 
     switch (reportingOption) {

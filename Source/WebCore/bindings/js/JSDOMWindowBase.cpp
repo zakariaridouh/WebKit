@@ -319,7 +319,7 @@ JSValue toJS(JSGlobalObject* lexicalGlobalObject, DOMWindow& domWindow)
 
 JSDOMWindow* toJSDOMWindow(LocalFrame& frame, DOMWrapperWorld& world)
 {
-    return uncheckedDowncast<JSDOMWindow>(frame.script().globalObject(world));
+    return uncheckedDowncast<JSDOMWindow>(protect(frame.script())->globalObject(world));
 }
 
 LocalDOMWindow& incumbentDOMWindow(JSGlobalObject& fallbackGlobalObject, CallFrame& callFrame)

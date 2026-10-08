@@ -27,6 +27,7 @@
 #pragma once
 
 #include <JavaScriptCore/Completion.h>
+#include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSMicrotask.h>
 #include <JavaScriptCore/JSPromise.h>
 #include <JavaScriptCore/JSSourceCode.h>

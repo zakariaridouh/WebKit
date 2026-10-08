@@ -162,7 +162,7 @@ public:
     RefPtr<FontLoadRequest> fontLoadRequest(const String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource) final;
     void beginLoadingFontSoon(FontLoadRequest&) final;
 
-    const SettingsValues& settingsValues() const LIFETIME_BOUND final { return m_settingsValues; }
+    const SettingsValues& NODELETE settingsValues() const LIFETIME_BOUND final { return m_settingsValues; }
 
     const NetworkLoadPolicy& networkLoadPolicy() const LIFETIME_BOUND final { return m_networkLoadPolicy; }
 

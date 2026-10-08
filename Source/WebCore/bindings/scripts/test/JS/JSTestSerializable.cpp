@@ -126,7 +126,7 @@ JSObject* JSTestSerializable::prototype(VM& vm, JSDOMGlobalObject& globalObject)
 
 bool JSTestSerializable::isExposedInGlobalObject(JSDOMGlobalObject& globalObject)
 {
-    return ((&globalObject)->scriptExecutionContext()->isSecureContext() && (((&globalObject))->inherits<JSDOMWindowBase>() || ((&globalObject))->inherits<JSDedicatedWorkerGlobalScope>()) && (&globalObject)->scriptExecutionContext()->settingsValues().testSettingEnabled && TestSerializable::enabledForContext(*(&globalObject)->scriptExecutionContext()));
+    return ((&globalObject)->scriptExecutionContext()->isSecureContext() && (((&globalObject))->inherits<JSDOMWindowBase>() || ((&globalObject))->inherits<JSDedicatedWorkerGlobalScope>()) && (&globalObject)->scriptExecutionContext()->settingsValues().testSettingEnabled && TestSerializable::enabledForContext(*protect((&globalObject)->scriptExecutionContext())));
 }
 
 void JSTestSerializable::destroy(JSC::JSCell* cell)

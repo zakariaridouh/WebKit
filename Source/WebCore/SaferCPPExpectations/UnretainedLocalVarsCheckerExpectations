@@ -1,3 +1,2 @@
-bindings/js/ScriptControllerMac.mm
 rendering/AttachmentLayout.mm
 [ iOS ] rendering/ios/RenderThemeIOS.mm

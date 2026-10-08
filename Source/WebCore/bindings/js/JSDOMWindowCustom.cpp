@@ -50,6 +50,7 @@
 #include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/ConsoleTypes.h>
+#include <JavaScriptCore/GetterSetter.h>
 #include <JavaScriptCore/GlobalObjectMethodTable.h>
 #include <JavaScriptCore/HeapAnalyzer.h>
 #include <JavaScriptCore/HeapCellInlines.h>

@@ -210,12 +210,12 @@ public:
     using StyleVariant = Variant<String, Ref<CanvasGradient>, Ref<CanvasPattern>>;
     StyleVariant strokeStyle() const;
     void setStrokeStyle(String&&);
-    void setStrokeStyle(RefPtr<CanvasGradient>&&);
-    void setStrokeStyle(RefPtr<CanvasPattern>&&);
+    void setStrokeStyle(Ref<CanvasGradient>&&);
+    void setStrokeStyle(Ref<CanvasPattern>&&);
     StyleVariant fillStyle() const;
     void setFillStyle(String&&);
-    void setFillStyle(RefPtr<CanvasGradient>&&);
-    void setFillStyle(RefPtr<CanvasPattern>&&);
+    void setFillStyle(Ref<CanvasGradient>&&);
+    void setFillStyle(Ref<CanvasPattern>&&);
 
     ExceptionOr<Ref<CanvasGradient>> createLinearGradient(float x0, float y0, float x1, float y1);
     ExceptionOr<Ref<CanvasGradient>> createRadialGradient(float x0, float y0, float r0, float x1, float y1, float r1);

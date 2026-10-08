@@ -859,6 +859,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     heap/HeapInlines.h
     heap/HeapIterationScope.h
     heap/HeapObserver.h
+    heap/HeapProfiler.h
     heap/HeapSnapshotBuilder.h
     heap/IncrementalSweeper.h
     heap/IsoCellSet.h

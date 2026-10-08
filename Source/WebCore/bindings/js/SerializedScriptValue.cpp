@@ -1365,7 +1365,7 @@ public:
             write(handle.name());
             write(std::span<const uint8_t> { handle.globalIdentifier().span() });
             ASSERT(!context->securityOrigin()->isOpaque());
-            write(context->securityOrigin()->toString());
+            write(protect(context->securityOrigin())->toString());
             if (RefPtr connection = fileSystemStorageConnectionForContext(*context)) {
                 auto origin = clientOriginForContext(*context);
                 m_fileSystemHandleKeepAlives.append({ WTF::move(origin), handle.globalIdentifier(), connection.releaseNonNull() });
@@ -1373,9 +1373,9 @@ public:
             return true;
         };
         if (auto* fileHandle = dynamicDowncast<JSFileSystemFileHandle>(obj))
-            return serializeFileSystemHandle(fileHandle->wrapped());
+            return serializeFileSystemHandle(protect(fileHandle->wrapped()));
         if (auto* dirHandle = dynamicDowncast<JSFileSystemDirectoryHandle>(obj))
-            return serializeFileSystemHandle(dirHandle->wrapped());
+            return serializeFileSystemHandle(protect(dirHandle->wrapped()));
 
         return false;
     }
@@ -3284,7 +3284,7 @@ private:
             return JSValue();
         }
 
-        if (context->securityOrigin()->toString() != origin->string()) {
+        if (protect(context->securityOrigin())->toString() != origin->string()) {
             fail();
             return JSValue();
         }

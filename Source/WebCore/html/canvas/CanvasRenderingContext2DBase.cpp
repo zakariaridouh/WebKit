@@ -2322,24 +2322,24 @@ void CanvasRenderingContext2DBase::setStrokeStyle(String&& colorString)
     setStrokeColorImpl(WTF::move(color), WTF::move(colorString));
 }
 
-void CanvasRenderingContext2DBase::setStrokeStyle(RefPtr<CanvasGradient>&& gradient)
+void CanvasRenderingContext2DBase::setStrokeStyle(Ref<CanvasGradient>&& gradient)
 {
     realizeSaves();
     if (auto* c = effectiveDrawingContext())
         c->setStrokeGradient(gradient->gradient());
     auto& state = modifiableState();
-    state.strokeStyle = gradient.releaseNonNull();
+    state.strokeStyle = WTF::move(gradient);
     state.unparsedStrokeColor = String();
 }
 
-void CanvasRenderingContext2DBase::setStrokeStyle(RefPtr<CanvasPattern>&& pattern)
+void CanvasRenderingContext2DBase::setStrokeStyle(Ref<CanvasPattern>&& pattern)
 {
-    checkOrigin(pattern.get());
+    checkOrigin(pattern.ptr());
     realizeSaves();
     if (auto* c = effectiveDrawingContext())
         c->setStrokePattern(pattern->pattern());
     auto& state = modifiableState();
-    state.strokeStyle = pattern.releaseNonNull();
+    state.strokeStyle = WTF::move(pattern);
     state.unparsedStrokeColor = String();
 }
 
@@ -2360,24 +2360,24 @@ void CanvasRenderingContext2DBase::setFillStyle(String&& colorString)
     setFillColorImpl(WTF::move(color), WTF::move(colorString));
 }
 
-void CanvasRenderingContext2DBase::setFillStyle(RefPtr<CanvasGradient>&& gradient)
+void CanvasRenderingContext2DBase::setFillStyle(Ref<CanvasGradient>&& gradient)
 {
     realizeSaves();
     if (auto* c = effectiveDrawingContext())
         c->setFillGradient(gradient->gradient());
     auto& state = modifiableState();
-    state.fillStyle = gradient.releaseNonNull();
+    state.fillStyle = WTF::move(gradient);
     state.unparsedFillColor = String();
 }
 
-void CanvasRenderingContext2DBase::setFillStyle(RefPtr<CanvasPattern>&& pattern)
+void CanvasRenderingContext2DBase::setFillStyle(Ref<CanvasPattern>&& pattern)
 {
-    checkOrigin(pattern.get());
+    checkOrigin(pattern.ptr());
     realizeSaves();
     if (auto* c = effectiveDrawingContext())
         c->setFillPattern(pattern->pattern());
     auto& state = modifiableState();
-    state.fillStyle = pattern.releaseNonNull();
+    state.fillStyle = WTF::move(pattern);
     state.unparsedFillColor = String();
 }
 

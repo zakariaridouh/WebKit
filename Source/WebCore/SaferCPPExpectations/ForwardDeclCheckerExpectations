@@ -1,11 +1,3 @@
-CommandLineAPIModuleSourceBuiltins.h
-ReadableStreamInternalsBuiltins.h
-StreamInternalsBuiltins.h
-TransformStreamInternalsBuiltins.h
-WritableStreamInternalsBuiltins.h
-bindings/js/GarbageCollectionController.cpp
-bindings/js/JSLocationCustom.cpp
-bindings/js/JSPaintRenderingContext2DCustom.cpp
 css/values/primitives/CSSPrimitiveData.h
 dom/ElementInlinesLight.h
 layout/formattingContexts/inline/InlineFormattingContext.h

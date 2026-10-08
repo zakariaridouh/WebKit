@@ -153,7 +153,7 @@ JSValue toJS(JSGlobalObject*, WorkletGlobalScope& workletGlobalScope)
 {
     if (!workletGlobalScope.script())
         return jsUndefined();
-    auto* contextWrapper = workletGlobalScope.script()->globalScopeWrapper();
+    auto* contextWrapper = protect(workletGlobalScope.script())->globalScopeWrapper();
     if (!contextWrapper)
         return jsUndefined();
     return &contextWrapper->proxy();

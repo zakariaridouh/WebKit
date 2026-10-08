@@ -1631,7 +1631,7 @@
 		A53243981856A489002ED692 /* CombinedDomains.json in Headers */ = {isa = PBXBuildFile; fileRef = A53243951856A475002ED692 /* CombinedDomains.json */; settings = {ATTRIBUTES = (Private, ); }; };
 		A5339EC61BB399A60054F005 /* InspectorHeapAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = A5339EC51BB399900054F005 /* InspectorHeapAgent.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A5339EC91BB4B4600054F005 /* HeapObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = A5339EC81BB4B4510054F005 /* HeapObserver.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		A5398FAB1C750DA40060A963 /* HeapProfiler.h in Headers */ = {isa = PBXBuildFile; fileRef = A5398FAA1C750D950060A963 /* HeapProfiler.h */; };
+		A5398FAB1C750DA40060A963 /* HeapProfiler.h in Headers */ = {isa = PBXBuildFile; fileRef = A5398FAA1C750D950060A963 /* HeapProfiler.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A53CE08A18BC21C300BEDF76 /* ConsoleClient.h in Headers */ = {isa = PBXBuildFile; fileRef = A53CE08918BC21C300BEDF76 /* ConsoleClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A53F1AC018C90F8F0072EB6D /* framework.sb in Resources */ = {isa = PBXBuildFile; fileRef = A53F1ABE18C90EC70072EB6D /* framework.sb */; };
 		A54C2AB11C6544F200A18D78 /* HeapSnapshot.h in Headers */ = {isa = PBXBuildFile; fileRef = A54C2AAF1C6544D100A18D78 /* HeapSnapshot.h */; settings = {ATTRIBUTES = (Private, ); }; };

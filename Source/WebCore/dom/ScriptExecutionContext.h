@@ -159,7 +159,7 @@ public:
 
     virtual String userAgent(const URL&) const = 0;
 
-    virtual const SettingsValues& settingsValues() const = 0;
+    virtual const SettingsValues& NODELETE settingsValues() const = 0;
 
     virtual const NetworkLoadPolicy& networkLoadPolicy() const = 0;
 
