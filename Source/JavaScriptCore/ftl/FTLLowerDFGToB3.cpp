@@ -21653,7 +21653,7 @@ IGNORE_CLANG_WARNINGS_END
             LValue hasType = isCellWithType(cell, classInfo->inheritsJSTypeRange.value(), speculationFromClassInfoInheritance(classInfo));
             LValue condition = nullptr;
             if (m_node->op() == CheckJSCast)
-                condition = m_out.bitNot(hasType);
+                condition = m_out.logicalNot(hasType);
             else
                 condition = hasType;
             speculate(BadType, jsValueValue(cell), m_node->child1().node(), condition);
