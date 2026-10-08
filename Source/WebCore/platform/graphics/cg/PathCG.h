@@ -82,7 +82,8 @@ public:
 private:
     PathCG(RetainPtr<CGMutablePathRef>&&);
 
-    PlatformPathPtr ensureMutablePlatformPath();
+    // Must return a reference: holding a RetainPtr copy across a mutation triggers a copy-on-write, so later edits through that copy are lost.
+    const RetainPtr<CGMutablePathRef>& ensureMutablePlatformPath();
 
     FloatPoint currentPoint() const final;
 
