@@ -5712,8 +5712,9 @@ static Node* parentEditingBoundary(Node* node)
     if (!documentElement)
         return nullptr;
 
+    bool nodeHasEditableStyle = node->hasEditableStyle();
     RefPtr boundary = node;
-    while (boundary != documentElement && boundary->nonShadowBoundaryParentNode() && node->hasEditableStyle() == protect(boundary->parentNode())->hasEditableStyle())
+    while (boundary != documentElement && boundary->nonShadowBoundaryParentNode() && nodeHasEditableStyle == protect(boundary->parentNode())->hasEditableStyle())
         boundary = boundary->nonShadowBoundaryParentNode();
 
     return boundary.unsafeGet();

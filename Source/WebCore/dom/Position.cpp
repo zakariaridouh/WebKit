@@ -526,8 +526,9 @@ RefPtr<Node> Position::parentEditingBoundary() const
     if (!documentElement)
         return nullptr;
 
+    bool anchorHasEditableStyle = protect(m_anchorNode)->hasEditableStyle();
     RefPtr boundary = m_anchorNode;
-    while (boundary != documentElement && boundary->nonShadowBoundaryParentNode() && protect(m_anchorNode)->hasEditableStyle() == protect(boundary->parentNode())->hasEditableStyle())
+    while (boundary != documentElement && boundary->nonShadowBoundaryParentNode() && anchorHasEditableStyle == protect(boundary->parentNode())->hasEditableStyle())
         boundary = boundary->nonShadowBoundaryParentNode();
     
     return boundary;
