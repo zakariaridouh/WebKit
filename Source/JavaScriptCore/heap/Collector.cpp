@@ -38,6 +38,7 @@
 #include "StochasticSpaceTimeMutatorScheduler.h"
 #include "SynchronousStopTheWorldMutatorScheduler.h"
 #include "TypeProfiler.h"
+#include "VerifierSlotVisitorInlines.h"
 #include <wtf/ListDump.h>
 #include <wtf/ParkingLot.h>
 #include <wtf/Scope.h>
@@ -384,13 +385,8 @@ NEVER_INLINE bool Collector::runBeginPhase(GCConductor conn)
     }
     RELEASE_ASSERT(m_raceMarkStack->isEmpty());
 
-    // Read once the heap has begun marking, since a Full collection advances the marking version there.
-    HeapVersion markingVersion = heap().objectSpace().markingVersion();
-    HeapAnalyzer* heapAnalyzer = heap().vm().activeHeapAnalyzer();
-    forEachSlotVisitor(
-        [&](SlotVisitor& visitor) {
-            visitor.didStartMarking(scope, markingVersion, heapAnalyzer);
-        });
+    // After each heap's beginMarking has determined this collection's marking version.
+    setUpVisitors(scope);
 
     m_parallelMarkersShouldExit = false;
 
@@ -448,6 +444,20 @@ void Collector::beginCollectionInEachHeap(CollectionScope scope, MonotonicTime s
         heap.willStartCollection(scope);
         heap.beginMarking();
     });
+}
+
+void Collector::setUpVisitors(CollectionScope scope)
+{
+    HeapVersion markingVersion = heap().objectSpace().markingVersion();
+    HeapAnalyzer* heapAnalyzer = heap().vm().activeHeapAnalyzer();
+    forEachSlotVisitor(
+        [&](SlotVisitor& visitor) {
+            visitor.didStartMarking(scope, markingVersion, heapAnalyzer);
+        });
+    if (Options::verifyGC()) [[unlikely]] {
+        m_verifierSlotVisitor = makeUnique<VerifierSlotVisitor>(*this);
+        m_verifierSlotVisitor->didStartMarking(scope, heapAnalyzer);
+    }
 }
 
 NEVER_INLINE bool Collector::runFixpointPhase(GCConductor conn)
@@ -626,7 +636,15 @@ void Collector::endCollectionInEachHeap()
         // them makes the next collection reconcile those profiles even if it is an Eden collection.
         heap.rememberExecutingAndCompilingCodeBlocks();
         heap.endMarking(bytesVisitedIn(heap));
-        heap.verifyMarking();
+    });
+
+    // Verify after every heap has finished marking, but before any heap prunes. Pruning applies the marking results
+    // to the heap, and the constraints would then see different heap state.
+    if (m_verifierSlotVisitor) [[unlikely]]
+        verifyGC();
+
+    forEachHeap([&](Heap& heap) {
+        heap.verifyHeapAfterMarking();
         heap.pruneDeadReferences();
         heap.prepareForAllocation();
         heap.didFinishCollection();
@@ -893,6 +911,80 @@ void Collector::runTaskInParallel(RefPtr<SharedTask<void(SlotVisitor&)>> task)
         while (task->refCount() > initialRefCount)
             m_bonusVisitorTaskConditionVariable.wait(m_markingMutex);
     }
+}
+
+void Collector::verifyGC()
+{
+    verifierMark();
+    VerifierSlotVisitor& visitor = *m_verifierSlotVisitor;
+    RELEASE_ASSERT(visitor.doneMarking());
+
+    visitor.forEachLiveCell([&](HeapCell* cell) {
+        Heap& heap = *cell->heap();
+        if (heap.isMarked(cell))
+            return;
+
+        dataLogLn("\n" "GC Verifier: ERROR cell ", RawPointer(cell), " was not marked");
+        if (Options::verboseVerifyGC()) [[unlikely]]
+            visitor.dumpMarkerData(cell);
+        RELEASE_ASSERT(heap.isMarked(cell));
+    });
+
+    if (!m_keepVerifierSlotVisitor)
+        clearVerifierSlotVisitor();
+}
+
+void Collector::verifierMark()
+{
+    forEachHeap([](Heap& heap) {
+        RELEASE_ASSERT(!heap.m_isMarkingForGCVerifier);
+        RELEASE_ASSERT(heap.m_collectionScope);
+        heap.m_isMarkingForGCVerifier = true;
+    });
+
+    VerifierSlotVisitor& visitor = *m_verifierSlotVisitor;
+    do {
+        while (!visitor.isEmpty())
+            visitor.drain();
+        m_constraintSet->executeAllSynchronously(visitor);
+        visitor.executeConstraintTasks();
+    } while (!visitor.isEmpty());
+
+    visitor.setDoneMarking();
+
+    forEachHeap([](Heap& heap) {
+        heap.m_isMarkingForGCVerifier = false;
+    });
+}
+
+void Collector::clearVerifierSlotVisitor()
+{
+    m_verifierSlotVisitor = nullptr;
+    m_keepVerifierSlotVisitor = false;
+}
+
+void Collector::dumpVerifierMarkerData(HeapCell* cell)
+{
+    if (!Options::verifyGC())
+        return;
+
+    if (!cell->heap()->isMarked(cell)) {
+        dataLogLn("\n" "GC Verifier: cell ", RawPointer(cell), " was not marked by SlotVisitor");
+        return;
+    }
+
+    // Use VerifierSlotVisitorScope to keep it live.
+    RELEASE_ASSERT(m_verifierSlotVisitor && !cell->heap()->isMarkingForGCVerifier());
+    VerifierSlotVisitor& visitor = *m_verifierSlotVisitor;
+    RELEASE_ASSERT(visitor.doneMarking());
+
+    if (!visitor.isMarked(cell)) {
+        dataLogLn("\n" "GC Verifier: ERROR cell ", RawPointer(cell), " was not marked by VerifierSlotVisitor");
+        return;
+    }
+
+    dataLogLn("\n" "GC Verifier: Found marked cell ", RawPointer(cell), " with MarkerData:");
+    visitor.dumpMarkerData(cell);
 }
 
 void Collector::startCollectingContinuously()

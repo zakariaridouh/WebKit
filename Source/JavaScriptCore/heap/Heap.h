@@ -101,7 +101,6 @@ class StopIfNecessaryTimer;
 class StructureAlignedMemoryAllocator;
 class SweepingScope;
 class VM;
-class VerifierSlotVisitor;
 class WeakGCHashTable;
 struct CurrentThreadState;
 
@@ -611,8 +610,6 @@ public:
 
     bool isMarkingForGCVerifier() const { return m_isMarkingForGCVerifier; }
 
-    void setKeepVerifierSlotVisitor();
-    void clearVerifierSlotVisitor();
 
     void appendPossiblyAccessedStringFromConcurrentThreadsOrGCOwnedDataScope(const JSString* owner, String&& string)
     {
@@ -632,8 +629,6 @@ public:
     bool markWasmCalleeIfPending(Wasm::Callee*);
 #endif
 
-    // This is a debug function for checking who marked the target cell.
-    void dumpVerifierMarkerData(HeapCell*);
 
 private:
     friend class AllocatingScope;
@@ -661,7 +656,6 @@ private:
     friend class SweepingScope;
     friend class IncrementalSweeper;
     friend class VM;
-    friend class VerifierSlotVisitor;
     friend class WeakBlock;
     friend class WeakSet;
 
@@ -736,7 +730,7 @@ private:
     void rememberExecutingAndCompilingCodeBlocks();
     void recordBytesVisited(size_t bytesVisited);
     void endMarking(size_t bytesVisited);
-    void verifyMarking();
+    void verifyHeapAfterMarking();
     void pruneDeadReferences();
     void prepareForAllocation();
 
@@ -802,8 +796,6 @@ private:
 
     bool shouldSweepSynchronously();
 
-    void verifyGC();
-    void verifierMark();
 
     Lock m_lock;
     const HeapType m_heapType;
@@ -852,7 +844,6 @@ private:
     const std::unique_ptr<Collector> m_collector;
     std::unique_ptr<SlotVisitor> m_mutatorSlotVisitor;
     std::unique_ptr<MarkStackArray> m_mutatorMarkStack;
-    std::unique_ptr<VerifierSlotVisitor> m_verifierSlotVisitor;
     
     StrongSet m_strongSet;
     std::unique_ptr<CodeBlockSet> m_codeBlocks;
@@ -864,7 +855,6 @@ private:
     bool m_isShuttingDown { false };
     bool m_mutatorShouldBeFenced { false };
     bool m_isMarkingForGCVerifier { false };
-    bool m_keepVerifierSlotVisitor { false };
     Lock m_wasmCalleesPendingDestructionLock;
 
     unsigned m_barrierThreshold { blackThreshold };

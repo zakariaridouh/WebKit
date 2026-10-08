@@ -46,12 +46,14 @@
 namespace JSC {
 
 class Heap;
+class HeapCell;
 class MarkStackArray;
 class MarkingConstraint;
 class MarkingConstraintSet;
 struct MarkingConstraintExecutorPair;
 class MutatorScheduler;
 class SlotVisitor;
+class VerifierSlotVisitor;
 
 // State belonging to a collection cycle.
 class Collector {
@@ -75,7 +77,15 @@ public:
             func(*heap);
     }
 
+    bool hasHeap(Heap& heap) const { return m_heaps.contains(&heap); }
+
     SlotVisitor& collectorSlotVisitor() LIFETIME_BOUND { return *m_collectorSlotVisitor; }
+
+    // The GC verifier (Options::verifyGC()).
+    void setKeepVerifierSlotVisitor() { m_keepVerifierSlotVisitor = true; }
+    void clearVerifierSlotVisitor();
+    // This is a debug function for checking who marked the target cell.
+    void dumpVerifierMarkerData(HeapCell*);
 
     // Every marking worker of the cycle: this Collector's own visitors, plus each participant's.
     template<typename Func>
@@ -150,6 +160,7 @@ private:
 
     // The per-heap part of the Begin and End phases.
     void beginCollectionInEachHeap(CollectionScope, MonotonicTime startTime);
+    void setUpVisitors(CollectionScope);
     void endCollectionInEachHeap();
 
     void stopThePeriphery();
@@ -157,6 +168,9 @@ private:
 
     bool suspendCompilerThreads();
     void resumeCompilerThreads();
+
+    void verifyGC();
+    void verifierMark();
 
     void assertMarkStacksEmpty();
 
@@ -235,6 +249,11 @@ private:
     MonotonicTime m_beforeGC;
     MonotonicTime m_afterGC;
     MonotonicTime m_stopTime;
+
+    // Re-marks every heap of the collection, from the same constraints, to check that the collection marked
+    // everything it should have. Created at Begin, run in End, kept afterwards only if asked.
+    std::unique_ptr<VerifierSlotVisitor> m_verifierSlotVisitor;
+    bool m_keepVerifierSlotVisitor { false };
 
     bool m_shouldStopCollectingContinuously WTF_GUARDED_BY_LOCK(m_collectContinuouslyLock) { false };
     Lock m_collectContinuouslyLock;

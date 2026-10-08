@@ -97,7 +97,7 @@
 #include "TypeProfilerLog.h"
 #include "UnlinkedEvalCodeBlock.h"
 #include "VM.h"
-#include "VerifierSlotVisitorInlines.h"
+#include "VerifierSlotVisitor.h"
 #include "WasmCallee.h"
 #include "WeakMapImplInlines.h"
 #include "WeakSetInlines.h"
@@ -903,13 +903,10 @@ void Heap::endMarking(size_t bytesVisited)
 #endif
 }
 
-void Heap::verifyMarking()
+void Heap::verifyHeapAfterMarking()
 {
     ASSERT(isInPhase(CollectorPhase::End));
     ASSERT(!m_objectSpace.isMarking());
-
-    if (Options::verifyGC()) [[unlikely]]
-        verifyGC();
 
     if (m_verifier) [[unlikely]] {
         m_verifier->gatherLiveCells(HeapVerifier::Phase::AfterMarking);
@@ -1773,11 +1770,6 @@ void Heap::willStartCollection(CollectionScope scope)
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    if (Options::verifyGC()) [[unlikely]] {
-        m_verifierSlotVisitor = makeUnique<VerifierSlotVisitor>(*m_collector);
-        ASSERT(!m_isMarkingForGCVerifier);
-    }
-
     dataLogIf(Options::logGC(), "=> ");
     
     m_collectionScope = scope;
@@ -2424,19 +2416,19 @@ void Heap::addCoreConstraints()
 
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::ConservativeScan);
                 visitor.append(conservativeRoots);
-                if (m_verifierSlotVisitor) [[unlikely]] {
-                    SetRootMarkReasonScope rootScope(*m_verifierSlotVisitor, RootMarkReason::ConservativeScan);
-                    m_verifierSlotVisitor->append(conservativeRoots);
+                if (auto* verifierVisitor = m_collector->m_verifierSlotVisitor.get()) [[unlikely]] {
+                    SetRootMarkReasonScope rootScope(*verifierVisitor, RootMarkReason::ConservativeScan);
+                    verifierVisitor->append(conservativeRoots);
                 }
             }
 
             // JITStubRoutines must be visited after scanning ConservativeRoots since JITStubRoutines depend on the hook executed during gathering ConservativeRoots.
             SetRootMarkReasonScope rootScope(visitor, RootMarkReason::JITStubRoutines);
             m_jitStubRoutines->traceMarkedStubRoutines(visitor);
-            if (m_verifierSlotVisitor) [[unlikely]] {
-                // It's important to cast m_verifierSlotVisitor to an AbstractSlotVisitor here
+            if (auto* verifierVisitor = m_collector->m_verifierSlotVisitor.get()) [[unlikely]] {
+                // It's important to cast the verifier's visitor to an AbstractSlotVisitor here
                 // so that we'll call the AbstractSlotVisitor version of traceMarkedStubRoutines().
-                AbstractSlotVisitor& visitor = *m_verifierSlotVisitor;
+                AbstractSlotVisitor& visitor = *verifierVisitor;
                 m_jitStubRoutines->traceMarkedStubRoutines(visitor);
             }
             lastVersion = m_collector->m_phaseVersion;
@@ -2738,77 +2730,6 @@ void Heap::addGCCompletionCallback(const GCCompletionCallback& callback)
 void Heap::removeGCCompletionCallback(const GCCompletionCallback& callback)
 {
     m_gcCompletionCallbacks.removeFirst(callback);
-}
-
-void Heap::verifierMark()
-{
-    RELEASE_ASSERT(!m_isMarkingForGCVerifier);
-    RELEASE_ASSERT(m_collectionScope);
-
-    SetForScope isMarkingForGCVerifierScope(m_isMarkingForGCVerifier, true);
-    VerifierSlotVisitor& visitor = *m_verifierSlotVisitor;
-    visitor.didStartMarking(m_collectionScope.value(), vm().activeHeapAnalyzer());
-    do {
-        while (!visitor.isEmpty())
-            visitor.drain();
-        m_collector->m_constraintSet->executeAllSynchronously(visitor);
-        visitor.executeConstraintTasks();
-    } while (!visitor.isEmpty());
-
-    visitor.setDoneMarking();
-}
-
-void Heap::dumpVerifierMarkerData(HeapCell* cell)
-{
-    if (!Options::verifyGC())
-        return;
-
-    if (!Heap::isMarked(cell)) {
-        dataLogLn("\n" "GC Verifier: cell ", RawPointer(cell), " was not marked by SlotVisitor");
-        return;
-    }
-
-    // Use VerifierSlotVisitorScope to keep it live.
-    RELEASE_ASSERT(m_verifierSlotVisitor && !m_isMarkingForGCVerifier);
-    VerifierSlotVisitor& visitor = *m_verifierSlotVisitor;
-    RELEASE_ASSERT(visitor.doneMarking());
-
-    if (!visitor.isMarked(cell)) {
-        dataLogLn("\n" "GC Verifier: ERROR cell ", RawPointer(cell), " was not marked by VerifierSlotVisitor");
-        return;
-    }
-
-    dataLogLn("\n" "GC Verifier: Found marked cell ", RawPointer(cell), " with MarkerData:");
-    visitor.dumpMarkerData(cell);
-}
-
-void Heap::verifyGC()
-{
-    RELEASE_ASSERT(m_verifierSlotVisitor);
-    verifierMark();
-    VerifierSlotVisitor& visitor = *m_verifierSlotVisitor;
-    RELEASE_ASSERT(visitor.doneMarking() && !m_isMarkingForGCVerifier);
-
-    visitor.forEachLiveCell([&] (HeapCell* cell) {
-        if (Heap::isMarked(cell))
-            return;
-
-        dataLogLn("\n" "GC Verifier: ERROR cell ", RawPointer(cell), " was not marked");
-        if (Options::verboseVerifyGC()) [[unlikely]]
-            visitor.dumpMarkerData(cell);
-        RELEASE_ASSERT(this->isMarked(cell));
-    });
-
-    if (!m_keepVerifierSlotVisitor)
-        clearVerifierSlotVisitor();
-}
-
-void Heap::setKeepVerifierSlotVisitor() { m_keepVerifierSlotVisitor = true; }
-
-void Heap::clearVerifierSlotVisitor()
-{
-    m_verifierSlotVisitor = nullptr;
-    m_keepVerifierSlotVisitor = false;
 }
 
 void Heap::scheduleOpportunisticFullCollection()
