@@ -2873,16 +2873,49 @@ void ByteCodeParser::handleMinMax(Operand resultOperand, NodeType op, int regist
         set(resultOperand, resultNode);
 }
 
-static bool calleeMayBeCrossRealm(CallVariant variant, JSGlobalObject* globalObject)
+// Whether the nodes substituted for a call to this intrinsic are correct when the callee comes from a realm other than
+// the calling code's. A builtin runs in its own realm, but substituted nodes otherwise use the calling code's realm, e.g.
+// to create errors and objects or to consult watchpoints.
+static bool intrinsicSupportsCalleeFromAnyRealm(Intrinsic intrinsic)
 {
-    JSFunction* function = variant.function();
-    if (!function)
+    switch (intrinsic) {
+    // These can't throw (other than out of memory), create objects, or read realm state.
+    case ArrayBufferIsViewIntrinsic:
+    case AsyncIteratorIntrinsic:
+    case DateNowIntrinsic:
+    case ErrorIsErrorIntrinsic:
+    case IteratorIntrinsic:
+    case NumberIsFiniteIntrinsic:
+    case NumberIsIntegerIntrinsic:
+    case NumberIsNaNIntrinsic:
+    case NumberIsSafeIntegerIntrinsic:
+    case ObjectIsIntrinsic:
+    // Calling a bound function only calls its target, which runs in its own realm.
+    case BoundFunctionCallIntrinsic:
+    // RegExpExec takes its realm from the callee.
+    case RegExpExecIntrinsic:
+    // CallWasm's argument conversions exit rather than throw, and the wasm function runs with its instance's realm.
+    case WasmFunctionIntrinsic:
+    // Testing intrinsics.
+    case DFGTrueIntrinsic:
+    case FTLTrueIntrinsic:
+    case OSRExitIntrinsic:
+    case IsFinalTierIntrinsic:
+    case SetInt32HeapPredictionIntrinsic:
+    case CheckInt32Intrinsic:
+    case FiatInt52Intrinsic:
+    case CPUMfenceIntrinsic:
+    case CPURdtscIntrinsic:
+    case CPUCpuidIntrinsic:
+    case CPUPauseIntrinsic:
         return true;
-    return function->realmMayBeNull() != globalObject;
+    default:
+        return false;
+    }
 }
 
 template<typename ChecksFunctor>
-auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, CallVariant variant, Intrinsic intrinsic, int registerOffset, int argumentCountIncludingThis, BytecodeIndex osrExitIndex, NodeType callOp, InlineCallFrame::Kind kind, CodeSpecializationKind specializationKind, SpeculatedType prediction, NOESCAPE const ChecksFunctor& insertChecks) -> CallOptimizationResult
+auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, CallVariant variant, Intrinsic intrinsic, int registerOffset, int argumentCountIncludingThis, BytecodeIndex osrExitIndex, NodeType callOp, InlineCallFrame::Kind kind, CodeSpecializationKind specializationKind, SpeculatedType prediction, NOESCAPE const ChecksFunctor& insertCalleeChecks) -> CallOptimizationResult
 {
     VERBOSE_LOG("       The intrinsic is ", intrinsic, "\n");
     UNUSED_PARAM(callOp);
@@ -2893,6 +2926,29 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
         VERBOSE_LOG("    Failing because instruction is not OpCallShape.\n");
         return CallOptimizationResult::DidNothing;
     }
+
+    // Natives from every realm share one executable, so the callee may come from a realm other than the calling code's.
+    JSGlobalObject* realmToCheck = nullptr;
+    if (!intrinsicSupportsCalleeFromAnyRealm(intrinsic)) {
+        JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
+        if (JSFunction* function = variant.function()) {
+            if (function->realmMayBeNull() != globalObject)
+                return CallOptimizationResult::DidNothing;
+        } else {
+            // Only the executable is known. The substituted nodes are correct for any callee with this executable from
+            // this realm, so speculate on the callee's realm unless that has failed before.
+            ASSERT(variant.isClosureCall());
+            if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadRealm))
+                return CallOptimizationResult::DidNothing;
+            realmToCheck = globalObject;
+        }
+    }
+
+    auto insertChecks = [&](bool willDoInliningInsideIntrinsic = false) {
+        insertCalleeChecks(willDoInliningInsideIntrinsic);
+        if (realmToCheck)
+            addToGraph(CheckIsConstant, OpInfo(m_graph.freeze(realmToCheck)), OpInfo(static_cast<unsigned>(BadRealm)), addToGraph(GetGlobalObject, callee));
+    };
 
     bool didSetResult = false;
     auto setResult = [&] (Node* node) {
@@ -3025,8 +3081,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
         case ArrayKeysIntrinsic:
         case ArrayValuesIntrinsic: {
             JSGlobalObject* globalObject = m_graph.globalObjectFor(currentNodeOrigin().semantic);
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             insertChecks();
 
@@ -3114,8 +3168,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             case Array::Int32:
             case Array::Contiguous: {
                 JSGlobalObject* globalObject = m_graph.globalObjectFor(currentNodeOrigin().semantic);
-                if (calleeMayBeCrossRealm(variant, globalObject))
-                    return CallOptimizationResult::DidNothing;
                 // FIXME: We could easily relax the Array/Object.prototype transition as long as we OSR exitted if we saw a hole.
                 // https://bugs.webkit.org/show_bug.cgi?id=173171
                 if (globalObject->arraySpeciesWatchpointSet().state() == IsWatched
@@ -3188,9 +3240,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (!arrayMode.isJSArray())
                 return CallOptimizationResult::DidNothing;
 
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
-                return CallOptimizationResult::DidNothing;
-
             insertChecks();
 
             for (int i = 0; i < argumentCountIncludingThis; ++i)
@@ -3221,8 +3270,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             case Array::Int32:
             case Array::Contiguous: {
                 JSGlobalObject* globalObject = m_graph.globalObjectFor(currentNodeOrigin().semantic);
-                if (calleeMayBeCrossRealm(variant, globalObject))
-                    return CallOptimizationResult::DidNothing;
                 if (globalObject->arraySpeciesWatchpointSet().state() != IsWatched
                     || !globalObject->havingABadTimeWatchpointSet().isStillValid()
                     || globalObject->arrayPrototypeChainIsSaneWatchpointSet().state() != IsWatched
@@ -3672,9 +3719,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (argumentCountIncludingThis < 2)
                 return CallOptimizationResult::DidNothing;
 
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
-                return CallOptimizationResult::DidNothing;
-
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
                 return CallOptimizationResult::DidNothing;
 
@@ -3696,9 +3740,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
         case StringPrototypeMatchIntrinsic: {
             if (argumentCountIncludingThis < 2)
-                return CallOptimizationResult::DidNothing;
-
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -3723,9 +3764,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
         case StringPrototypeSearchIntrinsic: {
             if (argumentCountIncludingThis < 2)
-                return CallOptimizationResult::DidNothing;
-
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -3971,8 +4009,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             if (!globalObject->regExpPrimordialPropertiesWatchpointSet().isStillValid())
                 return CallOptimizationResult::DidNothing;
@@ -4027,8 +4063,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             if (!globalObject->regExpPrimordialPropertiesWatchpointSet().isStillValid())
                 return CallOptimizationResult::DidNothing;
@@ -4083,8 +4117,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             if (!globalObject->regExpPrimordialPropertiesWatchpointSet().isStillValid())
                 return CallOptimizationResult::DidNothing;
@@ -4138,8 +4170,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             if (!globalObject->regExpPrimordialPropertiesWatchpointSet().isStillValid())
                 return CallOptimizationResult::DidNothing;
@@ -4196,8 +4226,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             Structure* iteratorResultStructure = globalObject->iteratorResultObjectStructureConcurrently();
             if (!iteratorResultStructure)
@@ -4270,9 +4298,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (argumentCountIncludingThis < 2)
                 return CallOptimizationResult::DidNothing;
 
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
-                return CallOptimizationResult::DidNothing;
-
             insertChecks();
             setResult(addToGraph(ObjectKeys, get(virtualRegisterForArgumentIncludingThis(1, registerOffset))));
             return CallOptimizationResult::Inlined;
@@ -4282,9 +4307,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (argumentCountIncludingThis < 2)
                 return CallOptimizationResult::DidNothing;
 
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
-                return CallOptimizationResult::DidNothing;
-
             insertChecks();
             setResult(addToGraph(ObjectGetOwnPropertyNames, get(virtualRegisterForArgumentIncludingThis(1, registerOffset))));
             return CallOptimizationResult::Inlined;
@@ -4292,9 +4314,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
         case ObjectGetOwnPropertySymbolsIntrinsic: {
             if (argumentCountIncludingThis < 2)
-                return CallOptimizationResult::DidNothing;
-
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
                 return CallOptimizationResult::DidNothing;
 
             insertChecks();
@@ -4367,8 +4386,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             if (!globalObject->stringSymbolReplaceWatchpointSet().isStillValid() || !globalObject->regExpPrimordialPropertiesWatchpointSet().isStillValid())
                 return CallOptimizationResult::DidNothing;
@@ -4617,9 +4634,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadConstantValue) || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
                 return CallOptimizationResult::DidNothing;
 
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
-                return CallOptimizationResult::DidNothing;
-
             insertChecks();
 
             IterationKind kind = IterationKind::Values;
@@ -4680,8 +4694,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_graph.globalObjectFor(currentNodeOrigin().semantic);
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             insertChecks();
 
@@ -4700,8 +4712,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_graph.globalObjectFor(currentNodeOrigin().semantic);
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             // The structure is created lazily, but profiling already ran next(), so it exists by
             // the time this call site is hot. Bail if it does not exist for some reason.
@@ -4791,8 +4801,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                 return CallOptimizationResult::DidNothing;
 
             JSGlobalObject* globalObject = m_graph.globalObjectFor(currentNodeOrigin().semantic);
-            if (calleeMayBeCrossRealm(variant, globalObject))
-                return CallOptimizationResult::DidNothing;
 
             Structure* iteratorResultStructure = globalObject->iteratorResultObjectStructureConcurrently();
             if (!iteratorResultStructure)
@@ -5812,9 +5820,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (argumentCountIncludingThis < 2)
                 return CallOptimizationResult::DidNothing;
 
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
-                return CallOptimizationResult::DidNothing;
-
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
                 return CallOptimizationResult::DidNothing;
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadConstantValue))
@@ -5851,9 +5856,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (argumentCountIncludingThis < 2)
                 return CallOptimizationResult::DidNothing;
 
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
-                return CallOptimizationResult::DidNothing;
-
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
                 return CallOptimizationResult::DidNothing;
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadConstantValue))
@@ -5888,9 +5890,6 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
         case PromisePrototypeThenIntrinsic: {
             if (argumentCountIncludingThis < 1)
-                return CallOptimizationResult::DidNothing;
-
-            if (calleeMayBeCrossRealm(variant, m_graph.globalObjectFor(currentNodeOrigin().semantic)))
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -6527,6 +6526,21 @@ bool ByteCodeParser::handleIndexedProxyObjectIn(VirtualRegister destination, Nod
     return true;
 }
 
+// Whether the nodes substituted for a call to this constant function are correct when it comes from a realm other than
+// the calling code's. These nodes carry the function's realm, as a structure or a frozen global object, and use it
+// instead of the calling code's realm.
+static bool constantFunctionSupportsCalleeFromAnyRealm(const ClassInfo* classInfo)
+{
+    return classInfo == ObjectConstructor::info()
+        || classInfo == RegExpConstructor::info()
+        || classInfo == MapConstructor::info()
+        || classInfo == SetConstructor::info()
+        || classInfo == WeakMapConstructor::info()
+        || classInfo == WeakSetConstructor::info()
+        || classInfo == JSArrayBufferConstructor::info()
+        || classInfo == JSSharedArrayBufferConstructor::info();
+}
+
 template<typename ChecksFunctor>
 bool ByteCodeParser::handleTypedArrayConstructor(
     Operand result, JSObject* function, int registerOffset,
@@ -6539,9 +6553,6 @@ bool ByteCodeParser::handleTypedArrayConstructor(
         return false;
     
     if (kind == CodeSpecializationKind::CodeForCall)
-        return false;
-
-    if (function->realmMayBeNull() != m_inlineStackTop->m_codeBlock->globalObject())
         return false;
     
     // We only have an intrinsic for the case where you say:
@@ -6604,9 +6615,12 @@ bool ByteCodeParser::handleConstantFunction(
     VERBOSE_LOG("    Handling constant function ", JSValue(function), "\n");
     UNUSED_PARAM(newTarget);
     
-    // It so happens that the code below assumes that the result operand is valid. It's extremely
-    // unlikely that the result operand would be invalid - you'd have to call this via a setter call.
+    // The code below assumes that the result operand is valid. It isn't when the result is unused, as for
+    // op_call_ignore_result or a setter call, but such calls to these constructors are rare.
     if (!result.isValid())
+        return false;
+
+    if (function->realmMayBeNull() != m_inlineStackTop->m_codeBlock->globalObject() && !constantFunctionSupportsCalleeFromAnyRealm(function->classInfo()))
         return false;
 
     if (function->classInfo() == ArrayConstructor::info()) {
@@ -6618,9 +6632,6 @@ bool ByteCodeParser::handleConstantFunction(
             if (newTargetNode != callTargetNode)
                 return false;
         }
-
-        if (function->realm() != m_inlineStackTop->m_codeBlock->globalObject())
-            return false;
 
         insertChecks();
         if (argumentCountIncludingThis == 2) {

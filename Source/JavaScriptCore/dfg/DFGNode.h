@@ -2308,6 +2308,14 @@ public:
         return m_opInfo.as<FrozenValue*>();
     }
 
+    // CheckIsConstant can carry the exit kind to use in opInfo2. It defaults to BadConstantValue.
+    ExitKind checkIsConstantExitKind()
+    {
+        ASSERT(op() == CheckIsConstant);
+        auto kind = static_cast<ExitKind>(m_opInfo2.as<unsigned>());
+        return kind == ExitKindUnset ? BadConstantValue : kind;
+    }
+
     FrozenValue* cellOperand2()
     {
         ASSERT(hasCellOperand2());

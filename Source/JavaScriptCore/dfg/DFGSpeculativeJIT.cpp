@@ -10610,13 +10610,13 @@ void SpeculativeJIT::compileCheckIsConstant(Node* node)
 {
     if (node->child1().useKind() == CellUse) {
         SpeculateCellOperand cell(this, node->child1());
-        speculationCheck(BadConstantValue, JSValueSource(cell.gpr()), node->child1(), branchLinkableConstant(NotEqual, cell.gpr(), LinkableConstant(*this, node->cellOperand()->cell())));
+        speculationCheck(node->checkIsConstantExitKind(), JSValueSource(cell.gpr()), node->child1(), branchLinkableConstant(NotEqual, cell.gpr(), LinkableConstant(*this, node->cellOperand()->cell())));
     } else {
         ASSERT(!node->constant()->value().isCell() || !node->constant()->value());
         JSValueOperand operand(this, node->child1());
         GPRReg valueGPR = operand.gpr();
 
-        speculationCheck(BadConstantValue, JSValueSource(valueGPR), node->child1(), branch64(NotEqual, valueGPR, TrustedImm64(JSValue::encode(node->constant()->value()))));
+        speculationCheck(node->checkIsConstantExitKind(), JSValueSource(valueGPR), node->child1(), branch64(NotEqual, valueGPR, TrustedImm64(JSValue::encode(node->constant()->value()))));
     }
 
 
