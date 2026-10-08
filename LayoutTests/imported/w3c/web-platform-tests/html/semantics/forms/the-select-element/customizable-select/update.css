@@ -152,6 +152,11 @@ select::picker-icon {
   rotate: -90deg;
 }
 
+select:open::picker-icon,
+.customizable-select-button.open::after {
+  transform: scale(-1);
+}
+
 /* ---- Picker popover ---- */
 
 select::picker(select),
