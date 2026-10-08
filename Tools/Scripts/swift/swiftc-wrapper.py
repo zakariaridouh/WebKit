@@ -124,7 +124,12 @@ def write_ninja_depfile(request, output_file_map):
     # Sorted: swiftc reports a dependency once per frontend job that saw it, so
     # discovery order follows job scheduling and would rewrite this file, and
     # cost a build, for a dependency set that did not change.
-    deps = sorted(dep for dep in raw if _canonical(dep) not in excludes)
+    # Drop dependencies that are not on disk. On Linux, swiftc overlays its
+    # libstdcxx.modulemap onto the libstdc++ include directory through a virtual
+    # file system and reports that virtual module.modulemap as a dependency.
+    # ninja considers a missing dependency always dirty, so it would recompile
+    # the module on every build.
+    deps = sorted(dep for dep in raw if _canonical(dep) not in excludes and os.path.exists(dep))
 
     lines = [f"{depfile.escape(request.target)}:"]
     lines += (f"  {depfile.escape(dep)}" for dep in deps)
