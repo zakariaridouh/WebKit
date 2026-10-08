@@ -583,15 +583,13 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
 
     LayoutUnit maxWidth = containingBlock->contentBoxLogicalWidth();
 
-    const auto& zoomFactor = style().usedZoomForLength();
-
     // Sticky positioned element ignore any override logical width on the containing block (as they don't call
     // containingBlockLogicalWidthForContent). It's unclear whether this is totally fine.
     LayoutBoxExtent minMargin(
-        Style::evaluateMinimum<LayoutUnit>(style().marginTop(), maxWidth, zoomFactor),
-        Style::evaluateMinimum<LayoutUnit>(style().marginRight(), maxWidth, zoomFactor),
-        Style::evaluateMinimum<LayoutUnit>(style().marginBottom(), maxWidth, zoomFactor),
-        Style::evaluateMinimum<LayoutUnit>(style().marginLeft(), maxWidth, zoomFactor)
+        usedStyle().marginTop(maxWidth).value_or(0_lu),
+        usedStyle().marginRight(maxWidth).value_or(0_lu),
+        usedStyle().marginBottom(maxWidth).value_or(0_lu),
+        usedStyle().marginLeft(maxWidth).value_or(0_lu)
     );
 
     // Compute the container-relative area within which the sticky element is allowed to move.
@@ -980,42 +978,42 @@ auto RenderBoxModelObject::computeVisibleRectsUsingPaintOffset(const RepaintRect
 
 LayoutUnit RenderBoxModelObject::marginTop() const
 {
-    return computedCSSMarginTop();
+    return usedStyle().marginTop(ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 }
 
 LayoutUnit RenderBoxModelObject::marginBottom() const
 {
-    return computedCSSMarginBottom();
+    return usedStyle().marginBottom(ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 }
 
 LayoutUnit RenderBoxModelObject::marginLeft() const
 {
-    return computedCSSMarginLeft();
+    return usedStyle().marginLeft(ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 }
 
 LayoutUnit RenderBoxModelObject::marginRight() const
 {
-    return computedCSSMarginRight();
+    return usedStyle().marginRight(ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 }
 
 LayoutUnit RenderBoxModelObject::marginBefore(const WritingMode writingMode) const
 {
-    return computedCSSMarginBefore(writingMode);
+    return usedStyle().marginBefore(writingMode, ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 }
 
 LayoutUnit RenderBoxModelObject::marginAfter(const WritingMode writingMode) const
 {
-    return computedCSSMarginAfter(writingMode);
+    return usedStyle().marginAfter(writingMode, ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 }
 
 LayoutUnit RenderBoxModelObject::marginStart(const WritingMode writingMode) const
 {
-    return computedCSSMarginStart(writingMode);
+    return usedStyle().marginStart(writingMode, ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 }
 
 LayoutUnit RenderBoxModelObject::marginEnd(const WritingMode writingMode) const
 {
-    return computedCSSMarginEnd(writingMode);
+    return usedStyle().marginEnd(writingMode, ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 }
 
 LayoutRect RenderBoxModelObject::firstFragmentBorderBoxRect() const

@@ -41,6 +41,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderButton.h"
 #include "RenderDeprecatedFlexibleBox.h"
+#include "RenderElementInlines.h"
 #include "RenderElementStyleInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderFileUploadControl.h"
@@ -75,11 +76,6 @@
 
 namespace WebCore {
 namespace LayoutIntegration {
-
-static LayoutUnit usedValueOrZero(const Style::MarginEdge& marginEdge, std::optional<LayoutUnit> availableWidth, const Style::ZoomFactor& zoomFactor)
-{
-    return marginEdge.isAuto() ? 0_lu : Style::evaluateMinimum<LayoutUnit>(marginEdge, availableWidth.value_or(0_lu), zoomFactor);
-}
 
 static LayoutUnit usedValueOrZero(const Style::PaddingEdge& paddingEdge, std::optional<LayoutUnit> availableWidth, Style::ZoomFactor usedZoom)
 {
@@ -195,28 +191,21 @@ static inline LayoutUnit contentLogicalHeightForRenderer(const RenderBox& render
 
 Layout::BoxGeometry::HorizontalEdges BoxGeometryUpdater::horizontalLogicalMargin(const RenderBoxModelObject& renderer, std::optional<LayoutUnit> availableWidth, WritingMode writingMode)
 {
-    const auto& zoomFactor = renderer.style().usedZoomForLength();
-
-    if (writingMode.isHorizontal()) {
-        auto marginInlineStart = usedValueOrZero(writingMode.isInlineLeftToRight() ? renderer.style().marginLeft() : renderer.style().marginRight(), availableWidth, zoomFactor);
-        auto marginInlineEnd = usedValueOrZero(writingMode.isInlineLeftToRight() ? renderer.style().marginRight() : renderer.style().marginLeft(), availableWidth, zoomFactor);
-
-        return { marginInlineStart, marginInlineEnd };
-    }
-
-    auto marginInlineStart = usedValueOrZero(writingMode.isInlineTopToBottom() ? renderer.style().marginTop() : renderer.style().marginBottom(), availableWidth, zoomFactor);
-    auto marginInlineEnd = usedValueOrZero(writingMode.isInlineTopToBottom() ? renderer.style().marginBottom() : renderer.style().marginTop(), availableWidth, zoomFactor);
-
-    return { marginInlineStart, marginInlineEnd };
+    auto usedStyle = renderer.usedStyle();
+    auto reference = availableWidth.value_or(0_lu);
+    return { usedStyle.marginStart(writingMode, reference).value_or(0_lu), usedStyle.marginEnd(writingMode, reference).value_or(0_lu) };
 }
 
 Layout::BoxGeometry::VerticalEdges BoxGeometryUpdater::verticalLogicalMargin(const RenderBoxModelObject& renderer, std::optional<LayoutUnit> availableWidth, WritingMode writingMode)
 {
+    // The block-axis pair is line-relative (line-over, line-under), matching logicalBorder/logicalPadding.
+    auto usedStyle = renderer.usedStyle();
+    auto reference = availableWidth.value_or(0_lu);
     if (writingMode.isHorizontal())
-        return { usedValueOrZero(renderer.style().marginTop(), availableWidth, renderer.style().usedZoomForLength()), usedValueOrZero(renderer.style().marginBottom(), availableWidth, renderer.style().usedZoomForLength()) };
+        return { usedStyle.marginTop(reference).value_or(0_lu), usedStyle.marginBottom(reference).value_or(0_lu) };
     if (writingMode.isLineOverLeft())
-        return { usedValueOrZero(renderer.style().marginLeft(), availableWidth, renderer.style().usedZoomForLength()), usedValueOrZero(renderer.style().marginRight(), availableWidth, renderer.style().usedZoomForLength()) };
-    return { usedValueOrZero(renderer.style().marginRight(), availableWidth, renderer.style().usedZoomForLength()), usedValueOrZero(renderer.style().marginLeft(), availableWidth, renderer.style().usedZoomForLength()) };
+        return { usedStyle.marginLeft(reference).value_or(0_lu), usedStyle.marginRight(reference).value_or(0_lu) };
+    return { usedStyle.marginRight(reference).value_or(0_lu), usedStyle.marginLeft(reference).value_or(0_lu) };
 }
 
 Layout::BoxGeometry::Edges BoxGeometryUpdater::logicalBorder(const RenderBoxModelObject& renderer, WritingMode writingMode, bool isIntrinsicWidthMode)

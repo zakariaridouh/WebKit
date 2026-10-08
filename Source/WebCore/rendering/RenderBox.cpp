@@ -72,6 +72,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderDeprecatedFlexibleBox.h"
+#include "RenderElementInlines.h"
 #include "RenderElementStyleInlines.h"
 #include "RenderFlexibleBox.h"
 #include "RenderFragmentContainer.h"
@@ -2759,11 +2760,10 @@ void RenderBox::computeLogicalWidth(LogicalExtentComputedValues& computedValues)
     }();
 
     auto containerLogicalWidth = std::max(0_lu, containingBlockLogicalWidthForContent());
-    auto& styleToUse = style();
     if (isInline() && is<RenderReplaced>(*this)) {
         // just calculate margins
-        computedValues.margins.start = Style::evaluateMinimum<LayoutUnit>(styleToUse.marginStart(), containerLogicalWidth, styleToUse.usedZoomForLength());
-        computedValues.margins.end = Style::evaluateMinimum<LayoutUnit>(styleToUse.marginEnd(), containerLogicalWidth, styleToUse.usedZoomForLength());
+        computedValues.margins.start = usedStyle().marginStart(containerLogicalWidth).value_or(0_lu);
+        computedValues.margins.end = usedStyle().marginEnd(containerLogicalWidth).value_or(0_lu);
         if (treatAsReplaced) {
             auto evaluatedWidth = downcast<RenderReplaced>(*this).computeReplacedLogicalWidth();
             auto totalWidth = evaluatedWidth + borderAndPaddingLogicalWidth();
@@ -2800,8 +2800,8 @@ void RenderBox::computeLogicalWidth(LogicalExtentComputedValues& computedValues)
 
     // Margin calculations.
     if (hasPerpendicularContainingBlock || isFloating() || isInline()) {
-        computedValues.margins.start = Style::evaluateMinimum<LayoutUnit>(styleToUse.marginStart(), containerLogicalWidth, styleToUse.usedZoomForLength());
-        computedValues.margins.end = Style::evaluateMinimum<LayoutUnit>(styleToUse.marginEnd(), containerLogicalWidth, styleToUse.usedZoomForLength());
+        computedValues.margins.start = usedStyle().marginStart(containerLogicalWidth).value_or(0_lu);
+        computedValues.margins.end = usedStyle().marginEnd(containerLogicalWidth).value_or(0_lu);
         if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(containingBlock); hasPerpendicularContainingBlock && blockFlow) {
             if (blockFlow->shouldTrimChildMargin(Style::MarginTrimSide::BlockStart, *this))
                 computedValues.margins.start = 0_lu;
@@ -3650,11 +3650,8 @@ LayoutUnit RenderBox::blockAxisMarginForStretch() const
     ASSERT(containingBlock());
     CheckedRef containingBlock = *this->containingBlock();
 
-    auto availableSpace = containingBlockLogicalWidthForContent();
-    auto marginLogicalBefore = Style::evaluateMinimum<LayoutUnit>(
-        style().marginBefore(), availableSpace, style().usedZoomForLength());
-    auto marginLogicalAfter = Style::evaluateMinimum<LayoutUnit>(
-        style().marginAfter(), availableSpace, style().usedZoomForLength());
+    auto marginLogicalBefore = usedStyle().marginBefore(ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
+    auto marginLogicalAfter = usedStyle().marginAfter(ReferenceSize::ContainingBlockLogicalWidth).value_or(0_lu);
 
     // When the child is non-orthogonal, its block axis maps to the parent's block axis.
     // Adjust margins per CSS Sizing 4 §6.1.
@@ -4232,8 +4229,8 @@ void RenderBox::computeBlockDirectionMargins(const RenderBlock& containingBlock,
 
     // Margins are calculated with respect to the logical width of the containing block (8.3)
     auto availableSpace = containingBlockLogicalWidthForContent();
-    marginBefore = Style::evaluateMinimum<LayoutUnit>(style().marginBefore(containingBlock.writingMode()), availableSpace, style().usedZoomForLength());
-    marginAfter = Style::evaluateMinimum<LayoutUnit>(style().marginAfter(containingBlock.writingMode()), availableSpace, style().usedZoomForLength());
+    marginBefore = usedStyle().marginBefore(containingBlock.writingMode(), availableSpace).value_or(0_lu);
+    marginAfter = usedStyle().marginAfter(containingBlock.writingMode(), availableSpace).value_or(0_lu);
 }
 
 void RenderBox::computeAndSetBlockDirectionMargins(const RenderBlock& containingBlock)

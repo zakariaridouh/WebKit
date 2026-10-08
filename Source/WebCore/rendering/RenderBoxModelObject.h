@@ -113,14 +113,6 @@ public:
     inline LayoutUnit computedCSSPaddingAfter() const;
     inline LayoutUnit computedCSSPaddingStart() const;
     inline LayoutUnit computedCSSPaddingEnd() const;
-    inline LayoutUnit computedCSSMarginTop() const;
-    inline LayoutUnit computedCSSMarginBottom() const;
-    inline LayoutUnit computedCSSMarginLeft() const;
-    inline LayoutUnit computedCSSMarginRight() const;
-    inline LayoutUnit computedCSSMarginBefore(const WritingMode) const;
-    inline LayoutUnit computedCSSMarginAfter(const WritingMode) const;
-    inline LayoutUnit computedCSSMarginStart(const WritingMode) const;
-    inline LayoutUnit computedCSSMarginEnd(const WritingMode) const;
 
     // These functions are used during layout. Table cells and the MathML
     // code override them to include some extra intrinsic padding.

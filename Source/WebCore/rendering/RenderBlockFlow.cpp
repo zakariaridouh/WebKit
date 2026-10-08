@@ -59,6 +59,7 @@
 #include "RenderCounter.h"
 #include "RenderDeprecatedFlexibleBox.h"
 #include "RenderDescendantIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderElementStyleInlines.h"
 #include "FlexFormattingUtils.h"
 #include "RenderFlexibleBox.h"
@@ -1674,7 +1675,7 @@ std::optional<LayoutUnit> RenderBlockFlow::selfCollapsingMarginBeforeWithClear(R
     if (!candidateBlockFlow->isSelfCollapsingBlock())
         return { };
 
-    if (Style::ComputedStyle::usedClear(*candidateBlockFlow) == UsedClear::None || !containsFloats())
+    if (candidateBlockFlow->usedStyle().clear() == UsedClear::None || !containsFloats())
         return { };
 
     auto clear = computedClearDeltaForChild(*candidateBlockFlow, candidateBlockFlow->logicalHeight());
@@ -1914,7 +1915,7 @@ void RenderBlockFlow::marginBeforeEstimateForChild(RenderBox& child, LayoutUnit&
     // If that's the case we want to be sure we estimate the correct position including margins after any floats rather
     // than use 'clearance' later which could give us the wrong position.
     auto grandchildMarginBefore = childBlock->shouldTrimChildMargin(Style::MarginTrimSide::BlockStart, *grandchildBox) ? 0_lu : childBlock->marginBeforeForChild(*grandchildBox);
-    if (Style::ComputedStyle::usedClear(*grandchildBox) != UsedClear::None && !grandchildMarginBefore)
+    if (grandchildBox->usedStyle().clear() != UsedClear::None && !grandchildMarginBefore)
         return;
 
     // Collapse the margin of the grandchild box with our own to produce an estimate.
@@ -2943,7 +2944,7 @@ void RenderBlockFlow::computeLogicalLocationForFloat(FloatingObject& floatingObj
         }
     }
 
-    if (Style::ComputedStyle::usedFloat(childBox) == UsedFloat::Left) {
+    if (childBox.usedStyle().floating() == UsedFloat::Left) {
         LayoutUnit heightRemainingLeft = 1_lu;
         LayoutUnit heightRemainingRight = 1_lu;
         floatLogicalLeft = logicalLeftOffsetForPositioningFloat(logicalTopOffset, logicalLeftOffset, &heightRemainingLeft);
@@ -3069,7 +3070,7 @@ bool RenderBlockFlow::positionNewFloats()
             continue;
 
         LayoutRect oldRect = childBox.borderBoxRectInContainer();
-        auto childBoxUsedClear = Style::ComputedStyle::usedClear(childBox);
+        auto childBoxUsedClear = childBox.usedStyle().clear();
         if (childBoxUsedClear == UsedClear::Left || childBoxUsedClear == UsedClear::Both)
             logicalTop = std::max(lowestFloatLogicalBottom(FloatingObject::FloatLeft), logicalTop);
         if (childBoxUsedClear == UsedClear::Right || childBoxUsedClear == UsedClear::Both)
@@ -3427,7 +3428,7 @@ LayoutUnit RenderBlockFlow::computedClearDeltaForChild(RenderBox& child, LayoutU
         return 0;
     
     // At least one float is present. We need to perform the clearance computation.
-    UsedClear usedClear = Style::ComputedStyle::usedClear(child);
+    UsedClear usedClear = child.usedStyle().clear();
     bool clearSet = usedClear != UsedClear::None;
     LayoutUnit logicalBottom;
     switch (usedClear) {
@@ -5340,9 +5341,9 @@ std::pair<LayoutUnit, LayoutUnit> RenderBlockFlow::computeInlineIntrinsicLogical
 
             bool clearPreviousFloat = false;
             if (box->isFloating()) {
-                auto childClearValue = Style::ComputedStyle::usedClear(*box);
+                auto childClearValue = box->usedStyle().clear();
                 if (previousFloat) {
-                    auto previousFloatValue = Style::ComputedStyle::usedFloat(*previousFloat);
+                    auto previousFloatValue = previousFloat->usedStyle().floating();
                     clearPreviousFloat =
                         (previousFloatValue == UsedFloat::Left && (childClearValue == UsedClear::Left || childClearValue == UsedClear::Both))
                         || (previousFloatValue == UsedFloat::Right && (childClearValue == UsedClear::Right || childClearValue == UsedClear::Both));
