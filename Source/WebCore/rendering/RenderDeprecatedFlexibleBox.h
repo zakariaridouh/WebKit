@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "LegacyLineClampUpdater.h"
 #include "RenderBlock.h"
 
 namespace WebCore {
@@ -62,11 +63,7 @@ private:
     bool isVertical() const { return style().boxOrient() == BoxOrient::Vertical; }
     bool isHorizontal() const { return style().boxOrient() == BoxOrient::Horizontal; }
 
-    struct ClampedContent {
-        LayoutUnit contentHeight;
-        SingleThreadWeakPtr<const RenderBlockFlow> renderer;
-    };
-    ClampedContent applyLineClamp(FlexBoxIterator&, RelayoutChildren);
+    std::optional<LegacyLineClampUpdater::ClampedContent> applyLineClamp(FlexBoxIterator&, RelayoutChildren);
     void clearLineClamp();
 
     bool m_stretchingChildren;

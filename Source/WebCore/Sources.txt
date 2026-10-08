@@ -3077,6 +3077,7 @@ rendering/LegacyInlineBox.cpp @header:RenderStyleGetters @cost:5
 rendering/LegacyInlineFlowBox.cpp @header:RenderStyleGetters @cost:6
 rendering/LegacyInlineIterator.cpp @header:RenderStyleGetters @cost:4
 rendering/LegacyInlineTextBox.cpp @header:RenderStyleGetters @cost:7
+rendering/LegacyLineClampUpdater.cpp
 rendering/LegacyLineLayout.cpp @header:RenderStyleGetters @cost:7
 rendering/LegacyRootInlineBox.cpp @header:RenderStyleGetters @cost:5
 rendering/LineClampUpdater.cpp
