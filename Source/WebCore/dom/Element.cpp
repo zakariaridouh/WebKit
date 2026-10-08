@@ -5906,6 +5906,20 @@ bool Element::establishesSpatialPortal() const
 }
 #endif
 
+#if ENABLE(CONNECTED_VOLUMETRIC_SCENE)
+bool Element::isVolumetricSceneEstablished() const
+{
+    return hasRareData() && elementRareData()->isVolumetricSceneEstablished();
+}
+
+void Element::setVolumetricSceneEstablished(bool established)
+{
+    if (!established && !hasRareData())
+        return;
+    ensureElementRareData().setVolumetricSceneEstablished(established);
+}
+#endif
+
 void Element::willModifyAttribute(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue)
 {
     if (name == HTMLNames::idAttr)

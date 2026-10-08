@@ -167,6 +167,11 @@ public:
     void setSpatialPortalController(std::unique_ptr<SpatialPortalController>&& controller) { m_spatialPortalController = WTF::move(controller); }
 #endif
 
+#if ENABLE(CONNECTED_VOLUMETRIC_SCENE)
+    bool isVolumetricSceneEstablished() const { return m_isVolumetricSceneEstablished; }
+    void setVolumetricSceneEstablished(bool established) { m_isVolumetricSceneEstablished = established; }
+#endif
+
     Ref<CSSCalc::RandomCachingKeyMap> ensureRandomCachingKeyMap(const std::optional<Style::PseudoElementIdentifier>&);
     bool hasRandomCachingKeyMap() const;
 
@@ -236,6 +241,9 @@ private:
 
     std::optional<OptionSet<ContentRelevancy>> m_contentRelevancy;
     OptionSet<VisibilityAdjustment> m_visibilityAdjustment; // Keep next to m_contentRelevancy for better bit packing.
+#if ENABLE(CONNECTED_VOLUMETRIC_SCENE)
+    bool m_isVolumetricSceneEstablished { false };
+#endif
     ScrollPosition m_savedLayerScrollPosition;
 
     String m_userInfo;

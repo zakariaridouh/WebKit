@@ -973,6 +973,12 @@ protected:
 private:
     Element(ClangVTableWorkaroundTag, const QualifiedName&, Document&);
 
+#if ENABLE(CONNECTED_VOLUMETRIC_SCENE)
+    friend class ElementVolumetricScene;
+    bool NODELETE isVolumetricSceneEstablished() const;
+    void setVolumetricSceneEstablished(bool);
+#endif
+
     LocalFrame* documentFrameWithNonNullView() const;
     void hideNonceSlow();
 

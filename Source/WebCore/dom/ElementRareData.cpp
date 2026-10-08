@@ -38,6 +38,9 @@ struct SameSizeAsElementRareData : NodeRareData {
     int m_tabIndex;
     uint8_t contentRelevancy;
     uint8_t visibilityAdjustment;
+#if ENABLE(CONNECTED_VOLUMETRIC_SCENE)
+    bool isVolumetricSceneEstablished;
+#endif
     IntPoint savedLayerScrollPosition;
     HashMap<std::optional<Style::PseudoElementIdentifier>, std::unique_ptr<ElementAnimationRareData>> animationRareData;
     HashMap<std::optional<Style::PseudoElementIdentifier>, AtomString> viewTransitionCapture;
