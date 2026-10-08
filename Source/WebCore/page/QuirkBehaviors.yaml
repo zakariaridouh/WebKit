@@ -168,6 +168,7 @@ NeedsDisableDOMPasteAccessQuirk:
 NeedsFacebookRemoveNotSupportedQuirk:
 
 # facebook.com rdar://141103350
+# Matched against the live top URL because quirks are not re-resolved on same-document navigations.
 NeedsFacebookStoriesCreationFormQuirk:
   available: iOSFamily
   conditions: [SecondaryURL]

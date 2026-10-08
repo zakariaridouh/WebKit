@@ -56,6 +56,7 @@ from webkitpy.style.checkers.jsonchecker import JSONContributorsChecker
 from webkitpy.style.checkers.jsonchecker import JSONFeaturesChecker
 from webkitpy.style.checkers.jsonchecker import JSONCSSPropertiesChecker
 from webkitpy.style.checkers.jsonchecker import JSONImportExpectationsChecker
+from webkitpy.style.checkers.jsonchecker import JSONQuirkTableChecker
 from webkitpy.style.checkers.jstest import JSTestChecker
 from webkitpy.style.checkers.messagesin import MessagesInChecker
 from webkitpy.style.checkers.png import PNGChecker
@@ -1040,6 +1041,8 @@ class CheckerDispatcher(object):
                 checker = JSONFeaturesChecker(file_path, handle_style_error)
             elif basename == 'CSSProperties.json':
                 checker = JSONCSSPropertiesChecker(file_path, handle_style_error)
+            elif basename == 'QuirkTable.json':
+                checker = JSONQuirkTableChecker(file_path, handle_style_error)
             elif basename == 'import-expectations.json':
                 checker = JSONImportExpectationsChecker(file_path, handle_style_error)
             else:
