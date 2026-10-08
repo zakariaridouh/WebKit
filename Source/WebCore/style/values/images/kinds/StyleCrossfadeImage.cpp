@@ -279,11 +279,6 @@ void CrossfadeImage::drawCrossfade(GraphicsContext& context, const RenderElement
         if (std::ranges::any_of(inputs, [&](const auto& input) { return !input.image || !protect(input.image)->canDraw(renderer); }))
             return;
 
-        ImagePaintingOptions inputOptions;
-#if ENABLE(AX_CUSTOM_COLOR_MODE)
-        inputOptions = ImagePaintingOptions { AXCustomColorModeController::shouldInvertSVGImage(renderer) ? InvertContent::Yes : InvertContent::No };
-#endif
-
         GraphicsContextStateSaver stateSaver(context);
 
         context.clip(FloatRect { { }, concreteObjectSize.size() });
@@ -293,7 +288,12 @@ void CrossfadeImage::drawCrossfade(GraphicsContext& context, const RenderElement
         // leftover percentage given to transparent black.
         auto operation = CompositeOperator::SourceOver;
         for (auto [input, percentage] : zippedRange(inputs, m_normalizedPercentages.percentages)) {
-            drawCrossfadeInput(context, renderer, *protect(input.image), inputOptions, operation, percentage / 100, concreteObjectSize, isForFirstLine);
+            Ref image = *input.image;
+            ImagePaintingOptions inputOptions;
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+            inputOptions = ImagePaintingOptions { AXCustomColorModeController::shouldInvertSVGImage(renderer, image) ? InvertContent::Yes : InvertContent::No };
+#endif
+            drawCrossfadeInput(context, renderer, image, inputOptions, operation, percentage / 100, concreteObjectSize, isForFirstLine);
             operation = CompositeOperator::PlusLighter;
         }
 

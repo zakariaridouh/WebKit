@@ -231,7 +231,7 @@ static void paintNinePieceImage(const T& ninePieceImage, GraphicsContext& graphi
     InterpolationQualityMaintainer interpolationMaintainer(graphicsContext, ImageQualityController::interpolationQualityFromStyle(style));
 
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
-    options = { options, styleImage->drawsSVGImage() && AXCustomColorModeController::shouldInvertSVGImage(renderer) ? InvertContent::Yes : InvertContent::No };
+    options = { options, styleImage->drawsSVGImage() && AXCustomColorModeController::shouldInvertSVGImage(renderer, *styleImage) ? InvertContent::Yes : InvertContent::No };
 #endif
 
     styleImage->drawNinePiece(graphicsContext, renderer, ConcreteObjectSize::fixed(FloatSize(source)), geometry, options);

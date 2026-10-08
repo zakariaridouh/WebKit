@@ -27,6 +27,10 @@
 #include "RenderReplaced.h"
 #include "SVGBoundingBoxComputation.h"
 
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+#include <WebKitAdditions/AXCustomColorSVGClassifier.h>
+#endif
+
 namespace WebCore {
 
 class RenderSVGViewportContainer;
@@ -83,6 +87,11 @@ public:
 
     RenderSVGViewportContainer* viewportContainer() const;
 
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    AXCustomColorSVGClassifier::Characteristics axCustomColorModeCharacteristics() const { return m_axCustomColorModeCharacteristics; }
+    void setAXCustomColorModeCharacteristics(const AXCustomColorSVGClassifier::Characteristics& characteristics) { m_axCustomColorModeCharacteristics = characteristics; }
+#endif
+
 private:
     void element() const = delete;
 
@@ -134,6 +143,9 @@ private:
     FloatRect m_objectBoundingBoxWithoutTransformations;
     mutable Markable<FloatRect> m_strokeBoundingBox;
     mutable std::optional<LayoutRect> m_cachedVisualOverflowRect;
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    AXCustomColorSVGClassifier::Characteristics m_axCustomColorModeCharacteristics;
+#endif
 };
 
 } // namespace WebCore

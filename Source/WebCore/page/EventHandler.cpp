@@ -1786,7 +1786,7 @@ std::optional<Cursor> EventHandler::selectCursor(const HitTestResult& result, bo
                 ImagePaintingOptions options;
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
                 if (renderElement)
-                    options = ImagePaintingOptions { AXCustomColorModeController::shouldInvertSVGImage(*renderElement) ? InvertContent::Yes : InvertContent::No };
+                    options = ImagePaintingOptions { AXCustomColorModeController::shouldInvertSVGImage(*renderElement, styleImage.get()) ? InvertContent::Yes : InvertContent::No };
 #endif
                 if (RefPtr nativeImage = svgImage->nativeImage(FloatSize { svgCursorSize }, ColorSpace::SRGB(), &extras, options))
                     image = BitmapImage::create(WTF::move(nativeImage));

@@ -109,6 +109,10 @@
 #include <wtf/WeakRandomNumber.h>
 #include <wtf/text/TextStream.h>
 
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+#include <WebKitAdditions/AXCustomColorSVGClassifier.h>
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -1958,6 +1962,10 @@ void RenderObject::insertedIntoTree()
     // FIXME: We should ASSERT(isRooted()) here but generated content makes some out-of-order insertion.
     if (!isFloating() && parent()->isSVGRenderer() && parent()->childrenInline())
         protect(parent())->dirtyLineFromChangedChild();
+
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    AXCustomColorSVGClassifier::invalidateCharacteristics(*this);
+#endif
 }
 
 void RenderObject::willBeRemovedFromTree()
@@ -1965,6 +1973,10 @@ void RenderObject::willBeRemovedFromTree()
     // FIXME: We should ASSERT(isRooted()) but we have some out-of-order removals which would need to be fixed first.
     // Update cached boundaries in SVG renderers, if a child is removed.
     protect(parent())->invalidateCachedBoundaries();
+
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    AXCustomColorSVGClassifier::invalidateCharacteristics(*this);
+#endif
 }
 
 void RenderObject::destroy()

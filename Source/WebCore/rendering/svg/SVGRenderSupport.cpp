@@ -67,6 +67,10 @@
 #include "VisibleRectContext.h"
 #include <numbers>
 
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+#include <WebKitAdditions/AXCustomColorSVGClassifier.h>
+#endif
+
 namespace WebCore {
 
 LayoutRect SVGRenderSupport::clippedOverflowRectForRepaint(const RenderElement& renderer, const RenderLayerModelObject* repaintContainer, const VisibleRectContext& context)
@@ -587,6 +591,10 @@ void SVGRenderSupport::styleChanged(RenderElement& renderer, const Style::Comput
     bool hasNonScalingStroke = renderer.style().vectorEffect() == VectorEffect::NonScalingStroke;
     if (hadNonScalingStroke != hasNonScalingStroke)
         updateAncestorNonScalingStrokeCounts(renderer, hasNonScalingStroke ? 1 : -1);
+
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    AXCustomColorSVGClassifier::styleDidChange(renderer, oldStyle);
+#endif
 }
 
 void SVGRenderSupport::updateAncestorNonScalingStrokeCounts(RenderElement& renderer, int delta)
