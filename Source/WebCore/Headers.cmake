@@ -2785,6 +2785,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/VideoTarget.h
     platform/graphics/VideoTrackPrivate.h
     platform/graphics/VideoTrackPrivateClient.h
+    platform/graphics/ViewCoordinateSpaceRect.h
     platform/graphics/WebGPUFramePacer.h
     platform/graphics/WidthIterator.h
     platform/graphics/WindRule.h

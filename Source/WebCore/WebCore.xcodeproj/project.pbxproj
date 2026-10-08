@@ -3111,6 +3111,7 @@
 		72ECA8AE2B62FBB40094F595 /* ImageAdapter.h in Headers */ = {isa = PBXBuildFile; fileRef = 72ECA8AC2B62FBB40094F595 /* ImageAdapter.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		72F667E1260C26AC00EE36AD /* DiagnosticLoggingDomain.h in Headers */ = {isa = PBXBuildFile; fileRef = 72F667DF260C264400EE36AD /* DiagnosticLoggingDomain.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		72F7E746279B8F7500D82D2D /* SourceImage.h in Headers */ = {isa = PBXBuildFile; fileRef = 72F7E744279B8F7400D82D2D /* SourceImage.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		AA0CE5D02E6F00A100C0FFEE /* ViewCoordinateSpaceRect.h in Headers */ = {isa = PBXBuildFile; fileRef = AA0CE5D12E6F00A100C0FFEE /* ViewCoordinateSpaceRect.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		72F9A6CD2D30DE880019DE4B /* ImageBufferDisplayListBackend.h in Headers */ = {isa = PBXBuildFile; fileRef = 72F9A6C92D30BE6E0019DE4B /* ImageBufferDisplayListBackend.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		72FD30AC27E3217B0023CDAC /* SourceBrush.h in Headers */ = {isa = PBXBuildFile; fileRef = 72FD30AA27E3217B0023CDAC /* SourceBrush.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		72FD88D1295E3C40006FACDC /* MenuListPart.h in Headers */ = {isa = PBXBuildFile; fileRef = 72FD88D0295D56E2006FACDC /* MenuListPart.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -14914,6 +14915,7 @@
 		72F7A08027F171BF0008EEE8 /* SVGFilterGraph.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SVGFilterGraph.h; sourceTree = "<group>"; };
 		72F7E742279B8F7400D82D2D /* SourceImage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SourceImage.cpp; sourceTree = "<group>"; };
 		72F7E744279B8F7400D82D2D /* SourceImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SourceImage.h; sourceTree = "<group>"; };
+		AA0CE5D12E6F00A100C0FFEE /* ViewCoordinateSpaceRect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewCoordinateSpaceRect.h; sourceTree = "<group>"; };
 		72F7E74E279CEDE800D82D2D /* FEImage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FEImage.cpp; sourceTree = "<group>"; };
 		72F7E74F279CEDE800D82D2D /* FEImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FEImage.h; sourceTree = "<group>"; };
 		72F7E751279CEE5C00D82D2D /* FEImageSoftwareApplier.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FEImageSoftwareApplier.cpp; sourceTree = "<group>"; };
@@ -37571,6 +37573,7 @@
 				CDAD8DF42BED37E600107D24 /* VideoTarget.h */,
 				BEF29EEA1715DD0900C4B4C9 /* VideoTrackPrivate.h */,
 				CD1F9B12270235F700617EB6 /* VideoTrackPrivateClient.h */,
+				AA0CE5D12E6F00A100C0FFEE /* ViewCoordinateSpaceRect.h */,
 				CD6FE5BB24BCE7B6009FCDA4 /* VP9Utilities.cpp */,
 				CD6FE5BA24BCE7B6009FCDA4 /* VP9Utilities.h */,
 				0D54CF5E301D5E9000DEB1E8 /* WebGPUFramePacer.cpp */,
@@ -50567,6 +50570,7 @@
 				CD1F9B14270235F700617EB6 /* VideoTrackPrivateClient.h in Headers */,
 				CD8B5A43180D149A008B8E65 /* VideoTrackPrivateMediaSourceAVFObjC.h in Headers */,
 				070E81D11BF27656001FDA48 /* VideoTrackPrivateMediaStream.h in Headers */,
+				AA0CE5D02E6F00A100C0FFEE /* ViewCoordinateSpaceRect.h in Headers */,
 				CEF418CF1179678C009D112C /* ViewportArguments.h in Headers */,
 				26F9A83918A046AC00AEB88A /* ViewportConfiguration.h in Headers */,
 				6D66568D305A799300B4BA0F /* ViewportProximityInfo.h in Headers */,

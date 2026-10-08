@@ -32,6 +32,7 @@
 #include <WebCore/ScrollTypes.h>
 #include <WebCore/ScrollableArea.h>
 #include <WebCore/Scrollbar.h>
+#include <WebCore/ViewCoordinateSpaceRect.h>
 #include <WebCore/Widget.h>
 #include <wtf/HashSet.h>
 #include <wtf/Platform.h>
@@ -367,6 +368,10 @@ public:
     // Functions for converting to and from screen coordinates.
     WEBCORE_EXPORT IntRect contentsToScreen(const IntRect&) const;
     WEBCORE_EXPORT IntPoint screenToContents(const IntPoint&) const;
+
+    template<typename RectType> ViewCoordinateSpaceRect<ViewCoordinateSpace::RootView, RectType> contentsToRootView(const ViewCoordinateSpaceRect<ViewCoordinateSpace::Contents, RectType>& rect) const { return inRootViewSpace(contentsToRootView(rect.raw())); }
+    template<typename RectType> ViewCoordinateSpaceRect<ViewCoordinateSpace::Contents, RectType> rootViewToContents(const ViewCoordinateSpaceRect<ViewCoordinateSpace::RootView, RectType>& rect) const { return inContentsSpace(rootViewToContents(rect.raw())); }
+    template<typename RectType> ViewCoordinateSpaceRect<ViewCoordinateSpace::Contents, RectType> viewToContents(const ViewCoordinateSpaceRect<ViewCoordinateSpace::View, RectType>& rect) const { return inContentsSpace(viewToContents(rect.raw())); }
 
     // The purpose of this function is to answer whether or not the scroll view is currently visible. Animations and painting updates can be suspended if
     // we know that we are either not in a window right now or if that window is not visible.
