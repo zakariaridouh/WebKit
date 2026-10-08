@@ -444,7 +444,7 @@ void RemoteGraphicsContext::drawBadgeSystemImage(std::optional<RenderingResource
         MESSAGE_CHECK(nativeImage);
     }
 
-    Ref badge = ARKitBadgeSystemImage::create(nativeImage.releaseNonNull());
+    Ref badge = ARKitBadgeSystemImage::create(WTF::move(nativeImage));
     drawSystemImage(WTF::move(badge), destinationRect);
 }
 #endif
