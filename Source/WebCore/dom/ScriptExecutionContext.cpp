@@ -424,6 +424,7 @@ void ScriptExecutionContext::suspendActiveDOMObjects(ReasonForSuspension why)
     }
 
     m_activeDOMObjectsAreSuspended = true;
+    m_reasonForSuspendingActiveDOMObjects = why;
 
     forEachMicrotaskGlobalObject([](auto& globalObject) {
         globalObject.setMicrotaskRunnability(JSC::QueuedTaskResult::Suspended);
@@ -433,8 +434,6 @@ void ScriptExecutionContext::suspendActiveDOMObjects(ReasonForSuspension why)
         activeDOMObject.suspend(why);
         return ShouldContinue::Yes;
     });
-
-    m_reasonForSuspendingActiveDOMObjects = why;
 }
 
 void ScriptExecutionContext::resumeActiveDOMObjects(ReasonForSuspension why)
@@ -452,6 +451,7 @@ void ScriptExecutionContext::resumeActiveDOMObjects(ReasonForSuspension why)
     vm().deferredWorkTimer->didResumeScriptExecutionOwner();
 
     m_activeDOMObjectsAreSuspended = false;
+    m_reasonForSuspendingActiveDOMObjects = std::nullopt;
 
     forEachMicrotaskGlobalObject([](auto& globalObject) {
         globalObject.setMicrotaskRunnability(JSC::QueuedTaskResult::Executed);
@@ -484,7 +484,7 @@ void ScriptExecutionContext::suspendActiveDOMObjectIfNeeded(ActiveDOMObject& act
 {
     ASSERT(m_activeDOMObjects.contains(activeDOMObject));
     if (m_activeDOMObjectsAreSuspended)
-        activeDOMObject.suspend(m_reasonForSuspendingActiveDOMObjects);
+        activeDOMObject.suspend(*m_reasonForSuspendingActiveDOMObjects);
     if (m_activeDOMObjectsAreStopped)
         activeDOMObject.stop();
 }

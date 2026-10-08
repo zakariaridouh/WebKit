@@ -413,7 +413,7 @@ protected:
         inline AddConsoleMessageTask(MessageSource, MessageLevel, const String&);
     };
 
-    ReasonForSuspension reasonForSuspendingActiveDOMObjects() const { return m_reasonForSuspendingActiveDOMObjects; }
+    std::optional<ReasonForSuspension> reasonForSuspendingActiveDOMObjects() const { return m_reasonForSuspendingActiveDOMObjects; }
 
     bool hasPendingActivity() const;
     WEBCORE_EXPORT void addToContextsMap();
@@ -475,7 +475,7 @@ private:
     HashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
 
     StorageBlockingPolicy m_storageBlockingPolicy;
-    ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
+    std::optional<ReasonForSuspension> m_reasonForSuspendingActiveDOMObjects;
 
     Type m_type;
     bool m_activeDOMObjectsAreSuspended { false };
