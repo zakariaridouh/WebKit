@@ -76,6 +76,10 @@ Protocol::Network::LoaderId LegacyIdentifierRegistry::loaderId(WebCore::Document
 {
     if (!loader)
         return emptyString();
+
+    if (auto navigationID = loader->navigationID())
+        return makeString("loader-"_s, navigationID->processIdentifier().toUInt64(), '.', navigationID->object().toUInt64());
+
     return m_loaderToIdentifier.ensure(loader, [] {
         return IdentifiersFactory::createIdentifier();
     }).iterator->value;
