@@ -2463,14 +2463,10 @@ std::pair<FixedContainerEdges, WeakElementEdges> LocalFrameView::fixedContainerE
         if (isHiddenOrNearlyTransparent(*box))
             return { };
 
-        auto& styleColor = renderer.style().backgroundColor();
-        if (!styleColor.isResolvedColor())
-            return { };
-
         if (compareWithViewportSize(side, renderer) == ViewportComparison::Smaller)
             return { };
 
-        return styleColor.resolvedColor();
+        return protect(renderer.style())->visitedDependentBackgroundColorApplyingColorFilter();
     };
 
     enum class ContainerEdgeCandidateResult : uint8_t {
