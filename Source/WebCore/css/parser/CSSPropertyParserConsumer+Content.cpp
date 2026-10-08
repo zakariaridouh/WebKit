@@ -167,6 +167,9 @@ static std::optional<CSS::Content::CountersFunction> consumeUnresolvedContentCou
 static std::optional<CSS::Content::LegacyAttrFunction> consumeUnresolvedContentLegacyAttrFunction(CSSParserTokenRange args, CSS::PropertyParserState& state)
 {
     // FIXME: Remove this when removing the `cssAttrSubstitutionFunctionEnabled` setting.
+    // With the setting enabled attr() is an arbitrary substitution function and is handled by CSSSubstitutionParser.
+    if (state.context.cssAttrSubstitutionFunctionEnabled)
+        return std::nullopt;
 
     if (args.peek().type() != IdentToken)
         return std::nullopt;
