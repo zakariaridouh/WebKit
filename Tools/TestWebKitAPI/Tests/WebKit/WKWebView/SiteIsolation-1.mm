@@ -2009,6 +2009,81 @@ TEST(SiteIsolation, TransientActivationFromForcedUserGesturePostedToCrossOriginI
     EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), nil));
 }
 
+// Loads a main frame with a cross-origin iframe, and runs a forced user gesture in the iframe that a pending timer
+// keeps alive. Its activation is also given to the main frame, which is in another process.
+static std::pair<RetainPtr<TestWKWebView>, RetainPtr<TestNavigationDelegate>> webViewWithPendingForcedUserGestureInCrossOriginIframe(const HTTPServer& server)
+{
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configurationWithInternals(server), CGRectMake(0, 0, 800, 600));
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    evaluateJavaScriptInFrame(webView.get(), @"window.pendingTimer = setTimeout(() => { }, 100000); 1", [webView firstChildFrame], YES);
+    EXPECT_TRUE(hasTransientActivationInFrame(webView.get(), nil));
+    return { webView, navigationDelegate };
+}
+
+TEST(SiteIsolation, TransientActivationFromForcedUserGestureIsRevokedWhenCrossOriginIframeIsRemoved)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { mainFrameTextWithCrossOriginIframe } },
+        { "/iframe"_s, { "iframe text"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = webViewWithPendingForcedUserGestureInCrossOriginIframe(server);
+
+    // The main frame's process reports that the iframe was destroyed before it replies.
+    evaluateJavaScriptInFrame(webView.get(), @"document.getElementById('iframe').remove(); 1", nil, NO);
+    EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), nil));
+}
+
+TEST(SiteIsolation, TransientActivationFromForcedUserGestureIsRevokedWhenCrossOriginIframeNavigatesToAnotherSite)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { mainFrameTextWithCrossOriginIframe } },
+        { "/iframe"_s, { "iframe text"_s } },
+        { "/destination"_s, { "<script>window.webkit.messageHandlers.testHandler.postMessage('loaded')</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = webViewWithPendingForcedUserGestureInCrossOriginIframe(server);
+    pid_t mainFrameProcessIdentifier = [webView mainFrame].info._processIdentifier;
+    EXPECT_NE(mainFrameProcessIdentifier, [webView firstChildFrame]._processIdentifier);
+
+    // Navigating to the main frame's site moves the iframe to the main frame's process. That process reports that
+    // the load committed before the new document's message.
+    __block bool loaded = false;
+    [webView performAfterReceivingMessage:@"loaded" action:^{
+        loaded = true;
+    }];
+    evaluateJavaScriptInFrame(webView.get(), @"document.getElementById('iframe').src = 'https://example.com/destination'; 1", nil, NO);
+    Util::run(&loaded);
+    EXPECT_EQ(mainFrameProcessIdentifier, [webView firstChildFrame]._processIdentifier);
+
+    EXPECT_FALSE(hasTransientActivationInFrame(webView.get(), nil));
+}
+
+TEST(SiteIsolation, TransientActivationFromForcedUserGestureIsRevokedWhenCrossOriginIframeProcessExits)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { mainFrameTextWithCrossOriginIframe } },
+        { "/iframe"_s, { "iframe text"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = webViewWithPendingForcedUserGestureInCrossOriginIframe(server);
+    pid_t mainFrameProcessIdentifier = [webView mainFrame].info._processIdentifier;
+    pid_t iframeProcessIdentifier = [webView firstChildFrame]._processIdentifier;
+    EXPECT_NE(mainFrameProcessIdentifier, iframeProcessIdentifier);
+
+    // Nothing tells the client that a subframe's process exited, so wait for the activation to go away. Make it last
+    // much longer than the wait, so that it can't expire first.
+    evaluateJavaScriptInFrame(webView.get(), @"internals.setTransientActivationDuration(1000); 1", nil, NO);
+    kill(iframeProcessIdentifier, SIGKILL);
+    EXPECT_TRUE(Util::waitFor([&] {
+        return !hasTransientActivationInFrame(webView.get(), nil);
+    }));
+
+    evaluateJavaScriptInFrame(webView.get(), @"internals.setTransientActivationDuration(5); 1", nil, NO);
+}
+
 #if PLATFORM(MAC)
 
 TEST(SiteIsolation, TransientActivationFromUserGestureIsPreservedAfterForcedUserGestureInCrossOriginIframe)

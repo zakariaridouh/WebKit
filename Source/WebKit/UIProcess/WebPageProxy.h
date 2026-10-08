@@ -2789,6 +2789,9 @@ public:
     void didNotifyUserActivation(IPC::Connection&, WebCore::FrameIdentifier, MonotonicTime, std::optional<WebCore::UserGestureTokenIdentifier>);
     void didConsumeUserActivation(IPC::Connection&, WebCore::FrameIdentifier);
     void didRevokeForcedUserActivation(IPC::Connection&, WebCore::FrameIdentifier, WebCore::UserGestureTokenIdentifier);
+    void revokeForcedUserActivationInOtherProcesses(WebCore::UserGestureTokenIdentifier);
+    void revokeOutstandingForcedUserActivationsForFrame(WebCore::FrameIdentifier);
+    void revokeOutstandingForcedUserActivationsForProcess(const WebProcessProxy&);
     RefPtr<WebProcessProxy> validatedUserActivationSenderProcess(IPC::Connection&, WebCore::FrameIdentifier sourceFrameID, std::optional<WebCore::UserGestureTokenIdentifier> forcedActivationToken);
     void didHandleFirstUserGesture(IPC::Connection&, WebCore::FrameIdentifier, MonotonicTime);
 
@@ -3932,6 +3935,8 @@ private:
     std::unique_ptr<WebPageLoadTiming> m_pageLoadTimingPendingCommit;
     HashSet<WebCore::FrameIdentifier> m_framesWithSubresourceLoadingForPageLoadTiming;
     RunLoop::Timer m_generatePageLoadTimingTimer;
+
+    HashMap<WebCore::FrameIdentifier, HashSet<WebCore::UserGestureTokenIdentifier>> m_outstandingForcedUserActivations;
 
     const UniqueRef<SessionHistoryTraversalQueue> m_sessionHistoryTraversalQueue;
 

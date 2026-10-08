@@ -8402,6 +8402,8 @@ void WebPageProxy::didDestroyFrame(IPC::Connection& connection, FrameIdentifier 
         webProcess.sendWithAsyncReply(Messages::WebPage::FrameWasRemovedInAnotherProcess(frameID), [preventProcessShutdownScope = webProcess.shutdownPreventingScope()] { }, pageID);
     });
 
+    revokeOutstandingForcedUserActivationsForFrame(frameID);
+
     if (RefPtr frame = WebFrameProxy::webFrame(frameID))
         frame->disconnect();
 
@@ -9244,6 +9246,8 @@ void WebPageProxy::didCommitLoadForFrame(IPC::Connection& connection, FrameIdent
         return;
     }
 
+    revokeOutstandingForcedUserActivationsForFrame(frameID);
+
     WEBPAGEPROXY_RELEASE_LOG(Loading, "didCommitLoadForFrame: frameID=%" PRIu64 ", isMainFrame=%d", frameID.toUInt64(), frame->isMainFrame());
 
     // FIXME: We should message check that navigationID is not zero here, but it's currently zero for some navigations through the back/forward cache.
@@ -9690,6 +9694,11 @@ void WebPageProxy::didNotifyUserActivation(IPC::Connection& connection, FrameIde
     if (!senderProcess)
         return;
 
+    if (forcedActivationToken) {
+        auto result = m_outstandingForcedUserActivations.add(sourceFrameID, HashSet<UserGestureTokenIdentifier> { });
+        result.iterator->value.add(*forcedActivationToken);
+    }
+
     RefPtr sourceFrame = WebFrameProxy::webFrame(sourceFrameID);
 
     HashMap<Ref<WebProcessProxy>, Vector<FrameIdentifier>> framesByProcess;
@@ -9775,10 +9784,70 @@ void WebPageProxy::didRevokeForcedUserActivation(IPC::Connection& connection, Fr
     if (!senderProcess)
         return;
 
+    if (auto it = m_outstandingForcedUserActivations.find(sourceFrameID); it != m_outstandingForcedUserActivations.end()) {
+        it->value.remove(forcedActivationToken);
+        if (it->value.isEmpty())
+            m_outstandingForcedUserActivations.remove(it);
+    }
+
+    revokeForcedUserActivationInOtherProcesses(forcedActivationToken);
+}
+
+void WebPageProxy::revokeForcedUserActivationInOtherProcesses(UserGestureTokenIdentifier token)
+{
     forEachWebContentProcess([&](auto& process, auto pageID) {
-        if (&process != senderProcess.get())
-            process.send(Messages::WebPage::RevokeForcedUserActivation(forcedActivationToken), pageID);
+        if (process.coreProcessIdentifier() != token.processIdentifier())
+            process.send(Messages::WebPage::RevokeForcedUserActivation(token), pageID);
     });
+}
+
+void WebPageProxy::revokeOutstandingForcedUserActivationsForFrame(FrameIdentifier frameID)
+{
+    if (m_outstandingForcedUserActivations.isEmpty())
+        return;
+
+    RefPtr frame = WebFrameProxy::webFrame(frameID);
+    if (frame && frame->isMainFrame()) {
+        auto outstandingForcedUserActivations = std::exchange(m_outstandingForcedUserActivations, { });
+        for (auto& forcedActivationTokens : outstandingForcedUserActivations.values()) {
+            for (auto forcedActivationToken : forcedActivationTokens)
+                revokeForcedUserActivationInOtherProcesses(forcedActivationToken);
+        }
+        return;
+    }
+
+    Vector<FrameIdentifier> frameIDs { frameID };
+    if (frame) {
+        for (RefPtr descendant = frame->traverseNext(frame.get()); descendant; descendant = descendant->traverseNext(frame.get()))
+            frameIDs.append(descendant->frameID());
+    }
+
+    for (auto frameID : frameIDs) {
+        for (auto forcedActivationToken : m_outstandingForcedUserActivations.take(frameID))
+            revokeForcedUserActivationInOtherProcesses(forcedActivationToken);
+    }
+}
+
+void WebPageProxy::revokeOutstandingForcedUserActivationsForProcess(const WebProcessProxy& process)
+{
+    if (m_outstandingForcedUserActivations.isEmpty())
+        return;
+
+    auto processIdentifier = process.coreProcessIdentifier();
+    HashMap<FrameIdentifier, HashSet<UserGestureTokenIdentifier>> outstandingForcedUserActivations;
+    Vector<UserGestureTokenIdentifier> forcedActivationTokensToRevoke;
+    for (auto& [frameID, forcedActivationTokens] : m_outstandingForcedUserActivations) {
+        for (auto forcedActivationToken : forcedActivationTokens) {
+            if (forcedActivationToken.processIdentifier() == processIdentifier)
+                forcedActivationTokensToRevoke.append(forcedActivationToken);
+            else
+                outstandingForcedUserActivations.add(frameID, HashSet<UserGestureTokenIdentifier> { }).iterator->value.add(forcedActivationToken);
+        }
+    }
+    m_outstandingForcedUserActivations = WTF::move(outstandingForcedUserActivations);
+
+    for (auto forcedActivationToken : forcedActivationTokensToRevoke)
+        revokeForcedUserActivationInOtherProcesses(forcedActivationToken);
 }
 
 void WebPageProxy::didFinishLoadForFrame(IPC::Connection& connection, FrameIdentifier frameID, FrameInfoData&& frameInfo, ResourceRequest&& request, std::optional<WebCore::NavigationIdentifier> navigationID, const UserData& userData, WallTime timestamp)
@@ -14645,6 +14714,8 @@ static bool NODELETE shouldReloadAfterProcessTermination(ProcessTerminationReaso
 void WebPageProxy::dispatchProcessDidTerminate(WebProcessProxy& process, ProcessTerminationReason reason)
 {
     WEBPAGEPROXY_RELEASE_LOG_ERROR(Loading, "dispatchProcessDidTerminate: reason=%" PUBLIC_LOG_STRING, processTerminationReasonToString(reason).characters());
+
+    revokeOutstandingForcedUserActivationsForProcess(process);
 
     if (protect(preferences())->siteIsolationEnabled()) {
         processDidBecomeResponsive(process); // Check if all other processes are responsive.
