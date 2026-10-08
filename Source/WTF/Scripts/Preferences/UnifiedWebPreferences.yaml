@@ -802,14 +802,6 @@ CSSAppearanceBaseEnabled:
   humanReadableDescription: "Enable base value for CSS appearance"
   defaultValue: false
 
-CSSAttrSubstitutionFunctionEnabled:
-  type: bool
-  category: css
-  status: stable
-  humanReadableName: "CSS attr() substitution function"
-  humanReadableDescription: "Enable CSS Values 5 attr() arbitrary substitution function"
-  defaultValue: true
-
 CSSAxisRelativePositionKeywordsEnabled:
   type: bool
   category: css

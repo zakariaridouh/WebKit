@@ -72,11 +72,6 @@ Ref<DeprecatedCSSOMPrimitiveValue> DeprecatedCSSOMPrimitiveValue::create(const C
     return create(DeprecatedCSSOMPrimitiveValueData { value.value }, owner);
 }
 
-Ref<DeprecatedCSSOMPrimitiveValue> DeprecatedCSSOMPrimitiveValue::create(const CSS::ContentLegacyAttrFunctionWrapper& value, CSSStyleDeclaration& owner)
-{
-    return create(DeprecatedCSSOMPrimitiveValueData { value.value }, owner);
-}
-
 Ref<DeprecatedCSSOMPrimitiveValue> DeprecatedCSSOMPrimitiveValue::create(const CSS::CustomIdent& value, CSSStyleDeclaration& owner)
 {
     return create(DeprecatedCSSOMPrimitiveValueData { value }, owner);
@@ -217,9 +212,6 @@ unsigned short DeprecatedCSSOMPrimitiveValue::primitiveType() const
         [](const CSS::ContentCountersFunction&) -> unsigned short {
             return CSS_COUNTER;
         },
-        [](const CSS::ContentLegacyAttrFunction&) -> unsigned short {
-            return CSS_ATTR;
-        },
         [](const CSS::ClipRect&) -> unsigned short {
             return CSS_RECT;
         }
@@ -349,9 +341,6 @@ ExceptionOr<String> DeprecatedCSSOMPrimitiveValue::getStringValue() const
         },
         [](const CSS::URL& url) -> ExceptionOr<String> {
             return String { url.specified };
-        },
-        [](const CSS::ContentLegacyAttrFunction& attrFunction) -> ExceptionOr<String> {
-            return CSS::serializationForCSS(CSS::defaultSerializationContext(), attrFunction);
         },
         [](const auto&) -> ExceptionOr<String> {
             return Exception { ExceptionCode::InvalidAccessError };

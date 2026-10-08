@@ -131,7 +131,6 @@ CSSParserContext::CSSParserContext(const Settings& settings)
     , cssInternalAutoBaseParsingEnabled { settings.cssInternalAutoBaseParsingEnabled() }
     , cssMathDepthEnabled { settings.cssMathDepthEnabled() }
     , openPseudoClassEnabled { settings.openPseudoClassEnabled() }
-    , cssAttrSubstitutionFunctionEnabled { settings.cssAttrSubstitutionFunctionEnabled() }
     , cssScrollStateContainerQueriesEnabled { settings.cssScrollStateContainerQueriesEnabled() }
     , cssCalcMixEnabled { settings.cssCalcMixEnabled() }
     , cssIdentFunctionEnabled { settings.cssIdentFunctionEnabled() }
@@ -190,7 +189,6 @@ void add(Hasher& hasher, const CSSParserContext& context)
         context.webkitMediaTextTrackDisplayQuirkEnabled,
         context.cssMathDepthEnabled,
         context.openPseudoClassEnabled,
-        context.cssAttrSubstitutionFunctionEnabled,
         context.cssScrollStateContainerQueriesEnabled,
         context.cssCalcMixEnabled,
         context.cssIdentFunctionEnabled,

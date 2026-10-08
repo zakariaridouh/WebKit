@@ -94,7 +94,6 @@ struct CSSParserContext {
     bool webkitMediaTextTrackDisplayQuirkEnabled : 1 { false };
     bool cssMathDepthEnabled : 1 { false };
     bool openPseudoClassEnabled : 1 { false };
-    bool cssAttrSubstitutionFunctionEnabled : 1 { false };
     bool cssScrollStateContainerQueriesEnabled : 1 { false };
     bool cssCalcMixEnabled : 1 { false };
     bool cssIdentFunctionEnabled : 1 { false };

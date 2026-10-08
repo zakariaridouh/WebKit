@@ -77,11 +77,6 @@ Ref<DeprecatedCSSOMValue> DeprecatedCSSOMValueCreation<ContentCountersFunction>:
     return DeprecatedCSSOMPrimitiveValue::create(ContentCountersFunctionWrapper { value }, owner);
 }
 
-Ref<DeprecatedCSSOMValue> DeprecatedCSSOMValueCreation<ContentLegacyAttrFunction>::operator()(CSSValuePool&, CSSStyleDeclaration& owner, const ContentLegacyAttrFunction& value)
-{
-    return DeprecatedCSSOMPrimitiveValue::create(ContentLegacyAttrFunctionWrapper { value }, owner);
-}
-
 Ref<DeprecatedCSSOMValue> DeprecatedCSSOMValueCreation<Content::Data>::operator()(CSSValuePool& pool, CSSStyleDeclaration& owner, const Content::Data& value)
 {
     if (!value.alt)

@@ -12454,8 +12454,6 @@
 		4969B0F113D0B33F00DF3521 /* HitTestingTransformState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HitTestingTransformState.h; sourceTree = "<group>"; };
 		4970AD7F2AE59BCD00AD3909 /* TransformOperationData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TransformOperationData.cpp; sourceTree = "<group>"; };
 		4970AD802AE59BCE00AD3909 /* TransformOperationData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TransformOperationData.h; sourceTree = "<group>"; };
-		497CDAA42CAC59BA00BC429D /* CSSAttrValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSSAttrValue.h; sourceTree = "<group>"; };
-		497CDAA52CAC59BA00BC429D /* CSSAttrValue.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CSSAttrValue.cpp; sourceTree = "<group>"; };
 		4987053212B58BF9F79B19AD /* UnifiedSource1-header-RenderStyleGetters.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "UnifiedSource1-header-RenderStyleGetters.cpp"; sourceTree = "<group>"; };
 		4989734A2B663C6600720679 /* StyleScrollbarState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StyleScrollbarState.h; sourceTree = "<group>"; };
 		498EC5452CB431BE00B7DAE1 /* detailsElementShadow.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = detailsElementShadow.css; sourceTree = "<group>"; };
@@ -42360,8 +42358,6 @@
 				4CA012DB29A7D56700C260C6 /* counterStyles.css */,
 				BC3078B92D00D3E800630D75 /* CSSAppleColorFilterValue.cpp */,
 				BC3078B82D00D3E800630D75 /* CSSAppleColorFilterValue.h */,
-				497CDAA52CAC59BA00BC429D /* CSSAttrValue.cpp */,
-				497CDAA42CAC59BA00BC429D /* CSSAttrValue.h */,
 				0FB9F15328A8417900666E64 /* CSSBackgroundRepeatValue.cpp */,
 				0FB9F15428A8417900666E64 /* CSSBackgroundRepeatValue.h */,
 				FBD6AF8615EF21D4008B7110 /* CSSBasicShapeValue.cpp */,

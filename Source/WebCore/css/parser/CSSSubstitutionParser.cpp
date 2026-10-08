@@ -144,7 +144,7 @@ static std::optional<ClassifyBlockResult> classifyBlock(CSSParserTokenRange rang
                 result.hasSubstitutionFunctions = true;
                 continue;
             }
-            if (token.functionId() == CSSValueAttr && parserContext.cssAttrSubstitutionFunctionEnabled) {
+            if (token.functionId() == CSSValueAttr) {
                 if (!isValidAttrReference(block, parserContext))
                     return { };
                 result.hasSubstitutionFunctions = true;

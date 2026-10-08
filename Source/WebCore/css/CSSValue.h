@@ -69,7 +69,6 @@ public:
     WEBCORE_EXPORT String cssText(const CSS::SerializationContext&) const;
 
     bool isAppleColorFilterValue() const { return m_classType == ClassType::AppleColorFilter; }
-    bool isAttrValue() const { return m_classType == ClassType::Attr; }
     bool isBackgroundRepeatValue() const { return m_classType == ClassType::BackgroundRepeat; }
     bool isBasicShape() const { return m_classType == ClassType::BasicShape; }
     bool isBorderImageOutsetValue() const { return m_classType == ClassType::BorderImageOutset; }
@@ -219,7 +218,6 @@ protected:
 
         // Other non-list classes.
         AppleColorFilter,
-        Attr,
         BackgroundRepeat,
         BasicShape,
         BorderImageOutset,
