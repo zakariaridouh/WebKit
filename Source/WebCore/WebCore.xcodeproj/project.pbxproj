@@ -7623,6 +7623,7 @@
 		E63623DC255F2C4598C1A823 /* ProofOfPossessionResponse.h in Headers */ = {isa = PBXBuildFile; fileRef = 02235505DADB0D826D6C1822 /* ProofOfPossessionResponse.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		78A65BD34B9DD5A88EE00085 /* ProofOfPossessionRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = 79387C77602AF736321E16F6 /* ProofOfPossessionRequest.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1EDD4EAC360A2C058339C9A8 /* ProofOfPossessionProviderData.h in Headers */ = {isa = PBXBuildFile; fileRef = 3D6204E043248DA5C91B85A3 /* ProofOfPossessionProviderData.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		86721D4F7D1D46A6B80B9F9A /* DebuggerSuspensionController.h in Headers */ = {isa = PBXBuildFile; fileRef = E1DEC3457E95468589B6727B /* DebuggerSuspensionController.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -24390,6 +24391,8 @@
 		79387C77602AF736321E16F6 /* ProofOfPossessionRequest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProofOfPossessionRequest.h; sourceTree = "<group>"; };
 		72F9298930D273388DAE57C3 /* ProofOfPossessionRequest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ProofOfPossessionRequest.cpp; sourceTree = "<group>"; };
 		3D6204E043248DA5C91B85A3 /* ProofOfPossessionProviderData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProofOfPossessionProviderData.h; sourceTree = "<group>"; };
+		E1DEC3457E95468589B6727B /* DebuggerSuspensionController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DebuggerSuspensionController.h; sourceTree = "<group>"; };
+		2EA33ABA0CA84C378492C732 /* DebuggerSuspensionController.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DebuggerSuspensionController.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -26658,6 +26661,8 @@
 				A584FE291863870F00843B10 /* CommandLineAPIModule.cpp */,
 				A584FE2A1863870F00843B10 /* CommandLineAPIModule.h */,
 				A584FE2718637DCA00843B10 /* CommandLineAPIModuleSource.js */,
+				2EA33ABA0CA84C378492C732 /* DebuggerSuspensionController.cpp */,
+				E1DEC3457E95468589B6727B /* DebuggerSuspensionController.h */,
 				7AABA25714BC613300AA9A11 /* DOMEditor.cpp */,
 				7AABA25814BC613300AA9A11 /* DOMEditor.h */,
 				7A54881614E432A1006AE05A /* DOMPatchSupport.cpp */,
@@ -45795,6 +45800,7 @@
 				F55B3DBA1251F12D003EF269 /* DateTimeLocalInputType.h in Headers */,
 				E5F06AEB24D49BF700BBC4F8 /* DateTimeNumericFieldElement.h in Headers */,
 				E5F06AEF24D4A63700BBC4F8 /* DateTimeSymbolicFieldElement.h in Headers */,
+				86721D4F7D1D46A6B80B9F9A /* DebuggerSuspensionController.h in Headers */,
 				BC4A532D256056D50028C592 /* DebugOverlayRegions.h in Headers */,
 				0F6A12BE1A00923700C6DE72 /* DebugPageOverlays.h in Headers */,
 				45FEA5D0156DDE8C00654101 /* Decimal.h in Headers */,

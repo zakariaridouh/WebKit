@@ -35,6 +35,7 @@
 #include "CommandLineAPIHost.h"
 #include "CommonVM.h"
 #include "DOMWrapperWorld.h"
+#include "DebuggerSuspensionController.h"
 #include "FrameInspectorController.h"
 #include "GraphicsContext.h"
 #include "InspectorAnimationAgent.h"
@@ -99,6 +100,7 @@ PageInspectorController::PageInspectorController(Page& page, std::unique_ptr<Ins
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
     , m_overlay(makeUniqueRefWithoutRefCountedCheck<InspectorOverlay>(*this))
     , m_executionStopwatch(Stopwatch::create())
+    , m_debuggerSuspensionController(makeUniqueRef<DebuggerSuspensionController>(page))
     , m_inspectorBackendClient(WTF::move(inspectorBackendClient))
     , m_identifierRegistry(Inspector::LegacyIdentifierRegistry::create())
 {

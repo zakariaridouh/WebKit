@@ -55,6 +55,7 @@ class InspectorAgent;
 namespace WebCore {
 
 class DOMWrapperWorld;
+class DebuggerSuspensionController;
 class GraphicsContext;
 class InspectorDOMAgent;
 class InspectorInstrumentation;
@@ -137,6 +138,7 @@ public:
     Inspector::FrontendRouter& frontendRouter() const { return m_frontendRouter.get(); }
     Inspector::BackendDispatcher& backendDispatcher() const { return m_backendDispatcher.get(); }
     WebInjectedScriptManager& injectedScriptManager() const { return m_injectedScriptManager.get(); }
+    DebuggerSuspensionController& debuggerSuspensionController() const { return m_debuggerSuspensionController.get(); }
 
     Inspector::InspectorAgent& ensureInspectorAgent();
     InspectorDOMAgent& ensureDOMAgent();
@@ -170,6 +172,7 @@ private:
     const UniqueRef<InspectorOverlay> m_overlay;
     const Ref<WTF::Stopwatch> m_executionStopwatch;
     std::unique_ptr<PageDebugger> m_debugger;
+    const UniqueRef<DebuggerSuspensionController> m_debuggerSuspensionController;
     Inspector::AgentRegistry m_agents;
 
     std::unique_ptr<InspectorBackendClient> m_inspectorBackendClient;

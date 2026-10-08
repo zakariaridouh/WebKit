@@ -2021,6 +2021,7 @@ inspector/InspectorStyleSheet.cpp
 inspector/InspectorThreadableLoaderClient.cpp
 inspector/InstrumentingAgents.cpp
 inspector/NetworkResourcesData.cpp
+inspector/DebuggerSuspensionController.cpp
 inspector/FrameDebugger.cpp
 inspector/PageDebugger.cpp
 inspector/PageInspectorController.cpp

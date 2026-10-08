@@ -25,46 +25,45 @@
 
 #pragma once
 
-#include <JavaScriptCore/Debugger.h>
+#include <wtf/CheckedPtr.h>
+#include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/WeakHashSet.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
+class Document;
 class LocalFrame;
+class Page;
+class WeakPtrImplWithEventTargetData;
 
-class FrameDebugger final : public JSC::Debugger {
-    WTF_MAKE_NONCOPYABLE(FrameDebugger);
-    WTF_MAKE_TZONE_ALLOCATED(FrameDebugger);
+class DebuggerSuspensionController final : public CanMakeCheckedPtr<DebuggerSuspensionController> {
+    WTF_MAKE_TZONE_ALLOCATED(DebuggerSuspensionController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DebuggerSuspensionController);
+    WTF_MAKE_NONCOPYABLE(DebuggerSuspensionController);
 public:
-    FrameDebugger(LocalFrame&);
-    ~FrameDebugger() override;
+    explicit DebuggerSuspensionController(Page&);
+    ~DebuggerSuspensionController();
 
-    void recompileAllJSFunctions() override;
+    // A paused FrameDebugger holds every page in the process, not only its own: pages in one process share the
+    // main thread, and related pages (an opener and its popup) can call into each other synchronously.
+    static void frameDebuggerDidPause();
+    static void frameDebuggerDidContinue();
 
-    // True between attachDebugger() and detachDebugger(), i.e. while an agent is actually
-    // debugging the frame. The debugger outlives that window, since FrameInspectorController
-    // creates it up front and keeps it for the lifetime of the frame target.
-    bool isAttachedToFrame() const { return m_isAttachedToFrame; }
+    void documentDidBecomeCurrent(Document&);
 
 private:
-    // JSC::Debugger
-    void attachDebugger() final;
-    void detachDebugger(bool isBeingDestroyed) final;
-    void didPause(JSC::JSGlobalObject*) final;
-    void didContinue(JSC::JSGlobalObject*) final;
-    void runEventLoopWhilePaused() final;
-    bool isPauseBlockedByAnotherDebugger() const final;
-    bool isContentScript(JSC::JSGlobalObject*) const final;
-    URL sourceURLBase(JSC::JSGlobalObject*) const final;
-    void reportException(JSC::JSGlobalObject*, JSC::Exception*) const final;
+    static void updateHeldDocumentsInAllPages();
 
-    void runEventLoopWhilePausedInternal();
+    bool shouldHoldDocuments() const;
+    void updateHeldDocuments();
+    void holdDocument(Document&);
+    void releaseDocument(Document&);
 
-    bool platformShouldContinueRunningEventLoopWhilePaused();
-
-    WeakRef<LocalFrame> m_frame;
-    bool m_isAttachedToFrame { false };
+    WeakRef<Page> m_page;
+    WeakHashSet<Document, WeakPtrImplWithEventTargetData> m_heldDocuments;
+    WeakHashSet<LocalFrame> m_pausedFrames;
 };
 
 } // namespace WebCore

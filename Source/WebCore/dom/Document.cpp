@@ -80,6 +80,7 @@
 #include "DOMTimer.h"
 #include "DateComponents.h"
 #include "DebugPageOverlays.h"
+#include "DebuggerSuspensionController.h"
 #include "DeprecatedGlobalSettings.h"
 #include "DocumentFontLoader.h"
 #include "DocumentFragment.h"
@@ -225,6 +226,7 @@
 #include "OwnerPermissionsPolicyData.h"
 #include "Page.h"
 #include "PageGroup.h"
+#include "PageInspectorController.h"
 #include "PageRevealEvent.h"
 #include "PageSwapEvent.h"
 #include "PageTransitionEvent.h"
@@ -3572,6 +3574,9 @@ void Document::didBecomeCurrentDocumentInFrame()
         if (m_timelinesController)
             m_timelinesController->resumeAnimations();
     }
+
+    if (RefPtr page = this->page())
+        CheckedRef { page->inspectorController().debuggerSuspensionController() }->documentDidBecomeCurrent(*this);
 
     if (isTopDocument() && m_quirks)
         m_quirks->determineRelevantQuirks();
