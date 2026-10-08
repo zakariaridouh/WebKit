@@ -60,9 +60,6 @@ svg/custom/pattern-content-inheritance-cycle.svg  [ ImageOnlyFailure ]
 # Clipping problems
 svg/batik/text/textProperties.svg                             [ ImageOnlyFailure ]
 
-# Bounding box issues
-imported/w3c/web-platform-tests/svg/interact/scripted/svg-pointer-events-bbox.html [ Failure ]
-
 # Failing WPT reftests
 imported/w3c/web-platform-tests/svg/painting/marker-009.svg                                                    [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/painting/scripted/marker-element-added.html                                [ ImageOnlyFailure ]

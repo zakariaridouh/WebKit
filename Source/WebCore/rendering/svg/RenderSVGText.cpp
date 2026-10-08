@@ -779,7 +779,14 @@ bool RenderSVGText::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
             if (!pointInSVGClippingArea(localLocation.point()))
                 return false;
 
-            return RenderBlock::nodeAtPoint(request, result, localLocation, accumulatedOffset + coordinateSystemOriginTranslation, hitTestAction);
+            if (RenderBlock::nodeAtPoint(request, result, localLocation, accumulatedOffset + coordinateSystemOriginTranslation, hitTestAction))
+                return true;
+
+            if (hitRules.canHitBoundingBox && objectBoundingBox().contains(localLocation.point())) {
+                updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
+                if (result.addNodeToListBasedTestResult(protect(nodeForHitTest()).get(), request, locationInContainer, objectBoundingBox()) == HitTestProgress::Stop)
+                    return true;
+            }
         }
     }
 
