@@ -53,7 +53,7 @@ private:
     InlineIterator::SVGTextBoxIterator textBoxIterator() const;
 
     const RenderSVGInlineText& renderer() const { return m_renderer; }
-    const RenderBoxModelObject& parentRenderer() const;
+    const RenderBoxModelObject& parentRenderer() const { return m_parentRenderer; }
     OptionSet<RenderSVGResourceMode> paintingResourceMode() const { return m_paintingResourceMode; }
 
     void paintDecoration(Style::TextDecorationLine, const SVGTextFragment&);
@@ -71,6 +71,7 @@ private:
 
     const TextBoxPath m_textBox;
     const RenderSVGInlineText& m_renderer;
+    const RenderBoxModelObject& m_parentRenderer;
     PaintInfo& m_paintInfo;
     const TextBoxSelectableRange m_selectableRange;
     const LayoutPoint m_paintOffset;

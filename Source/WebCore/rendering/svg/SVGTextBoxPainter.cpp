@@ -63,6 +63,7 @@ template<typename TextBoxPath>
 SVGTextBoxPainter<TextBoxPath>::SVGTextBoxPainter(TextBoxPath&& textBox, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     : m_textBox(WTF::move(textBox))
     , m_renderer(downcast<RenderSVGInlineText>(m_textBox.renderer()))
+    , m_parentRenderer(textBoxIterator()->parentInlineBox()->renderer())
     , m_paintInfo(paintInfo)
     , m_selectableRange(m_textBox.selectableRange())
     , m_paintOffset(paintOffset)
@@ -76,12 +77,6 @@ InlineIterator::SVGTextBoxIterator SVGTextBoxPainter<TextBoxPath>::textBoxIterat
     return { m_textBox };
 }
 
-
-template<typename TextBoxPath>
-const RenderBoxModelObject& SVGTextBoxPainter<TextBoxPath>::parentRenderer() const
-{
-    return textBoxIterator()->parentInlineBox()->renderer();
-}
 
 FloatRect selectionRectForTextFragment(const RenderSVGInlineText& renderer, TextDirection direction, const SVGTextFragment& fragment, unsigned startPosition, unsigned endPosition, const Style::ComputedStyle& style)
 {

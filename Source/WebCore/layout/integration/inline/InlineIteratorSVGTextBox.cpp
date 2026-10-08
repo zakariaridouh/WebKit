@@ -45,13 +45,18 @@ SVGTextBox::SVGTextBox(PathVariant&& path)
 
 FloatRect SVGTextBox::calculateBoundariesIncludingSVGTransform() const
 {
+    return calculateBoundariesIncludingSVGTransform(renderer(), textFragments());
+}
+
+FloatRect SVGTextBox::calculateBoundariesIncludingSVGTransform(const RenderSVGInlineText& text, std::span<const SVGTextFragment> fragments)
+{
     FloatRect textRect;
 
-    float scalingFactor = renderer().scalingFactor();
+    float scalingFactor = text.scalingFactor();
     ASSERT(scalingFactor);
 
-    float baseline = renderer().scaledFont().metricsOfPrimaryFont().ascent() / scalingFactor;
-    for (auto& fragment : textFragments()) {
+    float baseline = text.scaledFont().metricsOfPrimaryFont().ascent() / scalingFactor;
+    for (auto& fragment : fragments) {
         auto fragmentRect = FloatRect { fragment.x, fragment.y - baseline, fragment.width, fragment.height };
 
         AffineTransform fragmentTransform;

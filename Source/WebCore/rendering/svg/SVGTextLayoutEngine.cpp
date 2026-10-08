@@ -46,6 +46,13 @@ SVGTextLayoutEngine::SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>& layou
     ASSERT(!m_layoutAttributes.isEmpty());
 }
 
+SVGTextLayoutEngine::SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>& layoutAttributes, Vector<Vector<SVGTextFragment>>& fragmentsForBoxes)
+    : m_layoutAttributes(layoutAttributes)
+    , m_fragmentsForBoxes(&fragmentsForBoxes)
+{
+    ASSERT(!m_layoutAttributes.isEmpty());
+}
+
 void SVGTextLayoutEngine::updateCharacterPositionIfNeeded(float& x, float& y)
 {
     if (m_inPathLayout)
@@ -102,7 +109,7 @@ void SVGTextLayoutEngine::updateRelativePositionAdjustmentsIfNeeded(float dx, fl
     m_dy = dy;
 }
 
-void SVGTextLayoutEngine::recordTextFragment(InlineIterator::SVGTextBoxIterator textBox, const Vector<SVGTextMetrics>& textMetricsValues)
+void SVGTextLayoutEngine::recordTextFragment(const SVGTextLayoutBox& textBox, const Vector<SVGTextMetrics>& textMetricsValues)
 {
     ASSERT(!m_currentTextFragment.length);
     ASSERT(m_visualMetricsListOffset > 0);
@@ -129,12 +136,26 @@ void SVGTextLayoutEngine::recordTextFragment(InlineIterator::SVGTextBoxIterator 
         }
     }
 
-    auto& fragments = m_fragmentMap.ensure(makeKey(*textBox), [&] {
-        return Vector<SVGTextFragment> { };
-    }).iterator->value;
+    auto& fragments = [&] -> Vector<SVGTextFragment>& {
+        if (m_fragmentsForBoxes)
+            return (*m_fragmentsForBoxes)[textBox.index];
+        return m_fragmentMap.ensure({ textBox.text.ptr(), textBox.start }, [&] {
+            return Vector<SVGTextFragment> { };
+        }).iterator->value;
+    }();
 
     fragments.append(m_currentTextFragment);
     m_currentTextFragment = SVGTextFragment();
+}
+
+std::span<SVGTextFragment> SVGTextLayoutEngine::recordedFragments(const SVGTextLayoutBox& textBox)
+{
+    if (m_fragmentsForBoxes)
+        return (*m_fragmentsForBoxes)[textBox.index].mutableSpan();
+    auto iterator = m_fragmentMap.find({ textBox.text.ptr(), textBox.start });
+    if (iterator == m_fragmentMap.end())
+        return { };
+    return iterator->value.mutableSpan();
 }
 
 bool SVGTextLayoutEngine::parentDefinesTextLength(RenderObject* parent) const
@@ -203,7 +224,7 @@ void SVGTextLayoutEngine::beginTextPathLayout(const RenderSVGTextPath& textPath,
     m_textPathLength = m_textPathMapper.totalLength();
     m_textPathStartOffset = computeTextPathStartOffset(textPath);
 
-    lineLayout.m_chunkLayoutBuilder.buildTextChunks(lineLayout.m_lineLayoutBoxes, lineLayout.m_lineLayoutChunkStarts, lineLayout.m_fragmentMap);
+    lineLayout.m_chunkLayoutBuilder.buildTextChunks(lineLayout.m_lineLayoutBoxes, lineLayout.m_lineLayoutChunkStarts);
 
     // Handle text-anchor as additional start offset for text paths.
     m_textPathStartOffset += lineLayout.m_chunkLayoutBuilder.totalAnchorShift();
@@ -240,44 +261,44 @@ void SVGTextLayoutEngine::endTextPathLayout()
     m_textPathScaling = 1;
 }
 
-void SVGTextLayoutEngine::layoutInlineTextBox(InlineIterator::SVGTextBoxIterator textBox)
+void SVGTextLayoutEngine::layoutInlineTextBox(const SVGTextLayoutBox& textBox)
 {
-    auto& text = textBox->renderer();
+    auto& text = textBox.text.get();
     ASSERT(text.parent());
     ASSERT(text.parent()->element());
     ASSERT(text.parent()->element()->isSVGElement());
+    ASSERT(!m_fragmentsForBoxes || (*m_fragmentsForBoxes)[textBox.index].isEmpty());
 
     const Style::ComputedStyle& style = text.style();
 
     m_isVerticalText = style.writingMode().isVertical();
-    layoutTextOnLineOrPath(textBox, text, style);
+    auto chunkStartCount = m_lineLayoutChunkStarts.size();
+    layoutTextOnLineOrPath(textBox, style);
 
-    if (m_inPathLayout) {
-        m_pathLayoutBoxes.append(textBox);
+    if (m_inPathLayout)
         return;
-    }
 
-    m_lineLayoutBoxes.append(textBox);
+    // Fragments of a box are final once it is laid out, so the span stays valid as long as the storage.
+    m_lineLayoutBoxes.append({ text, recordedFragments(textBox), static_cast<unsigned>(m_lineLayoutChunkStarts.size() - chunkStartCount) });
 }
 
 #if DUMP_SVG_TEXT_LAYOUT_FRAGMENTS > 0
-static inline void dumpTextBoxes(Vector<InlineIterator::SVGTextBoxIterator>& boxes)
+static inline void dumpTextBoxes(const Vector<SVGTextChunkBox>& boxes)
 {
     auto boxCount = boxes.size();
     fprintf(stderr, "Dumping all text fragments in text sub tree, %ld boxes\n", boxCount);
 
     for (unsigned boxPosition = 0; boxPosition < boxCount; ++boxPosition) {
-        auto textBox = boxes.at(boxPosition);
-        Vector<SVGTextFragment>& fragments = textBox->textFragments();
-        fprintf(stderr, "-> Box %d: Dumping text fragments for SVGInlineTextBox, textBox=%p, textRenderer=%p\n", boxPosition, textBox, &textBox->renderer());
-        fprintf(stderr, "        textBox properties, start=%d, len=%d, box direction=%d\n", textBox->start(), textBox->len(), (int)textBox->direction());
-        fprintf(stderr, "   textRenderer properties, textLength=%d\n", textBox->renderer().text().length());
+        auto& textBox = boxes.at(boxPosition);
+        auto fragments = textBox.fragments;
+        SAFE_FPRINTF(stderr, "-> Box %d: Dumping text fragments, textRenderer=%p\n", boxPosition, textBox.text.ptr());
+        SAFE_FPRINTF(stderr, "   textRenderer properties, textLength=%d\n", textBox.text->text().length());
 
-        const auto* characters = textBox->renderer().text().characters<char16_t>();
+        const auto* characters = textBox.text->text().characters<char16_t>();
 
         unsigned fragmentCount = fragments.size();
         for (unsigned i = 0; i < fragmentCount; ++i) {
-            SVGTextFragment& fragment = fragments.at(i);
+            auto& fragment = fragments[i];
             String fragmentString(characters + fragment.characterOffset, fragment.length);
             SAFE_FPRINTF(stderr, "    -> Fragment %d, x=%.2f, y=%.2f, width=%.2f, height=%.2f, characterOffset=%d, length=%d, characters='%s'\n", i, fragment.x, fragment.y, fragment.width, fragment.height, fragment.characterOffset, fragment.length, fragmentString.utf8());
         }
@@ -285,20 +306,16 @@ static inline void dumpTextBoxes(Vector<InlineIterator::SVGTextBoxIterator>& box
 }
 #endif
 
-SVGTextFragmentMap SVGTextLayoutEngine::finishLayout()
+void SVGTextLayoutEngine::finishLayout()
 {
     // After all text fragments are stored in their correpsonding SVGInlineTextBoxes, we can layout individual text chunks.
     // Chunk layouting is only performed for line layout boxes, not for path layout, where it has already been done.
-    m_chunkLayoutBuilder.layoutTextChunks(m_lineLayoutBoxes, m_lineLayoutChunkStarts, m_fragmentMap);
+    m_chunkLayoutBuilder.layoutTextChunks(m_lineLayoutBoxes, m_lineLayoutChunkStarts);
 
 #if DUMP_SVG_TEXT_LAYOUT_FRAGMENTS > 0
     SAFE_FPRINTF(stderr, "Line layout: ");
     dumpTextBoxes(m_lineLayoutBoxes);
-    SAFE_FPRINTF(stderr, "Path layout: ");
-    dumpTextBoxes(m_pathLayoutBoxes);
 #endif
-
-    return WTF::move(m_fragmentMap);
 }
 
 bool SVGTextLayoutEngine::currentLogicalCharacterAttributes(SVGTextLayoutAttributes*& logicalAttributes)
@@ -352,12 +369,12 @@ bool SVGTextLayoutEngine::currentLogicalCharacterMetrics(SVGTextLayoutAttributes
     return true;
 }
 
-bool SVGTextLayoutEngine::currentVisualCharacterMetrics(const InlineIterator::SVGTextBox& textBox, const Vector<SVGTextMetrics>& visualMetricsValues, SVGTextMetrics& visualMetrics)
+bool SVGTextLayoutEngine::currentVisualCharacterMetrics(const SVGTextLayoutBox& textBox, const Vector<SVGTextMetrics>& visualMetricsValues, SVGTextMetrics& visualMetrics)
 {
     ASSERT(!visualMetricsValues.isEmpty());
     unsigned textMetricsSize = visualMetricsValues.size();
-    unsigned boxStart = textBox.start();
-    unsigned boxLength = textBox.length();
+    unsigned boxStart = textBox.start;
+    unsigned boxLength = textBox.length;
 
     while (m_visualMetricsListOffset < textMetricsSize) {
         // Advance to text box start location.
@@ -389,11 +406,12 @@ void SVGTextLayoutEngine::advanceToNextVisualCharacter(const SVGTextMetrics& vis
     m_visualCharacterOffset += visualMetrics.length();
 }
 
-void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxIterator textBox, const RenderSVGInlineText& text, const Style::ComputedStyle& style)
+void SVGTextLayoutEngine::layoutTextOnLineOrPath(const SVGTextLayoutBox& textBox, const Style::ComputedStyle& style)
 {
     if (m_inPathLayout && m_textPath.isEmpty())
         return;
 
+    auto& text = textBox.text.get();
     RenderElement* textParent = text.parent();
     ASSERT(textParent);
 
@@ -420,6 +438,9 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
     float baselineShift = baselineLayout.calculateBaselineShift(style);
     baselineShift -= baselineLayout.calculateAlignmentBaselineShift(m_isVerticalText, text);
 
+    CheckedPtr previousLeafRenderer = textBox.previousLeafRenderer;
+    bool followsOtherTextOnLine = previousLeafRenderer && previousLeafRenderer != &text;
+
     // Grapheme-cluster boundaries, keyed by the same code-unit offset the loop walks (m_visualCharacterOffset).
     NonSharedCharacterBreakIterator clusterIterator(StringView(text.text()));
 
@@ -427,7 +448,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
     while (true) {
         // Find the start of the current text box in this list, respecting ligatures.
         SVGTextMetrics visualMetrics(SVGTextMetrics::MetricsType::SkippedSpaceMetrics);
-        if (!currentVisualCharacterMetrics(*textBox, visualMetricsValues, visualMetrics))
+        if (!currentVisualCharacterMetrics(textBox, visualMetricsValues, visualMetrics))
             break;
 
         if (visualMetrics.isEmpty()) {
@@ -452,9 +473,6 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
 
         float x = data.x;
         float y = data.y;
-        auto previousBoxOnLine = textBox->nextLineLeftwardOnLine();
-        bool followsOtherTextOnLine = previousBoxOnLine && &previousBoxOnLine->renderer() != &text;
-
         bool hasXOrY = !SVGTextLayoutAttributes::isEmptyValue(x) || !SVGTextLayoutAttributes::isEmptyValue(y);
 
         // If we start a new chunk following an chunk that had a textLength set, use that
@@ -471,7 +489,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
                     return;
             }
 
-            RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(&previousBoxOnLine->renderer());
+            RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(previousLeafRenderer.get());
             if (!textContentElement)
                 return;
 
@@ -485,7 +503,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
         };
 
         bool characterStartsNewTextChunk = logicalAttributes->context().characterStartsNewTextChunk(m_logicalCharacterOffset);
-        bool isFirstCharacterInBox = m_visualCharacterOffset == textBox->start();
+        bool isFirstCharacterInBox = m_visualCharacterOffset == textBox.start;
 
         bool startsNewTextChunk = [&]() {
             // If we're at a position that could start a new text chunk, but doesn't for intrinsic reasons (no x/y information specified for the
@@ -638,11 +656,9 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxItera
 
             didStartTextFragment = true;
 
-            if (startsNewTextChunk && (isFirstCharacterInBox || characterStartsNewTextChunk)) {
-                m_lineLayoutChunkStarts.ensure(makeKey(*textBox), [] {
-                    return Vector<unsigned> { };
-                }).iterator->value.append(recordedFragmentCount);
-            }
+            // Chunks are only built from line layout boxes.
+            if (!m_inPathLayout && startsNewTextChunk && (isFirstCharacterInBox || characterStartsNewTextChunk))
+                m_lineLayoutChunkStarts.append(recordedFragmentCount);
 
             m_currentTextFragment.characterOffset = m_visualCharacterOffset;
             m_currentTextFragment.metricsListOffset = m_visualMetricsListOffset;

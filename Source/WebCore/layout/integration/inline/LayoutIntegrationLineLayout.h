@@ -52,6 +52,7 @@ class RenderBoxModelObject;
 class RenderInline;
 class RenderListOutsideMarker;
 struct PaintInfo;
+struct SVGTextFragment;
 
 namespace Layout {
 class InlineDamage;
@@ -155,7 +156,14 @@ public:
     bool hasDetachedContent() const { return m_lineDamage && m_lineDamage->hasDetachedContent(); }
 #endif
 
-    FloatRect applySVGTextFragments(SVGTextFragmentMap&&);
+    struct SVGTextFragmentsForBoxes {
+        const InlineDisplay::Boxes& boxes;
+        Vector<Vector<SVGTextFragment>>& fragments;
+    };
+    // Empties the per box SVG text fragments for SVGTextLayoutEngine to fill in.
+    SVGTextFragmentsForBoxes resetSVGTextFragments() LIFETIME_BOUND;
+    // Sets the box rects from the SVG text fragments.
+    FloatRect applySVGTextFragments();
 
     bool NODELETE hasBlocks() const;
 

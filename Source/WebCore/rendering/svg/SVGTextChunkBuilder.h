@@ -21,13 +21,22 @@
 #pragma once
 
 #include "SVGTextChunk.h"
+#include "SVGTextFragment.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class RenderSVGInlineText;
 class SVGInlineTextBox;
-struct SVGTextFragment;
+
+// The laid out fragments of one text box, in line order.
+struct SVGTextChunkBox {
+    CheckedRef<const RenderSVGInlineText> text;
+    std::span<SVGTextFragment> fragments;
+    // Number of entries this box contributes to the chunk start list, each the index of a fragment that starts a new chunk.
+    unsigned chunkStartCount { 0 };
+};
 
 // SVGTextChunkBuilder performs the third layout phase for SVG text.
 //
@@ -46,8 +55,8 @@ public:
     float totalLength() const;
     float totalAnchorShift() const;
 
-    void buildTextChunks(const Vector<InlineIterator::SVGTextBoxIterator>& lineLayoutBoxes, const SVGTextChunkStarts&, SVGTextFragmentMap&);
-    void layoutTextChunks(const Vector<InlineIterator::SVGTextBoxIterator>& lineLayoutBoxes, const SVGTextChunkStarts&, SVGTextFragmentMap&);
+    void buildTextChunks(std::span<const SVGTextChunkBox>, std::span<const unsigned> chunkStarts);
+    void layoutTextChunks(std::span<const SVGTextChunkBox>, std::span<const unsigned> chunkStarts);
 
 private:
     // SVG2 §11.10: applies 'textLength' across all chunks of an owning element when

@@ -30,9 +30,9 @@
 
 namespace WebCore {
 
-SVGTextChunk::SVGTextChunk(const InlineIterator::SVGTextBox& firstBox)
+SVGTextChunk::SVGTextChunk(const RenderSVGInlineText& firstText)
 {
-    CheckedRef style = firstBox.renderer().style();
+    CheckedRef style = firstText.style();
 
     if (style->writingMode().isBidiRTL())
         m_chunkStyle.add(ChunkStyle::RightToLeftText);
@@ -51,7 +51,7 @@ SVGTextChunk::SVGTextChunk(const InlineIterator::SVGTextBox& firstBox)
         break;
     }
 
-    if (RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(firstBox.renderer().parent())) {
+    if (RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(firstText.parent())) {
         m_textContentElement = textContentElement.get();
         SVGLengthContext lengthContext(textContentElement.get());
         m_desiredTextLength = textContentElement->specifiedTextLength().value(lengthContext);

@@ -28,6 +28,7 @@
 #include "SVGTextContentElement.h"
 #include "SVGTextFragment.h"
 #include <wtf/HashMap.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -57,36 +58,30 @@ float SVGTextChunkBuilder::totalAnchorShift() const
     return anchorShift;
 }
 
-void SVGTextChunkBuilder::buildTextChunks(const Vector<InlineIterator::SVGTextBoxIterator>& lineLayoutBoxes, const SVGTextChunkStarts& chunkStarts, SVGTextFragmentMap& fragmentMap)
+void SVGTextChunkBuilder::buildTextChunks(std::span<const SVGTextChunkBox> boxes, std::span<const unsigned> chunkStarts)
 {
-    for (auto box : lineLayoutBoxes) {
-        auto key = makeKey(*box);
-        auto fragmentsIterator = fragmentMap.find(key);
-        if (fragmentsIterator == fragmentMap.end())
-            continue;
-
-        auto fragments = fragmentsIterator->value.mutableSpan();
+    for (auto& box : boxes) {
+        auto boxChunkStarts = consumeSpan(chunkStarts, box.chunkStartCount);
+        auto fragments = box.fragments;
         size_t rangeStart = 0;
 
-        auto chunkStartsIterator = chunkStarts.find(key);
-        if (chunkStartsIterator != chunkStarts.end()) {
-            for (auto chunkStart : chunkStartsIterator->value) {
-                ASSERT(chunkStart >= rangeStart && chunkStart < fragments.size());
-                if (!m_textChunks.isEmpty())
-                    m_textChunks.last().appendFragments(fragments.subspan(rangeStart, chunkStart - rangeStart));
-                m_textChunks.append(SVGTextChunk(*box));
-                rangeStart = chunkStart;
-            }
+        for (auto chunkStart : boxChunkStarts) {
+            ASSERT(chunkStart >= rangeStart && chunkStart < fragments.size());
+            if (!m_textChunks.isEmpty())
+                m_textChunks.last().appendFragments(fragments.subspan(rangeStart, chunkStart - rangeStart));
+            m_textChunks.append(SVGTextChunk(box.text));
+            rangeStart = chunkStart;
         }
 
         if (!m_textChunks.isEmpty())
             m_textChunks.last().appendFragments(fragments.subspan(rangeStart));
     }
+    ASSERT(chunkStarts.empty());
 }
 
-void SVGTextChunkBuilder::layoutTextChunks(const Vector<InlineIterator::SVGTextBoxIterator>& lineLayoutBoxes, const SVGTextChunkStarts& chunkStarts, SVGTextFragmentMap& fragmentMap)
+void SVGTextChunkBuilder::layoutTextChunks(std::span<const SVGTextChunkBox> boxes, std::span<const unsigned> chunkStarts)
 {
-    buildTextChunks(lineLayoutBoxes, chunkStarts, fragmentMap);
+    buildTextChunks(boxes, chunkStarts);
     if (m_textChunks.isEmpty())
         return;
 

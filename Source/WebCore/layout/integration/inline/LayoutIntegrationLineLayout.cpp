@@ -854,12 +854,22 @@ bool LineLayout::layoutSVGText()
     return true;
 }
 
-FloatRect LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
+LineLayout::SVGTextFragmentsForBoxes LineLayout::resetSVGTextFragments()
+{
+    auto& boxes = m_inlineContent->displayContent().boxes;
+    auto& fragments = m_inlineContent->svgTextFragmentsForBoxes();
+    fragments.resize(boxes.size());
+    for (auto& fragmentsForBox : fragments)
+        fragmentsForBox.clear();
+    return { boxes, fragments };
+}
+
+FloatRect LineLayout::applySVGTextFragments()
 {
     auto& boxes = m_inlineContent->displayContent().boxes;
     auto& lines = m_inlineContent->displayContent().lines;
     auto& fragments = m_inlineContent->svgTextFragmentsForBoxes();
-    fragments.resize(m_inlineContent->displayContent().boxes.size());
+    RELEASE_ASSERT(fragments.size() == boxes.size());
 
     FloatRect fullBoundaries;
 
@@ -884,17 +894,13 @@ FloatRect LineLayout::applySVGTextFragments(SVGTextFragmentMap&& fragmentMap)
     for (size_t i = 0; i < boxes.size(); ++i) {
         popParent(&boxes[i].layoutBox().parent());
 
-        auto textBox = InlineIterator::svgTextBoxFor(*m_inlineContent, i);
-        if (!textBox) {
+        CheckedPtr text = boxes[i].isText() ? dynamicDowncast<RenderSVGInlineText>(boxes[i].layoutBox().rendererForIntegration()) : nullptr;
+        if (!text) {
             parentStack.append({ i, { } });
             continue;
         }
 
-        auto it = fragmentMap.find(makeKey(*textBox));
-        if (it != fragmentMap.end())
-            fragments[i] = WTF::move(it->value);
-
-        auto boundaries = textBox->calculateBoundariesIncludingSVGTransform();
+        auto boundaries = InlineIterator::SVGTextBox::calculateBoundariesIncludingSVGTransform(*text, fragments[i]);
         boxes[i].setRect(boundaries, boundaries);
         parentStack.last().boundaries.unite(boundaries);
     }

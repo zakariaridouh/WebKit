@@ -30,16 +30,16 @@
 namespace WebCore {
 
 class AffineTransform;
+class RenderSVGInlineText;
 class SVGInlineTextBox;
 class SVGTextContentElement;
 
 using SVGTextFragmentMap = HashMap<InlineIterator::SVGTextBox::Key, Vector<SVGTextFragment>>;
-using SVGTextChunkStarts = HashMap<InlineIterator::SVGTextBox::Key, Vector<unsigned>>;
 
 // A SVGTextChunk describes a range of SVGTextFragments, see the SVG spec definition of a "text chunk".
 class SVGTextChunk {
 public:
-    explicit SVGTextChunk(const InlineIterator::SVGTextBox& firstBox);
+    explicit SVGTextChunk(const RenderSVGInlineText& firstText);
 
     void appendFragments(std::span<SVGTextFragment>);
 

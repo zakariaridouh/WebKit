@@ -38,6 +38,17 @@ namespace Style {
 class ComputedStyle;
 }
 
+// A text box as seen by SVGTextLayoutEngine.
+struct SVGTextLayoutBox {
+    CheckedRef<const RenderSVGInlineText> text;
+    unsigned start { 0 };
+    unsigned length { 0 };
+    // Display box index, where the fragments go when the engine stores them by box index.
+    size_t index { 0 };
+    // Renderer of the previous leaf box on the line.
+    CheckedPtr<const RenderObject> previousLeafRenderer;
+};
+
 // SVGTextLayoutEngine performs the second layout phase for SVG text.
 //
 // The InlineBox tree was created, containing the text chunk information, necessary to apply
@@ -48,7 +59,10 @@ class ComputedStyle;
 
 class SVGTextLayoutEngine {
 public:
+    // Collects the fragments in a map keyed by (renderer, start), see takeFragmentMap().
     SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>&);
+    // Appends the fragments of each text box to fragmentsForBoxes[box.index]. The vector must not be resized while the engine exists.
+    SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>&, Vector<Vector<SVGTextFragment>>& fragmentsForBoxes);
     SVGTextLayoutEngine(SVGTextLayoutEngine&&) = default;
     SVGTextLayoutEngine(const SVGTextLayoutEngine&) = delete;
 
@@ -57,25 +71,27 @@ public:
     void beginTextPathLayout(const RenderSVGTextPath&, SVGTextLayoutEngine& lineLayout);
     void endTextPathLayout();
 
-    void layoutInlineTextBox(InlineIterator::SVGTextBoxIterator);
+    void layoutInlineTextBox(const SVGTextLayoutBox&);
 
-    SVGTextFragmentMap finishLayout();
+    void finishLayout();
+    SVGTextFragmentMap takeFragmentMap() { return WTF::move(m_fragmentMap); }
 
 private:
     void NODELETE updateCharacterPositionIfNeeded(float& x, float& y);
     void NODELETE updateCurrentTextPosition(float x, float y, float glyphAdvance);
     void NODELETE updateRelativePositionAdjustmentsIfNeeded(float dx, float dy);
 
-    void recordTextFragment(InlineIterator::SVGTextBoxIterator, const Vector<SVGTextMetrics>&);
+    void recordTextFragment(const SVGTextLayoutBox&, const Vector<SVGTextMetrics>&);
+    std::span<SVGTextFragment> recordedFragments(const SVGTextLayoutBox&);
     bool parentDefinesTextLength(RenderObject*) const;
 
     float computeTextPathStartOffset(const RenderSVGTextPath&) const;
 
-    void layoutTextOnLineOrPath(InlineIterator::SVGTextBoxIterator, const RenderSVGInlineText&, const Style::ComputedStyle&);
+    void layoutTextOnLineOrPath(const SVGTextLayoutBox&, const Style::ComputedStyle&);
 
     bool NODELETE currentLogicalCharacterAttributes(SVGTextLayoutAttributes*&);
     bool NODELETE currentLogicalCharacterMetrics(SVGTextLayoutAttributes*&, SVGTextMetrics&);
-    bool currentVisualCharacterMetrics(const InlineIterator::SVGTextBox&, const Vector<SVGTextMetrics>&, SVGTextMetrics&);
+    bool currentVisualCharacterMetrics(const SVGTextLayoutBox&, const Vector<SVGTextMetrics>&, SVGTextMetrics&);
 
     void NODELETE advanceToNextLogicalCharacter(const SVGTextMetrics&);
     void NODELETE advanceToNextVisualCharacter(const SVGTextMetrics&);
@@ -83,14 +99,14 @@ private:
 private:
     Vector<SVGTextLayoutAttributes*>& m_layoutAttributes;
 
-    Vector<InlineIterator::SVGTextBoxIterator> m_lineLayoutBoxes;
-    Vector<InlineIterator::SVGTextBoxIterator> m_pathLayoutBoxes;
+    Vector<SVGTextChunkBox> m_lineLayoutBoxes;
 
-    // Output.
-    HashMap<InlineIterator::SVGTextBox::Key, Vector<SVGTextFragment>> m_fragmentMap;
+    // Output. Fragments go to m_fragmentsForBoxes if set, to m_fragmentMap otherwise.
+    Vector<Vector<SVGTextFragment>>* m_fragmentsForBoxes { nullptr };
+    SVGTextFragmentMap m_fragmentMap;
 
     SVGTextChunkBuilder m_chunkLayoutBuilder;
-    SVGTextChunkStarts m_lineLayoutChunkStarts;
+    Vector<unsigned> m_lineLayoutChunkStarts;
 
     SVGTextFragment m_currentTextFragment;
     unsigned m_layoutAttributesPosition { 0 };
