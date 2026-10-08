@@ -85,11 +85,6 @@ svg/css/mix-blend-mode-opacity-root.svg    [ ImageOnlyFailure ]
 # Non-scaling stroke issues
 svg/repaint/non-scaling-stroke-transform-animation.html               [ ImageOnlyFailure ]
 
-# Hit testing
-svg/hittest/svg-ellipse-non-scale-stroke.xhtml [ Failure ]
-svg/hittest/svg-ellipse-rect-stroke.xhtml      [ Failure ]
-svg/hittest/svg-shapes-non-scale-stroke.html   [ Failure ]
-
 ###############
 # Buggy tests #
 ###############

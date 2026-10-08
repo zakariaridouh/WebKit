@@ -967,8 +967,16 @@ RenderLayer::HitLayer RenderLayer::hitTestChildrenInDOMOrderForSVG(RenderLayer* 
     if (allChildren.isEmpty())
         return { };
 
-    CheckedPtr svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer());
-    LayoutSize svgOffset = svgModelObject ? toLayoutSize(svgModelObject->nominalSVGLayoutLocation()) : LayoutSize();
+    LayoutSize svgOffset;
+    LayoutSize userSpaceShift;
+    if (CheckedPtr svgModelObject = dynamicDowncast<RenderSVGModelObject>(renderer())) {
+        svgOffset = toLayoutSize(svgModelObject->nominalSVGLayoutLocation());
+        userSpaceShift = svgOffset - offsetFromAncestor(rootLayer);
+    }
+
+    HitTestLocation userSpaceLocation(hitTestLocation, userSpaceShift);
+    auto userSpaceRect = hitTestRect;
+    userSpaceRect.move(userSpaceShift);
 
     for (int i = allChildren.size() - 1; i >= 0; --i) {
         auto& childToPaint = allChildren[i];
@@ -989,7 +997,7 @@ RenderLayer::HitLayer RenderLayer::hitTestChildrenInDOMOrderForSVG(RenderLayer* 
         CheckedRef childRenderer = *childRendererPtr;
 
         if (childRenderer->isTransformed()) {
-            auto hitLayer = hitTestRendererByInversingTransformForSVG(childRenderer.get(), childToPaint.accumulatedAncestorOffset, request, result, hitTestRect, hitTestLocation);
+            auto hitLayer = hitTestRendererByInversingTransformForSVG(childRenderer.get(), childToPaint.accumulatedAncestorOffset, request, result, userSpaceRect, userSpaceLocation);
             if (hitLayer.layer)
                 return hitLayer;
             continue;
@@ -998,7 +1006,7 @@ RenderLayer::HitLayer RenderLayer::hitTestChildrenInDOMOrderForSVG(RenderLayer* 
         LayoutPoint accumulatedOffset(svgOffset);
         accumulatedOffset += childToPaint.accumulatedAncestorOffset;
 
-        if (childRenderer->nodeAtPoint(request, result, hitTestLocation, accumulatedOffset, HitTestAction::Foreground))
+        if (childRenderer->nodeAtPoint(request, result, userSpaceLocation, accumulatedOffset, HitTestAction::Foreground))
             return { this, 0 };
     }
 
