@@ -721,6 +721,10 @@ webkit_target_add_swift_options(TestWebKitAPILibrary
     "-import-objc-header ${TESTWEBKITAPI_DIR}/Runner/TestWebKitAPI-Bridging-Header.h"
 )
 
+foreach (_target IN ITEMS TestWTF TestWebKit TestWebKitAPILibrary)
+    WEBKIT_RAISE_SWIFT_NINJA_PRIORITY(${_target} 6)
+endforeach ()
+
 list(APPEND TestWebKit_SOURCES
     "Tests/WebKit/WebPage/AppKit Gesture Tests/AppKitGesturesTestsSupport.swift"
     "Tests/WebKit/WebPage/AppKit Gesture Tests/BasicAppKitGesturesTests.swift"
