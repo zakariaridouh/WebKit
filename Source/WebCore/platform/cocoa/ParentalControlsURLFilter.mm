@@ -130,7 +130,7 @@ ParentalControlsURLFilter::ParentalControlsURLFilter() = default;
 
 WorkQueue& ParentalControlsURLFilter::workQueueSingleton()
 {
-    static MainThreadNeverDestroyed<Ref<WorkQueue>> queue = WorkQueue::create("ParentalControlsContentFilter queue"_s);
+    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("ParentalControlsContentFilter queue"_s));
     return queue.get();
 }
 
