@@ -4886,6 +4886,71 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseObjectLitera
 }
 
 template <typename LexerType>
+template <class TreeBuilder> TreeExpression Parser<LexerType>::parseArrayElement(TreeBuilder& context)
+{
+    // Large data tables are mostly literals separated by commas, and a literal directly followed by ',' or ']'
+    // is already a complete AssignmentExpression.
+    if (m_lexer->nextCharacterIsCommaOrCloseBracket()) {
+        JSTokenLocation location(tokenLocation());
+        switch (m_token.m_type) {
+        case INTEGER: {
+            double d = m_token.m_data.doubleValue;
+            next();
+            return context.createIntegerExpr(location, d);
+        }
+        case DOUBLE: {
+            double d = m_token.m_data.doubleValue;
+            next();
+            return context.createDoubleExpr(location, d);
+        }
+        case STRING: {
+            const Identifier* ident = m_token.m_data.ident;
+            next();
+            return context.createString(location, ident);
+        }
+        case NULLTOKEN:
+            next();
+            return context.createNull(location);
+        case TRUETOKEN:
+            next();
+            return context.createBoolean(location, true);
+        case FALSETOKEN:
+            next();
+            return context.createBoolean(location, false);
+        default:
+            break;
+        }
+    }
+    return parseAssignmentExpression(context);
+}
+
+template <typename LexerType>
+template <class TreeBuilder> void Parser<LexerType>::parseSimpleArrayElementsAfterComma(TreeBuilder& context, typename TreeBuilder::ElementList& tail)
+{
+    // Leaves the parser in exactly the state that lexing each element and its trailing ',' as tokens would.
+    ASSERT(match(COMMA));
+    JSTokenLocation location;
+    JSTokenType type = ERRORTOK;
+    while (true) {
+        double value = 0;
+        unsigned start = m_lexer->currentOffset();
+        JSTokenType elementType = m_lexer->scanSimpleArrayElementFollowedByComma(value);
+        if (elementType == ERRORTOK)
+            break;
+        type = elementType;
+        location.startOffset = start;
+        location.endOffset = m_lexer->currentOffset() - 1;
+        tail = context.createElementList(tail, 0, type == INTEGER ? context.createIntegerExpr(location, value) : context.createNull(location));
+    }
+    if (type == ERRORTOK)
+        return;
+    m_lastTokenLocation = location;
+    m_lastTokenType = type;
+    m_token.m_startPosition = JSTextPosition(location.endOffset);
+    m_token.m_endPosition = JSTextPosition(location.endOffset + 1);
+}
+
+template <typename LexerType>
 template <class TreeBuilder> TreeExpression Parser<LexerType>::parseArrayLiteral(TreeBuilder& context)
 {
     JSTokenLocation location(tokenLocation());
@@ -4911,12 +4976,13 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseArrayLiteral
         failIfFalse(spreadExpr, "Cannot parse subject of a spread operation");
         elem = context.createSpreadExpression(spreadLocation, spreadExpr, start, divot, lastTokenEndPosition());
     } else
-        elem = parseAssignmentExpression(context);
+        elem = parseArrayElement(context);
     failIfFalse(elem, "Cannot parse array literal element");
     typename TreeBuilder::ElementList elementList = context.createElementList(elisions, elem);
     typename TreeBuilder::ElementList tail = elementList;
     elisions = 0;
     while (match(COMMA)) {
+        parseSimpleArrayElementsAfterComma(context, tail);
         next(TreeBuilder::DontBuildStrings);
         elisions = 0;
         
@@ -4937,7 +5003,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseArrayLiteral
             tail = context.createElementList(tail, elisions, spread);
             continue;
         }
-        TreeExpression elem = parseAssignmentExpression(context);
+        TreeExpression elem = parseArrayElement(context);
         failIfFalse(elem, "Cannot parse array literal element");
         tail = context.createElementList(tail, elisions, elem);
     }
