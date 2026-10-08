@@ -1,0 +1,19 @@
+// swift-interface-format-version: 1.0
+// swift-module-flags: -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -library-level spi -module-abi-name USDKit -module-name USDKit_SPI
+import Foundation
+import Swift
+@_exported import USDKit
+
+public struct UsdStage {
+  public enum InitialLoadSet {
+    case loadAll
+  }
+
+  public static func open(buffer: Foundation.Data, initialLoadSet: InitialLoadSet = .loadAll) throws -> UsdStage
+
+  public struct ExportOptions {
+    public static var preferSmallMeshFiles: ExportOptions { get }
+  }
+
+  public func export(options: ExportOptions) throws -> Foundation.Data
+}
