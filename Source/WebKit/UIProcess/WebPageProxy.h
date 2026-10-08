@@ -806,6 +806,7 @@ public:
     void completeDisplayOnlyImage(RemoteSnapshotIdentifier, WebCore::FrameIdentifier rootFrameIdentifier, float scale, const WebCore::ColorSpace&, CompletionHandler<void(bool)>&&);
     void releaseDisplayOnlyImage(RemoteSnapshotIdentifier);
 #endif
+    RefPtr<WebProcessProxy> processForElementContext(const WebCore::ElementContext&);
     WebCore::PageIdentifier webPageIDInProcessForFrame(std::optional<WebCore::FrameIdentifier>);
 
     PAL::SessionID NODELETE sessionID() const;
