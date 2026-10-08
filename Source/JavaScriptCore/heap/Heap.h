@@ -733,7 +733,7 @@ private:
 #endif
     void visitCompilerWorklistWeakReferences();
     void removeDeadCompilerWorklistEntries();
-    void rememberExecutingAndCompilingCodeBlocks(SlotVisitor&);
+    void rememberExecutingAndCompilingCodeBlocks();
     void recordBytesVisited(size_t bytesVisited);
     void endMarking(size_t bytesVisited);
     void verifyMarking();

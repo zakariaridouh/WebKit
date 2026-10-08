@@ -624,7 +624,7 @@ void Collector::endCollectionInEachHeap()
 
         // Executing CodeBlocks keep writing their profiles without barriers after this collection. Remembering
         // them makes the next collection reconcile those profiles even if it is an Eden collection.
-        heap.rememberExecutingAndCompilingCodeBlocks(*m_collectorSlotVisitor);
+        heap.rememberExecutingAndCompilingCodeBlocks();
         heap.endMarking(bytesVisitedIn(heap));
         heap.verifyMarking();
         heap.pruneDeadReferences();

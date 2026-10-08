@@ -867,10 +867,10 @@ void Heap::removeDeadHeapSnapshotNodes(HeapProfiler& heapProfiler)
     }
 }
 
-void Heap::rememberExecutingAndCompilingCodeBlocks(SlotVisitor& visitor)
+void Heap::rememberExecutingAndCompilingCodeBlocks()
 {
     ASSERT(isInPhase(CollectorPhase::End));
-    iterateExecutingAndCompilingCodeBlocks(visitor,
+    iterateExecutingAndCompilingCodeBlocks(*m_mutatorSlotVisitor,
         [&] (CodeBlock* codeBlock) {
             writeBarrier(codeBlock);
         });
