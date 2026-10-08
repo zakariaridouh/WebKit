@@ -223,7 +223,7 @@ protected:
     private:
         SingleThreadWeakPtr<RenderFragmentContainer> m_startFragment;
         SingleThreadWeakPtr<RenderFragmentContainer> m_endFragment;
-        bool m_rangeInvalidated;
+        bool m_rangeInvalidated { false };
     };
 
     class FragmentSearchAdapter;
