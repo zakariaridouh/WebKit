@@ -2714,11 +2714,12 @@ TEST(WKAttachmentTestsIOS, CopyAttachmentUsingElementAction)
 
     [webView _simulateElementAction:_WKElementActionTypeCopy atLocation:CGPointMake(20, 20)];
 
-    // It takes two IPC round trips between the UI process and web process until the pasteboard data is written,
+    // It takes multiple IPC round trips between the UI process and web process until the pasteboard data is written,
     // since we first need to hit-test to discover the activated element, and then use the activated element to
     // simulate the "copy" action.
-    [webView waitForNextPresentationUpdate];
-    [webView waitForNextPresentationUpdate];
+    TestWebKitAPI::Util::waitForConditionWithLogging([] {
+        return [UIPasteboard.generalPasteboard.itemProviders.firstObject.suggestedName isEqualToString:@"hello.pdf"];
+    }, 2, @"Expected the attachment to be written to the pasteboard.");
 
     NSArray<NSItemProvider *> *itemProviders = UIPasteboard.generalPasteboard.itemProviders;
     EXPECT_EQ(1U, itemProviders.count);
