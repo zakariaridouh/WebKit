@@ -434,17 +434,23 @@ void RemoteGraphicsContext::drawNativeImage(RenderingResourceIdentifier imageIde
     context().drawNativeImage(*image, destRect, srcRect, options);
 }
 
+#if USE(SYSTEM_PREVIEW)
+void RemoteGraphicsContext::drawBadgeSystemImage(std::optional<RenderingResourceIdentifier> imageIdentifier, const FloatRect& destinationRect)
+{
+    RefPtr<NativeImage> nativeImage;
+
+    if (imageIdentifier) {
+        nativeImage = resourceCache().cachedNativeImage(*imageIdentifier);
+        MESSAGE_CHECK(nativeImage);
+    }
+
+    Ref badge = ARKitBadgeSystemImage::create(nativeImage.releaseNonNull());
+    drawSystemImage(WTF::move(badge), destinationRect);
+}
+#endif
+
 void RemoteGraphicsContext::drawSystemImage(Ref<SystemImage>&& systemImage, const FloatRect& destinationRect)
 {
-#if USE(SYSTEM_PREVIEW)
-    if (auto* badge = dynamicDowncast<ARKitBadgeSystemImage>(systemImage.get())) {
-        if (auto imageIdentifier = badge->imageIdentifier()) {
-            RefPtr nativeImage = resourceCache().cachedNativeImage(*imageIdentifier);
-            MESSAGE_CHECK(nativeImage);
-            badge->setImage(BitmapImage::create(nativeImage.releaseNonNull()));
-        }
-    }
-#endif
     context().drawSystemImage(systemImage, destinationRect);
 }
 

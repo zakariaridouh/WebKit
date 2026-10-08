@@ -3244,13 +3244,6 @@ class WebCore::SpeechRecognitionUpdate {
     Variant<std::monostate, WebCore::SpeechRecognitionError, Vector<WebCore::SpeechRecognitionResultData>> m_content;
 };
 
-#if USE(SYSTEM_PREVIEW)
-[RefCounted, AdditionalEncoder=StreamConnectionEncoder] class WebCore::ARKitBadgeSystemImage {
-    std::optional<WebCore::RenderingResourceIdentifier> imageIdentifier();
-    WebCore::FloatSize m_imageSize;
-};
-#endif
-
 [AdditionalEncoder=StreamConnectionEncoder] enum class WebCore::CompositeOperator : uint8_t {
     Clear,
     Copy,
@@ -6042,9 +6035,6 @@ enum class WebCore::InspectorBackendClientDeveloperPreference : uint8_t {
 [AdditionalEncoder=StreamConnectionEncoder, RefCounted] class WebCore::SystemImage subclasses {
 #if ENABLE(APPLE_PAY)
     WebCore::ApplePayLogoSystemImage
-#endif
-#if USE(SYSTEM_PREVIEW)
-    WebCore::ARKitBadgeSystemImage
 #endif
 #if USE(APPKIT)
     WebCore::AppKitControlSystemImage
