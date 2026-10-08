@@ -3674,14 +3674,14 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
     JSObject* baseObject = asObject(baseValue);
 
     GCOwnedDataScope<AtomStringImpl*> propertyName;
-    Identifier propertyKey;
+    GCOwnedDataScope<SymbolImpl*> symbolName;
     UniquedStringImpl* uid = nullptr;
     if (subscript.isString()) {
         propertyName = asString(subscript)->toAtomString(globalObject);
         uid = propertyName.data;
     } else {
-        propertyKey = subscript.toPropertyKey(globalObject);
-        uid = propertyKey.impl();
+        symbolName = { asSymbol(subscript), &asSymbol(subscript)->uid() };
+        uid = symbolName.data;
     }
     RETURN_IF_EXCEPTION(scope, { });
 

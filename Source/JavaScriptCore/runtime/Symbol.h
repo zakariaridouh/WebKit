@@ -27,6 +27,7 @@
 #pragma once
 
 #include <JavaScriptCore/ErrorType.h>
+#include <JavaScriptCore/GCOwnedDataScope.h>
 #include <JavaScriptCore/JSCell.h>
 #include <JavaScriptCore/PrivateName.h>
 #include <JavaScriptCore/VM.h>
@@ -56,7 +57,7 @@ public:
     JS_EXPORT_PRIVATE static Symbol* create(VM&, SymbolImpl& uid);
 
     SymbolImpl& uid() const { return m_privateName.uid(); }
-    PrivateName privateName() const { return m_privateName; }
+    GCOwnedDataScope<const PrivateName&> privateName() const { return { this, m_privateName }; }
     JSString* description(VM&);
 
     JSValue NODELETE toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const;

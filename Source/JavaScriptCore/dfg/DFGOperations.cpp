@@ -954,7 +954,7 @@ JSC_DEFINE_JIT_OPERATION(operationGetByValObjectSymbol, EncodedJSValue, (JSGloba
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
-    OPERATION_RETURN(scope, JSValue::encode(getByValObject(globalObject, vm, asObject(base), propertyName)));
+    OPERATION_RETURN(scope, JSValue::encode(getByValObject(globalObject, vm, asObject(base), propertyName.data)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPutByValCellStringStrict, void, (JSGlobalObject* globalObject, JSCell* cell, JSCell* string, EncodedJSValue encodedValue))
@@ -987,7 +987,7 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValCellSymbolStrict, void, (JSGlobalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
-    putByValCellInternal<true, false>(globalObject, vm, cell, propertyName, JSValue::decode(encodedValue));
+    putByValCellInternal<true, false>(globalObject, vm, cell, propertyName.data, JSValue::decode(encodedValue));
     OPERATION_RETURN(scope);
 }
 
@@ -999,7 +999,7 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValCellSymbolSloppy, void, (JSGlobalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
-    putByValCellInternal<false, false>(globalObject, vm, cell, propertyName, JSValue::decode(encodedValue));
+    putByValCellInternal<false, false>(globalObject, vm, cell, propertyName.data, JSValue::decode(encodedValue));
     OPERATION_RETURN(scope);
 }
 
@@ -1147,7 +1147,7 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellSymbolStrict, void, (JSGloba
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
-    putByValCellInternal<true, true>(globalObject, vm, cell, propertyName, JSValue::decode(encodedValue));
+    putByValCellInternal<true, true>(globalObject, vm, cell, propertyName.data, JSValue::decode(encodedValue));
     OPERATION_RETURN(scope);
 }
 
@@ -1159,7 +1159,7 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValDirectCellSymbolSloppy, void, (JSGloba
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto propertyName = asSymbol(symbol)->privateName();
-    putByValCellInternal<false, true>(globalObject, vm, cell, propertyName, JSValue::decode(encodedValue));
+    putByValCellInternal<false, true>(globalObject, vm, cell, propertyName.data, JSValue::decode(encodedValue));
     OPERATION_RETURN(scope);
 }
 
