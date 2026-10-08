@@ -77,7 +77,10 @@ static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPat
 
     size_t size = path.size();
     for (size_t i = 1; i < size; ++i) {
-        Ref currentNode { *path.contextAt(i).node() };
+        auto& eventContext = path.contextAt(i);
+        if (eventContext.isWindowContext())
+            continue;
+        Ref currentNode { *eventContext.node() };
         currentNode->defaultEventHandler(event);
         if (event.defaultPrevented() || event.defaultHandled())
             return;
