@@ -144,7 +144,7 @@ void ScrollAnchoringController::updateScrollableAreaRegistration()
 
 LocalFrameView& ScrollAnchoringController::frameView() const
 {
-    if (auto* renderLayerScrollableArea = dynamicDowncast<RenderLayerScrollableArea>(m_owningScrollableArea.get()))
+    if (auto* renderLayerScrollableArea = dynamicDowncast<RenderLayerScrollableArea>(m_owningScrollableArea))
         return renderLayerScrollableArea->layer().renderer().view().frameView();
 
     return downcast<LocalFrameView>(downcast<ScrollView>(m_owningScrollableArea));
@@ -152,10 +152,10 @@ LocalFrameView& ScrollAnchoringController::frameView() const
 
 RenderBox* ScrollAnchoringController::scrollableAreaBox() const
 {
-    if (auto* renderLayerScrollableArea = dynamicDowncast<RenderLayerScrollableArea>(m_owningScrollableArea.get()))
+    if (auto* renderLayerScrollableArea = dynamicDowncast<RenderLayerScrollableArea>(m_owningScrollableArea))
         return renderLayerScrollableArea->layer().renderBox();
 
-    if (auto* frameView = dynamicDowncast<LocalFrameView>(downcast<ScrollView>(m_owningScrollableArea.get())))
+    if (auto* frameView = dynamicDowncast<LocalFrameView>(downcast<ScrollView>(m_owningScrollableArea)))
         return frameView->renderView();
 
     return nullptr;
@@ -234,7 +234,7 @@ auto ScrollAnchoringController::computeScrollerRelativeRects(RenderObject& candi
     LOG_WITH_STREAM(ScrollAnchoring, stream << "computeScrollerRelativeRects - candidate " << candidate << " localAnchoringRect " << localAnchoringRect);
 
     if (scrollerBox->isRenderView()) {
-        RefPtr frameView = dynamicDowncast<LocalFrameView>(downcast<ScrollView>(m_owningScrollableArea.get()));
+        RefPtr frameView = dynamicDowncast<LocalFrameView>(downcast<ScrollView>(m_owningScrollableArea));
         if (!frameView)
             return { };
 

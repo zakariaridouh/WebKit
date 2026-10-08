@@ -649,7 +649,7 @@ void RenderListItem::placeExcludedMarker(RenderListOutsideMarker& marker)
         // Inside a fragmented flow the coordinates are in flow thread space, where the content is one continuous
         // strip. The column the line ended up in is a sibling of the flow thread rather than an ancestor, so leave
         // the flow thread for that column set and carry on from there, in visual space.
-        if (CheckedPtr fragmentedFlow = dynamicDowncast<RenderMultiColumnFlow>(ancestor.get())) {
+        if (CheckedPtr fragmentedFlow = dynamicDowncast<RenderMultiColumnFlow>(ancestor)) {
             CheckedPtr columnSet = dynamicDowncast<RenderMultiColumnSet>(static_cast<const RenderFragmentedFlow&>(*fragmentedFlow).fragmentAtBlockOffset(fragmentedFlow.get(), logicalTop, true));
             if (!columnSet)
                 continue;
@@ -736,7 +736,7 @@ RenderListItem::FirstFormattedLineCandidate RenderListItem::firstFormattedLineRo
 CheckedPtr<RenderListOutsideMarker> RenderListItem::excludedMarkerAnchoredTo(const RenderBlockFlow& firstFormattedLineRoot)
 {
     for (CheckedPtr<const RenderBlock> ancestor = &firstFormattedLineRoot; ancestor; ancestor = ancestor->containingBlock()) {
-        CheckedPtr listItem = dynamicDowncast<RenderListItem>(ancestor.get());
+        CheckedPtr listItem = dynamicDowncast<RenderListItem>(ancestor);
         CheckedPtr marker = listItem ? listItem->markerBox() : nullptr;
         if (!marker || !marker->isExcludedMarker())
             continue;

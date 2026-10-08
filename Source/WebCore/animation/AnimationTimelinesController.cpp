@@ -423,7 +423,7 @@ Vector<GraphicsLayer::AcceleratedAnimationForTesting> AnimationTimelinesControll
 {
     CheckedPtr renderer = element.renderer();
     if (renderer && renderer->isComposited()) {
-        CheckedPtr compositedRenderer = downcast<RenderBoxModelObject>(renderer.get());
+        CheckedPtr compositedRenderer = downcast<RenderBoxModelObject>(renderer);
         if (RefPtr graphicsLayer = compositedRenderer->layer()->backing()->graphicsLayer())
             return graphicsLayer->acceleratedAnimationsForTesting();
     }

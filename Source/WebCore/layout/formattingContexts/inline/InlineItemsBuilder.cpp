@@ -472,7 +472,7 @@ void InlineItemsBuilder::collectInlineItems(InlineItemList& inlineItemList, Inli
             m_hasTextAndLineBreakOnlyContent &= (isInlineBoxWithInlineContent(layoutBox) || isTextOrLineBreak(layoutBox));
             if (layoutBox->isOutOfFlowPositioned())
                 inlineItemList.append({ layoutBox, InlineItem::Type::OutOfFlow });
-            else if (CheckedPtr inlineTextBox = dynamicDowncast<InlineTextBox>(layoutBox.get()))
+            else if (CheckedPtr inlineTextBox = dynamicDowncast<InlineTextBox>(layoutBox))
                 handleTextContent(*inlineTextBox, inlineItemList, partialContentOffset(*inlineTextBox));
             else if (layoutBox->isAtomicInlineBox() || layoutBox->isLineBreakBox())
                 handleInlineLevelBox(layoutBox, inlineItemList);
@@ -686,7 +686,7 @@ static inline void buildBidiParagraph(const Style::ComputedStyle& rootStyle, con
         if (isBidiParagraphSeparator())
             handleBidiParagraphStart(paragraphContentBuilder, inlineItemOffsetList, bidiContextStack);
         else if (inlineItem.isText() || inlineItem.isSoftLineBreak()) {
-            CheckedPtr inlineTextBox = dynamicDowncast<InlineTextBox>(layoutBox.get());
+            CheckedPtr inlineTextBox = dynamicDowncast<InlineTextBox>(layoutBox);
             auto mayAppendTextContentAsOneEntry = inlineTextBox && !TextUtil::shouldPreserveNewline(*inlineTextBox);
             if (mayAppendTextContentAsOneEntry) {
                 // Append the entire InlineTextBox content and keep track of individual inline item positions as we process them.
