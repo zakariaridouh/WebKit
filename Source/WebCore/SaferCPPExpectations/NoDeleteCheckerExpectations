@@ -3,8 +3,4 @@ dom/FragmentDirectiveRangeFinder.cpp
 dom/UserGestureIndicator.cpp
 page/EventHandler.cpp
 page/Quirks.cpp
-rendering/GridLanesLayout.cpp
-rendering/RenderGeometryMap.cpp
-rendering/StyledMarkedText.cpp
-rendering/TextDecorationPainter.cpp
 style/values/primitives/StyleValueHandleMap.h

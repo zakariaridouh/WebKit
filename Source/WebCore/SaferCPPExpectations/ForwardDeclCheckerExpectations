@@ -1,9 +1,6 @@
 css/values/primitives/CSSPrimitiveData.h
 dom/ElementInlinesLight.h
 layout/formattingContexts/inline/InlineFormattingContext.h
-rendering/RenderLayerBacking.cpp
-rendering/RenderLayerCompositor.cpp
 rendering/RenderTextLineBoxes.h
-rendering/svg/SVGRenderingContext.h
 style/StyleBuilderState.h
 style/StyleExtractorState.h

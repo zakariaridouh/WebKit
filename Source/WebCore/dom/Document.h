@@ -971,7 +971,7 @@ public:
     ScriptableDocumentParser* scriptableDocumentParser() const;
     HTMLDocumentParser* htmlDocumentParser() const;
 
-    WEBCORE_EXPORT bool printing() const;
+    WEBCORE_EXPORT bool NODELETE printing() const;
 
     bool paginatedForScreen() const { return m_paginatedForScreen; }
     void setPaginatedForScreen(bool p) { m_paginatedForScreen = p; }

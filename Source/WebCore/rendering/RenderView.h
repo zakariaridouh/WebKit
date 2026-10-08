@@ -121,7 +121,7 @@ public:
 
     RenderSelection& selection() LIFETIME_BOUND { return m_selection; }
 
-    bool printing() const;
+    bool NODELETE printing() const;
 
     Vector<FloatRect> localBorderBoxRects() const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;

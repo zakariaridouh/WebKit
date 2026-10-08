@@ -37,6 +37,7 @@
 #include "DocumentFullscreen.h"
 #include "FixedContainerEdges.h"
 #include "GraphicsLayer.h"
+#include "GraphicsLayerFactory.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLIFrameElement.h"

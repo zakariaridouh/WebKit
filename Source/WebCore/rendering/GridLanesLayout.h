@@ -95,7 +95,7 @@ private:
     unsigned gridAxisTracksCount() const { return static_cast<unsigned>(m_runningPositions.size()); }
 
     bool hasDefiniteGridAxisPosition(const RenderBox& gridItem, Style::GridTrackSizingDirection gridAxisDirection) const;
-    GridArea NODELETE gridAreaFromGridAxisSpan(const GridSpan&) const;
+    GridArea gridAreaFromGridAxisSpan(const GridSpan&) const;
     GridSpan NODELETE gridAxisSpanFromArea(const GridArea&) const;
 
     Vector<LayoutUnit> m_runningPositions;

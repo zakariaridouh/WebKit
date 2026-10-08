@@ -48,6 +48,7 @@
 #include "FontSelector.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
+#include "GraphicsLayerFactory.h"
 #include "GraphicsLayerFilterAnimationValue.h"
 #include "GraphicsLayerFloatAnimationValue.h"
 #include "GraphicsLayerKeyframeValueList.h"
