@@ -133,7 +133,7 @@ SWIFT_OPTIMIZATION_LEVEL[config=Debug] = -Onone;
 WK_SWIFT_MEMORY_SAFETY_FLAGS = -strict-memory-safety -enable-experimental-feature Lifetimes -enable-experimental-feature LifetimeDependence -enable-experimental-feature ImportNonPublicCxxMembers;
 
 // Treat memory safety warnings as errors.
-WK_SWIFT_MEMORY_SAFETY_ERROR_FLAGS = -Werror StrictMemorySafety -Werror ForeignReferenceType -Werror RegionIsolation;
+WK_SWIFT_MEMORY_SAFETY_ERROR_FLAGS = -Werror StrictMemorySafety -Werror ForeignReferenceType;
 // rdar://164903024: Work around false positives in some SDK versions.
 WK_SWIFT_MEMORY_SAFETY_ERROR_FLAGS[sdk=*26.3*] = ;
 

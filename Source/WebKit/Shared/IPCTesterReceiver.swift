@@ -31,9 +31,7 @@ final class IPCTesterReceiver {
     // Optional just because of an initialization order issue. Always occupied after initialization finished.
     private var messageForwarder: RefIPCTesterReceiverMessageForwarder?
 
-    @MainActor
-    private var pendingDeferredReply: CheckedContinuation<UInt64, Never>?
-    @MainActor
+    private var deferredReply: CompletionHandlers.IPCTesterReceiver.DeferredReplyMessageCompletionHandler?
     private var deferredReplyArgument: UInt32 = 0
 
     init() {
@@ -47,30 +45,29 @@ final class IPCTesterReceiver {
         return messageForwarder
     }
 
-    @MainActor
     func asyncMessage(
         connection: IPC.Connection,
-        arg1: UInt32
-    ) -> UInt32 {
-        arg1 + 2
+        arg1: UInt32,
+        completionHandler: CompletionHandlers.IPCTesterReceiver.AsyncMessageCompletionHandler
+    ) {
+        completionHandler.pointee(arg1 + 2)
     }
 
-    @MainActor
     func deferredReplyMessage(
         connection: IPC.Connection,
-        arg1: UInt32
-    ) async -> UInt64 {
+        arg1: UInt32,
+        completionHandler: CompletionHandlers.IPCTesterReceiver.DeferredReplyMessageCompletionHandler
+    ) {
         deferredReplyArgument = arg1
-        return await withCheckedContinuation { continuation in
-            pendingDeferredReply = continuation
-        }
+        deferredReply = completionHandler
     }
 
-    @MainActor
     func completeDeferredReply(connection: IPC.Connection, arg1: UInt32) {
-        let continuation = pendingDeferredReply
-        pendingDeferredReply = nil
-        continuation?.resume(returning: UInt64(deferredReplyArgument) + UInt64(arg1) + 2)
+        guard let reply = deferredReply else {
+            return
+        }
+        deferredReply = nil
+        reply.pointee(UInt64(deferredReplyArgument) + UInt64(arg1) + 2)
     }
 }
 

@@ -24,8 +24,7 @@
 
 import WebKit_Internal
 
-// Safety: target is only written in init, assumeIsolated asserts the main thread, and weak loads are atomic in the Swift runtime
-final class TestWithStreamSwiftEnabledByWeakRef: @unchecked Sendable {
+final class TestWithStreamSwiftEnabledByWeakRef {
     private weak var target: TestWithStreamSwiftEnabledBy?
     init(target: TestWithStreamSwiftEnabledBy) {
         self.target = target
@@ -38,31 +37,14 @@ final class TestWithStreamSwiftEnabledByWeakRef: @unchecked Sendable {
 
     @used
     func dispatchSendString(
-        connection: sending IPC.StreamServerConnection,
-        url: sending WTF.String
-    ) {
-        MainActor.assumeIsolated {
-            guard let target else {
-                return
-            }
-            Task.immediateOnMainActor {
-                await Self.runSendString(
-                    target: target,
-                    connection: connection,
-                    url: url
-                )
-            }
-        }
-    }
-
-    @MainActor
-    private static func runSendString(
-        target: TestWithStreamSwiftEnabledBy,
         connection: IPC.StreamServerConnection,
         url: WTF.String
-    ) async {
+    ) {
+        guard let target else {
+            return
+        }
         do {
-            try await mayThrowInvalidMessage(
+            try mayThrowInvalidMessage(
                 target.sendString(
                     connection: connection,
                     url: url
