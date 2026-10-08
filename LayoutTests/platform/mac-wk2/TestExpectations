@@ -2660,3 +2660,5 @@ editing/selection/select-across-readonly-input-5.html [ Failure ]
 # represented in the integer ScrollPosition and gets rounded, which shifts the layout viewport for fixed targets.
 # iOS skips these for the same reason, see platform/ios/TestExpectations.
 webkit.org/b/322505 fast/visual-viewport/zoomed-scroll-into-view-fixed.html [ Skip ]
+
+webkit.org/b/325574 [ Sequoia x86 Debug ] media/modern-media-controls/icon-service/icon-service-bundle-load.html [ Pass Timeout ]
