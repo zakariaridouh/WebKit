@@ -71,7 +71,7 @@ void InputMethodFilter::setContext(WebKitInputMethodContext* context)
     }
 
     m_context = context;
-    m_cursorLocation = { };
+    m_cursorRect = { };
     m_surrounding = { };
     if (!m_context)
         return;
@@ -215,7 +215,7 @@ void InputMethodFilter::notifyFocusedOut()
         return;
 
     cancelComposition();
-    m_cursorLocation = { };
+    m_cursorRect = { };
     m_surrounding = { };
     webkit_input_method_context_notify_focus_out(m_context.get());
 }
@@ -229,14 +229,10 @@ void InputMethodFilter::notifyCursorRect(const IntRect& cursorRect)
     if (!cursorRect.x() && !cursorRect.y() && !cursorRect.width() && !cursorRect.height())
         return;
 
-    // Don't move the window unless the cursor actually moves more than 10
-    // pixels. This prevents us from making the window flash during minor
-    // cursor adjustments.
-    static const int windowMovementThreshold = 10 * 10;
-    if (cursorRect.location().distanceSquaredToPoint(m_cursorLocation) < windowMovementThreshold)
+    if (cursorRect == m_cursorRect)
         return;
 
-    m_cursorLocation = cursorRect.location();
+    m_cursorRect = cursorRect;
     auto translatedRect = platformTransformCursorRectToViewCoordinates(cursorRect);
     webkit_input_method_context_notify_cursor_area(m_context.get(), translatedRect.x(), translatedRect.y(), translatedRect.width(), translatedRect.height());
 }
