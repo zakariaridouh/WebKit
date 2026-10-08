@@ -58,8 +58,11 @@
 #import <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
+#import "Helpers/cocoa/PasteboardUtilities.h"
+#import "Helpers/ios/TestUIMenuBuilder.h"
 #import "TestInputDelegate.h"
 #import "UIKitSPIForTesting.h"
+#import <WebCore/LocalizedStrings.h>
 #import <WebKit/_WKTextInputContext.h>
 #endif
 
@@ -750,6 +753,35 @@ TEST(SiteIsolation, ReadSelectionFromPasteboardInCrossOriginIframe)
 }
 
 #endif // PLATFORM(MAC)
+
+#if PLATFORM(IOS_FAMILY)
+
+TEST(SiteIsolation, CopyLinkWithHighlightInCrossOriginIframe)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { mainFrameTextWithCrossOriginIframe } },
+        { "/iframe"_s, { "<body>subframe text</body>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate, childFrame] = webViewWithFocusedCrossOriginIframe(server);
+    setSelectionInFrame(webView.get(), childFrame.get(), @"getSelection().selectAllChildren(document.body)", _WKSelectionAttributeIsRange);
+
+    RetainPtr menuBuilder = adoptNS([TestUIMenuBuilder new]);
+    [webView buildMenuWithBuilder:menuBuilder];
+    RetainPtr<UIAction> copyLinkWithHighlightAction = [menuBuilder actionWithTitle:WebCore::contextMenuItemTagCopyLinkWithHighlight().createNSString()];
+    ASSERT_NOT_NULL(copyLinkWithHighlightAction.get());
+
+    clearPasteboard();
+    [copyLinkWithHighlightAction performWithSender:nil target:nil];
+    EXPECT_TRUE(Util::waitFor([] {
+        return !!readURLFromPasteboard();
+    }));
+    RetainPtr<NSString> copiedURL = readURLFromPasteboard();
+    EXPECT_TRUE([copiedURL hasPrefix:@"https://webkit.org/iframe#:~:text="]);
+    EXPECT_TRUE([copiedURL containsString:@"subframe"]);
+}
+
+#endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
 
