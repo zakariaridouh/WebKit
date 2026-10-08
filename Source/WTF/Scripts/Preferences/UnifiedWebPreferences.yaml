@@ -6623,7 +6623,7 @@ UseIFCForSVGText:
   status: internal
   humanReadableName: "Use IFC for SVG text"
   humanReadableDescription: "Use IFC for SVG text rendering"
-  defaultValue: false
+  defaultValue: true
 
 UseImageDocumentForSubframePDF:
   type: bool
