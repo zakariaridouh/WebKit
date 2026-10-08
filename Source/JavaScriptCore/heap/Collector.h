@@ -94,6 +94,8 @@ public:
     void addMarkingConstraint(ASCIICString abbreviatedName, ASCIICString name, MarkingConstraintExecutorPair&&,
         ConstraintVolatility, ConstraintConcurrency, ConstraintParallelism);
 
+    void dump(PrintStream&) const;
+
 private:
     class CollectorThread;
     friend class CollectorThread;
@@ -160,6 +162,15 @@ private:
 
     size_t bytesVisited();
     size_t bytesVisitedIn(Heap&);
+    UTF8CString bytesVisitedPerVisitorDump();
+
+    // Summed over the heaps, for logging.
+    size_t capacity();
+    uintptr_t barriersExecuted();
+    size_t mutatorMarkStacksSize();
+
+    void beginSignpost(CollectionScope, GCConductor);
+    void endSignpost();
 
     // The heaps this Collector's collections cover.
     Vector<Heap*, 1> m_heaps;
@@ -230,10 +241,9 @@ private:
     Condition m_collectContinuouslyCondition;
     RefPtr<Thread> m_collectContinuouslyThread { nullptr };
 
-    // Describes the cycle for Instruments. Built at Begin, cleared at End.
+    // Describes the cycle. Built at Begin, cleared at End.
     UTF8CString m_signpostMessage;
-    // Numbers the collections in the signpost.
-    uint64_t m_gcVersion { 0 };
+    uint64_t m_signpostVersion { 0 };
 };
 
 } // namespace JSC

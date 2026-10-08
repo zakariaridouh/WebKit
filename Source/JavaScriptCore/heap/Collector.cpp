@@ -370,21 +370,12 @@ NEVER_INLINE bool Collector::runBeginPhase(GCConductor conn)
         RELEASE_ASSERT(!m_requests.isEmpty());
         m_currentRequest = m_requests.first();
     }
-
-    dataLogIf(Options::logGC(), "[GC<", RawPointer(&heap()), ">: START ", gcConductorShortName(conn), " ", heap().capacity() / 1024, "kb ");
+    dataLogIf(Options::logGC(), "[GC<", *this, ">: START ", gcConductorShortName(conn), " ", capacity() / 1024, "kb ");
 
     m_beforeGC = MonotonicTime::now();
-
     CollectionScope scope = decideCollectionScope();
 
-    ++m_gcVersion;
-    if (Options::useGCSignpost()) [[unlikely]] {
-        StringPrintStream stream;
-        stream.print("GC:(", RawPointer(&heap()), "),mode:(", scope, "),version:(", m_gcVersion, "),conn:(", gcConductorShortName(conn), "),capacity(", heap().capacity() / 1024, "kb)");
-        m_signpostMessage = stream.toUTF8CString();
-        WTFBeginSignpost(this, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.isNull() ? "(nullptr)"_s : m_signpostMessage);
-    }
-
+    beginSignpost(scope, conn);
     beginCollectionInEachHeap(scope, startTime);
 
     if (scope == CollectionScope::Full) {
@@ -465,17 +456,7 @@ NEVER_INLINE bool Collector::runFixpointPhase(GCConductor conn)
 
     SlotVisitor& visitor = *m_collectorSlotVisitor;
 
-    if (Options::logGC()) [[unlikely]] {
-        UncheckedKeyHashMap<ASCIICString, size_t> visitMap;
-        forEachSlotVisitor(
-            [&] (SlotVisitor& visitor) {
-                visitMap.add(visitor.codeName(), visitor.bytesVisited() / 1024);
-            });
-
-        auto perVisitorDump = sortedMapDump(visitMap, std::less<>(), ":"_s, " "_s);
-
-        dataLog("v=", bytesVisited() / 1024, "kb (", perVisitorDump, ") o=", m_opaqueRoots.size(), " b=", heap().m_barriersExecuted, " ");
-    }
+    dataLogIf(Options::logGC(), "v=", bytesVisited() / 1024, "kb (", bytesVisitedPerVisitorDump(), ") o=", m_opaqueRoots.size(), " b=", barriersExecuted(), " ");
 
     if (visitor.didReachTermination()) {
         m_opaqueRoots.deleteOldTables();
@@ -504,7 +485,7 @@ NEVER_INLINE bool Collector::runFixpointPhase(GCConductor conn)
         m_scheduler->didExecuteConstraints();
     }
 
-    dataLogIf(Options::logGC(), visitor.collectorMarkStack().size(), "+", heap().m_mutatorMarkStack->size() + visitor.mutatorMarkStack().size(), " ");
+    dataLogIf(Options::logGC(), visitor.collectorMarkStack().size(), "+", mutatorMarkStacksSize() + visitor.mutatorMarkStack().size(), " ");
 
     {
         ParallelModeEnabler enabler(visitor);
@@ -576,7 +557,7 @@ NEVER_INLINE bool Collector::runConcurrentPhase(GCConductor conn)
 
 NEVER_INLINE bool Collector::runReloopPhase(GCConductor conn)
 {
-    dataLogIf(Options::logGC(), "[GC<", RawPointer(&heap()), ">: ", gcConductorShortName(conn), " ");
+    dataLogIf(Options::logGC(), "[GC<", *this, ">: ", gcConductorShortName(conn), " ");
 
     m_scheduler->didStop();
 
@@ -627,10 +608,7 @@ NEVER_INLINE bool Collector::runEndPhase(GCConductor conn)
     });
 
     dataLogLnIf(Options::logGC(), "GC END!");
-    if (Options::useGCSignpost()) [[unlikely]] {
-        WTFEndSignpost(this, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.isNull() ? "(nullptr)"_s : m_signpostMessage);
-        m_signpostMessage = { };
-    }
+    endSignpost();
 
     forEachHeap([&](Heap& heap) {
         heap.setNeedCollectionEpilogue();
@@ -813,6 +791,16 @@ void Collector::addMarkingConstraint(ASCIICString abbreviatedName, ASCIICString 
     m_constraintSet->add(WTF::move(abbreviatedName), WTF::move(name), WTF::move(executors), volatility, concurrency, parallelism);
 }
 
+void Collector::dump(PrintStream& out) const
+{
+    // A collection of one heap is named by that heap, as in Heap's own log lines. Every set of several
+    // heaps is the set of all heaps.
+    if (m_heaps.size() == 1)
+        out.print(RawPointer(m_heaps.first()));
+    else
+        out.print("all");
+}
+
 size_t Collector::bytesVisitedIn(Heap& heap)
 {
     // FIXME: Have the visitors count bytes per heap and return this heap's count.
@@ -828,6 +816,63 @@ size_t Collector::bytesVisited()
             result += visitor.bytesVisited();
         });
     return result;
+}
+
+UTF8CString Collector::bytesVisitedPerVisitorDump()
+{
+    // Every heap's mutator visitor has the same name, so their counts are summed.
+    UncheckedKeyHashMap<ASCIICString, size_t> visitMap;
+    forEachSlotVisitor(
+        [&](SlotVisitor& visitor) {
+            visitMap.add(visitor.codeName(), 0).iterator->value += visitor.bytesVisited() / 1024;
+        });
+    return sortedMapDump(visitMap, std::less<>(), ":"_s, " "_s);
+}
+
+size_t Collector::capacity()
+{
+    size_t result = 0;
+    forEachHeap([&](Heap& heap) {
+        result += heap.capacity();
+    });
+    return result;
+}
+
+uintptr_t Collector::barriersExecuted()
+{
+    uintptr_t result = 0;
+    forEachHeap([&](Heap& heap) {
+        result += heap.m_barriersExecuted;
+    });
+    return result;
+}
+
+size_t Collector::mutatorMarkStacksSize()
+{
+    size_t result = 0;
+    forEachHeap([&](Heap& heap) {
+        result += heap.m_mutatorMarkStack->size();
+    });
+    return result;
+}
+
+void Collector::beginSignpost(CollectionScope scope, GCConductor conn)
+{
+    ++m_signpostVersion;
+    if (!Options::useGCSignpost()) [[likely]]
+        return;
+    StringPrintStream stream;
+    stream.print("GC:(", *this, "),mode:(", scope, "),version:(", m_signpostVersion, "),conn:(", gcConductorShortName(conn), "),capacity(", capacity() / 1024, "kb)");
+    m_signpostMessage = stream.toUTF8CString();
+    WTFBeginSignpost(this, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.isNull() ? "(nullptr)"_s : m_signpostMessage);
+}
+
+void Collector::endSignpost()
+{
+    if (!Options::useGCSignpost()) [[likely]]
+        return;
+    WTFEndSignpost(this, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.isNull() ? "(nullptr)"_s : m_signpostMessage);
+    m_signpostMessage = { };
 }
 
 void Collector::runTaskInParallel(RefPtr<SharedTask<void(SlotVisitor&)>> task)
