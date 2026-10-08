@@ -350,10 +350,6 @@ WI.CSSManager = class CSSManager extends WI.Object
     set layoutContextTypeChangedMode(layoutContextTypeChangedMode)
     {
         for (let target of WI.targets) {
-            // FIXME <https://webkit.org/b/314148> Use FrameCSSAgent in the frontend.
-            if (target instanceof WI.FrameTarget)
-                continue;
-
             // COMPATIBILITY (iOS 14.5): CSS.setLayoutContextTypeChangedMode did not exist.
             if (target.hasCommand("CSS.setLayoutContextTypeChangedMode"))
                 target.CSSAgent.setLayoutContextTypeChangedMode(layoutContextTypeChangedMode);

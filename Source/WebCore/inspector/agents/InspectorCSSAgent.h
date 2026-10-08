@@ -153,7 +153,10 @@ public:
         SlotAssigned = 1 << 7,
         SlotFilled = 1 << 8,
     };
-    OptionSet<LayoutFlag> layoutFlagsForNode(Node&);
+    static OptionSet<LayoutFlag> layoutFlagsForNode(Node&);
+    static std::optional<LayoutFlag> layoutFlagContextType(RenderObject*);
+    static bool layoutFlagsContainLayoutContextType(OptionSet<LayoutFlag>);
+    static RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> protocolLayoutFlags(OptionSet<LayoutFlag>);
     RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> protocolLayoutFlagsForNode(Node&);
 
     void reset();

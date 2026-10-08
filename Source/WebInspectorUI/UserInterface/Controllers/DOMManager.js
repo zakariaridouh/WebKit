@@ -863,9 +863,9 @@ WI.DOMManager = class DOMManager extends WI.Object
 
     // CSSObserver
 
-    nodeLayoutFlagsChanged(nodeId, layoutFlags)
+    nodeLayoutFlagsChanged(nodeId, layoutFlags, target)
     {
-        let domNode = this._idToDOMNode[nodeId];
+        let domNode = target instanceof WI.FrameTarget ? this.nodeForIdInFrameTarget(nodeId, target) : this._idToDOMNode[nodeId];
         console.assert(domNode instanceof WI.DOMNode, domNode, nodeId);
         if (!domNode)
             return;

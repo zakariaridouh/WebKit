@@ -42,6 +42,7 @@
 #include "CSSStyleSheet.h"
 #include "CSSValueKeywords.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -53,6 +54,7 @@
 #include "FontPlatformData.h"
 #include "FrameDOMAgent.h"
 #include "HTMLHeadElement.h"
+#include "HTMLSlotElement.h"
 #include "HTMLStyleElement.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorHistory.h"
@@ -76,6 +78,7 @@
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
 #include "StyledElement.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -150,6 +153,7 @@ FrameCSSAgent::FrameCSSAgent(FrameAgentContext& context)
     , m_frontendDispatcher(makeUniqueRef<Inspector::CSSFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::CSSBackendDispatcher::create(Ref { context.backendDispatcher }, this))
     , m_inspectedFrame(context.inspectedFrame)
+    , m_nodesWithPendingLayoutFlagsChangeDispatchTimer(*this, &FrameCSSAgent::nodesWithPendingLayoutFlagsChangeDispatchTimerFired)
 {
 }
 
@@ -174,6 +178,12 @@ Inspector::CommandResult<void> FrameCSSAgent::enable()
 
     if (RefPtr document = m_inspectedFrame->document())
         activeStyleSheetsUpdated(*document);
+
+    // The frontend requests the frame's document before enabling CSS, so report flags for nodes it already has.
+    if (CheckedPtr domAgent = agents->persistentFrameDOMAgent()) {
+        for (Ref node : domAgent->boundNodes())
+            nodeHasLayoutFlagsChange(node);
+    }
 
     return { };
 }
@@ -669,10 +679,98 @@ bool FrameCSSAgent::forcePseudoState(const Element& element, CSSSelector::Pseudo
     return m_nodeIdToForcedPseudoState.get(nodeId).contains(pseudoClass);
 }
 
-Inspector::CommandResult<void> FrameCSSAgent::setLayoutContextTypeChangedMode(Inspector::Protocol::CSS::LayoutContextTypeChangedMode)
+Inspector::CommandResult<void> FrameCSSAgent::setLayoutContextTypeChangedMode(Inspector::Protocol::CSS::LayoutContextTypeChangedMode mode)
 {
-    // FIXME: <https://webkit.org/b/316844>: Consider how to deal with global CSS commands.
-    return makeUnexpected("Not supported on frame targets"_s);
+    if (m_layoutContextTypeChangedMode == mode)
+        return { };
+
+    m_layoutContextTypeChangedMode = mode;
+
+    if (mode == Inspector::Protocol::CSS::LayoutContextTypeChangedMode::All) {
+        Ref agents = m_instrumentingAgents.get();
+        CheckedPtr domAgent = agents->persistentFrameDOMAgent();
+        if (!domAgent)
+            return makeUnexpected("DOM domain must be enabled"_s);
+
+        if (RefPtr document = m_inspectedFrame->document()) {
+            for (Ref element : descendantsOfType<Element>(*document)) {
+                if (InspectorCSSAgent::layoutFlagContextType(protect(element->renderer())))
+                    domAgent->pushNodePathToFrontend(element.ptr());
+            }
+        }
+    }
+
+    return { };
+}
+
+void FrameCSSAgent::didChangeRendererForDOMNode(Node& node)
+{
+    nodeHasLayoutFlagsChange(node);
+}
+
+void FrameCSSAgent::didAddEventListener(EventTarget& target)
+{
+    if (RefPtr node = dynamicDowncast<Node>(target))
+        nodeHasLayoutFlagsChange(*node);
+}
+
+void FrameCSSAgent::willRemoveEventListener(EventTarget& target)
+{
+    if (RefPtr node = dynamicDowncast<Node>(target))
+        nodeHasLayoutFlagsChange(*node);
+}
+
+void FrameCSSAgent::didChangeAssignedSlot(Node& slotable)
+{
+    nodeHasLayoutFlagsChange(slotable);
+}
+
+void FrameCSSAgent::didChangeAssignedNodes(Element& slotElement)
+{
+    ASSERT(is<HTMLSlotElement>(slotElement));
+    nodeHasLayoutFlagsChange(slotElement);
+}
+
+RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> FrameCSSAgent::protocolLayoutFlagsForNode(Node& node)
+{
+    auto layoutFlags = InspectorCSSAgent::layoutFlagsForNode(node);
+    if (!layoutFlags.isEmpty())
+        m_lastLayoutFlagsForNode.set(node, layoutFlags);
+    return InspectorCSSAgent::protocolLayoutFlags(layoutFlags);
+}
+
+void FrameCSSAgent::nodeHasLayoutFlagsChange(Node& node)
+{
+    m_nodesWithPendingLayoutFlagsChange.add(node);
+    if (!m_nodesWithPendingLayoutFlagsChangeDispatchTimer.isActive())
+        m_nodesWithPendingLayoutFlagsChangeDispatchTimer.startOneShot(0_s);
+}
+
+void FrameCSSAgent::nodesWithPendingLayoutFlagsChangeDispatchTimerFired()
+{
+    Ref agents = m_instrumentingAgents.get();
+    CheckedPtr domAgent = agents->persistentFrameDOMAgent();
+    if (!domAgent)
+        return;
+
+    for (Ref node : std::exchange(m_nodesWithPendingLayoutFlagsChange, { })) {
+        auto layoutFlags = InspectorCSSAgent::layoutFlagsForNode(node);
+        if (m_lastLayoutFlagsForNode.get(node) == layoutFlags)
+            continue;
+
+        auto nodeId = domAgent->boundNodeId(node.ptr());
+        bool nodeWasPushedToFrontend = false;
+        if (!nodeId && m_layoutContextTypeChangedMode == Inspector::Protocol::CSS::LayoutContextTypeChangedMode::All && InspectorCSSAgent::layoutFlagsContainLayoutContextType(layoutFlags)) {
+            nodeId = domAgent->pushNodePathToFrontend(node.ptr());
+            nodeWasPushedToFrontend = nodeId;
+        }
+        if (!nodeId)
+            continue;
+
+        m_lastLayoutFlagsForNode.set(node, layoutFlags);
+        if (!nodeWasPushedToFrontend)
+            m_frontendDispatcher->nodeLayoutFlagsChanged(nodeId, InspectorCSSAgent::protocolLayoutFlags(layoutFlags));
+    }
 }
 
 void FrameCSSAgent::styleSheetChanged(InspectorStyleSheet* inspectorStyleSheet)
@@ -717,6 +815,11 @@ void FrameCSSAgent::reset()
         document->styleScope().didChangeStyleSheetEnvironment();
     m_nodeIdToForcedPseudoState.clear();
     m_documentsWithForcedPseudoStates.clear();
+
+    m_lastLayoutFlagsForNode.clear();
+    m_nodesWithPendingLayoutFlagsChange.clear();
+    m_nodesWithPendingLayoutFlagsChangeDispatchTimer.stop();
+    m_layoutContextTypeChangedMode = Inspector::Protocol::CSS::LayoutContextTypeChangedMode::Observed;
 }
 
 // A page-level InspectorCSSAgent reports every document in its own process, and the frontend still

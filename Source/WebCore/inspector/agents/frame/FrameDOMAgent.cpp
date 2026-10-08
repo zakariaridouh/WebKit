@@ -43,6 +43,7 @@
 #include "Event.h"
 #include "EventListener.h"
 #include "EventNames.h"
+#include "FrameCSSAgent.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameInlines.h"
 #include "HTMLFrameOwnerElement.h"
@@ -276,6 +277,13 @@ Inspector::Protocol::DOM::NodeId FrameDOMAgent::boundNodeId(const Node* node)
     return m_nodeToId.get(*node);
 }
 
+Vector<Ref<Node>> FrameDOMAgent::boundNodes() const
+{
+    return WTF::compactMap(m_idToNode.values(), [](auto& node) {
+        return RefPtr { node.get() };
+    });
+}
+
 Node* FrameDOMAgent::nodeForId(Inspector::Protocol::DOM::NodeId id)
 {
     if (!m_idToNode.isValidKey(id))
@@ -383,6 +391,11 @@ Ref<Inspector::Protocol::DOM::Node> FrameDOMAgent::buildObjectForNode(Node* node
         auto children = buildArrayForContainerChildren(node, depth);
         if (children->length() > 0)
             value->setChildren(WTF::move(children));
+    }
+
+    if (CheckedPtr cssAgent = Ref { m_instrumentingAgents.get() }->enabledFrameCSSAgent()) {
+        if (auto layoutFlags = cssAgent->protocolLayoutFlagsForNode(*node))
+            value->setLayoutFlags(layoutFlags.releaseNonNull());
     }
 
     if (RefPtr element = dynamicDowncast<Element>(*node)) {

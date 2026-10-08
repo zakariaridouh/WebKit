@@ -65,13 +65,6 @@ WI.DOMNode = class DOMNode extends WI.Object
         this._layoutOverlayShowing = false;
         this._layoutOverlayColorSetting = null;
 
-        // FIXME: <https://webkit.org/b/298980> Workaround for missing FrameCSSAgent.
-        // Without this, CSS.nodeLayoutFlagsChanged is never sent for frame-target nodes,
-        // so the Elements panel hides them as "not rendered." Force Rendered until
-        // FrameCSSAgent exists to provide real layout flags.
-        if (this._owningTarget && payload.nodeType === Node.ELEMENT_NODE)
-            this._layoutFlags = [WI.DOMNode.LayoutFlag.Rendered];
-
         if (this._nodeType === Node.DOCUMENT_NODE)
             this.ownerDocument = this;
         else
@@ -172,17 +165,13 @@ WI.DOMNode = class DOMNode extends WI.Object
             WI.DOMNode.addEventListener(WI.DOMNode.Event.DidFireEvent, this._handleDOMNodeDidFireEvent, this);
 
         // COMPATIBILITY (macOS 13.0, iOS 16.0): CSS.LayoutContextType was renamed/expanded to CSS.LayoutFlag.
-        // Frame-target nodes don't receive layout flags from the backend (no FrameCSSAgent yet).
-        // Their flags were already set above in the constructor workaround — don't overwrite them.
-        if (!frameTarget) {
-            if (!InspectorBackend.Enum.CSS.LayoutFlag) {
-                let layoutFlags = [WI.DOMNode.LayoutFlag.Rendered];
-                if (payload.layoutContextType)
-                    layoutFlags.push(payload.layoutContextType);
-                this.layoutFlags = layoutFlags;
-            } else
-                this.layoutFlags = payload.layoutFlags;
-        }
+        if (!InspectorBackend.Enum.CSS.LayoutFlag) {
+            let layoutFlags = [WI.DOMNode.LayoutFlag.Rendered];
+            if (payload.layoutContextType)
+                layoutFlags.push(payload.layoutContextType);
+            this.layoutFlags = layoutFlags;
+        } else
+            this.layoutFlags = payload.layoutFlags;
     }
 
     // Static

@@ -862,7 +862,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCSSAgent::forcePseudoState(Ins
     return { };
 }
 
-static std::optional<InspectorCSSAgent::LayoutFlag> layoutFlagContextType(RenderObject* renderer)
+std::optional<InspectorCSSAgent::LayoutFlag> InspectorCSSAgent::layoutFlagContextType(RenderObject* renderer)
 {
     if (auto* renderFlexibleBox = dynamicDowncast<RenderFlexibleBox>(renderer)) {
         // Subclasses of RenderFlexibleBox (buttons, selection inputs, etc.) should not be considered flex containers,
@@ -881,7 +881,7 @@ static std::optional<InspectorCSSAgent::LayoutFlag> layoutFlagContextType(Render
     return std::nullopt;
 }
 
-static bool layoutFlagsContainLayoutContextType(OptionSet<InspectorCSSAgent::LayoutFlag> layoutFlags)
+bool InspectorCSSAgent::layoutFlagsContainLayoutContextType(OptionSet<LayoutFlag> layoutFlags)
 {
     return layoutFlags.containsAny({
         InspectorCSSAgent::LayoutFlag::Flex,
@@ -957,7 +957,7 @@ OptionSet<InspectorCSSAgent::LayoutFlag> InspectorCSSAgent::layoutFlagsForNode(N
     return layoutFlags;
 }
 
-static RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> toProtocol(OptionSet<InspectorCSSAgent::LayoutFlag> layoutFlags)
+RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> InspectorCSSAgent::protocolLayoutFlags(OptionSet<LayoutFlag> layoutFlags)
 {
     if (layoutFlags.isEmpty())
         return nullptr;
@@ -989,7 +989,7 @@ RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> Inspect
     auto layoutFlags = layoutFlagsForNode(node);
     if (!layoutFlags.isEmpty())
         m_lastLayoutFlagsForNode.set(node, layoutFlags);
-    return toProtocol(layoutFlags);
+    return protocolLayoutFlags(layoutFlags);
 }
 
 static void pushChildrenNodesToFrontendIfLayoutFlagIsRelevant(InspectorDOMAgent& domAgent, ContainerNode& node)
@@ -997,7 +997,7 @@ static void pushChildrenNodesToFrontendIfLayoutFlagIsRelevant(InspectorDOMAgent&
     for (auto& child : childrenOfType<Element>(node))
         pushChildrenNodesToFrontendIfLayoutFlagIsRelevant(domAgent, child);
     
-    if (layoutFlagContextType(protect(node.renderer())))
+    if (InspectorCSSAgent::layoutFlagContextType(protect(node.renderer())))
         domAgent.pushNodeToFrontend(&node);
 }
 
@@ -1080,7 +1080,7 @@ void InspectorCSSAgent::nodesWithPendingLayoutFlagsChangeDispatchTimerFired()
 
         m_lastLayoutFlagsForNode.set(node, layoutFlags);
         if (!nodeWasPushedToFrontend)
-            m_frontendDispatcher->nodeLayoutFlagsChanged(nodeId, toProtocol(layoutFlags));
+            m_frontendDispatcher->nodeLayoutFlagsChanged(nodeId, protocolLayoutFlags(layoutFlags));
     }
 }
 

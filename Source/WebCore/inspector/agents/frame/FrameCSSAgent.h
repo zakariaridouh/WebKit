@@ -26,13 +26,17 @@
 #pragma once
 
 #include "CSSSelector.h"
+#include "InspectorCSSAgent.h"
 #include "InspectorStyleSheet.h"
 #include "InspectorWebAgentBase.h"
+#include "Timer.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakHashMap.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakRef.h>
 
 namespace Inspector {
@@ -45,6 +49,7 @@ class CSSRule;
 class CSSStyleSheet;
 class Document;
 class Element;
+class EventTarget;
 class LocalFrame;
 class Node;
 class StyledElement;
@@ -99,6 +104,14 @@ public:
     void documentDetached(Document&);
     void mediaQueryResultChanged();
     void activeStyleSheetsUpdated(Document&);
+    void didChangeRendererForDOMNode(Node&);
+    void didAddEventListener(EventTarget&);
+    void willRemoveEventListener(EventTarget&);
+    void didChangeAssignedSlot(Node&);
+    void didChangeAssignedNodes(Element& slotElement);
+
+    // FrameDOMAgent
+    RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> protocolLayoutFlagsForNode(Node&);
 
 private:
     void reset();
@@ -118,6 +131,8 @@ private:
     void setActiveStyleSheetsForDocument(Document&, Vector<CSSStyleSheet*>&);
     InspectorStyleSheet* createInspectorStyleSheetForDocument(Document&);
     Inspector::Protocol::CSS::StyleSheetOrigin detectOrigin(CSSStyleSheet*, Document*);
+    void nodeHasLayoutFlagsChange(Node&);
+    void nodesWithPendingLayoutFlagsChangeDispatchTimerFired();
 
     const UniqueRef<Inspector::CSSFrontendDispatcher> m_frontendDispatcher;
     const Ref<Inspector::CSSBackendDispatcher> m_backendDispatcher;
@@ -131,6 +146,10 @@ private:
     using PseudoClassHashSet = HashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>>;
     HashMap<Inspector::Protocol::DOM::NodeId, PseudoClassHashSet> m_nodeIdToForcedPseudoState;
     HashSet<Document*> m_documentsWithForcedPseudoStates;
+    WeakHashMap<Node, OptionSet<InspectorCSSAgent::LayoutFlag>, WeakPtrImplWithEventTargetData> m_lastLayoutFlagsForNode;
+    WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_nodesWithPendingLayoutFlagsChange;
+    Timer m_nodesWithPendingLayoutFlagsChangeDispatchTimer;
+    Inspector::Protocol::CSS::LayoutContextTypeChangedMode m_layoutContextTypeChangedMode { Inspector::Protocol::CSS::LayoutContextTypeChangedMode::Observed };
     int m_lastStyleSheetId { 1 };
     bool m_creatingViaInspectorStyleSheet { false };
 };

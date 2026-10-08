@@ -164,6 +164,7 @@ public:
     // Public accessors
     Node* nodeForId(Inspector::Protocol::DOM::NodeId);
     Inspector::Protocol::DOM::NodeId boundNodeId(const Node*);
+    Vector<Ref<Node>> boundNodes() const;
     Inspector::Protocol::DOM::NodeId pushNodePathToFrontend(Node*);
     InspectorHistory* history() LIFETIME_BOUND { return m_history.get(); }
     Vector<size_t> flexibleBoxRendererCachedItemsAtStartOfLine(const RenderObject&) const;
