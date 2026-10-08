@@ -7617,6 +7617,10 @@
 		FF945ECC161F7F3600971BC8 /* PseudoElement.h in Headers */ = {isa = PBXBuildFile; fileRef = FF945ECA161F7F3600971BC8 /* PseudoElement.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FFAC30FE184FB145008C4F1E /* TrailingObjects.h in Headers */ = {isa = PBXBuildFile; fileRef = FFAC30FC184FB145008C4F1E /* TrailingObjects.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FFDBC047183D27B700407109 /* LineWidth.h in Headers */ = {isa = PBXBuildFile; fileRef = FFDBC045183D27B700407109 /* LineWidth.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		3DFFF0BE5E7CD9C96015563F /* ProofOfPossessionResponseScope.h in Headers */ = {isa = PBXBuildFile; fileRef = FA9AC1967DFE9A22161E6BD4 /* ProofOfPossessionResponseScope.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		E63623DC255F2C4598C1A823 /* ProofOfPossessionResponse.h in Headers */ = {isa = PBXBuildFile; fileRef = 02235505DADB0D826D6C1822 /* ProofOfPossessionResponse.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		78A65BD34B9DD5A88EE00085 /* ProofOfPossessionRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = 79387C77602AF736321E16F6 /* ProofOfPossessionRequest.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		1EDD4EAC360A2C058339C9A8 /* ProofOfPossessionProviderData.h in Headers */ = {isa = PBXBuildFile; fileRef = 3D6204E043248DA5C91B85A3 /* ProofOfPossessionProviderData.h */; settings = {ATTRIBUTES = (Private, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -24378,6 +24382,11 @@
 		FFEFAB2D183BCC6F00514565 /* MapperCallback.h */ = {isa = PBXFileReference; lastKnownFileType = text; path = MapperCallback.h; sourceTree = "<group>"; };
 		FFEFAB2D183BCC6F00514566 /* InternalObserverMap.h */ = {isa = PBXFileReference; lastKnownFileType = text; path = InternalObserverMap.h; sourceTree = "<group>"; };
 		FFEFAB2D183BCC6F00514567 /* InternalObserverMap.cpp */ = {isa = PBXFileReference; lastKnownFileType = text; path = InternalObserverMap.cpp; sourceTree = "<group>"; };
+		FA9AC1967DFE9A22161E6BD4 /* ProofOfPossessionResponseScope.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProofOfPossessionResponseScope.h; sourceTree = "<group>"; };
+		02235505DADB0D826D6C1822 /* ProofOfPossessionResponse.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProofOfPossessionResponse.h; sourceTree = "<group>"; };
+		79387C77602AF736321E16F6 /* ProofOfPossessionRequest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProofOfPossessionRequest.h; sourceTree = "<group>"; };
+		72F9298930D273388DAE57C3 /* ProofOfPossessionRequest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ProofOfPossessionRequest.cpp; sourceTree = "<group>"; };
+		3D6204E043248DA5C91B85A3 /* ProofOfPossessionProviderData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProofOfPossessionProviderData.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -34393,6 +34402,7 @@
 				93B0A64226CDC57400AA21E4 /* permissions */,
 				1DEF06A2233C32DB00EE228D /* pictureinpicture */,
 				072AE1DE183C0513000A5988 /* plugins */,
+				060ADCE725AA66DEC08F0842 /* proofofpossession */,
 				418FCBB82706E4BD00F96ECA /* push-api */,
 				CDC312E022FCD0B0001204EC /* remoteplayback */,
 				7ABA24E028A5BF44005D4F6D /* reporting */,
@@ -44564,6 +44574,19 @@
 			path = line;
 			sourceTree = "<group>";
 		};
+		060ADCE725AA66DEC08F0842 /* proofofpossession */ = {
+			isa = PBXGroup;
+			children = (
+				3D6204E043248DA5C91B85A3 /* ProofOfPossessionProviderData.h */,
+				72F9298930D273388DAE57C3 /* ProofOfPossessionRequest.cpp */,
+				79387C77602AF736321E16F6 /* ProofOfPossessionRequest.h */,
+				02235505DADB0D826D6C1822 /* ProofOfPossessionResponse.h */,
+				FA9AC1967DFE9A22161E6BD4 /* ProofOfPossessionResponseScope.h */,
+			);
+			name = proofofpossession;
+			path = Modules/proofofpossession;
+			sourceTree = SOURCE_ROOT;
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -48729,6 +48752,10 @@
 				1ACADD791880D91C00D8B71D /* ProgressTrackerClient.h in Headers */,
 				F47A633D1FF6FD500081B3CC /* PromisedAttachmentInfo.h in Headers */,
 				A578F4351DE00EEB003DFC6A /* PromiseRejectionEvent.h in Headers */,
+				1EDD4EAC360A2C058339C9A8 /* ProofOfPossessionProviderData.h in Headers */,
+				78A65BD34B9DD5A88EE00085 /* ProofOfPossessionRequest.h in Headers */,
+				E63623DC255F2C4598C1A823 /* ProofOfPossessionResponse.h in Headers */,
+				3DFFF0BE5E7CD9C96015563F /* ProofOfPossessionResponseScope.h in Headers */,
 				7128CB3F271EE58A00A13DA6 /* PropertyAllowlist.h in Headers */,
 				E4ABABE42361A32900FA4345 /* PropertyCascade.h in Headers */,
 				BC2388912D8C816C00698102 /* PropertySetCSSDescriptors.h in Headers */,
