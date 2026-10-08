@@ -123,7 +123,6 @@
 #include <WebCore/InlineIteratorLineBoxModernPath.h>
 #include <WebCore/InlineIteratorLogicalOrderTraversal.h>
 #include <WebCore/InlineIteratorTextBox.h>
-#include <WebCore/InlineLine.h>
 #include <WebCore/InlineLineTypes.h>
 #include <WebCore/InlineRect.h>
 #include <WebCore/InlineTextItem.h>

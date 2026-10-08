@@ -1813,19 +1813,16 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     layout/formattingContexts/grid/GridLayoutConstraints.h
     layout/formattingContexts/grid/GridTypeAliases.h
 
-    layout/formattingContexts/inline/AbstractLineBuilder.h
     layout/formattingContexts/inline/AvailableLineWidthOverride.h
     layout/formattingContexts/inline/InlineContentAligner.h
     layout/formattingContexts/inline/InlineContentBreaker.h
     layout/formattingContexts/inline/InlineContentCache.h
     layout/formattingContexts/inline/InlineContentConstrainer.h
     layout/formattingContexts/inline/InlineFormattingConstraints.h
-    layout/formattingContexts/inline/InlineFormattingContext.h
     layout/formattingContexts/inline/InlineFormattingUtils.h
     layout/formattingContexts/inline/InlineItem.h
     layout/formattingContexts/inline/InlineLayoutState.h
     layout/formattingContexts/inline/InlineLevelBox.h
-    layout/formattingContexts/inline/InlineLine.h
     layout/formattingContexts/inline/InlineLineBox.h
     layout/formattingContexts/inline/InlineLineBoxBuilder.h
     layout/formattingContexts/inline/InlineLineBoxVerticalAligner.h
@@ -1836,7 +1833,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     layout/formattingContexts/inline/InlineTextItem.h
     layout/formattingContexts/inline/IntrinsicWidthHandler.h
     layout/formattingContexts/inline/LineLayoutResult.h
-    layout/formattingContexts/inline/TextOnlySimpleLineBuilder.h
 
     layout/formattingContexts/inline/display/InlineDisplayBox.h
     layout/formattingContexts/inline/display/InlineDisplayContent.h

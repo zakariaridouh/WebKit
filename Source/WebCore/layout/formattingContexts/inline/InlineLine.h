@@ -25,8 +25,8 @@
 
 #pragma once
 
+#include "InlineFormattingContext.h"
 #include <WebCore/InlineDisplayBox.h>
-#include <WebCore/InlineFormattingContext.h>
 #include <WebCore/InlineItem.h>
 #include <WebCore/InlineLineRun.h>
 #include <WebCore/InlineLineTypes.h>
