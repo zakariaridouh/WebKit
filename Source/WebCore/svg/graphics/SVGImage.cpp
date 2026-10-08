@@ -91,7 +91,7 @@ SVGImage::SVGImage(ImageObserver* observer)
         .fragmentURL = URL { },
         .linkParameters = CSS::Keyword::None { },
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
-        .invertContent { false },
+        .invertContent = false,
 #endif
       }
     , m_startAnimationTimer(*this, &SVGImage::startAnimationTimerFired)
