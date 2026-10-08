@@ -850,6 +850,15 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
     auto containerSize = FloatSize(imageContainerSize());
     auto concreteObjectSize = ConcreteObjectSize::fixed(containerSize);
 
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    auto invertContent = [&] {
+        if (styleImage->drawsSVGImage())
+            return AXCustomColorModeController::shouldInvertSVGImage(*this, *styleImage);
+
+        return AXCustomColorModeController::shouldInvertContentImage(*this, rect.size());
+    };
+#endif
+
     ImagePaintingOptions options = {
         CompositeOperator::SourceOver,
         styleImage->decodingModeForImageDraw(*this, paintInfo),
@@ -858,7 +867,7 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
         settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
         settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No,
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
-        AXCustomColorModeController::shouldInvertContentImage(*this, *styleImage, rect.size()) ? InvertContent::Yes : InvertContent::No,
+        invertContent() ? InvertContent::Yes : InvertContent::No,
 #endif
 #if USE(SKIA)
         StrictImageClamping::No,

@@ -204,12 +204,21 @@ void LegacyRenderSVGImage::paintForeground(PaintInfo& paintInfo)
 
     auto concreteObjectSize = ConcreteObjectSize::fixed(imageRenderingSize);
 
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    auto invertContent = [&] {
+        if (styleImage->drawsSVGImage())
+            return AXCustomColorModeController::shouldInvertSVGImage(*this, *styleImage);
+
+        return AXCustomColorModeController::shouldInvertContentImage(*this, destRect.size());
+    };
+#endif
+
     ImagePaintingOptions options = {
         imageOrientation(),
         styleImage->interpolationQualityForImageDraw(paintInfo.context(), *this, concreteObjectSize, styleImage.get(), LayoutSize(destRect.size())),
         settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
-        AXCustomColorModeController::shouldInvertContentImage(*this, *styleImage, destRect.size()) ? InvertContent::Yes : InvertContent::No,
+        invertContent() ? InvertContent::Yes : InvertContent::No,
 #endif
         settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No,
         settings().hdrAcceleratedApplyGainMapEnabled() ? AllowAcceleratedApplyGainMap::Yes : AllowAcceleratedApplyGainMap::No,
