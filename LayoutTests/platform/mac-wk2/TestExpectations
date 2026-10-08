@@ -2601,7 +2601,6 @@ webkit.org/b/323902 [ x86_64 ] http/tests/webgpu/webgpu/shader/execution/express
 [ GoldenGate Debug ] fast/events/ime-composition-events-001.html [ Failure ]
 [ GoldenGate Debug ] fast/mediastream/video-rotation2.html [ Failure ]
 [ GoldenGate Debug ] fast/mediastream/video-srcObject-fit-fill.html [ Failure ]
-[ GoldenGate Debug ] http/tests/cache/cancel-multiple-post-xhrs.html [ Failure ]
 [ GoldenGate Debug ] http/tests/inspector/network/resource-sizes-network.html [ Failure ]
 [ GoldenGate Debug ] http/tests/ipc/createnewpage-file-body-sandbox-extension.html [ Failure ]
 [ GoldenGate Debug ] http/tests/media/media-source/media-source-video-fit-fill.html [ Failure ]
@@ -2663,5 +2662,5 @@ webkit.org/b/322505 fast/visual-viewport/zoomed-scroll-into-view-fixed.html [ Sk
 webkit.org/b/326746 [ Sequoia x86 Debug ] media/modern-media-controls/icon-service/icon-service-bundle-load.html [ Pass Timeout ]
 webkit.org/b/326748 [ Debug ] media/modern-media-controls/macos-fullscreen-media-controls/macos-fullscreen-rtl-volume-button-no-overlap.html [ Pass Timeout ]
 webkit.org/b/326894 [ Sequoia+ ] http/tests/websocket/tests/hybi/inspector/handshake-error.html [ Pass Failure ]
-
 webkit.org/b/326895 [ Debug ] http/tests/security/registerBlobURL.html
+webkit.org/b/326899 [ Sequoia+ ] http/tests/cache/cancel-multiple-post-xhrs.html [ Pass Failure ]
