@@ -334,7 +334,9 @@ static void writeRenderSVGTextBox(TextStream& ts, const RenderSVGText& text)
     if (!box)
         return;
 
-    ts << ' ' << enclosingIntRect(FloatRect(text.location(), FloatSize(box->logicalWidth(), box->logicalHeight())));
+    // Legacy SVG root boxes store the physical size in the logical dimensions.
+    auto size = text.legacyRootBox() ? FloatSize(box->logicalWidth(), box->logicalHeight()) : box->visualRectIgnoringBlockDirection().size();
+    ts << ' ' << enclosingIntRect(FloatRect(text.location(), size));
     
     // FIXME: Remove this hack, once the new text layout engine is completly landed. We want to preserve the old layout test results for now.
     ts << " contains 1 chunk(s)"_s;

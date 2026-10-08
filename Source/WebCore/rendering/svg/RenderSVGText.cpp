@@ -812,8 +812,7 @@ bool RenderSVGText::hitTestInlineChildren(const HitTestRequest& request, HitTest
             if (!hitsStroke && !hitsFill)
                 continue;
 
-            FloatRect rect = textBox->logicalRectIgnoringInlineDirection();
-            rect.moveBy(accumulatedOffset);
+            auto rect = textBox->calculateBoundariesIncludingSVGTransform();
             if (!locationInContainer.intersects(rect))
                 continue;
 
