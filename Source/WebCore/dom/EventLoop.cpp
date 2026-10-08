@@ -411,7 +411,7 @@ Markable<MonotonicTime> EventLoop::nextTimerFireTime() const
         Markable<MonotonicTime> nextFireTime;
         auto updateResult = [&](auto& tasks) {
             for (auto& timer : tasks) {
-                if (timer.isSuspended())
+                if (timer.isSuspended() || !timer.isActive())
                     continue;
                 if (!nextFireTime || timer.nextFireTime() < *nextFireTime)
                     nextFireTime = timer.nextFireTime();
@@ -466,6 +466,8 @@ void EventLoopTaskGroup::markAsReadyToStop()
 
     for (Ref timer : m_timers)
         timer->stop();
+    if (RefPtr eventLoop = m_eventLoop.get())
+        eventLoop->invalidateNextTimerFireTimeCache();
 
     if (wasSuspended && !isStoppedPermanently()) {
         // We we get marked as ready to stop while suspended (happens when a CachedPage gets destroyed) then the
