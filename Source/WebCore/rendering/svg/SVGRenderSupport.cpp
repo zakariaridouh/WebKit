@@ -584,7 +584,7 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
 
 void SVGRenderSupport::styleChanged(RenderElement& renderer, const Style::ComputedStyle* oldStyle)
 {
-    if (renderer.element() && renderer.element()->isSVGElement() && (!oldStyle || (renderer.style().blendMode() != BlendMode::Normal) != (oldStyle->blendMode() != BlendMode::Normal)))
+    if (renderer.element() && renderer.element()->isSVGElement() && (!oldStyle || (protect(renderer.style())->usedBlendMode() != BlendMode::Normal) != (oldStyle->usedBlendMode() != BlendMode::Normal)))
         SVGRenderSupport::updateMaskedAncestorShouldIsolateBlending(renderer);
 
     bool hadNonScalingStroke = oldStyle && oldStyle->vectorEffect() == VectorEffect::NonScalingStroke;
@@ -633,7 +633,7 @@ bool SVGRenderSupport::isolatesBlending(const Style::ComputedStyle& style)
 {
     return style.hasPositionedMask()
         || !style.filter().isNone()
-        || style.blendMode() != BlendMode::Normal
+        || style.usedBlendMode() != BlendMode::Normal
         || !style.opacity().isOpaque();
 }
 
@@ -647,7 +647,7 @@ void SVGRenderSupport::updateMaskedAncestorShouldIsolateBlending(const RenderEle
         if (!style || !isolatesBlending(*style))
             continue;
         if (style->hasPositionedMask())
-            ancestor->setShouldIsolateBlending(renderer.style().blendMode() != BlendMode::Normal);
+            ancestor->setShouldIsolateBlending(protect(renderer.style())->usedBlendMode() != BlendMode::Normal);
         return;
     }
 }

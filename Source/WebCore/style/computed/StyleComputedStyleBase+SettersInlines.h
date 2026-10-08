@@ -202,6 +202,19 @@ inline void ComputedStyleBase::setUsedPositionOptionIndex(std::optional<size_t> 
     SET_NESTED(m_nonInheritedData, rareData, usedPositionOptionIndex, index);
 }
 
+inline void ComputedStyleBase::setOverrideBlendMode(std::optional<BlendMode> mode)
+{
+    if (compareEqual(mode, m_nonInheritedData->rareData->overrideBlendMode))
+        return;
+
+    if (mode)
+        SET(m_inheritedRareData, isInSubtreeWithBlendMode, *mode != BlendMode::Normal);
+    else
+        SET(m_inheritedRareData, isInSubtreeWithBlendMode, static_cast<BlendMode>(m_nonInheritedData->rareData->blendMode) != BlendMode::Normal);
+
+    m_nonInheritedData.access().rareData.access().overrideBlendMode = WTF::move(mode);
+}
+
 inline void ComputedStyleBase::setDisplayMaintainingOriginalDisplay(Display display)
 {
     m_nonInheritedFlags.display = display.toRaw();

@@ -1648,7 +1648,7 @@ void RenderLayer::updateBlendMode()
             parent()->dirtyAncestorChainHasBlendingDescendants();
     }
 
-    BlendMode newBlendMode = renderer().style().blendMode();
+    BlendMode newBlendMode = renderer().style().usedBlendMode();
     if (newBlendMode != static_cast<BlendMode>(m_blendMode))
         m_blendMode = static_cast<unsigned>(newBlendMode);
 }

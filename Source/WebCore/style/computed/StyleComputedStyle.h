@@ -158,6 +158,7 @@ public:
     WebCore::Color usedScrollbarThumbColor() const;
     WebCore::Color usedScrollbarTrackColor() const;
     WebCore::Color usedAccentColor(OptionSet<StyleColorOptions>) const;
+    BlendMode usedBlendMode() const;
 
     Style::LineWidth NODELETE usedColumnRuleWidth() const;
 
