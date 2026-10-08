@@ -20,14 +20,16 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from webkitcorepy.skill_testing.skill_file import SkillFile
-from webkitcorepy.skill_testing.skill_test import SkillTest
-from webkitcorepy.skill_testing.validators import DirectoryValidator, SkillValidator, ValidationResult
+import os
+import unittest
 
-__all__ = [
-    'DirectoryValidator',
-    'SkillFile',
-    'SkillTest',
-    'SkillValidator',
-    'ValidationResult',
-]
+from webkitcorepy.testing import run_mypy
+
+
+class TypeAnnotations(unittest.TestCase):
+    longMessage = False
+
+    def test_mypy(self):
+        library = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        status, output = run_mypy(os.path.join(library, 'mypy.ini'), 'webkitcorepy')
+        self.assertEqual(status, 0, output)
