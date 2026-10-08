@@ -1481,7 +1481,8 @@ void IDBTransaction::connectionClosedFromServer(const IDBError& error)
 {
     LOG_WITH_STREAM(IndexedDB, stream << "IDBTransaction::connectionClosedFromServer - "_s << error.message());
 
-    m_database->willAbortTransaction(*this);
+    if (m_state != IndexedDB::TransactionState::Aborting)
+        m_database->willAbortTransaction(*this);
     transitionedToFinishing(IndexedDB::TransactionState::Aborting);
 
     // Move operations out of m_pendingTransactionOperationQueue, otherwise we may start handling

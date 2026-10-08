@@ -335,6 +335,13 @@ void IDBDatabase::stop()
     if (!m_closedInServer) {
         m_closedInServer = true;
         m_connectionProxy->databaseConnectionClosed(*this);
+
+        // The server does not reply for transactions on a closed connection.
+        IDBError error { ExceptionCode::UnknownError, "Database connection was closed"_s };
+        for (auto& transaction : copyToVector(m_committingTransactions.values()))
+            transaction->connectionClosedFromServer(error);
+        for (auto& transaction : copyToVector(m_abortingTransactions.values()))
+            transaction->connectionClosedFromServer(error);
     }
 }
 
