@@ -262,11 +262,18 @@ GridLayoutResult GridFormattingContext::layout(GridLayoutConstraints layoutConst
 
     // 3. Given the resulting grid container size, run the Grid Sizing Algorithm to size the grid.
     auto usedTrackSizes = GridSizer { *this, layoutState }.sizeGrid(placedGridItems, columnTrackSizingFunctionsList, rowTrackSizingFunctionsList);
-    auto blockContentSize = [&] {
-        if (layoutConstraints.blockAxis.scenario() == AxisConstraint::FreeSpaceScenario::Definite)
-            return layoutConstraints.blockAxis.availableSpace();
+    auto usedBlockContentSize = [&] {
+        auto& blockAxisConstraint = layoutConstraints.blockAxis;
+        if (blockAxisConstraint.scenario() == AxisConstraint::FreeSpaceScenario::Definite)
+            return blockAxisConstraint.availableSpace();
+
         auto& rowSizes = usedTrackSizes.rowSizes;
-        return std::reduce(rowSizes.begin(), rowSizes.end()) + GridLayoutUtils::totalGuttersSize(rowSizes.size(), layoutState.usedRowGap);
+        auto blockContentSize = std::reduce(rowSizes.begin(), rowSizes.end()) + GridLayoutUtils::totalGuttersSize(rowSizes.size(), layoutState.usedRowGap);
+        if (auto containerMaximumSize = blockAxisConstraint.containerMaximumSize())
+            blockContentSize = std::min(blockContentSize, *containerMaximumSize);
+        if (auto containerMinimumSize = blockAxisConstraint.containerMinimumSize())
+            blockContentSize = std::max(blockContentSize, *containerMinimumSize);
+        return blockContentSize;
     }();
 
     // 4. Lay out the grid items into their respective containing blocks. Each grid area’s
@@ -287,7 +294,7 @@ GridLayoutResult GridFormattingContext::layout(GridLayoutConstraints layoutConst
     };
     mapGridItemLocationsToGrid();
     setGridItemGeometries(gridItemRects);
-    return { WTF::move(usedTrackSizes), WTF::move(gridItemRects), blockContentSize };
+    return { WTF::move(usedTrackSizes), WTF::move(gridItemRects), usedBlockContentSize };
 }
 
 PlacedGridItems GridFormattingContext::constructPlacedGridItems(const GridAreas& gridAreas) const

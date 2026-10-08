@@ -69,7 +69,7 @@ private:
     GridItemBorderBoxRects gridItemBorderBoxRects() const;
 
     void updateGridItemRenderers(const GridItemBorderBoxRects& previousGridItemRects);
-    void updateFormattingContextRootRenderer(LayoutUnit blockContentSize, const Layout::GridItemRects&);
+    void updateFormattingContextRootRenderer(LayoutUnit usedBlockContentSize, const Layout::GridItemRects&);
     void layoutOutOfFlowBoxes(const Layout::UsedTrackSizes&);
     void updateOverflow(RenderGrid&);
     void populateGridPositionsForOutOfFlowLayout(const Layout::UsedTrackSizes&);
