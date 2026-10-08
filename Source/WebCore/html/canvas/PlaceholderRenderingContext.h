@@ -106,6 +106,7 @@ public:
 
 private:
     PlaceholderRenderingContext(HTMLCanvasElement&);
+    bool delegatesDisplay() const final { return true; }
     void setContentsToLayer(GraphicsLayer&) final;
     PixelFormat pixelFormat() const final;
     bool isOpaque() const final { return m_opaque; }

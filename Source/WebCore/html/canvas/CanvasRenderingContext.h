@@ -104,7 +104,7 @@ public:
     // for example because the canvas has no contents or an allocation failed.
     virtual RefPtr<NativeImage> surfaceBufferToNativeImage(SurfaceBuffer) = 0;
     virtual bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const = 0;
-    bool NODELETE delegatesDisplay() const;
+    virtual bool delegatesDisplay() const { return false; }
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate();
     virtual void setContentsToLayer(GraphicsLayer&);
 

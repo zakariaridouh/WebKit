@@ -417,6 +417,7 @@ private:
     void applyShadow();
     bool NODELETE shouldDrawShadows() const;
 
+    bool delegatesDisplay() const final;
     bool needsPreparationForDisplay() const final;
     void prepareForDisplay() final;
 

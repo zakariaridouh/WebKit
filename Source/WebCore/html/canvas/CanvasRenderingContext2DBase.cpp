@@ -2702,6 +2702,15 @@ void CanvasRenderingContext2DBase::prepareForDisplay()
         buffer->prepareForDisplay();
 }
 
+bool CanvasRenderingContext2DBase::delegatesDisplay() const
+{
+#if USE(SKIA)
+    return isAccelerated();
+#else
+    return false;
+#endif
+}
+
 bool CanvasRenderingContext2DBase::needsPreparationForDisplay() const
 {
 #if USE(SKIA)
