@@ -83,8 +83,12 @@ OptionSet<DocumentNeeds> needsLayoutOrStyleRecalc(const Document&);
 
 bool NODELETE isRenderHidden(const Style::ComputedStyle*);
 // Checks both CSS display properties, and CSS visibility properties.
+bool NODELETE isRenderHidden(const RenderObject&);
+// For elements without a renderer, and for comparing styles.
 bool NODELETE isRenderHidden(const Style::ComputedStyle&);
 // Only checks CSS visibility properties.
+bool NODELETE isVisibilityHidden(const RenderObject&);
+// For elements without a renderer, and for comparing styles.
 bool NODELETE isVisibilityHidden(const Style::ComputedStyle&);
 const Style::ComputedStyle* safeStyleFrom(Element&);
 

@@ -138,13 +138,6 @@ inline TransformStyle3D ComputedStyle::usedTransformStyle3D() const
     return transformStyleForcedToFlat() ? TransformStyle3D::Flat : transformStyle3D();
 }
 
-inline Visibility ComputedStyle::usedVisibility() const
-{
-    if (isForceHidden()) [[unlikely]]
-        return Visibility::Hidden;
-    return visibility();
-}
-
 template<BoxSide side> struct UsedBorderWidthsAccessor {
     static Style::LineWidth get(const BorderData& data)
     {

@@ -3529,7 +3529,7 @@ String AccessibilityObject::selectedOptionCheckmark() const
     RefPtr option = dynamicDowncast<HTMLOptionElement>(node());
     CheckedPtr renderer = option ? option->renderer() : nullptr;
     CheckedPtr checkmark = renderer ? renderer->pseudoElementRenderer(PseudoElementType::Checkmark).get() : nullptr;
-    if (!checkmark || checkmark->style().usedVisibility() != Visibility::Visible || !option->selected())
+    if (!checkmark || checkmark->usedStyle().visibility() != UsedVisibility::Visible || !option->selected())
         return { };
 
     StringBuilder glyph;
@@ -4476,7 +4476,7 @@ AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
     if (CheckedPtr style = this->style()) {
         if (style->effectiveInert())
             return AccessibilityObjectInclusion::IgnoreObject;
-        if (isVisibilityHidden(*style)) {
+        if (renderer() ? isVisibilityHidden(*renderer()) : isVisibilityHidden(*style)) {
             isHiddenUntilFound = isHiddenUntilFoundContainer();
             if (!isHiddenUntilFound)
                 return AccessibilityObjectInclusion::IgnoreObject;
@@ -4545,7 +4545,7 @@ bool AccessibilityObject::isWithinHiddenWebArea() const
     CheckedPtr frameRenderer = renderView ? renderView->frameView().frame().ownerRenderer() : nullptr;
     while (frameRenderer) {
         const CheckedRef style = frameRenderer->style();
-        if (isVisibilityHidden(style) || style->effectiveInert())
+        if (isVisibilityHidden(*frameRenderer) || style->effectiveInert())
             return true;
 
         renderView = frameRenderer->document().renderView();

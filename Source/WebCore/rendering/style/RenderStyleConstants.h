@@ -710,6 +710,12 @@ enum class Visibility : uint8_t {
     Collapse
 };
 
+// Outside its table layout effect, collapse is hidden.
+enum class UsedVisibility : bool {
+    Visible,
+    Hidden
+};
+
 enum class CursorType : uint8_t {
     // The following must match the order in CSSValueKeywords.in.
     Auto,
@@ -1275,6 +1281,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, UserDrag);
 WTF::TextStream& operator<<(WTF::TextStream&, UserModify);
 WTF::TextStream& operator<<(WTF::TextStream&, UserSelect);
 WTF::TextStream& operator<<(WTF::TextStream&, Visibility);
+WTF::TextStream& operator<<(WTF::TextStream&, UsedVisibility);
 WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpace);
 WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpaceCollapse);
 WTF::TextStream& operator<<(WTF::TextStream&, WordBreak);

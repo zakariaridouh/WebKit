@@ -35,7 +35,7 @@ inline bool Box::isHorizontal() const { return writingMode().isHorizontal(); }
 
 inline bool Box::isVisible() const
 {
-    return !isFullyTruncated() && style().usedVisibility() == Visibility::Visible;
+    return !isFullyTruncated() && style().visibility() == Visibility::Visible && !style().isForceHidden();
 }
 
 inline bool Box::isVisibleIgnoringUsedVisibility() const

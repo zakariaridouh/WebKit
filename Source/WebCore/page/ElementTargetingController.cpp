@@ -63,6 +63,7 @@
 #include "Region.h"
 #include "RenderBoxInlines.h"
 #include "RenderDescendantIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderView.h"
 #include "ShadowRoot.h"
 #include "SimpleRange.h"
@@ -181,12 +182,12 @@ static inline bool elementAndAncestorsAreOnlyRenderedChildren(const Element& ele
         return false;
 
     for (auto& ancestor : ancestorsOfType<RenderElement>(*renderer)) {
-        if (ancestor.style().usedVisibility() == Visibility::Hidden)
+        if (ancestor.usedStyle().visibility() == UsedVisibility::Hidden)
             continue;
 
         unsigned numberOfVisibleChildren = 0;
         for (auto& child : childrenOfType<RenderObject>(ancestor)) {
-            if (auto* renderElement = dynamicDowncast<RenderElement>(child); renderElement && renderElement->style().usedVisibility() == Visibility::Hidden)
+            if (auto* renderElement = dynamicDowncast<RenderElement>(child); renderElement && renderElement->usedStyle().visibility() == UsedVisibility::Hidden)
                 continue;
 
             if (++numberOfVisibleChildren >= 2)

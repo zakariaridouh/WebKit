@@ -44,6 +44,7 @@
 #include "LocalizedStrings.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
+#include "RenderElementInlines.h"
 #include "RenderObjectInlines.h"
 #include "RenderSearchField.h"
 #include "ScriptDisallowedScope.h"
@@ -128,7 +129,7 @@ PopupMenuStyle SearchInputType::menuStyle() const
         style->visitedDependentBackgroundColorApplyingColorFilter(),
         style->fontCascade(),
         nullString(),
-        style->usedVisibility() == Visibility::Visible,
+        renderer ? renderer->usedStyle().visibility() == UsedVisibility::Visible : style->visibility() == Visibility::Visible,
         style->display() == Style::DisplayType::None,
         true,
         style->writingMode().bidiDirection(),

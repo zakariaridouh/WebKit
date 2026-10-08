@@ -53,6 +53,7 @@
 #import "RenderBoxInlines.h"
 #import "RenderBoxModelObjectInlines.h"
 #import "RenderButton.h"
+#import "RenderElementInlines.h"
 #import "RenderMenuList.h"
 #import "RenderMeter.h"
 #import "RenderObjectInlines.h"
@@ -3865,7 +3866,7 @@ static bool hasVisibleSliderThumbDescendant(const RenderElement& box)
     CheckedRef style = renderBox->style();
     const auto usedAppearance = style->usedAppearance();
     const auto isSliderThumb = usedAppearance == StyleAppearance::SliderThumbHorizontal || usedAppearance == StyleAppearance::SliderThumbVertical;
-    if (isSliderThumb && style->usedVisibility() == Visibility::Visible)
+    if (isSliderThumb && renderBox->usedStyle().visibility() == UsedVisibility::Visible)
         return true;
 
     return false;

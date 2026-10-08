@@ -38,6 +38,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
@@ -1673,7 +1674,7 @@ bool AnchorPositionEvaluator::isDefaultAnchorInvisibleOrClippedByInterveningBoxe
     if (!defaultAnchor)
         return false;
 
-    if (defaultAnchor->style().usedVisibility() == Visibility::Hidden)
+    if (defaultAnchor->usedStyle().visibility() == UsedVisibility::Hidden)
         return true;
 
     CheckedPtr anchorBox = dynamicDowncast<RenderBox>(*defaultAnchor);

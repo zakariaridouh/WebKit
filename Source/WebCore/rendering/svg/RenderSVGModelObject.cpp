@@ -258,7 +258,7 @@ void RenderSVGModelObject::styleDidChange(Style::Difference diff, const Style::C
     // FIXME: [LBSE] Upstream RenderElement changes
     // bool hasSVGMask = hasSVGMask();
     bool hasSVGMask = false;
-    if (hasSVGMask && hasLayer() && style().usedVisibility() != Visibility::Visible)
+    if (hasSVGMask && hasLayer() && usedStyle().visibility() != UsedVisibility::Visible)
         layer()->setHasVisibleContent();
 }
 

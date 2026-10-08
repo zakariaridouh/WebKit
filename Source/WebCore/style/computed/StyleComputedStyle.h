@@ -151,7 +151,6 @@ public:
     WebCore::Color usedStrokeColor() const;
     WebCore::Color usedStrokeColorApplyingColorFilter() const;
     inline PointerEvents usedPointerEvents() const;
-    inline Visibility usedVisibility() const;
     inline UserModify usedUserModify() const;
     WEBCORE_EXPORT UserSelect NODELETE usedUserSelect() const;
     Style::Contain usedContain() const;

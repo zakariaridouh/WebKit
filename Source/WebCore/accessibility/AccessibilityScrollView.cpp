@@ -46,6 +46,7 @@
 #include "Page.h"
 #include "RemoteFrameView.h"
 #include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderObjectStyle.h"
 #include "Widget.h"
 
@@ -660,7 +661,7 @@ bool AccessibilityScrollView::isHostingFrameRenderHidden() const
 
     RefPtr frameOwner = frameOwnerElement();
     if (auto* renderer = frameOwner ? frameOwner->renderer() : nullptr)
-        return WebCore::isRenderHidden(protect(renderer->style()).get());
+        return WebCore::isRenderHidden(*renderer);
 
     return false;
 }

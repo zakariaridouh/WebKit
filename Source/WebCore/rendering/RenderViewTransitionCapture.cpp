@@ -169,7 +169,7 @@ void RenderViewTransitionCapture::styleDidChange(Style::Difference diff, const S
 {
     RenderReplaced::styleDidChange(diff, oldStyle);
 
-    if (oldStyle && oldStyle->usedVisibility() != style().usedVisibility() && hasLayer())
+    if (oldStyle && (oldStyle->visibility() != style().visibility() || oldStyle->isForceHidden() != style().isForceHidden()) && hasLayer())
         layer()->setNeedsCompositingLayerConnection();
 }
 

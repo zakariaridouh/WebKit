@@ -29,6 +29,7 @@
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
 #include "LayoutRepainter.h"
+#include "RenderElementInlines.h"
 #include "RenderElementStyleInlines.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
@@ -144,7 +145,7 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint& paintOff
         return;
 
     // Children can override with "visibility: visible", per SVG spec.
-    if (paintInfo.phase != PaintPhase::Foreground && style().usedVisibility() == Visibility::Hidden)
+    if (paintInfo.phase != PaintPhase::Foreground && usedStyle().visibility() == UsedVisibility::Hidden)
         return;
 
     if (paintInfo.phase == PaintPhase::ClippingMask) {

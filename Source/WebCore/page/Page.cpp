@@ -5812,7 +5812,7 @@ void Page::updateFixedContainerEdges(BoxSideSet sides)
             if (!renderer)
                 continue;
 
-            if (renderer->style().usedVisibility() != Visibility::Visible
+            if (renderer->usedStyle().visibility() != UsedVisibility::Visible
                 && (side != BoxSide::Top || !lastElement->hasTagName(HTMLNames::headerTag))
                 && (side != BoxSide::Bottom || !lastElement->hasTagName(HTMLNames::footerTag)))
                 continue;

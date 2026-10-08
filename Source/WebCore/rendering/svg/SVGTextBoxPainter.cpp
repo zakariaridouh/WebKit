@@ -31,6 +31,7 @@
 #include "GraphicsContextStateSaver.h"
 #include "LegacyRenderSVGResourceSolidColor.h"
 #include "OutlinePainter.h"
+#include "RenderElementInlines.h"
 #include "RenderInline.h"
 #include "RenderObjectDocument.h"
 #include "RenderSVGInlineText.h"
@@ -115,7 +116,7 @@ void SVGTextBoxPainter<TextBoxPath>::paintSelectionBackground()
     ASSERT(m_paintInfo.shouldPaintWithinRoot(renderer()));
     ASSERT(m_paintInfo.phase == PaintPhase::Foreground || m_paintInfo.phase == PaintPhase::Selection);
 
-    if (renderer().style().usedVisibility() != Visibility::Visible)
+    if (renderer().usedStyle().visibility() != UsedVisibility::Visible)
         return;
 
     auto& parentRenderer = this->parentRenderer();
@@ -168,7 +169,7 @@ void SVGTextBoxPainter<TextBoxPath>::paint()
     ASSERT(m_paintInfo.shouldPaintWithinRoot(renderer()));
     ASSERT(m_paintInfo.phase == PaintPhase::Foreground || m_paintInfo.phase == PaintPhase::Selection);
 
-    if (renderer().style().usedVisibility() != Visibility::Visible)
+    if (renderer().usedStyle().visibility() != UsedVisibility::Visible)
         return;
 
     // Note: We're explicitly not supporting composition & custom underlines and custom highlighters - unlike LegacyInlineTextBox.
@@ -446,7 +447,7 @@ void SVGTextBoxPainter<TextBoxPath>::paintDecoration(Style::TextDecorationLine d
 
     const Style::ComputedStyle& decorationStyle = decorationRenderer->style();
 
-    if (decorationStyle.usedVisibility() == Visibility::Hidden)
+    if (decorationRenderer->usedStyle().visibility() == UsedVisibility::Hidden)
         return;
 
     for (auto type : renderer().style().paintOrder()) {

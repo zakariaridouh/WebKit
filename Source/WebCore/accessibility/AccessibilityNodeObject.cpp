@@ -3950,7 +3950,7 @@ String AccessibilityNodeObject::textUnderElement(TextUnderElementMode mode) cons
     bool isDisplayNone = false;
     if (CheckedPtr style = this->style()) {
         isDisplayNone = style->display() == Style::DisplayType::None;
-        mode.inHiddenSubtree = WebCore::isRenderHidden(*style);
+        mode.inHiddenSubtree = renderer() ? WebCore::isRenderHidden(*renderer()) : WebCore::isRenderHidden(*style);
     } else {
         // If there is no style for something, assume it's hidden.
         mode.inHiddenSubtree = true;
@@ -4527,7 +4527,7 @@ static String accessibleNameForNode(Node& node, Node* labelledbyNode, DescendInt
             for (const auto& assignedNode : *assignedNodes) {
                 // Skip hidden assigned nodes, e.g. those with display:none.
                 RefPtr assignedElement = dynamicDowncast<Element>(assignedNode.get());
-                if (assignedElement && isRenderHidden(safeStyleFrom(*assignedElement)))
+                if (assignedElement && (assignedElement->renderer() ? isRenderHidden(*assignedElement->renderer()) : isRenderHidden(safeStyleFrom(*assignedElement))))
                     continue;
                 appendNameToStringBuilder(builder, accessibleNameForNode(*assignedNode, nullptr, descendIntoContainers));
             }

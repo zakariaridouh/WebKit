@@ -105,6 +105,7 @@
 #include "RenderAncestorIterator.h"
 #include "RenderBoxInlines.h"
 #include "RenderDescendantIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderElementStyleInlines.h"
 #include "RenderFlexibleBox.h"
 #include "RenderFragmentContainer.h"
@@ -403,7 +404,7 @@ RenderLayer::RenderLayer(RenderLayerModelObject& renderer)
 
     if (needsVisibleContentStatusUpdate) {
         m_visibleContentStatusDirty = false;
-        m_hasVisibleContent = renderer.style().usedVisibility() == Visibility::Visible;
+        m_hasVisibleContent = renderer.usedStyle().visibility() == UsedVisibility::Visible;
     }
 }
 
@@ -529,7 +530,7 @@ void RenderLayer::removeChild(RenderLayer& oldChild)
 
     if (oldChild.hasBlendMode() || (oldChild.hasNotIsolatedBlendingDescendants() && !oldChild.isolatesBlending()))
         dirtyAncestorChainHasBlendingDescendants();
-    if (renderer().style().usedVisibility() != Visibility::Visible)
+    if (renderer().usedStyle().visibility() != UsedVisibility::Visible)
         dirtyVisibleContentStatus();
 }
 
@@ -1971,7 +1972,7 @@ void RenderLayer::dirtyVisibleContentStatusIncludingAncestors()
         return;
 
     for (auto* ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
-        if (ancestor->renderer().style().usedVisibility() != Visibility::Visible)
+        if (ancestor->renderer().usedStyle().visibility() != UsedVisibility::Visible)
             ancestor->dirtyVisibleContentStatus();
         if (ancestor->isSelfPaintingLayer())
             break;
@@ -2077,7 +2078,7 @@ bool RenderLayer::computeHasVisibleContent() const
     if (renderer().isSkippedContent())
         return false;
 
-    if (renderer().style().usedVisibility() == Visibility::Visible)
+    if (renderer().usedStyle().visibility() == UsedVisibility::Visible)
         return true;
 
     if (m_svgData && !renderer().style().filter().isNone())
@@ -2094,7 +2095,7 @@ bool RenderLayer::computeHasVisibleContent() const
     const auto* renderer = this->renderer().firstChild();
     while (renderer) {
         if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(renderer); renderElement && !renderElement->hasSelfPaintingLayer()) {
-            if (renderElement->style().usedVisibility() == Visibility::Visible)
+            if (renderElement->usedStyle().visibility() == UsedVisibility::Visible)
                 return true;
             if (auto* firstChild = renderElement->firstChild()) {
                 renderer = firstChild;
@@ -5947,7 +5948,7 @@ bool RenderLayer::backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect)
 
     // We can't use hasVisibleContent(), because that will be true if our renderer is hidden, but some child
     // is visible and that child doesn't cover the entire rect.
-    if (renderer().style().usedVisibility() != Visibility::Visible)
+    if (renderer().usedStyle().visibility() != UsedVisibility::Visible)
         return false;
 
     if (shouldPaintWithFilters() && renderer().style().filter().hasFilterThatAffectsOpacity())
@@ -6335,7 +6336,7 @@ void RenderLayer::styleChanged(Style::Difference diff, const Style::ComputedStyl
     // likely be folded along with the rest.
     if (oldStyle) {
         auto& newStyle = renderer().style();
-        bool visibilityChanged = oldStyle->usedVisibility() != newStyle.usedVisibility();
+        bool visibilityChanged = (oldStyle->visibility() != newStyle.visibility() || oldStyle->isForceHidden() != newStyle.isForceHidden());
         if (oldStyle->usedZIndex() != newStyle.usedZIndex() || oldStyle->usedContentVisibility() != newStyle.usedContentVisibility() || visibilityChanged) {
             dirtyStackingContextZOrderLists();
             if (isStackingContext())

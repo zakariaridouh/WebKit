@@ -34,6 +34,11 @@
 namespace WebCore {
 namespace Style {
 
+static Visibility visibilityIncludingForceHidden(const ComputedStyle& style)
+{
+    return style.isForceHidden() ? Visibility::Hidden : style.visibility();
+}
+
 class DifferenceFunctions final {
 public:
     // MARK: DifferenceResult::Layout
@@ -535,7 +540,7 @@ public:
             || a.nonInheritedFlags().overflowY != b.nonInheritedFlags().overflowY)
             return true;
 
-        if ((a.usedVisibility() == Visibility::Collapse) != (b.usedVisibility() == Visibility::Collapse))
+        if ((visibilityIncludingForceHidden(a) == Visibility::Collapse) != (visibilityIncludingForceHidden(b) == Visibility::Collapse))
             return true;
 
         bool aHasFirstLineStyle = a.hasPseudoStyle(PseudoElementType::FirstLine);
@@ -661,7 +666,7 @@ public:
 
     static bool NODELETE requiresPainting(const Style::ComputedStyle& style)
     {
-        if (style.usedVisibility() == Visibility::Hidden)
+        if (visibilityIncludingForceHidden(style) == Visibility::Hidden)
             return false;
         if (style.opacity().isTransparent())
             return false;
@@ -858,7 +863,7 @@ public:
         if (!requiresPainting(a) && !requiresPainting(b))
             return false;
 
-        if (a.usedVisibility() != b.usedVisibility()
+        if (visibilityIncludingForceHidden(a) != visibilityIncludingForceHidden(b)
             || a.inheritedFlags().printColorAdjust != b.inheritedFlags().printColorAdjust
             || a.inheritedFlags().insideLink != b.inheritedFlags().insideLink)
             return true;

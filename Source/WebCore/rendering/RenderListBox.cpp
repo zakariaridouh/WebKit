@@ -53,6 +53,7 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderElementStyleInlines.h"
 #include "RenderFlexibleBox.h"
 #include "RenderLayer.h"
@@ -401,7 +402,7 @@ void RenderListBox::paintItem(PaintInfo& paintInfo, const LayoutPoint& paintOffs
 
 void RenderListBox::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (style().usedVisibility() != Visibility::Visible)
+    if (usedStyle().visibility() != UsedVisibility::Visible)
         return;
     
     if (paintInfo.phase == PaintPhase::Foreground) {
@@ -492,7 +493,7 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     if (!itemStyle)
         return;
 
-    if (itemStyle->usedVisibility() == Visibility::Hidden)
+    if ((itemStyle->visibility() == Visibility::Hidden || itemStyle->isForceHidden()))
         return;
 
     String itemText;
@@ -566,7 +567,7 @@ void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint&
         backColor = itemStyle->visitedDependentBackgroundColorApplyingColorFilter();
 
     // Draw the background for this list box item
-    if (itemStyle->usedVisibility() == Visibility::Hidden)
+    if ((itemStyle->visibility() == Visibility::Hidden || itemStyle->isForceHidden()))
         return;
 
     LayoutRect itemRect = itemBoundingBoxRect(paintOffset, listIndex);

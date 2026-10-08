@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <WebCore/StyleComputedStyle+GettersInlines.h>
 #include <WebCore/UsedStyleProperties.h>
 
 namespace WebCore {
@@ -55,6 +56,15 @@ public:
     // left/right using the containing block's writing mode.
     UsedFloat floating() const;
     UsedClear clear() const;
+
+    inline UsedVisibility visibility() const;
 };
+
+inline UsedVisibility UsedStyle::visibility() const
+{
+    if (m_renderer->isHiddenByLineClamp() || computedStyle().isForceHidden()) [[unlikely]]
+        return UsedVisibility::Hidden;
+    return computedStyle().visibility() == Visibility::Visible ? UsedVisibility::Visible : UsedVisibility::Hidden;
+}
 
 } // namespace WebCore

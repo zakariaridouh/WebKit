@@ -36,6 +36,7 @@
 #include "MathMLFractionElement.h"
 #include "OpenTypeMathData.h"
 #include "PaintInfo.h"
+#include "RenderElementInlines.h"
 #include "RenderMathMLBlockInlines.h"
 #include "RenderObjectInlines.h"
 #include <cmath>
@@ -295,7 +296,7 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
 {
     RenderMathMLRow::paint(info, paintOffset);
     LayoutUnit thickness = lineThickness();
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible || !isValid() || !thickness)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || usedStyle().visibility() != UsedVisibility::Visible || !isValid() || !thickness)
         return;
 
     LayoutUnit borderAndPaddingLeft = writingMode().isBidiLTR() ? borderAndPaddingStart() : borderAndPaddingEnd();

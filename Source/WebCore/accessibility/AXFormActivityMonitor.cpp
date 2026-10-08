@@ -44,6 +44,7 @@
 #include "HTMLNames.h"
 #include "HTMLSelectElement.h"
 #include "Logging.h"
+#include "RenderElementInlines.h"
 #include "RenderText.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include "ValidatedFormListedElement.h"
@@ -456,7 +457,7 @@ static std::optional<Color> renderedTextColor(Element& message)
             continue;
 
         CheckedPtr renderer = text->renderer();
-        if (!renderer || isVisibilityHidden(renderer->style()))
+        if (!renderer || isVisibilityHidden(*renderer))
             continue;
 
         auto color = protect(renderer->style())->visitedDependentColor();

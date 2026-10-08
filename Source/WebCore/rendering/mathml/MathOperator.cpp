@@ -32,6 +32,7 @@
 #include "FontCascadeInlines.h"
 #include "FontInlines.h"
 #include "StyleComputedStyle+GettersInlines.h"
+#include "UsedStyle.h"
 #include <wtf/StdLibExtras.h>
 
 static const unsigned kRadicalOperator = 0x221A;
@@ -712,10 +713,12 @@ void MathOperator::paintHorizontalGlyphAssembly(const Style::ComputedStyle& styl
         fillWithHorizontalExtensionGlyph(style, info, LayoutPoint(leftGlyphPaintRect.maxX(), baselineY), LayoutPoint(rightGlyphPaintRect.x(), baselineY));
 }
 
-void MathOperator::paint(const Style::ComputedStyle& style, PaintInfo& info, const LayoutPoint& paintOffset, float deviceScaleFactor)
+void MathOperator::paint(const UsedStyle& usedStyle, PaintInfo& info, const LayoutPoint& paintOffset, float deviceScaleFactor)
 {
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style.usedVisibility() != Visibility::Visible)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || usedStyle.visibility() != UsedVisibility::Visible)
         return;
+
+    auto& style = usedStyle.computedStyle();
 
     // Make a copy of the PaintInfo because applyTransform will modify its rect.
     PaintInfo paintInfo(info);

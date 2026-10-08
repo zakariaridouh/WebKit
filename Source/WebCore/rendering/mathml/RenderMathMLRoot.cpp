@@ -38,6 +38,7 @@
 #include "MathMLNames.h"
 #include "MathMLRootElement.h"
 #include "PaintInfo.h"
+#include "RenderElementInlines.h"
 #include "RenderIterator.h"
 #include "RenderMathMLBlockInlines.h"
 #include "RenderMathMLMenclose.h"
@@ -307,7 +308,7 @@ void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 {
     RenderMathMLRow::paint(info, paintOffset);
 
-    if (info.context().paintingDisabled() || style().usedVisibility() != Visibility::Visible || !isValid())
+    if (info.context().paintingDisabled() || usedStyle().visibility() != UsedVisibility::Visible || !isValid())
         return;
 
     // We draw the radical operator.
@@ -319,7 +320,7 @@ void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
         horizontalOffset += horizontal.kernBeforeDegree + indexWidth + horizontal.kernAfterDegree;
     }
     radicalOperatorTopLeft.move(mirrorIfNeeded(horizontalOffset, m_radicalOperator.width()), m_radicalOperatorTop + borderAndPaddingBefore());
-    m_radicalOperator.paint(style(), info, radicalOperatorTopLeft, protect(document())->deviceScaleFactor());
+    m_radicalOperator.paint(usedStyle(), info, radicalOperatorTopLeft, protect(document())->deviceScaleFactor());
 
     // We draw the radical line.
     LayoutUnit ruleThickness = verticalParameters().ruleThickness;

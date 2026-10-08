@@ -36,6 +36,8 @@
 
 namespace WebCore {
 
+class UsedStyle;
+
 namespace Style {
 class ComputedStyle;
 }
@@ -56,7 +58,7 @@ public:
 
     void stretchTo(const Style::ComputedStyle&, LayoutUnit width);
 
-    void paint(const Style::ComputedStyle&, PaintInfo&, const LayoutPoint&, float deviceScaleFactor);
+    void paint(const UsedStyle&, PaintInfo&, const LayoutPoint&, float deviceScaleFactor);
 
 private:
     struct GlyphAssemblyData {

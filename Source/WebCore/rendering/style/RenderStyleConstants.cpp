@@ -1334,6 +1334,15 @@ TextStream& operator<<(TextStream& ts, Visibility visibility)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, UsedVisibility visibility)
+{
+    switch (visibility) {
+    case UsedVisibility::Visible: ts << "visible"_s; break;
+    case UsedVisibility::Hidden: ts << "hidden"_s; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, WhiteSpace whiteSpace)
 {
     switch (whiteSpace) {

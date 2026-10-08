@@ -9526,6 +9526,7 @@
                 "computed-style-storage-container": "struct",
                 "computed-style-storage-kind": "enum",
                 "computed-style-type": "Visibility",
+                "used-style": "custom",
                 "parser-grammar": "<<values>>",
                 "fast-path-inherited": true
             },

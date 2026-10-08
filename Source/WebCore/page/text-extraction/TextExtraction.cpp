@@ -518,7 +518,7 @@ static inline std::optional<FloatRect> visibleAssociatedLabelBounds(HTMLElement&
         if (!renderer)
             continue;
 
-        if (renderer->style().usedVisibility() == Visibility::Hidden)
+        if (renderer->usedStyle().visibility() == UsedVisibility::Hidden)
             continue;
 
         if (renderer->style().opacity() < minOpacityToConsiderVisible)
@@ -537,7 +537,7 @@ static bool hasVisuallyDistinctStyling(const Style::ComputedStyle&);
 static inline bool paintsVisibleContent(const RenderObject& renderer)
 {
     CheckedRef style = renderer.style();
-    if (style->usedVisibility() != Visibility::Visible)
+    if (renderer.usedStyle().visibility() != UsedVisibility::Visible)
         return false;
 
     if (style->opacity() < minOpacityToConsiderVisible)
@@ -717,7 +717,7 @@ static inline Variant<SkipExtraction, ItemData, URL, Editable> extractItemData(N
         }
     }
 
-    if (renderer->style().usedVisibility() == Visibility::Hidden)
+    if (renderer->usedStyle().visibility() == UsedVisibility::Hidden)
         return { SkipExtraction::Self };
 
     if (RefPtr textNode = dynamicDowncast<Text>(node)) {
@@ -1938,7 +1938,7 @@ static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets,
     appendReplacedContentOrBackgroundImage(*renderer);
 
     for (CheckedRef descendant : descendantsOfType<RenderObject>(*renderer)) {
-        if (descendant->style().usedVisibility() == Visibility::Hidden)
+        if (descendant->usedStyle().visibility() == UsedVisibility::Hidden)
             continue;
 
         if (descendant->style().opacity() < minOpacityToConsiderVisible)
@@ -2382,7 +2382,7 @@ static std::expected<ResolvedMouseTarget, String> resolveMouseTarget(Node& targe
         if (!renderer)
             return makeUnexpected("Target is not rendered (possibly display: none) or uid may be stale"_s);
 
-        if (renderer->style().usedVisibility() != Visibility::Visible)
+        if (renderer->usedStyle().visibility() != UsedVisibility::Visible)
             return makeUnexpected("Target is hidden via CSS visibility"_s);
     }
 

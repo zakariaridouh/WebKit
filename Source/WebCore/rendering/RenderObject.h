@@ -84,6 +84,7 @@ class SelectionGeometry;
 class Settings;
 class TransformState;
 class TreeScope;
+class UsedStyle;
 class VisiblePosition;
 class WeakPtrImplWithEventTargetData;
 
@@ -871,6 +872,7 @@ public:
     WEBCORE_EXPORT LayoutRect subtreePaintRootRect(LayoutRect& topLevelRect, RespectTransforms = RespectTransforms::No);
 
     inline const Style::ComputedStyle& style() const LIFETIME_BOUND; // Defined in RenderObjectStyle.h.
+    inline UsedStyle usedStyle() const LIFETIME_BOUND; // Defined in RenderElementInlines.h.
     inline CheckedRef<const Style::ComputedStyle> firstLineStyle() const LIFETIME_BOUND;
     inline WritingMode writingMode() const; // Defined in RenderObjectStyle.h.
     // writingMode().isHorizontal() is cached by isHorizontalWritingMode() above.

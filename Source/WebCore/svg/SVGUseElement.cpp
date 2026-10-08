@@ -37,6 +37,7 @@
 #include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGTransformableContainer.h"
 #include "NodeName.h"
+#include "RenderElementInlines.h"
 #include "RenderSVGTransformableContainer.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementTypeHelpers.h"
@@ -356,7 +357,7 @@ RefPtr<SVGGraphicsElement> SVGUseElement::visibleTargetGraphicsElement() const
         return nullptr;
 
     CheckedRef style = renderer->style();
-    if (style->display() == Style::DisplayType::None || style->usedVisibility() != Visibility::Visible)
+    if (style->display() == Style::DisplayType::None || renderer->usedStyle().visibility() != UsedVisibility::Visible)
         return nullptr;
 
     // Spec: "If a <use> element is a child of a clipPath element, it must directly
