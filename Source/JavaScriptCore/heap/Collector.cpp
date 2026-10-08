@@ -757,12 +757,10 @@ NEVER_INLINE void Collector::resumeThePeriphery()
 bool Collector::suspendCompilerThreads()
 {
 #if ENABLE(JIT)
-    // We ensure the worklists so that it's not possible for the mutator to start a new worklist
-    // after we have suspended the ones that he had started before. That's not very expensive since
-    // the worklists use AutomaticThreads anyway.
     if (!Options::useJIT())
         return false;
-    if (!heap().vm().numberOfActiveJITPlans())
+    // The worklist is process-wide, so one heap's active plans are enough to need every compiler thread suspended.
+    if (std::ranges::none_of(m_heaps, [](Heap* heap) { return heap->vm().numberOfActiveJITPlans(); }))
         return false;
     JITWorklist::ensureGlobalWorklist().suspendAllThreads();
     return true;

@@ -809,6 +809,7 @@ void Heap::removeDeadCompilerWorklistEntries()
     if (!Options::useJIT())
         return;
 #if ENABLE(JIT)
+    ASSERT_IMPLIES(vm().numberOfActiveJITPlans(), m_collector->m_isCompilerThreadsSuspended);
     JITWorklist::ensureGlobalWorklist().removeDeadPlans(vm());
 #endif // ENABLE(JIT)
 }
@@ -2600,6 +2601,7 @@ void Heap::addCoreConstraints()
             MAKE_MARKING_CONSTRAINT_EXECUTOR_PAIR(([this] (auto& visitor) {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::JITWorkList);
 
+                ASSERT_IMPLIES(vm().numberOfActiveJITPlans(), m_collector->m_isCompilerThreadsSuspended);
                 JITWorklist::ensureGlobalWorklist().visitWeakReferences(vm(), visitor);
                 
                 // FIXME: This is almost certainly unnecessary.
