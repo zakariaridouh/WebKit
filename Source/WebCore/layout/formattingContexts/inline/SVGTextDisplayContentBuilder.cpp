@@ -89,7 +89,7 @@ std::optional<InlineDisplay::Content> buildSVGTextDisplayContent(const ElementBo
         if (!inlineBox.isInFlow())
             return false;
         // These make the inline box contentful (see Line::Run::isContentfulOrHasDecoration).
-        if (hasInlineDirectionMarginBorderOrPadding(inlineBox.style()))
+        if (hasInlineDirectionMarginBorderOrPadding(protect(inlineBox.style())))
             return false;
         return isSupportedElementBox(inlineBox);
     };
@@ -248,9 +248,9 @@ std::optional<InlineDisplay::Content> buildSVGTextDisplayContent(const ElementBo
         }
         if (!run.length)
             continue;
-        auto& inlineTextBox = downcast<InlineTextBox>(run.layoutBox.get());
+        CheckedRef inlineTextBox = downcast<InlineTextBox>(run.layoutBox.get());
         auto type = run.isWordSeparator ? InlineDisplay::Box::Type::WordSeparator : InlineDisplay::Box::Type::Text;
-        boxes.append({ 0, type, inlineTextBox, UBIDI_DEFAULT_LTR, { }, { }, hasContentfulText, { }, InlineDisplay::Box::Text { run.start, run.length, inlineTextBox.content() }, true, false });
+        boxes.append({ 0, type, inlineTextBox.get(), UBIDI_DEFAULT_LTR, { }, { }, hasContentfulText, { }, InlineDisplay::Box::Text { run.start, run.length, inlineTextBox->content() }, true, false });
     }
 
     for (size_t index = 1; index < boxes.size(); ++index) {
