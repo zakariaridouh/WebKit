@@ -2109,4 +2109,41 @@ TEST(SiteIsolation, ShouldDelayWindowOrderingOverSelectionInFocusedCrossOriginIf
 
 #endif // PLATFORM(MAC)
 
+TEST(SiteIsolation, AccessibilitySettingsChangeReachesCrossOriginIframe)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<style>p { color: black } @media (prefers-reduced-motion: reduce) { p { color: green } }</style><p id='target'>main frame text</p><iframe src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "<style>p { color: black } @media (prefers-reduced-motion: reduce) { p { color: green } }</style><p id='target'>subframe text</p>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = configurationWithInternals(server);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration, CGRectMake(0, 0, 800, 600));
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    RetainPtr childFrame = [webView firstChildFrame];
+    auto targetColorInFrame = [&](WKFrameInfo *frame) {
+        return [webView stringByEvaluatingJavaScript:@"getComputedStyle(document.getElementById('target')).color" inFrame:frame];
+    };
+    EXPECT_WK_STREQ("rgb(0, 0, 0)", targetColorInFrame(nil));
+    EXPECT_WK_STREQ("rgb(0, 0, 0)", targetColorInFrame(childFrame.get()));
+
+    // The forced value only takes effect once the settings change notification re-evaluates media queries.
+    [webView objectByEvaluatingJavaScript:@"internals.settings.forcedPrefersReducedMotionAccessibilityValue = 'on'"];
+    [webView objectByEvaluatingJavaScript:@"internals.settings.forcedPrefersReducedMotionAccessibilityValue = 'on'" inFrame:childFrame.get()];
+
+#if PLATFORM(MAC)
+    [[[NSWorkspace sharedWorkspace] notificationCenter] postNotificationName:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification object:nil];
+#else
+    [[NSNotificationCenter defaultCenter] postNotificationName:UIAccessibilityReduceMotionStatusDidChangeNotification object:nil];
+#endif
+
+    EXPECT_TRUE(Util::waitFor([&] {
+        return [targetColorInFrame(nil) isEqualToString:@"rgb(0, 128, 0)"];
+    }));
+    EXPECT_TRUE(Util::waitFor([&] {
+        return [targetColorInFrame(childFrame.get()) isEqualToString:@"rgb(0, 128, 0)"];
+    }));
+}
+
 } // namespace TestWebKitAPI
