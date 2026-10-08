@@ -105,10 +105,8 @@ if (USE_CAIRO)
     )
 
     list(APPEND WebCore_SOURCES
-        platform/graphics/cairo/CairoOperationRecorder.cpp
         platform/graphics/cairo/CairoPaintingContext.cpp
         platform/graphics/cairo/CairoPaintingEngine.cpp
         platform/graphics/cairo/CairoPaintingEngineBasic.cpp
-        platform/graphics/cairo/CairoPaintingEngineThreaded.cpp
     )
 endif ()
