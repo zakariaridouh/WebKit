@@ -355,42 +355,35 @@ bool RenderSVGImage::bufferForeground(PaintInfo& paintInfo, const LayoutPoint& p
 {
     auto& destinationContext = paintInfo.context();
 
-    auto repaintBoundingBox = borderBoxRectEquivalent();
+    FloatRect repaintBoundingBox = borderBoxRectEquivalent();
     repaintBoundingBox.moveBy(paintOffset);
 
-    // Invalidate an existing buffer if the scale is not correct.
-    const auto& absoluteTransform = destinationContext.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale);
-
-    auto absoluteTargetRect = enclosingIntRect(absoluteTransform.mapRect(repaintBoundingBox));
-    if (m_bufferedForeground) {
-        if (absoluteTargetRect.size() != protect(m_bufferedForeground)->backendSize())
-            m_bufferedForeground = nullptr;
-        else {
-            const auto& absoluteTransformBuffer = protect(m_bufferedForeground)->context().getCTM(GraphicsContext::DefinitelyIncludeDeviceScale);
-            if (absoluteTransformBuffer != absoluteTransform)
-                m_bufferedForeground = nullptr;
-        }
-    }
+    auto scaledSize = destinationContext.compatibleImageBufferSize(repaintBoundingBox.size());
+    if (m_bufferedForeground && (m_bufferedForegroundSize != repaintBoundingBox.size() || m_bufferedForegroundScaledSize != scaledSize))
+        m_bufferedForeground = nullptr;
 
     // Create a new buffer and paint the foreground into it.
     if (!m_bufferedForeground) {
-        m_bufferedForeground = destinationContext.createAlignedImageBuffer(expandedIntSize(repaintBoundingBox.size()));
+        m_bufferedForeground = destinationContext.createAlignedImageBuffer(repaintBoundingBox.size());
         if (!m_bufferedForeground)
             return false;
+        m_bufferedForegroundSize = repaintBoundingBox.size();
+        m_bufferedForegroundScaledSize = scaledSize;
     }
 
-    auto& bufferedContext = protect(m_bufferedForeground)->context();
-    bufferedContext.clearRect(absoluteTargetRect);
-
-    PaintInfo bufferedInfo(paintInfo);
-    bufferedInfo.setContext(bufferedContext);
-    paintForeground(bufferedInfo, paintOffset);
-
-    destinationContext.concatCTM(absoluteTransform.inverse().value_or(AffineTransform()));
     RefPtr bufferedForeground = m_bufferedForeground.copyRef();
-    destinationContext.drawImageBuffer(*bufferedForeground, absoluteTargetRect);
-    destinationContext.concatCTM(absoluteTransform);
+    {
+        auto& bufferedContext = bufferedForeground->context();
+        GraphicsContextStateSaver stateSaver(bufferedContext);
+        bufferedContext.translate(-toFloatSize(repaintBoundingBox.location()));
+        bufferedContext.clearRect(repaintBoundingBox);
 
+        PaintInfo bufferedInfo(paintInfo);
+        bufferedInfo.setContext(bufferedContext);
+        paintForeground(bufferedInfo, paintOffset);
+    }
+
+    destinationContext.drawImageBuffer(*bufferedForeground, repaintBoundingBox);
     return true;
 }
 

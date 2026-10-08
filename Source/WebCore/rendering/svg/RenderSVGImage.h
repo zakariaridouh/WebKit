@@ -88,6 +88,8 @@ private:
     FloatRect m_objectBoundingBox;
     const UniqueRef<RenderImageResource> m_imageResource;
     RefPtr<ImageBuffer> m_bufferedForeground;
+    FloatSize m_bufferedForegroundSize;
+    IntSize m_bufferedForegroundScaledSize;
 };
 
 } // namespace WebCore
