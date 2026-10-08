@@ -26,14 +26,14 @@
 #pragma once
 
 #include "BlockLayoutState.h"
-#include "InlineLine.h"
-#include "InlineLineBuilder.h"
+#include "FloatingContext.h"
+#include "InlineLineRun.h"
+#include "LineLayoutResult.h"
 #include <WebCore/InlineLineTypes.h>
 
 namespace WebCore {
 namespace Layout {
 
-class FloatingContext;
 class InlineFormattingContext;
 class InlineLevelBox;
 class LineBox;
@@ -69,7 +69,7 @@ public:
 
     static LineEndingTruncationPolicy NODELETE lineEndingTruncationPolicy(const Style::ComputedStyle& rootStyle, size_t numberOfContentfulLines, std::optional<size_t> numberOfVisibleLinesAllowed, bool currentLineIsContentful);
 
-    static std::optional<LineLayoutResult::InlineContentEnding> inlineContentEnding(const Line::Result&);
+    static std::optional<LineLayoutResult::InlineContentEnding> inlineContentEnding(const LineResult&);
 
     bool NODELETE shouldDiscardRemainingContentInBlockDirection() const;
 

@@ -28,6 +28,7 @@
 
 #include "InlineFormattingContext.h"
 #include "FontCascadeInlines.h"
+#include "InlineLine.h"
 #include "InlineLineBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutBoxInlines.h"
@@ -221,7 +222,7 @@ std::optional<InlineLayoutUnit> InlineQuirks::adjustmentForLineGridLineSnap(cons
     return gridLineHeight - remainder;
 }
 
-bool InlineQuirks::shouldCollapseLineBoxHeight(const Line::RunList& lineContent, size_t numberOfOutsideListMarkers) const
+bool InlineQuirks::shouldCollapseLineBoxHeight(const LineRunList& lineContent, size_t numberOfOutsideListMarkers) const
 {
     // This quirk is needed as we put the marker in seemingly random places in the list item's subtree.
     // (instead of having a well defined place and layout behavior).

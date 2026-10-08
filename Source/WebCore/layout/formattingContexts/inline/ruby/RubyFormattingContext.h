@@ -28,6 +28,7 @@
 #include <WebCore/InlineContentBreaker.h>
 #include <WebCore/InlineDisplayContent.h>
 #include <WebCore/InlineLevelBox.h>
+#include <WebCore/InlineLineRun.h>
 #include <wtf/Range.h>
 
 namespace WebCore {
@@ -42,7 +43,7 @@ class RubyFormattingContext {
 public:
     // Line building
     static InlineLayoutUnit annotationBoxLogicalWidth(const Box& rubyBaseLayoutBox, InlineFormattingContext&);
-    static InlineLayoutUnit baseEndAdditionalLogicalWidth(const Box& rubyBaseLayoutBox, const Line::RunList&, const InlineContentBreaker::ContinuousContent::RunList&, InlineFormattingContext&);
+    static InlineLayoutUnit baseEndAdditionalLogicalWidth(const Box& rubyBaseLayoutBox, const LineRunList&, const InlineContentBreaker::ContinuousContent::RunList&, InlineFormattingContext&);
     static HashMap<const Box*, InlineLayoutUnit> applyRubyAlign(Line&, InlineFormattingContext&);
     static InlineLayoutUnit applyRubyAlignOnAnnotationBox(Line&, InlineLayoutUnit spaceToDistribute, InlineFormattingContext&);
 

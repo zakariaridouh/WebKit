@@ -10,8 +10,6 @@ css/values/primitives/CSSPrimitiveData.h
 dom/CustomElementReactionQueue.h
 dom/ElementInlinesLight.h
 layout/formattingContexts/inline/InlineFormattingContext.h
-layout/formattingContexts/inline/InlineItemsBuilder.cpp
-layout/formattingContexts/inline/InlineLine.h
 rendering/RenderLayerBacking.cpp
 rendering/RenderLayerCompositor.cpp
 rendering/RenderTextLineBoxes.h

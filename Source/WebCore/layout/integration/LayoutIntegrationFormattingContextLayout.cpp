@@ -168,10 +168,11 @@ static inline size_t NODELETE remainingLinesForLineClamp(auto& inlineLayoutState
     // budget, and the nested block has to lay out within what is left of it. A block level sibling gets this from
     // LineClampUpdater, which drops each preceding sibling's line count from the budget as it goes.
     auto maximumLines = inlineLayoutState.parentBlockLayoutState().lineClamp()->maximumLines;
-    return maximumLines - std::min(maximumLines, inlineLayoutState.lineCountWithInlineContentIncludingNestedBlocks());
+    auto lineCount = inlineLayoutState.lineCountWithInlineContentIncludingNestedBlocks();
+    return maximumLines > lineCount ? maximumLines - lineCount : 0;
 }
 
-static inline void NODELETE updateRenderTreeLineClampBeforeLayout(auto& inlineLayoutState, auto& renderTreeLayoutState)
+static inline void updateRenderTreeLineClampBeforeLayout(auto& inlineLayoutState, auto& renderTreeLayoutState)
 {
     auto& parentBlockLayoutState = inlineLayoutState.parentBlockLayoutState();
 
@@ -191,7 +192,7 @@ static inline void NODELETE updateRenderTreeLineClampBeforeLayout(auto& inlineLa
         renderTreeLayoutState.setLineClamp(RenderLayoutState::LineClamp { remainingLinesForLineClamp(inlineLayoutState), renderTreeLineClamp->shouldDiscardOverflow, renderTreeLineClamp->clampAfterBox });
 }
 
-static inline void NODELETE updateIFCLineClampAfterLayout(auto& inlineLayoutState, auto& renderTreeLayoutState)
+static inline void updateIFCLineClampAfterLayout(auto& inlineLayoutState, auto& renderTreeLayoutState)
 {
     auto& parentBlockLayoutState = inlineLayoutState.parentBlockLayoutState();
 

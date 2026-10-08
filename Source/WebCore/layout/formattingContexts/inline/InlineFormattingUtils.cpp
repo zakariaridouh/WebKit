@@ -636,7 +636,7 @@ LineEndingTruncationPolicy InlineFormattingUtils::lineEndingTruncationPolicy(con
     return LineEndingTruncationPolicy::NoTruncation;
 }
 
-std::optional<LineLayoutResult::InlineContentEnding> InlineFormattingUtils::inlineContentEnding(const Line::Result& lineContent)
+std::optional<LineLayoutResult::InlineContentEnding> InlineFormattingUtils::inlineContentEnding(const LineResult& lineContent)
 {
     if (!lineContent.runs.isEmpty() && lineContent.runs.last().isBlock()) {
 #if ASSERT_ENABLED

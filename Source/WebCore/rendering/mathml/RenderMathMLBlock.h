@@ -96,7 +96,7 @@ protected:
     LayoutUnit applySizeToMathContent(LayoutPhase, const SizeAppliedToMathContent&);
 
 private:
-    bool isRenderMathMLBlock() const final { return true; }
+    bool NODELETE isRenderMathMLBlock() const final { return true; }
     ASCIILiteral renderName() const override { return "RenderMathMLBlock"_s; }
     bool canDropAnonymousBlockChild() const final { return false; }
     void layoutItems(RelayoutChildren);

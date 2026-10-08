@@ -590,7 +590,8 @@ Box::RareDataMap& Box::rareDataMap()
     return map;
 }
 
-const Box::BoxRareData& Box::rareData() const
+// The analyzer cannot verify that HashMap::get() does not destroy anything; a lookup never does.
+SUPPRESS_NODELETE const Box::BoxRareData& Box::rareData() const
 {
     ASSERT(hasRareData());
     return *rareDataMap().get(this);

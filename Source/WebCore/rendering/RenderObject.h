@@ -531,7 +531,7 @@ public:
     void setFragmentedFlowState(FragmentedFlowState state) { m_stateBitfields.setFragmentedFlowState(state); }
 
 #if ENABLE(MATHML)
-    virtual bool isRenderMathMLBlock() const { return false; }
+    virtual bool NODELETE isRenderMathMLBlock() const { return false; }
     bool isRenderMathMLTable() const { return type() == Type::MathMLTable; }
     virtual bool isRenderMathMLOperator() const { return false; }
     bool isRenderMathMLRow() const;

@@ -78,7 +78,7 @@ public:
 
     const Style::ComputedStyle& style() const LIFETIME_BOUND { return m_style; }
     const Style::ComputedStyle* parentStyle() const LIFETIME_BOUND { return !m_parent ? nullptr : &m_parent->style(); }
-    const Style::ComputedStyle& firstLineStyle() const LIFETIME_BOUND;
+    const Style::ComputedStyle& NODELETE firstLineStyle() const LIFETIME_BOUND;
 
     // FIXME: Style shouldn't be mutated.
     Style::ComputedStyle& mutableStyle() LIFETIME_BOUND { return m_style; }
@@ -334,7 +334,7 @@ public:
     bool isInPendingSVGTransformAttributeUpdates() const { return m_isInPendingSVGTransformAttributeUpdates; }
     void setIsInPendingSVGTransformAttributeUpdates(bool b) { m_isInPendingSVGTransformAttributeUpdates = b; }
 
-    bool isAnonymousBlock() const;
+    bool NODELETE isAnonymousBlock() const;
     inline bool shouldSkipForPercentageResolution() const;
     inline bool isBlockBox() const;
     inline bool isBlockLevelBox() const;

@@ -27,6 +27,7 @@
 
 #include <WebCore/InlineIteratorBoxLegacyPath.h>
 #include <WebCore/LayoutElementBox.h>
+#include <WebCore/LayoutInlineTextBox.h>
 #include <WebCore/LayoutIntegrationInlineContent.h>
 #include <WebCore/RenderBlockFlow.h>
 #include <WebCore/TextBoxSelectableRange.h>

@@ -195,30 +195,28 @@ static inline LayoutUnit contentLogicalHeightForRenderer(const RenderBox& render
 
 Layout::BoxGeometry::HorizontalEdges BoxGeometryUpdater::horizontalLogicalMargin(const RenderBoxModelObject& renderer, std::optional<LayoutUnit> availableWidth, WritingMode writingMode)
 {
-    auto& style = renderer.style();
-    const auto& zoomFactor = style.usedZoomForLength();
+    const auto& zoomFactor = renderer.style().usedZoomForLength();
 
     if (writingMode.isHorizontal()) {
-        auto marginInlineStart = usedValueOrZero(writingMode.isInlineLeftToRight() ? style.marginLeft() : style.marginRight(), availableWidth, zoomFactor);
-        auto marginInlineEnd = usedValueOrZero(writingMode.isInlineLeftToRight() ? style.marginRight() : style.marginLeft(), availableWidth, zoomFactor);
+        auto marginInlineStart = usedValueOrZero(writingMode.isInlineLeftToRight() ? renderer.style().marginLeft() : renderer.style().marginRight(), availableWidth, zoomFactor);
+        auto marginInlineEnd = usedValueOrZero(writingMode.isInlineLeftToRight() ? renderer.style().marginRight() : renderer.style().marginLeft(), availableWidth, zoomFactor);
 
         return { marginInlineStart, marginInlineEnd };
     }
 
-    auto marginInlineStart = usedValueOrZero(writingMode.isInlineTopToBottom() ? style.marginTop() : style.marginBottom(), availableWidth, zoomFactor);
-    auto marginInlineEnd = usedValueOrZero(writingMode.isInlineTopToBottom() ? style.marginBottom() : style.marginTop(), availableWidth, zoomFactor);
+    auto marginInlineStart = usedValueOrZero(writingMode.isInlineTopToBottom() ? renderer.style().marginTop() : renderer.style().marginBottom(), availableWidth, zoomFactor);
+    auto marginInlineEnd = usedValueOrZero(writingMode.isInlineTopToBottom() ? renderer.style().marginBottom() : renderer.style().marginTop(), availableWidth, zoomFactor);
 
     return { marginInlineStart, marginInlineEnd };
 }
 
 Layout::BoxGeometry::VerticalEdges BoxGeometryUpdater::verticalLogicalMargin(const RenderBoxModelObject& renderer, std::optional<LayoutUnit> availableWidth, WritingMode writingMode)
 {
-    auto& style = renderer.style();
     if (writingMode.isHorizontal())
-        return { usedValueOrZero(style.marginTop(), availableWidth, style.usedZoomForLength()), usedValueOrZero(style.marginBottom(), availableWidth, style.usedZoomForLength()) };
+        return { usedValueOrZero(renderer.style().marginTop(), availableWidth, renderer.style().usedZoomForLength()), usedValueOrZero(renderer.style().marginBottom(), availableWidth, renderer.style().usedZoomForLength()) };
     if (writingMode.isLineOverLeft())
-        return { usedValueOrZero(style.marginLeft(), availableWidth, style.usedZoomForLength()), usedValueOrZero(style.marginRight(), availableWidth, style.usedZoomForLength()) };
-    return { usedValueOrZero(style.marginRight(), availableWidth, style.usedZoomForLength()), usedValueOrZero(style.marginLeft(), availableWidth, style.usedZoomForLength()) };
+        return { usedValueOrZero(renderer.style().marginLeft(), availableWidth, renderer.style().usedZoomForLength()), usedValueOrZero(renderer.style().marginRight(), availableWidth, renderer.style().usedZoomForLength()) };
+    return { usedValueOrZero(renderer.style().marginRight(), availableWidth, renderer.style().usedZoomForLength()), usedValueOrZero(renderer.style().marginLeft(), availableWidth, renderer.style().usedZoomForLength()) };
 }
 
 Layout::BoxGeometry::Edges BoxGeometryUpdater::logicalBorder(const RenderBoxModelObject& renderer, WritingMode writingMode, bool isIntrinsicWidthMode)
@@ -249,13 +247,12 @@ Layout::BoxGeometry::Edges BoxGeometryUpdater::logicalBorder(const RenderBoxMode
 
 Layout::BoxGeometry::Edges BoxGeometryUpdater::logicalPadding(const RenderBoxModelObject& renderer, std::optional<LayoutUnit> availableWidth, WritingMode writingMode)
 {
-    auto& style = renderer.style();
-    auto usedZoom = style.usedZoomForLength();
+    auto usedZoom = renderer.style().usedZoomForLength();
 
-    auto paddingLeft = usedValueOrZero(style.paddingLeft(), availableWidth, usedZoom);
-    auto paddingRight = usedValueOrZero(style.paddingRight(), availableWidth, usedZoom);
-    auto paddingTop = usedValueOrZero(style.paddingTop(), availableWidth, usedZoom);
-    auto paddingBottom = usedValueOrZero(style.paddingBottom(), availableWidth, usedZoom);
+    auto paddingLeft = usedValueOrZero(renderer.style().paddingLeft(), availableWidth, usedZoom);
+    auto paddingRight = usedValueOrZero(renderer.style().paddingRight(), availableWidth, usedZoom);
+    auto paddingTop = usedValueOrZero(renderer.style().paddingTop(), availableWidth, usedZoom);
+    auto paddingBottom = usedValueOrZero(renderer.style().paddingBottom(), availableWidth, usedZoom);
 
     if (writingMode.isHorizontal()) {
         auto paddingInlineStart = writingMode.isInlineLeftToRight() ? paddingLeft : paddingRight;

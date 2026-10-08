@@ -1777,28 +1777,30 @@ void LineBuilder::commitCandidateContent(LineCandidate& lineCandidate, std::opti
     }
 }
 
+static const Box& NODELETE enclosingBoxForWrapOpportunity(const InlineItem& wrapOpportunity)
+{
+    // Inline boxes set the wrapping rules for their content and not for themselves, so the box that encloses a wrap
+    // opportunity is the inline box its trailing content belongs to.
+    auto& layoutBox = wrapOpportunity.layoutBox();
+    return layoutBox.isInlineBox() ? layoutBox : layoutBox.parent();
+}
+
 static const InlineItem& NODELETE wrapOpportunityToRevertTo(const WrapOpportunityList& wrapOpportunityList)
 {
     ASSERT(!wrapOpportunityList.isEmpty());
-    auto enclosingBoxForWrapOpportunity = [](auto& wrapOpportunity) -> const Box& {
-        // Inline boxes set the wrapping rules for their content and not for themselves, so the box that encloses a wrap
-        // opportunity is the inline box its trailing content belongs to.
-        auto& layoutBox = wrapOpportunity.layoutBox();
-        return layoutBox.isInlineBox() ? layoutBox : layoutBox.parent();
-    };
 
     // https://drafts.csswg.org/css-text-4/#wrap-inside
     // Prefer the last wrap opportunity that is outside any wrap-inside: avoid box.
-    for (auto* wrapOpportunity : wrapOpportunityList | std::views::reverse) {
-        if (!enclosingBoxForWrapOpportunity(*wrapOpportunity).style().effectiveWrapInsideAvoid())
-            return *wrapOpportunity;
+    for (size_t index = wrapOpportunityList.size(); index--;) {
+        if (!enclosingBoxForWrapOpportunity(*wrapOpportunityList[index]).style().effectiveWrapInsideAvoid())
+            return *wrapOpportunityList[index];
     }
     // Every opportunity is inside an avoid box, so we must break within one. "A break in an outer box must be used
     // before a break within an inner box", so revert to the last opportunity sitting directly in an outermost avoid box
     // - one whose enclosing box is not itself inside another avoid box.
-    for (auto* wrapOpportunity : wrapOpportunityList | std::views::reverse) {
-        if (!enclosingBoxForWrapOpportunity(*wrapOpportunity).parent().style().effectiveWrapInsideAvoid())
-            return *wrapOpportunity;
+    for (size_t index = wrapOpportunityList.size(); index--;) {
+        if (!enclosingBoxForWrapOpportunity(*wrapOpportunityList[index]).parent().style().effectiveWrapInsideAvoid())
+            return *wrapOpportunityList[index];
     }
     // The outermost avoid box is the only content on the line; break inside it as a last resort.
     return *wrapOpportunityList.last();

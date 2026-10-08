@@ -28,6 +28,7 @@
 
 #include "InlineDamage.h"
 #include "InlineSoftLineBreakItem.h"
+#include "InlineTextItem.h"
 #include "LayoutElementBox.h"
 #include "LayoutUnit.h"
 #include "StyleComputedStyle+GettersInlines.h"

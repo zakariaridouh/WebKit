@@ -200,7 +200,7 @@ InlineLayoutUnit RubyFormattingContext::annotationBoxLogicalWidth(const Box& rub
     return inlineFormattingContext.geometryForBox(*annotationBox).marginBoxWidth();
 }
 
-InlineLayoutUnit RubyFormattingContext::baseEndAdditionalLogicalWidth(const Box& rubyBaseLayoutBox, const Line::RunList& lineRuns, const InlineContentBreaker::ContinuousContent::RunList& candidateRuns, InlineFormattingContext& inlineFormattingContext)
+InlineLayoutUnit RubyFormattingContext::baseEndAdditionalLogicalWidth(const Box& rubyBaseLayoutBox, const LineRunList& lineRuns, const InlineContentBreaker::ContinuousContent::RunList& candidateRuns, InlineFormattingContext& inlineFormattingContext)
 {
     ASSERT(rubyBaseLayoutBox.isRubyBase());
     if (hasInterlinearAnnotation(rubyBaseLayoutBox)) {

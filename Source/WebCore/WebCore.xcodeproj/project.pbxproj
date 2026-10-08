@@ -2874,7 +2874,8 @@
 		6ED8C37A183BFF8C009E53BD /* BoxLayoutShape.h in Headers */ = {isa = PBXBuildFile; fileRef = 6ED8C378183BFF8C009E53BD /* BoxLayoutShape.h */; };
 		6EE8A77310F803F3005A4A24 /* JSWebGLContextAttributes.h in Headers */ = {isa = PBXBuildFile; fileRef = 6EE8A77110F803F3005A4A24 /* JSWebGLContextAttributes.h */; };
 		6F0B98B523F268EC00EEC2F2 /* LayoutInlineTextBox.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F0B98B323F268EB00EEC2F2 /* LayoutInlineTextBox.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		6F0CD695229ED32700C5994E /* InlineLine.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F0CD694229ED32700C5994E /* InlineLine.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		6F0CD695229ED32700C5994E /* InlineLine.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F0CD694229ED32700C5994E /* InlineLine.h */; };
+		BEB7304D0BA0A300F44CCA41 /* InlineLineRun.h in Headers */ = {isa = PBXBuildFile; fileRef = 39586F183DEC6F6A6BD6CF9B /* InlineLineRun.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		6F15522126476B5C00E353C6 /* TableWrapperBlockFormattingQuirks.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F15522026476B5B00E353C6 /* TableWrapperBlockFormattingQuirks.h */; };
 		6F17264F2470C60B00518C96 /* TableWrapperBlockFormattingContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F17264E2470C60A00518C96 /* TableWrapperBlockFormattingContext.h */; };
 		6F1B101427E2D524007178E6 /* LineSelection.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F1B101327E2D524007178E6 /* LineSelection.h */; };
@@ -6373,7 +6374,7 @@
 		DD17C082286EC57400D60B58 /* build in Copy PDF.js */ = {isa = PBXBuildFile; fileRef = DD17C07C286EC51900D60B58 /* build */; };
 		DD17C083286EC57700D60B58 /* LICENSE in Copy PDF.js */ = {isa = PBXBuildFile; fileRef = DD17C080286EC51B00D60B58 /* LICENSE */; };
 		DD17C084286EC57A00D60B58 /* web in Copy PDF.js */ = {isa = PBXBuildFile; fileRef = DD17C07E286EC51A00D60B58 /* web */; };
-		DD308A2D2A82F684000A2687 /* AbstractLineBuilder.h in Headers */ = {isa = PBXBuildFile; fileRef = DD308A2C2A82F684000A2687 /* AbstractLineBuilder.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		DD308A2D2A82F684000A2687 /* AbstractLineBuilder.h in Headers */ = {isa = PBXBuildFile; fileRef = DD308A2C2A82F684000A2687 /* AbstractLineBuilder.h */; };
 		DD4B9CF72C80E8E8001A6830 /* LineClampUpdater.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4B9CF62C80E8E8001A6830 /* LineClampUpdater.h */; };
 		DD5ACFD82B14DADE00B36C57 /* LayoutIntegrationBoxGeometryUpdater.h in Headers */ = {isa = PBXBuildFile; fileRef = DD5ACFD72B14DADE00B36C57 /* LayoutIntegrationBoxGeometryUpdater.h */; };
 		DD6FCF232D77694F00505083 /* PositionedLayoutConstraints.h in Headers */ = {isa = PBXBuildFile; fileRef = DD6FCF222D77694F00505083 /* PositionedLayoutConstraints.h */; };
@@ -14202,6 +14203,7 @@
 		6F0B98B623F2690600EEC2F2 /* LayoutInlineTextBox.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LayoutInlineTextBox.cpp; sourceTree = "<group>"; };
 		6F0CD692229ED31900C5994E /* InlineLine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = InlineLine.cpp; sourceTree = "<group>"; };
 		6F0CD694229ED32700C5994E /* InlineLine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InlineLine.h; sourceTree = "<group>"; };
+		39586F183DEC6F6A6BD6CF9B /* InlineLineRun.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InlineLineRun.h; sourceTree = "<group>"; };
 		6F10B08622B8568D0090E69C /* InlineQuirks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = InlineQuirks.cpp; sourceTree = "<group>"; };
 		6F15522026476B5B00E353C6 /* TableWrapperBlockFormattingQuirks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TableWrapperBlockFormattingQuirks.h; sourceTree = "<group>"; };
 		6F17264C2470C5F700518C96 /* TableWrapperBlockFormattingContext.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TableWrapperBlockFormattingContext.cpp; sourceTree = "<group>"; };
@@ -25472,6 +25474,7 @@
 				6F6EE74126D44EE200374CDA /* InlineLineBoxVerticalAligner.h */,
 				6F25B200220A85AB0000011B /* InlineLineBuilder.cpp */,
 				6F26EB46234004A5006906E2 /* InlineLineBuilder.h */,
+				39586F183DEC6F6A6BD6CF9B /* InlineLineRun.h */,
 				DDEA91B929946E43007E9FDA /* InlineLineTypes.h */,
 				6F10B08622B8568D0090E69C /* InlineQuirks.cpp */,
 				6FE636E72647962900F0951E /* InlineQuirks.h */,
@@ -46817,6 +46820,7 @@
 				11C3227D26D958CE00328F4D /* InlineLineBoxBuilder.h in Headers */,
 				6F6EE74326D44EE300374CDA /* InlineLineBoxVerticalAligner.h in Headers */,
 				6F26EB48234004A5006906E2 /* InlineLineBuilder.h in Headers */,
+				BEB7304D0BA0A300F44CCA41 /* InlineLineRun.h in Headers */,
 				DDEA91BA29946E43007E9FDA /* InlineLineTypes.h in Headers */,
 				6FE636E82647962900F0951E /* InlineQuirks.h in Headers */,
 				6F40DA822513033A00EC04B7 /* InlineRect.h in Headers */,

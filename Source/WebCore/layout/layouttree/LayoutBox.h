@@ -184,7 +184,7 @@ public:
 
     void updateStyle(Style::ComputedStyle&& newStyle, std::unique_ptr<Style::ComputedStyle>&& newFirstLineStyle);
     const Style::ComputedStyle& style() const LIFETIME_BOUND { return m_style; }
-    const Style::ComputedStyle& firstLineStyle() const LIFETIME_BOUND { return hasRareData() && rareData().firstLineStyle ? *rareData().firstLineStyle : m_style; }
+    const Style::ComputedStyle& NODELETE firstLineStyle() const LIFETIME_BOUND { return hasRareData() && rareData().firstLineStyle ? *rareData().firstLineStyle : m_style; }
     WritingMode writingMode() const { return style().writingMode(); }
 
     // FIXME: Find a better place for random DOM things.
@@ -230,7 +230,7 @@ private:
 
     bool hasRareData() const { return m_hasRareData; }
     void setHasRareData(bool hasRareData) { m_hasRareData = hasRareData; }
-    const BoxRareData& rareData() const;
+    const BoxRareData& NODELETE rareData() const;
     Box::BoxRareData& rareData();
     BoxRareData& ensureRareData();
     void removeRareData();

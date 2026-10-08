@@ -27,7 +27,6 @@
 
 #include <WebCore/Font.h>
 #include <WebCore/InlineItem.h>
-#include <WebCore/InlineLine.h>
 #include <WebCore/LayoutUnits.h>
 #include <WebCore/TextSpacing.h>
 #include <wtf/EnumSet.h>

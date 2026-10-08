@@ -1829,6 +1829,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     layout/formattingContexts/inline/InlineLineBox.h
     layout/formattingContexts/inline/InlineLineBoxBuilder.h
     layout/formattingContexts/inline/InlineLineBoxVerticalAligner.h
+    layout/formattingContexts/inline/InlineLineRun.h
     layout/formattingContexts/inline/InlineLineTypes.h
     layout/formattingContexts/inline/InlineQuirks.h
     layout/formattingContexts/inline/InlineRect.h

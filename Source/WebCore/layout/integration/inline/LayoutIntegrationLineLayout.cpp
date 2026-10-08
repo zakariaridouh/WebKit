@@ -1086,7 +1086,7 @@ size_t LineLayout::lineCountIgnoringBlockLevelBoxes() const
             ++blockLevelLineCount;
     }
     // lineCount() may have already dropped a trailing line.
-    return lineCount - std::min(lineCount, blockLevelLineCount);
+    return lineCount > blockLevelLineCount ? lineCount - blockLevelLineCount : 0;
 }
 
 size_t LineLayout::lineCount() const
