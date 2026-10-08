@@ -197,7 +197,6 @@ public:
     WEBCORE_EXPORT bool isMatchingRegistrableDomainSuffix(const String&, bool treatIPAddressAsDomain = false) const;
 
     WEBCORE_EXPORT bool isPotentiallyTrustworthy() const;
-    void setIsPotentiallyTrustworthy(bool value) { m_isPotentiallyTrustworthy = value; }
 
     WEBCORE_EXPORT static bool isLocalHostOrLoopbackIPAddress(StringView);
     WEBCORE_EXPORT static bool isLocalhostAddress(StringView);

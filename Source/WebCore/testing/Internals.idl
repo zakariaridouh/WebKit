@@ -1399,8 +1399,6 @@ enum ContentsFormat {
 
     DOMString windowLocationHost(DOMWindow window);
 
-    undefined markContextAsInsecure();
-
     undefined setMaxCanvasArea(unsigned long size);
 
     readonly attribute boolean hasMediaSessionManager;

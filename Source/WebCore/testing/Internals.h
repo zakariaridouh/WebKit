@@ -1281,8 +1281,6 @@ public:
     ExceptionOr<void> queueTaskToQueueMicrotask(Document&, const String& source, Ref<VoidCallback>&&);
     ExceptionOr<bool> hasSameEventLoopAs(WindowProxy&);
 
-    void markContextAsInsecure();
-
     bool NODELETE usingAppleInternalSDK() const;
     bool NODELETE usingGStreamer() const;
 

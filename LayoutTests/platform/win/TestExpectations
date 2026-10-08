@@ -1060,7 +1060,7 @@ webkit.org/b/209455 http/wpt/misc/no-last-modified.html [ Failure Pass ]
 http/tests/cookies/document-cookie-multiple-cookies.html [ Failure ]
 http/tests/misc/form-post-textplain-cross-site.html [ Failure ]
 http/tests/misc/form-post-textplain.html [ Failure ]
-http/tests/misc/gamepads-insecure.html [ Failure ]
+http/wpt/gamepad/getGamepads-insecure-context.html [ Failure ]
 http/tests/misc/large-js-program.py [ Skip ] # Timeout
 http/wpt/fetch/response-opaque-clone.html [ Skip ]
 http/wpt/fetch/response-status-text.html [ Failure Slow ]

@@ -6919,16 +6919,6 @@ bool Internals::pageHasPointerLock() const
 }
 #endif
 
-void Internals::markContextAsInsecure()
-{
-    RefPtr document = contextDocument();
-    if (!document)
-        return;
-
-    document->securityOrigin().setIsPotentiallyTrustworthy(false);
-    document->markAsInsecureContextForTesting();
-}
-
 void Internals::postTask(Ref<VoidCallback>&& callback)
 {
     RefPtr document = contextDocument();
