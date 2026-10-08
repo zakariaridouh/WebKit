@@ -127,7 +127,6 @@ Layout::InlineContentCache& RenderBlockFlow::ensureInlineContentCache()
 
 void RenderBlockFlow::resetInlineContentCache()
 {
-    ASSERT(m_inlineContentCache);
     m_inlineContentCache = nullptr;
 }
 
