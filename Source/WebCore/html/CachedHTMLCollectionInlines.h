@@ -37,19 +37,19 @@ template <typename HTMLCollectionClass>
 CachedHTMLCollection<HTMLCollectionClass>::~CachedHTMLCollection()
 {
     if (m_indexCache.hasValidCache())
-        document().unregisterCollection(*this);
+        protect(document())->unregisterCollection(*this);
 }
 
 template <typename HTMLCollectionClass>
 unsigned CachedHTMLCollection<HTMLCollectionClass>::length() const
 {
-    return m_indexCache.nodeCount(collection());
+    return m_indexCache.nodeCount(static_cast<const HTMLCollectionClass&>(*this));
 }
 
 template <typename HTMLCollectionClass>
 Element* CachedHTMLCollection<HTMLCollectionClass>::item(unsigned offset) const
 {
-    return m_indexCache.nodeAt(collection(), offset);
+    return m_indexCache.nodeAt(static_cast<const HTMLCollectionClass&>(*this), offset);
 }
 
 template <typename HTMLCollectionClass>
@@ -128,7 +128,7 @@ Element* CachedHTMLCollection<HTMLCollectionClass>::namedItem(const AtomString& 
         } else
             return nullptr;
 
-        if (candidate && collection().elementMatches(*candidate)) {
+        if (candidate && static_cast<const HTMLCollectionClass&>(*this).elementMatches(*candidate)) {
             if (traversalType == CollectionTraversalType::ChildrenOnly ? candidate->parentNode() == root.ptr() : candidate->isDescendantOf(root))
                 return candidate.get();
         }
@@ -140,25 +140,25 @@ Element* CachedHTMLCollection<HTMLCollectionClass>::namedItem(const AtomString& 
 template <typename HTMLCollectionClass>
 auto CachedHTMLCollection<HTMLCollectionClass>::collectionBegin() const -> Iterator
 {
-    return Traversal::begin(collection(), rootNode());
+    return Traversal::begin(static_cast<const HTMLCollectionClass&>(*this), protect(rootNode()));
 }
 
 template <typename HTMLCollectionClass>
 auto CachedHTMLCollection<HTMLCollectionClass>::collectionLast() const -> Iterator
 {
-    return Traversal::last(collection(), rootNode());
+    return Traversal::last(static_cast<const HTMLCollectionClass&>(*this), protect(rootNode()));
 }
 
 template <typename HTMLCollectionClass>
 void CachedHTMLCollection<HTMLCollectionClass>::collectionTraverseForward(Iterator& current, unsigned count, unsigned& traversedCount) const
 {
-    Traversal::traverseForward(collection(), current, count, traversedCount);
+    Traversal::traverseForward(static_cast<const HTMLCollectionClass&>(*this), current, count, traversedCount);
 }
 
 template <typename HTMLCollectionClass>
 void CachedHTMLCollection<HTMLCollectionClass>::collectionTraverseBackward(Iterator& current, unsigned count) const
 {
-    Traversal::traverseBackward(collection(), current, count);
+    Traversal::traverseBackward(static_cast<const HTMLCollectionClass&>(*this), current, count);
 }
 
 template <typename HTMLCollectionClass>

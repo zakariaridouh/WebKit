@@ -62,9 +62,6 @@ dom/ShadowRoot.cpp
 dom/TreeScopeOrderedMap.cpp
 dom/TypedElementDescendantIteratorInlines.h
 dom/ViewTransition.cpp
-html/CachedHTMLCollection.h
-html/CachedHTMLCollectionInlines.h
-html/CollectionTraversalInlines.h
 page/IntersectionObserver.cpp
 [ macOS ] rendering/AttachmentLayout.mm
 rendering/BackgroundPainter.cpp

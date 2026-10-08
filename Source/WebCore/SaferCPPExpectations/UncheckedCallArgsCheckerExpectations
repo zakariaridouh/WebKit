@@ -51,9 +51,6 @@ dom/ShadowRoot.cpp
 dom/TreeScopeOrderedMap.cpp
 dom/TypedElementDescendantIteratorInlines.h
 dom/ViewTransition.cpp
-html/CachedHTMLCollection.h
-html/CachedHTMLCollectionInlines.h
-html/CollectionTraversalInlines.h
 layout/floats/FloatingContext.cpp
 layout/floats/PlacedFloats.cpp
 layout/formattingContexts/FormattingGeometry.cpp
