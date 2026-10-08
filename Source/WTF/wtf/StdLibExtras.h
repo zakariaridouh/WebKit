@@ -1270,6 +1270,13 @@ bool spansOverlap(std::span<T, TExtent> a, std::span<U, UExtent> b)
     dataLogF(format __VA_OPT__(, SAFE_PRINTF_TYPE(__VA_ARGS__))) \
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+// PrintStream::printf() is a C variadic function, so it cannot convert typed strings itself without losing
+// format checking. This converts them at the call site, keeping the format a literal that the compiler checks.
+#define SAFE_PRINTSTREAM_PRINTF(stream, format, ...) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    (stream).printf(format __VA_OPT__(, SAFE_PRINTF_TYPE(__VA_ARGS__))) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 // WTFLogAlways() and the other WTF_ATTRIBUTE_NSSTRING functions accept %@ as well as the printf
 // conversions, and vprintf_stderr_common() routes a format containing %@ through
 // CFStringCreateWithFormatAndArguments(). An Objective-C object argument therefore has to arrive
@@ -1289,6 +1296,65 @@ inline decltype(auto) NODELETE safeNSStringPrintfType(T&& argument) { return saf
 
 #define SAFE_WTFLOGALWAYS(format, ...) \
     SUPPRESS_UNCOUNTED_ARG WTFLogAlways(format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__)))
+
+// For call sites that log to a channel they were handed, so cannot use LOG() and LOG_VERBOSE(). The file and
+// function of SAFE_WTFLOG_VERBOSE() are converted with logPrintfType(), so either a typed string or __FILE__ works.
+#define SAFE_WTFLOG(channel, format, ...) \
+    SUPPRESS_UNCOUNTED_ARG WTFLog(channel, format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__)))
+
+#define SAFE_WTFLOG_VERBOSE(file, line, function, channel, format, ...) \
+    SUPPRESS_UNCOUNTED_ARG WTFLogVerbose(WTF::logPrintfType(file), line, WTF::logPrintfType(function), channel, format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__)))
+
+#if OS(DARWIN)
+// For call sites that log to an os_log_t they hold, so cannot use the RELEASE_LOG() family. os_log() accepts %@
+// as well as the printf conversions, so Objective-C object arguments are passed unchanged.
+#define SAFE_OS_LOG(log, format, ...) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    os_log(log, format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__))) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#define SAFE_OS_LOG_INFO(log, format, ...) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    os_log_info(log, format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__))) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#define SAFE_OS_LOG_DEBUG(log, format, ...) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    os_log_debug(log, format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__))) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#define SAFE_OS_LOG_ERROR(log, format, ...) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    os_log_error(log, format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__))) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#define SAFE_OS_LOG_FAULT(log, format, ...) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    os_log_fault(log, format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__))) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#define SAFE_OS_LOG_WITH_TYPE(log, type, format, ...) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    os_log_with_type(log, type, format __VA_OPT__(, SAFE_NSSTRING_PRINTF_TYPE(__VA_ARGS__))) \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+#endif
+
+#if OS(ANDROID)
+#define SAFE_ANDROID_LOG_PRINT(priority, tag, format, ...) \
+    __android_log_print(priority, tag, format __VA_OPT__(, SAFE_PRINTF_TYPE(__VA_ARGS__)))
+#endif
+
+#if ENABLE(JOURNALD_LOG)
+// sd_journal_send() takes a list of "FIELD=format", arguments... groups, so every argument, including the
+// formats, is converted with logPrintfType(), which passes those through. The macros supply the terminating
+// nullptr themselves: the functions are declared with the sentinel attribute, which requires a null pointer
+// constant rather than the result of a conversion.
+#define SAFE_SD_JOURNAL_SEND(format, ...) \
+    sd_journal_send(format WTF_LOG_PRINTF_ARGS(__VA_ARGS__), nullptr)
+
+#define SAFE_SD_JOURNAL_SEND_WITH_LOCATION(file, line, function, format, ...) \
+    sd_journal_send_with_location(WTF::logPrintfType(file), WTF::logPrintfType(line), WTF::logPrintfType(function), format WTF_LOG_PRINTF_ARGS(__VA_ARGS__), nullptr)
+#endif
 
 // logPrintfType() and LOG_PRINTF_TYPE(), the logging counterpart to safePrintfType(), are defined
 // in wtf/Assertions.h too, next to the LOG and RELEASE_LOG macro families that use them.

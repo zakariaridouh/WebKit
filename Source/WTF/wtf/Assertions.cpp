@@ -149,7 +149,7 @@ static os_log_t webkitSubsystemForGenericOSLog()
 static void logToStderr([[maybe_unused]] WTFLogChannel* channel, UTF8CStringView buffer)
 {
 #if PLATFORM(COCOA)
-    os_log(channel ? channel->osLogChannel : webkitSubsystemForGenericOSLog(), "%s", buffer.utf8());
+    SAFE_OS_LOG(channel ? channel->osLogChannel : webkitSubsystemForGenericOSLog(), "%s", buffer);
 #elif OS(ANDROID)
     __android_log_write(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, buffer.utf8());
 #endif

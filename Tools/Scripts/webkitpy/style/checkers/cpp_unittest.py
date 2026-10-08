@@ -7039,6 +7039,178 @@ class WebKitStyleTest(CppStyleTestBase):
             '',
             'foo.cpp')
 
+    def test_printstream_printf(self):
+        self.assert_lint(
+            'out.printf(" %8s ", str.legacyCStringPointer());',
+            "Use SAFE_PRINTSTREAM_PRINTF() instead of calling printf() on a PrintStream, and pass the typed string instead of calling legacyCStringPointer()."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'stream->printf(templateHTML, substitute.utf8().legacyCStringPointer(), other.utf8().legacyCStringPointer());',
+            "Use SAFE_PRINTSTREAM_PRINTF() instead of calling printf() on a PrintStream, and pass the typed string instead of calling legacyCStringPointer()."
+            "  [safercpp/printf] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'out.printf(" %c%8s %c ", SAFE_PRINTF_TYPE(d, str, d));',
+            "Use SAFE_PRINTSTREAM_PRINTF() instead of passing SAFE_PRINTF_TYPE() arguments to printf() on a PrintStream."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_multi_line_lint(
+            'out.printf(" %c%8s <- %18s %c ", d, str.legacyCStringPointer(),\n'
+            '    recoveryStr.legacyCStringPointer(), d);\n',
+            ["Use SAFE_PRINTSTREAM_PRINTF() instead of calling printf() on a PrintStream, and pass the typed string instead of calling legacyCStringPointer()."
+             "  [safercpp/printf] [4]"] * 2,
+            'foo.cpp')
+
+        self.assert_lint(
+            'SAFE_PRINTSTREAM_PRINTF(out, " %c%8s %c ", d, str, d);',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'out.printf("%zu", strlen(name.legacyCStringPointer()));',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'out.printf("test %d", value);',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'file.write(name.legacyCStringPointer());',
+            '',
+            'foo.cpp')
+
+        self.assert_multi_line_lint(
+            '#define SAFE_PRINTSTREAM_PRINTF(stream, format, ...) \\\n'
+            '    (stream).printf(format __VA_OPT__(, SAFE_PRINTF_TYPE(__VA_ARGS__)))\n',
+            '',
+            'foo.h')
+
+    def test_safe_logging_macros(self):
+        self.assert_lint(
+            'WTFLog(&channel, "%s", message.utf8().legacyCStringPointer());',
+            "Use 'SAFE_WTFLOG()' from <wtf/StdLibExtras.h> instead of 'WTFLog()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'WTFLogVerbose(file, line, function, &channel, "%s", message);',
+            "Use 'SAFE_WTFLOG_VERBOSE()' from <wtf/StdLibExtras.h> instead of 'WTFLogVerbose()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'os_log_error(OS_LOG_DEFAULT, "Failed: %{public}s", message);',
+            "Use 'SAFE_OS_LOG_ERROR()' from <wtf/StdLibExtras.h> instead of 'os_log_error()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'os_log_with_type(log, type, "%{public}s", message);',
+            "Use 'SAFE_OS_LOG_WITH_TYPE()' from <wtf/StdLibExtras.h> instead of 'os_log_with_type()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            '__android_log_print(ANDROID_LOG_VERBOSE, tag, "%s", message);',
+            "Use 'SAFE_ANDROID_LOG_PRINT()' from <wtf/StdLibExtras.h> instead of '__android_log_print()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'sd_journal_send("MESSAGE=%s", message, nullptr);',
+            "Use 'SAFE_SD_JOURNAL_SEND()' from <wtf/StdLibExtras.h> instead of 'sd_journal_send()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'sd_journal_send_with_location(file, line, function, "MESSAGE=%s", message, nullptr);',
+            "Use 'SAFE_SD_JOURNAL_SEND_WITH_LOCATION()' from <wtf/StdLibExtras.h> instead of 'sd_journal_send_with_location()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'gst_printerrln("Start error: %s", error->message);',
+            "Use 'SAFE_GST_PRINTERRLN()' from \"GStreamerCommon.h\" instead of 'gst_printerrln()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'gst_debug_log(category, level, file, function, line, nullptr, "%s", message);',
+            "Use 'SAFE_GST_DEBUG_LOG()' from \"GStreamerCommon.h\" instead of 'gst_debug_log()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'gst_debug_log_id_literal(category, level, file, function, line, id, message);',
+            "Use 'SAFE_GST_DEBUG_LOG_ID_LITERAL()' from \"GStreamerCommon.h\" instead of 'gst_debug_log_id_literal()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            '::os_log(log, "%{public}s", message);',
+            "Use 'SAFE_OS_LOG()' from <wtf/StdLibExtras.h> instead of 'os_log()'. It converts typed strings itself, so pass them without unwrapping them."
+            "  [safercpp/printf] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'SAFE_OS_LOG(log, "%{public}s", message);',
+            '',
+            'foo.mm')
+
+        self.assert_lint(
+            'SAFE_WTFLOG(&channel, "%s", message.utf8());',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'SAFE_GST_PRINTERRLN("Start error: %s", UTF8CStringView::unsafeFromUTF8(error->message));',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'OSObjectPtr log = adoptOSObject(os_log_create("com.apple.WebKit", "Process"));',
+            '',
+            'foo.mm')
+
+        self.assert_lint(
+            'logger.os_log(message);',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'WTF_EXPORT_PRIVATE void WTFLog(WTFLogChannel*, const char* format, ...) WTF_ATTRIBUTE_NSSTRING(2, 3);',
+            '',
+            'Source/WTF/wtf/Assertions.h')
+
+        self.assert_lint(
+            '#define RELEASE_LOG_ERROR(channel, format, ...) os_log_error(LOG_CHANNEL(channel).osLogChannel, format WTF_LOG_PRINTF_ARGS(__VA_ARGS__))',
+            '',
+            'foo.h')
+
+        self.assert_multi_line_lint(
+            '#define notImplemented() do { \\\n'
+            '        WTFLogVerbose(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, channel, "UNIMPLEMENTED: "); \\\n'
+            '    } while (0)\n',
+            '',
+            'foo.h')
+
+        self.assert_lint(
+            'os_log_debug(osLog(), "%s\\n", m_buffer);',
+            '',
+            'Source/bmalloc/bmalloc/TZoneLog.cpp')
+
+        self.assert_lint(
+            'SAFE_OS_LOG(log, "%{public}s", message.legacyCStringPointer());',
+            "Pass the typed string instead of calling legacyCStringPointer(). 'SAFE_OS_LOG()' converts typed strings itself."
+            "  [runtime/log_string_conversion] [4]",
+            'foo.mm')
+
     def test_posix_string_wrappers(self):
         self.assert_lint(
             'int fd = open(path.legacyCStringPointer(), O_RDONLY);',
@@ -7554,6 +7726,10 @@ class WebKitStyleTest(CppStyleTestBase):
         self.assert_lint('size_t buffer_size;',
                          'buffer_size' + name_underscore_error_message)
         self.assert_lint('short m_length;', '')
+        self.assert_lint('SUPPRESS_UNRETAINED_LOCAL SAFE_OS_LOG(channel.osLogChannel, "%{public}s", message);', '', 'foo.mm')
+        self.assert_lint('SUPPRESS_UNRETAINED_ARG RELEASE_LOG_FAULT(IPC, "Failed: %s", name);', '')
+        self.assert_lint('SUPPRESS_UNCOUNTED_LOCAL size_t buffer_size = 0;',
+                         'buffer_size' + name_underscore_error_message)
         self.assert_lint('short _length;',
                          '_length' + name_underscore_error_message)
         self.assert_lint('short length_;',

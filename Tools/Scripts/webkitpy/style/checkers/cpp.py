@@ -3385,9 +3385,17 @@ def _enclosing_function_call(clean_lines, line_number, position):
     return _enclosing_function_call_and_argument_index(clean_lines, line_number, position)[0]
 
 
-def _enclosing_function_call_and_argument_index(clean_lines, line_number, position):
+def _enclosing_member_function_call(clean_lines, line_number, position):
+    """Returns the name of the member function, called with '.' or '->', whose argument list contains the given
+    position, or None.
+    """
+
+    return _enclosing_function_call_and_argument_index(clean_lines, line_number, position, member=True)[0]
+
+
+def _enclosing_function_call_and_argument_index(clean_lines, line_number, position, member=False):
     """Returns the name of the function whose argument list contains the given position, and the index of the
-    argument containing it, or (None, None).
+    argument containing it, or (None, None). If member is True, only a member function call matches.
     """
 
     depth = 0
@@ -3403,8 +3411,11 @@ def _enclosing_function_call_and_argument_index(clean_lines, line_number, positi
                 if depth:
                     depth -= 1
                     continue
-                # A leading '::' names the global function, but any other qualifier names a different one.
-                name = search(r'(?:^|[^\w.>:])(?:::)?(\w+)\s*$', line[:index])
+                if member:
+                    name = search(r'(?:\.|->)\s*(\w+)\s*$', line[:index])
+                else:
+                    # A leading '::' names the global function, but any other qualifier names a different one.
+                    name = search(r'(?:^|[^\w.>:])(?:::)?(\w+)\s*$', line[:index])
                 return (name.group(1), argument_index) if name else (None, None)
             elif character == ',' and not depth:
                 argument_index += 1
@@ -3508,11 +3519,26 @@ _TYPED_STRING_PRINTF_MACROS = frozenset([
     'LOG_VERBOSE',
     'LOG_WITH_LEVEL',
     'RELEASE_ASSERT_WITH_MESSAGE',
+    'SAFE_ANDROID_LOG_PRINT',
     'SAFE_DATALOGF',
     'SAFE_FPRINTF',
+    'SAFE_GST_DEBUG_LOG',
+    'SAFE_GST_DEBUG_LOG_ID_LITERAL',
+    'SAFE_GST_PRINTERRLN',
+    'SAFE_OS_LOG',
+    'SAFE_OS_LOG_DEBUG',
+    'SAFE_OS_LOG_ERROR',
+    'SAFE_OS_LOG_FAULT',
+    'SAFE_OS_LOG_INFO',
+    'SAFE_OS_LOG_WITH_TYPE',
     'SAFE_PRINTF',
+    'SAFE_PRINTSTREAM_PRINTF',
+    'SAFE_SD_JOURNAL_SEND',
+    'SAFE_SD_JOURNAL_SEND_WITH_LOCATION',
     'SAFE_SPRINTF',
+    'SAFE_WTFLOG',
     'SAFE_WTFLOGALWAYS',
+    'SAFE_WTFLOG_VERBOSE',
 ])
 
 
@@ -3553,6 +3579,110 @@ def check_log_string_conversions(clean_lines, line_number, file_state, error):
         else:
             error(line_number, 'runtime/log_string_conversion', 4,
                   "Pass the typed string instead of calling legacyCStringPointer(). '%s()' converts typed strings itself." % macro)
+
+
+def _is_in_macro_definition(clean_lines, line_number):
+    """Returns whether the given line is part of a #define, including its continuation lines."""
+
+    current_line_number = line_number
+    while current_line_number > 0 and clean_lines.lines[current_line_number - 1].rstrip().endswith('\\'):
+        current_line_number -= 1
+    return clean_lines.lines[current_line_number].lstrip().startswith('#')
+
+
+# Logging functions taking printf-style arguments that have a SAFE_* macro converting typed strings itself, and
+# the header that defines the macro.
+_SAFE_LOGGING_MACROS = {
+    '__android_log_print': ('SAFE_ANDROID_LOG_PRINT', '<wtf/StdLibExtras.h>'),
+    'gst_debug_log': ('SAFE_GST_DEBUG_LOG', '"GStreamerCommon.h"'),
+    'gst_debug_log_id_literal': ('SAFE_GST_DEBUG_LOG_ID_LITERAL', '"GStreamerCommon.h"'),
+    'gst_printerrln': ('SAFE_GST_PRINTERRLN', '"GStreamerCommon.h"'),
+    'os_log': ('SAFE_OS_LOG', '<wtf/StdLibExtras.h>'),
+    'os_log_debug': ('SAFE_OS_LOG_DEBUG', '<wtf/StdLibExtras.h>'),
+    'os_log_error': ('SAFE_OS_LOG_ERROR', '<wtf/StdLibExtras.h>'),
+    'os_log_fault': ('SAFE_OS_LOG_FAULT', '<wtf/StdLibExtras.h>'),
+    'os_log_info': ('SAFE_OS_LOG_INFO', '<wtf/StdLibExtras.h>'),
+    'os_log_with_type': ('SAFE_OS_LOG_WITH_TYPE', '<wtf/StdLibExtras.h>'),
+    'sd_journal_send': ('SAFE_SD_JOURNAL_SEND', '<wtf/StdLibExtras.h>'),
+    'sd_journal_send_with_location': ('SAFE_SD_JOURNAL_SEND_WITH_LOCATION', '<wtf/StdLibExtras.h>'),
+    'WTFLog': ('SAFE_WTFLOG', '<wtf/StdLibExtras.h>'),
+    'WTFLogVerbose': ('SAFE_WTFLOG_VERBOSE', '<wtf/StdLibExtras.h>'),
+}
+
+_SAFE_LOGGING_FUNCTION_CALL_PATTERN = re.compile(
+    r'(?:^|[^\w.>:])(?:::)?(' + '|'.join(sorted(_SAFE_LOGGING_MACROS, key=len, reverse=True)) + r')\s*\(')
+
+# bmalloc cannot depend on WTF, which defines the macros.
+_SAFE_LOGGING_MACROS_EXEMPT_PATH_PATTERN = re.compile(r'(^|/)Source/bmalloc/')
+
+
+def check_safe_logging_macros(filename, clean_lines, line_number, file_state, error):
+    """Looks for calls to printf-style logging functions that have a SAFE_* macro converting typed strings itself.
+
+    Args:
+      filename: The name of the current file.
+      clean_lines: A CleansedLines instance containing the file.
+      line_number: The number of the line to check.
+      file_state: A _FileState instance which maintains information about
+                  the state of things in the file.
+      error: The function to call with any errors found.
+    """
+
+    if file_state.is_c_or_objective_c():
+        return
+
+    if _SAFE_LOGGING_MACROS_EXEMPT_PATH_PATTERN.search(_unix_path(filename)):
+        return
+
+    line = clean_lines.elided[line_number]  # Get rid of comments and strings.
+
+    # The macros themselves, and other macros building on these functions, forward their arguments.
+    if _is_in_macro_definition(clean_lines, line_number):
+        return
+
+    for call in _SAFE_LOGGING_FUNCTION_CALL_PATTERN.finditer(line):
+        function = call.group(1)
+        # Skip declarations and definitions, like 'void WTFLog(WTFLogChannel*, const char* format, ...)'.
+        if search(r'\b(void|int|bool)\s*$', line[:call.start(1)]):
+            continue
+        macro, header = _SAFE_LOGGING_MACROS[function]
+        error(line_number, 'safercpp/printf', 4,
+              "Use '%s()' from %s instead of '%s()'. It converts typed strings itself, so pass them without unwrapping them."
+              % (macro, header, function))
+
+
+def check_printstream_printf(clean_lines, line_number, file_state, error):
+    """Looks for typed strings converted by hand for PrintStream::printf(), which should use SAFE_PRINTSTREAM_PRINTF().
+
+    Args:
+      clean_lines: A CleansedLines instance containing the file.
+      line_number: The number of the line to check.
+      file_state: A _FileState instance which maintains information about
+                  the state of things in the file.
+      error: The function to call with any errors found.
+    """
+
+    if file_state.is_c_or_objective_c():
+        return
+
+    line = clean_lines.elided[line_number]  # Get rid of comments and strings.
+    if 'legacyCStringPointer' not in line and 'SAFE_PRINTF_TYPE' not in line:
+        return
+
+    # A macro forwarding its arguments to printf(), like SAFE_PRINTSTREAM_PRINTF() itself, is the wrapper.
+    if _is_in_macro_definition(clean_lines, line_number):
+        return
+
+    for conversion in re.finditer(r'\blegacyCStringPointer\s*\(|\bSAFE_PRINTF_TYPE\s*\(', line):
+        if _enclosing_member_function_call(clean_lines, line_number, conversion.start()) != 'printf':
+            continue
+        if conversion.group(0).startswith('legacyCStringPointer'):
+            error(line_number, 'safercpp/printf', 4,
+                  "Use SAFE_PRINTSTREAM_PRINTF() instead of calling printf() on a PrintStream, and pass the typed string instead of calling legacyCStringPointer().")
+        else:
+            error(line_number, 'safercpp/printf', 4,
+                  "Use SAFE_PRINTSTREAM_PRINTF() instead of passing SAFE_PRINTF_TYPE() arguments to printf() on a PrintStream.")
+        return
 
 
 def check_auto_with_adopt(clean_lines, line_number, file_state, error):
@@ -4479,6 +4609,7 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
     check_posix_string_wrappers(clean_lines, line_number, file_state, error)
     check_legacy_cstring_pointer_with_length(clean_lines, line_number, file_state, error)
     check_log_string_conversions(clean_lines, line_number, file_state, error)
+    check_printstream_printf(clean_lines, line_number, file_state, error)
     check_auto_with_adopt(clean_lines, line_number, file_state, error)
     check_adopt_of_dynamic_cast(clean_lines, line_number, file_state, error)
     check_lock_guard(clean_lines, line_number, file_state, error)
@@ -5141,6 +5272,10 @@ def check_identifier_name_in_declaration(filename, line_number, line, file_state
     # Remove keywords that aren't types.
     line = sub(r'\b(inline|using|static|const|volatile|register|extern|typedef|restrict|struct|class|virtual)(?=\W)', '', line)
 
+    # Remove static analyzer suppressions, like SUPPRESS_UNRETAINED_LOCAL, which annotate a statement rather than
+    # name a type, so that 'SUPPRESS_UNRETAINED_LOCAL os_log(...)' is not taken for a declaration of os_log().
+    line = sub(r'^\s*SUPPRESS_[A-Z_]+\s+', '', line)
+
     # Remove "new" and "new (expr)" to simplify, too.
     line = sub(r'new\s+', '', line)
     line = sub(r'new\s*(\([^)]*\))', '', line)
@@ -5636,6 +5771,7 @@ def process_line(filename, file_extension,
     check_posix_threading(clean_lines, line, error)
     check_invalid_increment(clean_lines, line, error)
     check_os_version_checks(filename, clean_lines, line, error)
+    check_safe_logging_macros(filename, clean_lines, line, file_state, error)
     check_objc_annotation_macros(filename, clean_lines, line, error)
     check_callonmainthread(filename, clean_lines, line, file_state, error)
     check_ismainthread(filename, clean_lines, line, file_state, error)

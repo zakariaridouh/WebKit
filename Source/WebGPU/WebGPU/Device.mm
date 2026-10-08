@@ -248,7 +248,7 @@ Ref<Device> Device::create(id<MTLDevice> device, String&& deviceLabel, HardwareC
 
     commandQueue.label = @"Default queue";
     if (!deviceLabel.isEmpty())
-        commandQueue.label = [NSString stringWithFormat:@"Default queue for device %s", deviceLabel.utf8().legacyCStringPointer()];
+        commandQueue.label = [NSString stringWithFormat:@"Default queue for device %@", deviceLabel.createNSString().get()];
 
     return adoptRef(*new Device(device, commandQueue, WTF::move(capabilities), adapter));
 }

@@ -708,7 +708,7 @@ void WebCoreLogObserver::didLogMessage(const WTFLogChannel& channel, WTFLogLevel
     const char* file = location ? location->file : __FILE__;
     const char* function = location ? location->function : __FUNCTION__;
     int line = location ? location->line : __LINE__;
-    gst_debug_log(debugCategory(), gstDebugLevel, file, function, line, nullptr, "%s", logString.utf8().legacyCStringPointer());
+    SAFE_GST_DEBUG_LOG(debugCategory(), gstDebugLevel, file, function, line, nullptr, "%s", logString.utf8());
 #else
     UNUSED_PARAM(channel);
     UNUSED_PARAM(level);

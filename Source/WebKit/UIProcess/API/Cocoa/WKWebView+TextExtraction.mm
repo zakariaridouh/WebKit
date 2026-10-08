@@ -1040,7 +1040,7 @@ static OptionSet<WebCore::DataDetectorType> NODELETE coreDataDetectorTypes(_WKTe
 
 #if PLATFORM(MAC)
     if ([self _activePopupButtonCell] && interaction.action == WebCore::TextExtraction::Action::SelectMenuItem && !interaction.text.isEmpty())
-        return completionHandler([NSString stringWithFormat:@"Select popup menu item labeled '%s'", interaction.text.utf8().legacyCStringPointer()], nil);
+        return completionHandler([NSString stringWithFormat:@"Select popup menu item labeled '%@'", interaction.text.createNSString().get()], nil);
 #endif
 
     [self _describeInteraction:WTF::move(interaction) inFrame:targetFrame staleNodeResolution:WebKit::StaleNodeResolutionState { .requestedIdentifier = nodeIdentifierString } completionHandler:completionHandler];

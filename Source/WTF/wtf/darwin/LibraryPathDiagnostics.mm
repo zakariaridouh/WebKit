@@ -143,9 +143,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     va_start(argList, format);
     stream.vprintf(format, argList);
     va_end(argList);
-
-    os_log_error(m_osLog, "%{public}s", stream.toUTF8CString().legacyCStringPointer());
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+    SAFE_OS_LOG_ERROR(m_osLog, "%{public}s", stream.toUTF8CString());
 }
 
 void LibraryPathDiagnosticsLogger::logExecutablePath(void)

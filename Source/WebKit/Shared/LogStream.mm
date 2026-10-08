@@ -49,14 +49,12 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(LogStream);
 
 void logWithProcessNamePrefix(os_log_t log, os_log_type_t type, ASCIILiteral processName, int pid, UTF8CStringView message)
 {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     if (processName == "WebContent"_s)
-        os_log_with_type(log, type, "WebContent[%d] %{public}s", pid, message.utf8()); // NOLINT
+        SAFE_OS_LOG_WITH_TYPE(log, type, "WebContent[%d] %{public}s", pid, message);
     else if (processName == "Model"_s)
-        os_log_with_type(log, type, "Model[%d] %{public}s", pid, message.utf8()); // NOLINT
+        SAFE_OS_LOG_WITH_TYPE(log, type, "Model[%d] %{public}s", pid, message);
     else
-        os_log_with_type(log, type, "%{public}s[%d] %{public}s", processName.characters(), pid, message.utf8()); // NOLINT
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        SAFE_OS_LOG_WITH_TYPE(log, type, "%{public}s[%d] %{public}s", processName, pid, message);
 }
 
 #if ENABLE(STREAMING_IPC_IN_LOG_FORWARDING)
