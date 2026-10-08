@@ -1503,6 +1503,17 @@ static void runMovingStepsForShadowIncludingInclusiveDescendants(Node& root, Nod
     }
 }
 
+static bool renderTreeUpdateCanReachMovedNode(const Node& node)
+{
+    for (RefPtr ancestor = node.parentElementInComposedTree(); ancestor; ancestor = ancestor->parentElementInComposedTree()) {
+        if (ancestor->renderer())
+            return true;
+        if (!ancestor->hasDisplayContents())
+            return false;
+    }
+    return false;
+}
+
 // https://dom.spec.whatwg.org/#dom-parentnode-movebefore
 ExceptionOr<void> ContainerNode::moveBefore(Node& node, RefPtr<Node>&& refChild)
 {
@@ -1547,6 +1558,7 @@ ExceptionOr<void> ContainerNode::moveBefore(Node& node, RefPtr<Node>&& refChild)
     RefPtr oldNextSibling = node.nextSibling();
 
     auto removalChildChange = makeChildChangeForMoveRemoval(node);
+    std::optional<ChildChange> insertionChildChange;
 
     {
         Ref nodeDocument = node.document();
@@ -1555,37 +1567,46 @@ ExceptionOr<void> ContainerNode::moveBefore(Node& node, RefPtr<Node>&& refChild)
         ChildListMutationScope(*oldParent).willRemoveChild(node);
         nodeDocument->nodeWillBeMoved(node);
 
-        if (oldNextSibling) {
-            oldNextSibling->setPreviousSibling(oldPreviousSibling.get());
-            node.setNextSibling(nullptr);
-        } else {
-            ASSERT(oldParent->lastChild() == &node);
-            oldParent->setLastChild(oldPreviousSibling.get());
-        }
+        {
+            Style::ChildChangeInvalidation styleInvalidation(*oldParent, removalChildChange);
 
-        if (oldPreviousSibling) {
-            oldPreviousSibling->setNextSibling(oldNextSibling.get());
-            node.setPreviousSibling(nullptr);
-        } else {
-            ASSERT(oldParent->firstChild() == &node);
-            oldParent->setFirstChild(oldNextSibling.get());
-        }
+            if (oldNextSibling) {
+                oldNextSibling->setPreviousSibling(oldPreviousSibling.get());
+                node.setNextSibling(nullptr);
+            } else {
+                ASSERT(oldParent->lastChild() == &node);
+                oldParent->setLastChild(oldPreviousSibling.get());
+            }
 
-        node.updateAncestorConnectedSubframeCountForRemoval();
-        // FIXME(319588): Handle inspector DOM breakpoints (e.g. InspectorInstrumentation::willRemoveDOMNode)
-        InspectorInstrumentation::didRemoveDOMNode(nodeDocument, node);
-        node.setParentNode(nullptr);
+            if (oldPreviousSibling) {
+                oldPreviousSibling->setNextSibling(oldNextSibling.get());
+                node.setPreviousSibling(nullptr);
+            } else {
+                ASSERT(oldParent->firstChild() == &node);
+                oldParent->setFirstChild(oldNextSibling.get());
+            }
+
+            node.updateAncestorConnectedSubframeCountForRemoval();
+            // FIXME(319588): Handle inspector DOM breakpoints (e.g. InspectorInstrumentation::willRemoveDOMNode)
+            InspectorInstrumentation::didRemoveDOMNode(nodeDocument, node);
+            node.setParentNode(nullptr);
+        }
 
         // FIXME(281223): Handle slot assignments and live ranges.
 
-        if (refChild)
-            insertBeforeCommon(*refChild, node);
-        else
-            appendChildCommon(node);
-        // FIXME(319588): Handle inspector DOM breakpoints (e.g. InspectorInstrumentation::willInsertDOMNode)
-        InspectorInstrumentation::didInsertDOMNode(protect(document()), node);
+        insertionChildChange.emplace(makeChildChangeForMoveInsertion(*this, node, refChild.get()));
+        {
+            Style::ChildChangeInvalidation styleInvalidation(*this, *insertionChildChange);
 
-        node.setTreeScopeRecursively(treeScope());
+            if (refChild)
+                insertBeforeCommon(*refChild, node);
+            else
+                appendChildCommon(node);
+            // FIXME(319588): Handle inspector DOM breakpoints (e.g. InspectorInstrumentation::willInsertDOMNode)
+            InspectorInstrumentation::didInsertDOMNode(protect(document()), node);
+
+            node.setTreeScopeRecursively(treeScope());
+        }
         node.updateAncestorConnectedSubframeCountForInsertion();
         ChildListMutationScope(*this).childAdded(node);
     }
@@ -1594,8 +1615,11 @@ ExceptionOr<void> ContainerNode::moveBefore(Node& node, RefPtr<Node>&& refChild)
 
     runMovingStepsForShadowIncludingInclusiveDescendants(node, node, *oldParent, newParentIsConnected, { .didRemoveFromOldTreeScope = oldParent->isInTreeScope(), .didInsertIntoNewTreeScope = isInTreeScope() });
 
+    if (!renderTreeUpdateCanReachMovedNode(node))
+        destroyRenderTreeIfNeeded(node);
+
     oldParent->childrenChanged(removalChildChange);
-    childrenChanged(makeChildChangeForMoveInsertion(*this, node, refChild));
+    childrenChanged(*insertionChildChange);
 
     return { };
 }
