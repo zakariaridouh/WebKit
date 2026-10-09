@@ -118,7 +118,7 @@ public:
     FloatRect currentViewBoxRect() const;
     bool hasSynthesizedViewBoxForSVGImage() const;
 
-    bool viewBoxDisablesPainting();
+    bool viewBoxDisablesPainting() const;
 
     AffineTransform viewBoxToViewTransform(float viewWidth, float viewHeight) const;
     bool hasTransformRelatedAttributes() const final;

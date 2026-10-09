@@ -294,9 +294,7 @@ void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint&
     if (paintInfo.phase == PaintPhase::Outline || paintInfo.phase == PaintPhase::SelfOutline)
         return;
 
-    // An empty viewBox also disables rendering.
-    // (http://www.w3.org/TR/SVG/coords.html#ViewBoxAttribute)
-    if (svgSVGElement().hasEmptyViewBox())
+    if (svgSVGElement().viewBoxDisablesPainting())
         return;
 
     GraphicsContext& context = paintInfo.context();

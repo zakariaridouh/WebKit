@@ -699,16 +699,15 @@ bool SVGSVGElement::hasSynthesizedViewBoxForSVGImage() const
 {
     // An SVG document embedded through SVGImage is resized to the container size chosen by the
     // embedder. Without an explicit viewBox the content has to stretch to that size, which is
-    // modelled by synthesizing a viewBox from the intrinsic size, see currentViewBoxRect().
+    // modeled by synthesizing a viewBox from the intrinsic size, see currentViewBoxRect().
     return !m_useCurrentView && viewBox().isEmpty() && isEmbeddedThroughSVGImage(*this);
 }
 
-bool SVGSVGElement::viewBoxDisablesPainting()
+bool SVGSVGElement::viewBoxDisablesPainting() const
 {
-    if (!hasEmptyViewBox())
-        return false;
-
-    return m_useCurrentView ? currentView().hasEmptyViewBox() : true;
+    if (m_useCurrentView)
+        return m_viewSpec && m_viewSpec->hasEmptyViewBox();
+    return hasEmptyViewBox();
 }
 
 FloatRect SVGSVGElement::currentViewBoxRect() const
@@ -968,10 +967,12 @@ void SVGSVGElement::inheritViewAttributes(const SVGViewElement& viewElement)
     Ref view = currentView();
     m_useCurrentView = true;
 
-    if (viewElement.hasAttribute(SVGNames::viewBoxAttr))
+    if (viewElement.hasValidViewBox())
         view->setViewBox(viewElement.viewBox());
-    else
+    else if (hasValidViewBox())
         view->setViewBox(viewBox());
+    else
+        view->resetViewBox();
 
     if (viewElement.hasAttribute(SVGNames::preserveAspectRatioAttr))
         view->setPreserveAspectRatio(viewElement.preserveAspectRatio());
