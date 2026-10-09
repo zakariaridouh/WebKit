@@ -3118,6 +3118,12 @@ void AXObjectCache::onStyleChange(Element& element, OptionSet<Style::Change> cha
         childrenChanged(object.get());
     }
 
+    if (oldStyle->content().altText() != newStyle->content().altText()) {
+        m_deferredTextChangedList.add(element);
+        if (!m_performCacheUpdateTimer.isActive())
+            m_performCacheUpdateTimer.startOneShot(0_s);
+    }
+
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     if (oldStyle->insideLink() != newStyle->insideLink())
         postNotification(*object, AXNotification::VisitedStateChanged);
