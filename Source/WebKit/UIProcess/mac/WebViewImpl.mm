@@ -1820,7 +1820,7 @@ static WKPDFHUDViewAccessibilityDisplayModeState platformAccessibilityDisplayMod
     return WKPDFHUDViewAccessibilityDisplayModeStateUnavailable;
 }
 
-void WebViewImpl::createPDFHUD(PDFPluginIdentifier identifier, WebCore::FrameIdentifier frameID, const WebCore::IntRect& boundingBoxInFrameRootView)
+void WebViewImpl::createPDFHUD(PDFPluginIdentifier identifier, WebCore::FrameIdentifier frameID, const WebCore::IntRect& boundingBoxInMainFrameView)
 {
     removePDFHUD(identifier);
 
@@ -1856,90 +1856,35 @@ void WebViewImpl::createPDFHUD(PDFPluginIdentifier identifier, WebCore::FrameIde
         }
     });
 
-    // The bounding box is in the plugin frame's local root view coordinates.
-    // For cross-origin <iframe> PDFs, this lacks the subframe's offset in the
-    // page, so we need to convert that to top level web view coordinates.
-    m_pdfHUDsPendingCreation.set(identifier, PendingHUDData { boundingBoxInFrameRootView, PDFAccessibilityDisplayModeState::Ineligible });
-    convertPDFHUDBoundingBoxToWebViewCoordinates(frameID, boundingBoxInFrameRootView, [weakThis = WeakPtr { *this }, identifier, frameID, requestedBox = boundingBoxInFrameRootView, actionHandler](const WebCore::IntRect& boundingBoxInWebView) {
-        CheckedPtr checkedThis = weakThis.get();
-        if (!checkedThis)
-            return;
+    const auto compositingBordersVisible = protect(m_page->preferences())->compositingBordersVisible();
 
-        // In case the PDF HUD was removed while the conversion was in flight.
-        auto pendingData = checkedThis->m_pdfHUDsPendingCreation.takeOptional(identifier);
-        if (!pendingData)
-            return;
+    RetainPtr<Class> hudType = protect(m_page->preferences())->useAlternatePDFHUD() ? WKAlternatePDFHUDView.class : WKDefaultPDFHUDView.class;
+    RetainPtr<NSView<WKPDFHUDView>> hud = adoptNS([[hudType alloc] initWithFrame:boundingBoxInMainFrameView frameIdentifier:frameID.toUInt64() compositingBordersVisible:compositingBordersVisible actionHandler:actionHandler.get()]);
 
-        const auto compositingBordersVisible = protect(checkedThis->m_page->preferences())->compositingBordersVisible();
-
-        RetainPtr<Class> hudType = protect(checkedThis->m_page->preferences())->useAlternatePDFHUD() ? WKAlternatePDFHUDView.class : WKDefaultPDFHUDView.class;
-        RetainPtr<NSView<WKPDFHUDView>> hud = adoptNS([[hudType alloc] initWithFrame:boundingBoxInWebView frameIdentifier:frameID.toUInt64() compositingBordersVisible:compositingBordersVisible actionHandler:actionHandler.get()]);
-
-        [hud setAccessibilityDisplayModeState:platformAccessibilityDisplayModeState(pendingData->displayModeState)];
-
-        [checkedThis->m_view.get() addSubview:hud];
-        checkedThis->_pdfHUDViews.add(identifier, WTF::move(hud));
-
-        // If a HUD update arrived while the conversion was in flight, apply it now that the HUD exists.
-        if (pendingData->frameRootViewBox != requestedBox)
-            checkedThis->updatePDFHUDLocation(identifier, pendingData->frameRootViewBox);
-    });
+    [m_view.get() addSubview:hud.get()];
+    _pdfHUDViews.add(identifier, WTF::move(hud));
 }
 
-void WebViewImpl::updatePDFHUDLocation(PDFPluginIdentifier identifier, const WebCore::IntRect& boundingBoxInFrameRootView)
+void WebViewImpl::updatePDFHUDLocation(PDFPluginIdentifier identifier, const WebCore::IntRect& boundingBoxInMainFrameView)
 {
-    RetainPtr hud = _pdfHUDViews.get(identifier);
-    if (!hud) {
-        if (auto it = m_pdfHUDsPendingCreation.find(identifier); it != m_pdfHUDsPendingCreation.end())
-            it->value.frameRootViewBox = boundingBoxInFrameRootView;
-        return;
-    }
-
-    convertPDFHUDBoundingBoxToWebViewCoordinates(WebCore::FrameIdentifier { [hud frameIdentifier] }, boundingBoxInFrameRootView, [weakThis = WeakPtr { *this }, identifier](const WebCore::IntRect& boundingBoxInWebView) {
-        CheckedPtr checkedThis = weakThis.get();
-        if (!checkedThis)
-            return;
-        if (RetainPtr hud = checkedThis->_pdfHUDViews.get(identifier))
-            [hud setFrame:boundingBoxInWebView];
-    });
-}
-
-void WebViewImpl::convertPDFHUDBoundingBoxToWebViewCoordinates(WebCore::FrameIdentifier pluginFrameID, WebCore::IntRect boundingBoxInFrameRootView, CompletionHandler<void(WebCore::IntRect)>&& completionHandler)
-{
-    RefPtr frame = WebFrameProxy::webFrame(pluginFrameID);
-    if (!frame)
-        return completionHandler(boundingBoxInFrameRootView);
-
-    m_page->convertRectToMainFrameCoordinates(boundingBoxInFrameRootView, frame->rootFrame()->frameID(), [completionHandler = WTF::move(completionHandler), fallback = boundingBoxInFrameRootView](std::optional<WebCore::FloatRect> boundingBoxInWebView) mutable {
-        completionHandler(boundingBoxInWebView
-            .transform([](const auto& floatRect) {
-                return WebCore::enclosingIntRect(floatRect);
-            })
-            .value_or(fallback));
-    });
+    if (RetainPtr hud = _pdfHUDViews.get(identifier))
+        [hud setFrame:boundingBoxInMainFrameView];
 }
 
 void WebViewImpl::updatePDFHUDAccessibilityDisplayMode(PDFPluginIdentifier identifier, PDFAccessibilityDisplayModeState accessibilityDisplayModeState)
 {
-    if (RetainPtr hud = _pdfHUDViews.get(identifier)) {
+    if (RetainPtr hud = _pdfHUDViews.get(identifier))
         [hud setAccessibilityDisplayModeState:platformAccessibilityDisplayModeState(accessibilityDisplayModeState)];
-        return;
-    }
-
-    if (auto it = m_pdfHUDsPendingCreation.find(identifier); it != m_pdfHUDsPendingCreation.end())
-        it->value.displayModeState = accessibilityDisplayModeState;
 }
 
 void WebViewImpl::removePDFHUD(PDFPluginIdentifier identifier)
 {
-    m_pdfHUDsPendingCreation.remove(identifier);
     if (RetainPtr hud = _pdfHUDViews.take(identifier))
         [hud removeFromSuperview];
 }
 
 void WebViewImpl::removeAllPDFHUDs()
 {
-    m_pdfHUDsPendingCreation.clear();
     for (auto& hud : _pdfHUDViews.values())
         [hud removeFromSuperview];
     _pdfHUDViews.clear();

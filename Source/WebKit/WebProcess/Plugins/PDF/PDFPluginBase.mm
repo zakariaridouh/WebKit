@@ -774,7 +774,7 @@ void PDFPluginBase::updateHUDVisibility()
         return;
 
     if (shouldShowHUD())
-        page->createPDFHUD(*this, frame->frameID(), frameForHUDInRootViewCoordinates());
+        page->createPDFHUD(*this, frame->frameID(), frameForHUDInMainFrameViewCoordinates());
     else
         page->removePDFHUD(*this);
 }
@@ -1296,12 +1296,12 @@ void PDFPluginBase::updateHUDLocation()
 {
     if (!shouldShowHUD())
         return;
-    protect(protect(m_frame.get())->page())->updatePDFHUDLocation(*this, frameForHUDInRootViewCoordinates());
+    protect(protect(m_frame.get())->page())->updatePDFHUDLocation(*this, frameForHUDInMainFrameViewCoordinates());
 }
 
-IntRect PDFPluginBase::frameForHUDInRootViewCoordinates() const
+IntRect PDFPluginBase::frameForHUDInMainFrameViewCoordinates() const
 {
-    return convertFromPluginToRootView(IntRect(IntPoint(), size()));
+    return enclosingIntRect(convertFromRootViewToMainFrameView(convertFromPluginToRootView(FloatRect { { }, size() })));
 }
 
 bool PDFPluginBase::hudEnabled() const

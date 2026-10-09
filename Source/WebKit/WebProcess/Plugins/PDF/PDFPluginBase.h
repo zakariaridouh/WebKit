@@ -484,7 +484,7 @@ protected:
     virtual void incrementalLoadingDidFinish() { }
 
 #if ENABLE(PDF_HUD)
-    WebCore::IntRect frameForHUDInRootViewCoordinates() const;
+    WebCore::IntRect frameForHUDInMainFrameViewCoordinates() const;
     bool NODELETE hudEnabled() const;
     bool shouldShowHUD() const;
     void updateHUDVisibility();
