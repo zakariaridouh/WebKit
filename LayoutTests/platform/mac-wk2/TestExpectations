@@ -43,6 +43,7 @@ scrollingcoordinator/ios [ Skip ]
 swipe [ Pass ]
 view-gestures [ Pass ]
 http/tests/swipe [ Pass ]
+http/tests/ipc/cocoa [ Pass ]
 http/tests/pdf [ Pass ]
 pdf [ Pass ]
 tiled-drawing [ Pass ]
@@ -2668,3 +2669,6 @@ webkit.org/b/326894 [ Sequoia+ ] http/tests/websocket/tests/hybi/inspector/hands
 webkit.org/b/326895 [ Debug ] http/tests/security/registerBlobURL.html [ Skip ] 
 
 webkit.org/b/326899 [ Sequoia+ ] http/tests/cache/cancel-multiple-post-xhrs.html [ Pass Failure ]
+
+webkit.org/b/293973 [ Debug ] http/tests/ipc/cocoa/gpu-load-error-empty-user-info-crssh.html [ Skip ]
+[ Debug ] ipc/cocoa/media-containment-bypass-create-player.html [ Crash ]

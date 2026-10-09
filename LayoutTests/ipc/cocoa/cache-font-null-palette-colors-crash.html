@@ -1,6 +1,6 @@
 <!-- webkit-test-runner [ IPCTestingAPIEnabled=true ] -->
 <p>This test passes if WebKit does not crash.</p>
-<script src="../resources/ipc.js"></script>
+<script src="../../resources/ipc.js"></script>
 <script>
 if (window.testRunner) {
     testRunner.dumpAsText();
@@ -11,7 +11,7 @@ if (window.testRunner) {
     if (!window.IPC)
         return window.testRunner?.notifyDone();
 
-    const { CoreIPC } = await import('./coreipc.js');
+    const { CoreIPC } = await import('../coreipc.js');
 
     const renderingBackendIdentifier = randomIPCID();
     const connection = CoreIPC.newStreamConnection();

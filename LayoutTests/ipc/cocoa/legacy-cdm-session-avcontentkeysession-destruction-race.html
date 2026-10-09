@@ -24,7 +24,7 @@ async function main() {
         return;
     }
 
-    const {CoreIPC} = await import('./coreipc.js');
+    const {CoreIPC} = await import('../coreipc.js');
     CoreIPC.default_timeout = 30;
 
     function makeSharedBuffer(bytes) {

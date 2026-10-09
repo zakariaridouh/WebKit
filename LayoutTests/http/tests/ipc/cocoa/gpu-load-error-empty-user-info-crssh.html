@@ -3,7 +3,7 @@
     window.testRunner?.dumpAsText();
     window.testRunner?.waitUntilDone();
     if (window.IPC) {
-        import('./coreipc.js').then(({
+        import('../coreipc.js').then(({
             CoreIPC
         }) => {
             CoreIPC.GPU.RemoteMediaResourceManager.LoadFailed(0, {identifier:262145, error:{ipcData:{optionalValue:{type:4, nsError:{optionalValue:{wrapper:{domain:location.href, code:523986010202, userInfo:{vector:{}},underlyingError:{optionalValue:{domain:'A', code:29, userInfo:{vector:{}}, underlyingError:{}}}}}}, isSanitized:false}}}});

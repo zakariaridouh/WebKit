@@ -150,6 +150,7 @@ interaction-region [ Skip ]
 overlay-region [ Skip ]
 pdf [ Skip ]
 ipc/cocoa [ Skip ]
+http/tests/ipc/cocoa [ Skip ]
 ipc/ios [ Skip ]
 ipc/mac [ Skip ]
 ipc/restrictedendpoints/mac [ Skip ]
@@ -7880,8 +7881,6 @@ imported/w3c/web-platform-tests/mixed-content/gen/top.http-rp/opt-in/video-tag.h
 imported/w3c/web-platform-tests/mixed-content/gen/top.meta/opt-in/audio-tag.https.html
 imported/w3c/web-platform-tests/mixed-content/gen/top.meta/opt-in/beacon.https.html
 imported/w3c/web-platform-tests/mixed-content/gen/top.meta/opt-in/video-tag.https.html
-
-webkit.org/b/293973 [ Debug ] http/tests/ipc/gpu-load-error-empty-user-info-crssh.html [ Skip ]
 
 webkit.org/b/297505 ipc/LocalSampleBufferDisplayLayer-LogIdentifier-data-race-uaf.html [ Skip ]
 

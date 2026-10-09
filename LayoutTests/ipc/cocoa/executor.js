@@ -1,4 +1,4 @@
-import { CoreIPC } from './coreipc.js';
+import { CoreIPC } from '../coreipc.js';
 
 export default class Executor {
     constructor() {
