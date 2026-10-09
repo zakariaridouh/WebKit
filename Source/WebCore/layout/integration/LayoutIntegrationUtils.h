@@ -58,6 +58,8 @@ public:
     LayoutUnit maxContentContributionHeightForGridItem(const ElementBox&, LayoutUnit gridAreaInlineSize) const;
     LayoutUnit minContentLogicalWidthContribution(const ElementBox&) const;
     LayoutUnit maxContentLogicalWidthContribution(const ElementBox&) const;
+    std::optional<LayoutUnit> firstLineBaselineForGridItem(const ElementBox&) const;
+    std::optional<LayoutUnit> lastLineBaselineForGridItem(const ElementBox&) const;
     void layoutWithFormattingContextForBlockInInline(const ElementBox& block, LayoutPoint blockLineLogicalTopLeft, const InlineLayoutState&) const;
     static const Style::ComputedStyle& firstNonAnonymousAncestorStyle(const Box&);
 

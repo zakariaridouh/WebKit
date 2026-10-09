@@ -97,6 +97,18 @@ void IntegrationUtils::layoutGridItem(const ElementBox& box, std::optional<Layou
     LayoutIntegration::layoutGridItemWithFormattingContext(box, overridingBorderBoxLogicalWidth, overridingBorderBoxLogicalHeight, gridAreaInlineSize, const_cast<LayoutState&>(m_globalLayoutState.get()));
 }
 
+std::optional<LayoutUnit> IntegrationUtils::firstLineBaselineForGridItem(const ElementBox& box) const
+{
+    ASSERT(box.isGridItem());
+    return protect(downcast<RenderBox>(*box.rendererForIntegration()))->firstLineBaseline();
+}
+
+std::optional<LayoutUnit> IntegrationUtils::lastLineBaselineForGridItem(const ElementBox& box) const
+{
+    ASSERT(box.isGridItem());
+    return protect(downcast<RenderBox>(*box.rendererForIntegration()))->lastLineBaseline();
+}
+
 LayoutUnit IntegrationUtils::maxContentWidth(const ElementBox& box) const
 {
     ASSERT(box.isFlexItem());

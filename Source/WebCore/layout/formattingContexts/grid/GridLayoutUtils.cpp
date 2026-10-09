@@ -980,6 +980,39 @@ bool preferredSizeBehavesAsAuto(const Style::PreferredSize& preferredSize)
     return preferredSize.isAuto();
 }
 
+// https://drafts.csswg.org/css-align-3/#baseline-terms
+Vector<BaselineSharingGroup> baselineSharingGroups(const PlacedGridItems& gridItems, LogicalBoxAxis alignmentAxis)
+{
+    Vector<BaselineSharingGroup> groups;
+    for (auto [gridItemIndex, gridItem] : WTF::indexedRange(gridItems)) {
+        auto& alignment = alignmentAxis == LogicalBoxAxis::Inline ? gridItem.inlineAxisAlignment() : gridItem.blockAxisAlignment();
+        auto position = alignment.position();
+        if (position != ItemPosition::Baseline && position != ItemPosition::LastBaseline)
+            continue;
+
+        // FIXME: Items whose size depends on an intrinsically-sized track do not participate in
+        // baseline alignment and use their fallback alignment instead.
+        // https://drafts.csswg.org/css-grid-1/#column-align
+
+        // Items that span multiple tracks participate in first/last baseline alignment within their
+        // start-most/end-most track.
+        auto baselineAlignmentPreference = position == ItemPosition::Baseline ? Style::BaselineAlignmentPreferenceKind::First : Style::BaselineAlignmentPreferenceKind::Last;
+        auto [startLine, endLine] = alignmentAxis == LogicalBoxAxis::Inline
+            ? std::pair { gridItem.columnStartLine(), gridItem.columnEndLine() }
+            : std::pair { gridItem.rowStartLine(), gridItem.rowEndLine() };
+        auto trackIndex = baselineAlignmentPreference == Style::BaselineAlignmentPreferenceKind::First ? startLine : endLine - 1;
+
+        auto groupIndex = groups.findIf([&](auto& group) {
+            return group.trackIndex == trackIndex && group.baselineAlignmentPreference == baselineAlignmentPreference;
+        });
+        if (groupIndex == notFound)
+            groups.append({ trackIndex, baselineAlignmentPreference, { gridItemIndex } });
+        else
+            groups[groupIndex].gridItemIndexes.append(gridItemIndex);
+    }
+    return groups;
+}
+
 }
 }
 }

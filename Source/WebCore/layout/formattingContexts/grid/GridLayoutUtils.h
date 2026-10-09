@@ -28,14 +28,18 @@
 #include "GridTypeAliases.h"
 #include "LayoutUnit.h"
 #include <optional>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
 class WritingMode;
 
+enum class LogicalBoxAxis : uint8_t;
+
 namespace Style {
 struct GridTrackSize;
 struct PreferredSize;
+enum class BaselineAlignmentPreferenceKind : bool;
 }
 
 namespace Layout {
@@ -51,6 +55,13 @@ struct MarginBoxSize;
 struct UsedMargins {
     LayoutUnit marginStart;
     LayoutUnit marginEnd;
+};
+
+// https://drafts.csswg.org/css-align-3/#baseline-sharing-group
+struct BaselineSharingGroup {
+    size_t trackIndex { 0 };
+    Style::BaselineAlignmentPreferenceKind baselineAlignmentPreference { };
+    Vector<size_t> gridItemIndexes;
 };
 
 namespace GridLayoutUtils {
@@ -98,6 +109,9 @@ MarginBoxSize blockAxisMinContentContribution(const PlacedGridItem&, LayoutUnit 
 MarginBoxSize blockAxisMaxContentContribution(const PlacedGridItem&, LayoutUnit gridAreaInlineSize, const GridFormattingContext&);
 
 bool preferredSizeBehavesAsAuto(const Style::PreferredSize&);
+
+Vector<BaselineSharingGroup> baselineSharingGroups(const PlacedGridItems&, LogicalBoxAxis alignmentAxis);
+
 template<typename SizeType>
 bool sizeDependsOnContainingBlockSize(const SizeType& size)
 {
