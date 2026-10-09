@@ -79,6 +79,8 @@ void FindTestPage::load(const String& url, SiteIsolation siteIsolation, RetainPt
         [configuration setWebsiteDataStore:m_server.httpsProxyConfiguration().websiteDataStore];
     else
         configuration = m_server.httpsProxyConfiguration();
+
+    setFeatureEnabled(configuration.get(), @"SiteIsolationEnabled", siteIsolation == SiteIsolation::On);
     std::tie(m_webView, m_navigationDelegate) = siteIsolatedViewAndDelegate(configuration, CGRectMake(0, 0, 800, 600), siteIsolation == SiteIsolation::On);
 
     [m_webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url.createNSString().get()]]];
