@@ -42,6 +42,7 @@ class Array;
 
 namespace WebKit {
 
+class BrowsingContextGroup;
 class FrameState;
 class WebPageProxy;
 
@@ -99,7 +100,7 @@ public:
     void didReceiveProvisionalMessage(IPC::Connection&, IPC::Decoder&);
     void didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&);
 
-    void backForwardAddItemShared(IPC::Connection&, Ref<FrameState>&&, LoadedWebArchive);
+    void backForwardAddItemShared(IPC::Connection&, Ref<FrameState>&&, LoadedWebArchive, BrowsingContextGroup&);
     void backForwardGoToItemShared(IPC::Connection&, WebCore::BackForwardItemIdentifier);
 
     RefPtr<FrameState> findFrameStateInItem(WebCore::BackForwardItemIdentifier, WebCore::FrameIdentifier parentFrameID, WebCore::FrameIdentifier childFrameID, uint64_t childFrameIndex, const String& childFrameName);

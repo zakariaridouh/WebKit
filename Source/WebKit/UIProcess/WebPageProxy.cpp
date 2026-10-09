@@ -6068,6 +6068,14 @@ Ref<BrowsingContextGroup> WebPageProxy::browsingContextGroupForNavigation(WebFra
     return carriedOverGroup(m_browsingContextGroup.copyRef());
 }
 
+// The group the navigation commits into. The page adopts a provisional page's group only in swapToProvisionalPage().
+Ref<BrowsingContextGroup> WebPageProxy::browsingContextGroupForCommittingNavigation(const API::Navigation* navigation) const
+{
+    if (RefPtr provisionalPage = m_provisionalPage; provisionalPage && navigation && provisionalPage->navigationID() == navigation->navigationID())
+        return provisionalPage->browsingContextGroup();
+    return m_browsingContextGroup;
+}
+
 void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& processInitiatingNavigation, PolicyAction policyAction, API::Navigation& navigation, Ref<API::NavigationAction>&& navigationAction, ProcessSwapRequestedByClient processSwapRequestedByClient, WebFrameProxy& frame, const FrameInfoData& frameInfo, WasNavigationIntercepted wasNavigationIntercepted, std::optional<PolicyDecisionConsoleMessage>&& message, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
 {
     WEBPAGEPROXY_RELEASE_LOG(Loading, "receivedNavigationActionPolicyDecision: frameID=%" PRIu64 ", isMainFrame=%d, navigationID=%" PRIu64 ", policyAction=%" PUBLIC_LOG_STRING, frame.frameID().toUInt64(), frame.isMainFrame(), navigation.navigationID().object().toUInt64(), toString(policyAction).characters());
@@ -6623,7 +6631,7 @@ void WebPageProxy::receivedNavigationResponsePolicyDecision(WebCore::PolicyActio
         RefPtr mainFrame = m_mainFrame;
         auto& topLevelCreationURL = navigationResponse->frame().isMainFrame() || !mainFrame ? response.url() : mainFrame->url();
         auto isSecureContext = responseOrigin->isPotentiallyTrustworthy() && SecurityOrigin::create(topLevelCreationURL)->isPotentiallyTrustworthy() ? IsSecureContext::Yes : IsSecureContext::No;
-        isOriginKeyed = protect(browsingContextGroup())->resolveAgentClusterKeying(responseOrigin->data(), obtainOriginAgentClusterPolicy(response, isSecureContext, nullptr));
+        isOriginKeyed = browsingContextGroupForCommittingNavigation(navigation)->resolveAgentClusterKeying(responseOrigin->data(), obtainOriginAgentClusterPolicy(response, isSecureContext, nullptr));
     }
 
     completionHandler(PolicyDecision { isNavigatingToAppBoundDomain(), action, navigation ? std::optional { navigation->navigationID() } : std::nullopt, downloadID, { }, { }, { }, SafeBrowsingCheckOngoing::No, nullptr, isOriginKeyed });
@@ -11345,9 +11353,7 @@ void WebPageProxy::triggerProcessSwapForEnhancedSecurity(WebCore::NavigationIden
         || !internals().enhancedSecurityTracker.shouldEnableForInsecureResponse(*navigation, hasOpenedPage()))
         return completionHandler(std::nullopt);
 
-    Ref browsingContextGroupForSwap = (m_provisionalPage && m_provisionalPage->navigationID() == navigationID)
-        ? Ref { m_provisionalPage->browsingContextGroup() }
-        : m_browsingContextGroup.copyRef();
+    Ref browsingContextGroupForSwap = browsingContextGroupForCommittingNavigation(navigation);
 
     RefPtr provisionalPage = m_provisionalPage;
 
@@ -13244,12 +13250,12 @@ void WebPageProxy::requestDOMPasteAccess(IPC::Connection& connection, DOMPasteAc
 
 // BackForwardList
 
-void WebPageProxy::backForwardAddItemShared(IPC::Connection& connection, Ref<FrameState>&& navigatedFrameState, LoadedWebArchive loadedWebArchive)
+void WebPageProxy::backForwardAddItemShared(IPC::Connection& connection, Ref<FrameState>&& navigatedFrameState, LoadedWebArchive loadedWebArchive, BrowsingContextGroup& browsingContextGroup)
 {
 #if ENABLE(BACK_FORWARD_LIST_SWIFT)
-    backForwardList().backForwardAddItemShared(&connection, WTF::move(navigatedFrameState), loadedWebArchive);
+    backForwardList().backForwardAddItemShared(&connection, WTF::move(navigatedFrameState), loadedWebArchive, &browsingContextGroup);
 #else
-    backForwardList().backForwardAddItemShared(connection, WTF::move(navigatedFrameState), loadedWebArchive);
+    backForwardList().backForwardAddItemShared(connection, WTF::move(navigatedFrameState), loadedWebArchive, browsingContextGroup);
 #endif
 }
 
