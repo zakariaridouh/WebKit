@@ -150,7 +150,6 @@ NonInheritedRareData::NonInheritedRareData()
     , usesAnchorFunctions(false)
     , anchorFunctionScrollCompensatedAxes(0)
     , isPopoverInvoker(false)
-    , useSVGZoomRulesForLength(false)
     , scrollAxisLock(static_cast<unsigned>(ComputedStyle::initialScrollAxisLock()))
 {
 }
@@ -270,7 +269,6 @@ inline NonInheritedRareData::NonInheritedRareData(const NonInheritedRareData& o)
     , usesAnchorFunctions(o.usesAnchorFunctions)
     , anchorFunctionScrollCompensatedAxes(o.anchorFunctionScrollCompensatedAxes)
     , isPopoverInvoker(o.isPopoverInvoker)
-    , useSVGZoomRulesForLength(o.useSVGZoomRulesForLength)
     , scrollAxisLock(o.scrollAxisLock)
 {
 }
@@ -397,7 +395,6 @@ bool NonInheritedRareData::operator==(const NonInheritedRareData& o) const
         && usesAnchorFunctions == o.usesAnchorFunctions
         && anchorFunctionScrollCompensatedAxes == o.anchorFunctionScrollCompensatedAxes
         && isPopoverInvoker == o.isPopoverInvoker
-        && useSVGZoomRulesForLength == o.useSVGZoomRulesForLength
         && scrollAxisLock == o.scrollAxisLock;
 }
 
@@ -567,7 +564,6 @@ void NonInheritedRareData::dumpDifferences(TextStream& ts, const NonInheritedRar
     LOG_IF_DIFFERENT_WITH_CAST(bool, anchorFunctionScrollCompensatedAxes);
     LOG_IF_DIFFERENT_WITH_CAST(bool, isPopoverInvoker);
 
-    LOG_IF_DIFFERENT_WITH_CAST(bool, useSVGZoomRulesForLength);
     LOG_IF_DIFFERENT_WITH_CAST(ScrollAxisLock, scrollAxisLock);
 }
 #endif // !LOG_DISABLED

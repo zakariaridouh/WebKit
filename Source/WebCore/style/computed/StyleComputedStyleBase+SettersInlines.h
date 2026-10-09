@@ -276,7 +276,7 @@ inline void ComputedStyleBase::setPseudoElementIdentifier(std::optional<PseudoEl
 
 inline void ComputedStyleBase::setUseSVGZoomRulesForLength(bool value)
 {
-    SET_NESTED(m_nonInheritedData, rareData, useSVGZoomRulesForLength, value);
+    m_nonInheritedFlags.useSVGZoomRulesForLength = value;
 }
 
 inline bool ComputedStyleBase::setUsedZoom(float zoomLevel)

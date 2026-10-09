@@ -803,6 +803,7 @@ public:
         PREFERRED_TYPE(PseudoElementType) unsigned pseudoElementType : PseudoElementTypeBits;
         unsigned pseudoBits : PublicPseudoIDBits;
         PREFERRED_TYPE(PseudoElementBoxGeneration) unsigned pseudoElementBoxGeneration : 1;
+        PREFERRED_TYPE(bool) unsigned useSVGZoomRulesForLength : 1;
     };
 
     struct InheritedFlags {
