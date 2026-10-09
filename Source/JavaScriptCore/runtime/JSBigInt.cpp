@@ -5472,6 +5472,91 @@ String JSBigInt::toStringBasePowerOfTwo(VM& vm, JSGlobalObject* nullOrGlobalObje
     return StringImpl::adopt(WTF::move(resultString));
 }
 
+// Divide-and-conquer conversion to string, ported from V8 [1]. The divisor of a level is the square
+// of the divisor of the level below, so a division splits a chunk into two halves that produce the
+// same number of characters.
+//
+// [1]: https://source.chromium.org/chromium/chromium/src/+/main:v8/src/bigint/tostring.cc
+static constexpr size_t toStringDivideAndConquerThreshold = 12;
+
+class JSBigInt::ToStringFormatter {
+    WTF_MAKE_NONCOPYABLE(ToStringFormatter);
+public:
+    ToStringFormatter(unsigned radix, std::span<const Digit>, std::span<Latin1Character> out);
+
+    size_t format() { return format(m_divisors.size(), m_digits, m_out.size(), m_scratch); }
+
+private:
+    size_t format(size_t depth, std::span<const Digit> chunk, size_t position, std::span<Digit> scratch);
+
+    unsigned m_radix;
+    size_t m_chunkChars;
+    std::span<const Digit> m_digits;
+    std::span<Latin1Character> m_out;
+    Vector<Digit, 128> m_storage;
+    Vector<std::span<const Digit>, 16> m_divisors;
+    std::span<Digit> m_scratch;
+};
+
+JSBigInt::ToStringFormatter::ToStringFormatter(unsigned radix, std::span<const Digit> digits, std::span<Latin1Character> out)
+    : m_radix(radix)
+    , m_chunkChars(digitBits * bitsPerCharTableMultiplier / maxBitsPerCharTable[radix])
+    , m_digits(digits)
+    , m_out(out)
+{
+    auto bitLength = [](std::span<const Digit> x) {
+        return x.size() * digitBits - clz(x.back());
+    };
+    Vector<size_t, 16> sizes;
+    sizes.append(1);
+    m_storage.append(digitPow(radix, m_chunkChars));
+    while (bitLength(m_storage.span().last(sizes.last())) * 2 - 1 <= bitLength(digits)) {
+        size_t end = m_storage.size();
+        m_storage.grow(end + sizes.last() * 2);
+        auto storage = m_storage.mutableSpan();
+        auto divisor = storage.subspan(end - sizes.last(), sizes.last());
+        sizes.append(multiplyDigits(divisor, divisor, storage.subspan(end)).size());
+        m_storage.shrink(end + sizes.last());
+    }
+    m_storage.grow(m_storage.size() * 2 + digits.size() + sizes.size() + 1);
+    m_scratch = m_storage.mutableSpan();
+    for (size_t size : sizes)
+        m_divisors.constructAndAppend(consumeSpan(m_scratch, size));
+}
+
+size_t JSBigInt::ToStringFormatter::format(size_t depth, std::span<const Digit> chunk, size_t position, std::span<Digit> scratch)
+{
+    chunk = normalize(chunk);
+    if (chunk.size() < toStringDivideAndConquerThreshold) {
+        auto rest = scratch.first(chunk.size());
+        while (chunk.size() > 1) {
+            Digit remainder;
+            chunk = normalize(divideSingle(rest, remainder, chunk, m_divisors[0][0]));
+            for (size_t i = 0; i < m_chunkChars; ++i, remainder /= m_radix)
+                m_out[--position] = radixDigits[remainder % m_radix];
+        }
+        for (Digit digit = chunk.empty() ? 0 : chunk[0]; digit; digit /= m_radix)
+            m_out[--position] = radixDigits[digit % m_radix];
+        return position;
+    }
+
+    auto divisor = m_divisors[depth - 1];
+    if (compareDigits(chunk, divisor) == ComparisonResult::LessThan)
+        return format(depth - 1, chunk, position, scratch);
+
+    size_t chars = m_chunkChars << (depth - 1);
+    size_t trailingZeroDigits = chars * ctz(m_radix) / digitBits;
+    auto quotientStorage = consumeSpan(scratch, chunk.size() - divisor.size() + 1);
+    auto remainderStorage = consumeSpan(scratch, divisor.size());
+    memcpySpan(remainderStorage, chunk.first(trailingZeroDigits));
+    auto [quotient, remainder] = divideDigitsInto(quotientStorage, remainderStorage.subspan(trailingZeroDigits), chunk.subspan(trailingZeroDigits), divisor.subspan(trailingZeroDigits));
+
+    size_t start = position - chars;
+    position = format(depth - 1, remainderStorage.first(trailingZeroDigits + remainder.size()), position, scratch);
+    memsetSpan(m_out.subspan(start, position - start), '0');
+    return format(depth - 1, quotient, start, scratch);
+}
+
 String JSBigInt::toStringGeneric(VM& vm, JSGlobalObject* nullOrGlobalObjectForOOM, JSBigInt* x, unsigned radix)
 {
     // FIXME: [JSC] Revisit usage of Vector into JSBigInt::toString
@@ -5493,6 +5578,15 @@ String JSBigInt::toStringGeneric(VM& vm, JSGlobalObject* nullOrGlobalObjectForOO
             throwOutOfMemoryError(nullOrGlobalObjectForOOM, scope);
         }
         return String();
+    }
+
+    if (length >= toStringDivideAndConquerThreshold) {
+        resultString.grow(maximumCharactersRequired);
+        ToStringFormatter formatter(radix, x->digits(), resultString.mutableSpan());
+        size_t start = formatter.format();
+        if (sign)
+            resultString[--start] = '-';
+        return StringImpl::create(resultString.span().subspan(start));
     }
 
     Digit lastDigit;

@@ -642,6 +642,7 @@ private:
     static std::span<Digit> leftShift(std::span<Digit> z, std::span<const Digit> x, unsigned);
 
     static String toStringBasePowerOfTwo(VM&, JSGlobalObject*, JSBigInt*, unsigned radix);
+    class ToStringFormatter;
     static String toStringGeneric(VM&, JSGlobalObject*, JSBigInt*, unsigned radix);
 
     template <typename CharType>
