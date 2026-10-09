@@ -60,7 +60,6 @@ endif ()
 WEBKIT_COMPUTE_SOURCES(WebKitLegacy)
 
 list(APPEND WebKitLegacy_SOURCES
-    WebCoreSupport/LegacySocketProvider.cpp
     WebCoreSupport/LegacyWebPageDebuggable.cpp
     WebCoreSupport/LegacyWebPageInspectorController.cpp
     WebCoreSupport/WebCryptoClient.mm
