@@ -315,7 +315,7 @@ static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, Seria
         // FIXME: These are exposed everywhere, but transferring them to an AudioWorklet is untested.
         return !isAudioWorkletGlobalScope(globalObject);
     case FileSystemHandleTag:
-        return isInterfaceExposed<JSFileSystemHandle>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSFileSystemHandle>(globalObject);
     }
     return false;
 }
