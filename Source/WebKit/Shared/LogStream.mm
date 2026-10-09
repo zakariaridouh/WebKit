@@ -34,6 +34,7 @@
 #import <wtf/NeverDestroyed.h>
 #import <wtf/OSObjectPtr.h>
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/darwin/DarwinExtras.h>
 
 #if HAVE(OS_SIGNPOST)
 #import <wtf/SystemTracing.h>
@@ -132,7 +133,7 @@ void LogStream::logOnBehalfOfWebContent(std::span<const char8_t> subsystemSpan, 
     if (!subsystem.isEmpty() && !category.isEmpty()) {
         if (category == "Testing"_s)
             globalLogCountForTesting++;
-        osLog = adoptOSObject(os_log_create(subsystem.legacyCStringPointer(), category.legacyCStringPointer()));
+        osLog = adoptOSObject(osLogCreate(subsystem, category));
     }
     if (!osLog)
         osLog = OS_LOG_DEFAULT;

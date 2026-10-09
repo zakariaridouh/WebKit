@@ -7211,6 +7211,65 @@ class WebKitStyleTest(CppStyleTestBase):
             "  [runtime/log_string_conversion] [4]",
             'foo.mm')
 
+    def test_darwin_string_wrappers(self):
+        self.assert_lint(
+            'return !sandbox_check(pid, "mach-lookup", SANDBOX_FILTER_GLOBAL_NAME, service.utf8().legacyCStringPointer());',
+            "Use 'sandboxCheck()' from <wtf/darwin/DarwinExtras.h> instead of 'sandbox_check()', and pass the typed string instead of calling legacyCStringPointer()."
+            "  [runtime/darwin_string_wrappers] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'if (rootless_check_datavault_flag(directoryPath.legacyCStringPointer(), storageClass))',
+            "Use 'rootlessCheckDatavaultFlag()' from <wtf/darwin/DarwinExtras.h> instead of 'rootless_check_datavault_flag()', and pass the typed string instead of calling legacyCStringPointer()."
+            "  [runtime/darwin_string_wrappers] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'osLog = adoptOSObject(os_log_create(subsystem.legacyCStringPointer(), category.legacyCStringPointer()));',
+            "Use 'osLogCreate()' from <wtf/darwin/DarwinExtras.h> instead of 'os_log_create()', and pass the typed string instead of calling legacyCStringPointer()."
+            "  [runtime/darwin_string_wrappers] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'RetainPtr<Class> objectClass = objc_lookUpClass(className.legacyCStringPointer());',
+            "Use 'objcLookUpClass()' from <wtf/darwin/DarwinExtras.h> instead of 'objc_lookUpClass()', and pass the typed string instead of calling legacyCStringPointer()."
+            "  [runtime/darwin_string_wrappers] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'xpc_dictionary_set_string(message.get(), key.utf8().legacyCStringPointer(), value.utf8().legacyCStringPointer());',
+            "Use 'xpcDictionarySetString()' from <wtf/darwin/XPCExtras.h> instead of 'xpc_dictionary_set_string()', and pass the typed string instead of calling legacyCStringPointer()."
+            "  [runtime/darwin_string_wrappers] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'm_connection = adoptOSObject(xpc_connection_create_mach_service(m_machServiceName.legacyCStringPointer(), queue, 0));',
+            "Use 'xpcConnectionCreateMachService()' from <wtf/darwin/XPCExtras.h> instead of 'xpc_connection_create_mach_service()', and pass the typed string instead of calling legacyCStringPointer()."
+            "  [runtime/darwin_string_wrappers] [4]",
+            'foo.mm')
+
+        self.assert_multi_line_lint(
+            'SandboxProfilePtr sandboxProfile { sandbox_compile_file(\n'
+            '    profilePath.legacyCStringPointer(), parameters, &error) };',
+            "Use 'sandboxCompileFile()' from <wtf/darwin/DarwinExtras.h> instead of 'sandbox_compile_file()', and pass the typed string instead of calling legacyCStringPointer()."
+            "  [runtime/darwin_string_wrappers] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'xpc_dictionary_set_string(message.get(), "message-name", "bootstrap");',
+            '',
+            'foo.mm')
+
+        self.assert_lint(
+            'OSObjectPtr log = adoptOSObject(os_log_create("com.apple.WebKit", "Process"));',
+            '',
+            'foo.mm')
+
+        self.assert_lint(
+            'return !sandboxCheck(pid, "mach-lookup", SANDBOX_FILTER_GLOBAL_NAME, service.utf8());',
+            '',
+            'foo.cpp')
+
     def test_posix_string_wrappers(self):
         self.assert_lint(
             'int fd = open(path.legacyCStringPointer(), O_RDONLY);',

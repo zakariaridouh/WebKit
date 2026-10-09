@@ -3379,6 +3379,37 @@ _POSIX_STRING_WRAPPERS = {
     'unlink': 'posixUnlink',
 }
 
+_DARWIN_STRING_WRAPPERS = {
+    'objc_getClass': 'objcGetClass',
+    'objc_lookUpClass': 'objcLookUpClass',
+    'os_log_create': 'osLogCreate',
+    'rootless_check_datavault_flag': 'rootlessCheckDatavaultFlag',
+    'rootless_mkdir_datavault': 'rootlessMkdirDatavault',
+    'sandbox_check': 'sandboxCheck',
+    'sandbox_check_by_audit_token': 'sandboxCheckByAuditToken',
+    'sandbox_compile_file': 'sandboxCompileFile',
+    'sandbox_compile_string': 'sandboxCompileString',
+    'sandbox_extension_consume': 'sandboxExtensionConsume',
+    'sandbox_extension_issue_file': 'sandboxExtensionIssueFile',
+    'sandbox_extension_issue_file_to_process': 'sandboxExtensionIssueFileToProcess',
+    'sandbox_extension_issue_generic': 'sandboxExtensionIssueGeneric',
+    'sandbox_extension_issue_iokit_registry_entry_class': 'sandboxExtensionIssueIOKitRegistryEntryClass',
+    'sandbox_extension_issue_iokit_registry_entry_class_to_process': 'sandboxExtensionIssueIOKitRegistryEntryClassToProcess',
+    'sandbox_extension_issue_mach': 'sandboxExtensionIssueMach',
+    'sandbox_extension_issue_mach_to_process': 'sandboxExtensionIssueMachToProcess',
+    'sandbox_init_with_parameters': 'sandboxInitWithParameters',
+    'sandbox_set_param': 'sandboxSetParam',
+}
+
+
+_XPC_STRING_WRAPPERS = {
+    'xpc_array_set_string': 'xpcArraySetString',
+    'xpc_connection_copy_entitlement_value': 'xpcConnectionCopyEntitlementValue',
+    'xpc_connection_create_mach_service': 'xpcConnectionCreateMachService',
+    'xpc_dictionary_set_string': 'xpcDictionarySetString',
+}
+
+
 def _enclosing_function_call(clean_lines, line_number, position):
     """Returns the name of the function whose argument list contains the given position, or None.
 
@@ -3482,6 +3513,22 @@ def check_posix_string_wrappers(clean_lines, line_number, file_state, error):
 _STRING_EXPRESSION = r'((?:[A-Za-z_]\w*(?:\(\s*\))?\s*(?:\.|->)\s*)*[A-Za-z_]\w*(?:\(\s*\))?)'
 _LEGACY_CSTRING_POINTER_WITH_LENGTH_PATTERN = re.compile(
     r'\b' + _STRING_EXPRESSION + r'\s*\.\s*legacyCStringPointer\s*\(\s*\)\s*,\s*' + _STRING_EXPRESSION + r'\s*\.\s*(?:length|size)\s*\(\s*\)')
+
+
+def check_darwin_string_wrappers(clean_lines, line_number, file_state, error):
+    """Looks for Darwin functions called with legacyCStringPointer(), which should use the wrappers in wtf/darwin/DarwinExtras.h
+    or wtf/darwin/XPCExtras.h.
+
+    Args:
+      clean_lines: A CleansedLines instance containing the file.
+      line_number: The number of the line to check.
+      file_state: A _FileState instance which maintains information about
+                  the state of things in the file.
+      error: The function to call with any errors found.
+    """
+
+    _check_string_wrappers(clean_lines, line_number, file_state, error, _DARWIN_STRING_WRAPPERS, '<wtf/darwin/DarwinExtras.h>', 'runtime/darwin_string_wrappers', {})
+    _check_string_wrappers(clean_lines, line_number, file_state, error, _XPC_STRING_WRAPPERS, '<wtf/darwin/XPCExtras.h>', 'runtime/darwin_string_wrappers', {})
 
 
 def check_legacy_cstring_pointer_with_length(clean_lines, line_number, file_state, error):
@@ -4610,6 +4657,7 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
     check_wtf_xpc_object_ptr(clean_lines, line_number, file_state, error)
     check_glib_string_wrappers(clean_lines, line_number, file_state, error)
     check_posix_string_wrappers(clean_lines, line_number, file_state, error)
+    check_darwin_string_wrappers(clean_lines, line_number, file_state, error)
     check_legacy_cstring_pointer_with_length(clean_lines, line_number, file_state, error)
     check_log_string_conversions(clean_lines, line_number, file_state, error)
     check_printstream_printf(clean_lines, line_number, file_state, error)
@@ -5911,6 +5959,7 @@ class CppChecker(object):
         'runtime/casting',
         'runtime/construct_and_append',
         'runtime/ctype_function',
+        'runtime/darwin_string_wrappers',
         'runtime/dispatch_queue_autorelease_pool',
         'runtime/dispatch_set_target_queue',
         'runtime/enum_bitfields',

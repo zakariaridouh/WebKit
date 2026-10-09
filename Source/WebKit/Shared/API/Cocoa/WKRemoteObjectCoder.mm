@@ -43,6 +43,7 @@
 #import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/NSStringExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/darwin/DarwinExtras.h>
 #import <wtf/spi/cocoa/SecuritySPI.h>
 #import <wtf/text/CString.h>
 
@@ -1079,7 +1080,7 @@ static RetainPtr<id> decodeObject(WKRemoteObjectDecoder *decoder)
 
     auto className = classNameString->string().utf8();
 
-    RetainPtr<Class> objectClass = objc_lookUpClass(className.legacyCStringPointer());
+    RetainPtr<Class> objectClass = objcLookUpClass(className);
     if (!objectClass)
         crashWithClassName(className.span());
 

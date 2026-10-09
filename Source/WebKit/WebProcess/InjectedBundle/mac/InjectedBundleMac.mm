@@ -43,6 +43,7 @@
 #import <stdio.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/darwin/DarwinExtras.h>
 #import <wtf/text/CString.h>
 #import <wtf/text/WTFString.h>
 
@@ -232,7 +233,7 @@ void InjectedBundle::extendClassesForParameterCoder(API::Array& classes)
         }
 
         auto className = classNameString->string().utf8();
-        RetainPtr objectClass = objc_lookUpClass(className.legacyCStringPointer());
+        RetainPtr objectClass = objcLookUpClass(className);
         if (!objectClass) {
             RELEASE_LOG_ERROR(Process, "InjectedBundle::extendClassesForParameterCoder - Class %{public}s is not a valid Objective C class", className);
             break;
