@@ -184,15 +184,6 @@ static bool isInterfaceExposedInGlobalObject(JSC::JSGlobalObject& globalObject)
     return JSWrapper::isExposedInGlobalObject(*domGlobalObject);
 }
 
-template<typename JSWrapper>
-static bool isInterfaceExposed(JSC::JSGlobalObject& globalObject)
-{
-    // FIXME: Replace with isInterfaceExposedInGlobalObject() one serialization tag at a time.
-    if (!isAudioWorkletGlobalScope(globalObject))
-        return true;
-    return JSWrapper::isExposedInGlobalObject(uncheckedDowncast<JSDOMGlobalObject>(globalObject));
-}
-
 static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, SerializationTag tag)
 {
     switch (tag) {
@@ -237,32 +228,32 @@ static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, Seria
     case ErrorTag:
         return true;
     case FileTag:
-        return isInterfaceExposed<JSFile>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSFile>(globalObject);
     case FileListTag:
-        return isInterfaceExposed<JSFileList>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSFileList>(globalObject);
     case ImageDataTag:
-        return isInterfaceExposed<JSImageData>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSImageData>(globalObject);
     case BlobTag:
-        return isInterfaceExposed<JSBlob>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSBlob>(globalObject);
     case CryptoKeyTag:
         return isInterfaceExposedInGlobalObject<JSCryptoKey>(globalObject);
     case DOMPointReadOnlyTag:
-        return isInterfaceExposed<JSDOMPointReadOnly>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSDOMPointReadOnly>(globalObject);
     case DOMPointTag:
-        return isInterfaceExposed<JSDOMPoint>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSDOMPoint>(globalObject);
     case DOMRectReadOnlyTag:
-        return isInterfaceExposed<JSDOMRectReadOnly>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSDOMRectReadOnly>(globalObject);
     case DOMRectTag:
-        return isInterfaceExposed<JSDOMRect>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSDOMRect>(globalObject);
     case DOMMatrixReadOnlyTag:
-        return isInterfaceExposed<JSDOMMatrixReadOnly>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSDOMMatrixReadOnly>(globalObject);
     case DOMMatrixTag:
-        return isInterfaceExposed<JSDOMMatrix>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSDOMMatrix>(globalObject);
     case DOMQuadTag:
-        return isInterfaceExposed<JSDOMQuad>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSDOMQuad>(globalObject);
     case ImageBitmapTransferTag:
     case ImageBitmapTag:
-        return isInterfaceExposed<JSImageBitmap>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSImageBitmap>(globalObject);
 #if ENABLE(WEB_RTC)
     case RTCCertificateTag:
         return isInterfaceExposedInGlobalObject<JSRTCCertificate>(globalObject);
@@ -270,19 +261,19 @@ static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, Seria
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     case OffscreenCanvasTransferTag:
     case InMemoryOffscreenCanvasTag:
-        return isInterfaceExposed<JSOffscreenCanvas>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSOffscreenCanvas>(globalObject);
 #endif
     case MessagePortReferenceTag:
     case InMemoryMessagePortTag:
-        return isInterfaceExposed<JSMessagePort>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSMessagePort>(globalObject);
 #if ENABLE(WEB_RTC)
     case RTCDataChannelTransferTag:
-        return isInterfaceExposed<JSRTCDataChannel>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSRTCDataChannel>(globalObject);
 #endif
     case DOMExceptionTag:
-        return isInterfaceExposed<JSDOMException>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSDOMException>(globalObject);
     case QuotaExceededErrorTag:
-        return isInterfaceExposed<JSQuotaExceededError>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSQuotaExceededError>(globalObject);
 #if ENABLE(WEB_CODECS)
     case WebCodecsEncodedVideoChunkTag:
         return isInterfaceExposedInGlobalObject<JSWebCodecsEncodedVideoChunk>(globalObject);
