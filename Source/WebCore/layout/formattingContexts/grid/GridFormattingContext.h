@@ -66,6 +66,12 @@ struct GridLayoutResult {
     UsedTrackSizes usedTrackSizes;
     GridItemRects gridItemRects;
     LayoutUnit usedBlockContentSize;
+    // The number of explicit grid tracks that came from an auto-repeat.
+    size_t autoRepeatColumnsCount { 0 };
+    size_t autoRepeatRowsCount { 0 };
+
+    size_t leadingImplicitColumnsCount { 0 };
+    size_t leadingImplicitRowsCount { 0 };
 };
 
 // The number of implicit tracks generated before the start of the explicit grid, per axis, because

@@ -50,7 +50,11 @@ public:
     static ExplicitGridTrackSizes resolve(const Style::ComputedStyle& gridContainerStyle, const AutoRepeatConstraint& inlineAxisAutoRepeatConstraint, const AutoRepeatConstraint& blockAxisAutoRepeatConstraint, LayoutUnit usedColumnGap, LayoutUnit usedRowGap);
 
 private:
-    static Vector<Style::GridTrackSize> resolveTrackSizes(const Style::GridTemplateList&, const AutoRepeatConstraint&, LayoutUnit usedGap, Style::ZoomFactor);
+    struct ResolveTrackSizesResult {
+        Vector<Style::GridTrackSize> trackSizes;
+        WTF::Range<size_t> autoRepeatTracksIndexes;
+    };
+    static ResolveTrackSizesResult resolveTrackSizes(const Style::GridTemplateList&, const AutoRepeatConstraint&, LayoutUnit usedGap, Style::ZoomFactor);
 };
 
 } // namespace Layout

@@ -37,10 +37,9 @@ namespace Layout {
 ExplicitGridTrackSizes ExplicitGridResolver::resolve(const Style::ComputedStyle& gridContainerStyle, const AutoRepeatConstraint& inlineAxisAutoRepeatConstraint, const AutoRepeatConstraint& blockAxisAutoRepeatConstraint, LayoutUnit usedColumnGap, LayoutUnit usedRowGap)
 {
     auto zoom = gridContainerStyle.usedZoomForLength();
-    return {
-        resolveTrackSizes(gridContainerStyle.gridTemplateColumns(), inlineAxisAutoRepeatConstraint, usedColumnGap, zoom),
-        resolveTrackSizes(gridContainerStyle.gridTemplateRows(), blockAxisAutoRepeatConstraint, usedRowGap, zoom)
-    };
+    auto resolvedColumns = resolveTrackSizes(gridContainerStyle.gridTemplateColumns(), inlineAxisAutoRepeatConstraint, usedColumnGap, zoom);
+    auto resolvedRows = resolveTrackSizes(gridContainerStyle.gridTemplateRows(), blockAxisAutoRepeatConstraint, usedRowGap, zoom);
+    return { WTF::move(resolvedColumns.trackSizes), WTF::move(resolvedRows.trackSizes), resolvedColumns.autoRepeatTracksIndexes, resolvedRows.autoRepeatTracksIndexes };
 }
 
 // Style keeps the auto-repeated tracks apart from the rest of the track list, so splice
@@ -61,11 +60,15 @@ static Vector<Style::GridTrackSize> trackSizesWithAutoRepetitions(const Style::G
     return trackSizes;
 }
 
-Vector<Style::GridTrackSize> ExplicitGridResolver::resolveTrackSizes(const Style::GridTemplateList& gridTemplateList, const AutoRepeatConstraint& autoRepeatConstraint, LayoutUnit usedGap, Style::ZoomFactor zoom)
+ExplicitGridResolver::ResolveTrackSizesResult ExplicitGridResolver::resolveTrackSizes(const Style::GridTemplateList& gridTemplateList, const AutoRepeatConstraint& autoRepeatConstraint, LayoutUnit usedGap, Style::ZoomFactor zoom)
 {
-    bool hasAutoFillRepeat = gridTemplateList.autoRepeatType == AutoRepeatType::Fill && !gridTemplateList.autoRepeatSizes.isEmpty();
-    auto trackSizes = hasAutoFillRepeat ? trackSizesWithAutoRepetitions(gridTemplateList, AutoRepeatResolver::resolveRepetitions(gridTemplateList, autoRepeatConstraint, usedGap, zoom)) : gridTemplateList.sizes;
-    return trackSizes;
+    auto& autoRepeatSizes = gridTemplateList.autoRepeatSizes;
+    if (gridTemplateList.autoRepeatType != AutoRepeatType::Fill || autoRepeatSizes.isEmpty())
+        return { gridTemplateList.sizes, { } };
+
+    auto repetitionCount = AutoRepeatResolver::resolveRepetitions(gridTemplateList, autoRepeatConstraint, usedGap, zoom);
+    auto firstAutoRepeatTrackIndex = gridTemplateList.autoRepeatInsertionPoint;
+    return { trackSizesWithAutoRepetitions(gridTemplateList, repetitionCount), { firstAutoRepeatTrackIndex, firstAutoRepeatTrackIndex + repetitionCount * autoRepeatSizes.size() } };
 }
 
 } // namespace Layout

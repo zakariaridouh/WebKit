@@ -128,7 +128,9 @@ static ExplicitGridTrackSizes explicitGridTrackSizesForIntrinsicWidths(const Sty
     auto explicitGridTrackSizes = ExplicitGridResolver::resolve(gridStyle, inlineAxisAutoRepeatConstraint, blockAxisAutoRepeatConstraint, usedColumnGap, usedRowGap);
     return {
         trackSizesWithPercentagesConvertedToAuto(explicitGridTrackSizes.columnTrackSizes),
-        trackSizesWithPercentagesConvertedToAuto(explicitGridTrackSizes.rowTrackSizes)
+        trackSizesWithPercentagesConvertedToAuto(explicitGridTrackSizes.rowTrackSizes),
+        explicitGridTrackSizes.columnAutoRepeatTracksIndexes,
+        explicitGridTrackSizes.rowAutoRepeatTracksIndexes
     };
 }
 
@@ -294,7 +296,12 @@ GridLayoutResult GridFormattingContext::layout(GridLayoutConstraints layoutConst
     };
     mapGridItemLocationsToGrid();
     setGridItemGeometries(gridItemRects);
-    return { WTF::move(usedTrackSizes), WTF::move(gridItemRects), usedBlockContentSize };
+
+    auto autoRepeatColumnsCount = gridDefinition.explicitGridTrackSizes.columnAutoRepeatTracksIndexes.distance();
+    auto autoRepeatRowsCount = gridDefinition.explicitGridTrackSizes.rowAutoRepeatTracksIndexes.distance();
+    return { WTF::move(usedTrackSizes), WTF::move(gridItemRects), usedBlockContentSize,
+        autoRepeatColumnsCount, autoRepeatRowsCount,
+        leadingImplicitTracks.columnsCount, leadingImplicitTracks.rowsCount };
 }
 
 PlacedGridItems GridFormattingContext::constructPlacedGridItems(const GridAreas& gridAreas) const

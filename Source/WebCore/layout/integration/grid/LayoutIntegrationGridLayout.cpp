@@ -199,7 +199,7 @@ void GridLayout::updateGridItemRenderers(const GridItemBorderBoxRects& previousG
     ASSERT(gridItemIndex == previousGridItemRects.size());
 }
 
-void GridLayout::updateFormattingContextRootRenderer(LayoutUnit usedBlockContentSize, const Layout::GridItemRects& gridItemRects)
+void GridLayout::updateFormattingContextRootRenderer(LayoutUnit usedBlockContentSize, const Layout::GridItemRects& gridItemRects, size_t autoRepeatColumnsCount, size_t autoRepeatRowsCount, size_t leadingImplicitColumnsCount, size_t leadingImplicitRowsCount)
 {
     CheckedRef renderGrid = gridBoxRenderer();
     auto& currentGrid = renderGrid->currentGrid();
@@ -215,6 +215,11 @@ void GridLayout::updateFormattingContextRootRenderer(LayoutUnit usedBlockContent
         currentGrid.setGridItemArea(downcast<RenderBox>(*protect(gridItemRect.layoutBox->rendererForIntegration())), gridArea);
     }
     currentGrid.setNeedsItemsPlacement(false);
+
+    // Out-of-flow boxes are placed by RenderGrid, which resolves their grid lines against the explicit
+    // grid it computes from style plus these auto-repeated track counts, offset by the explicit grid start.
+    currentGrid.setAutoRepeatTracks(autoRepeatRowsCount, autoRepeatColumnsCount);
+    currentGrid.setExplicitGridStart(leadingImplicitRowsCount, leadingImplicitColumnsCount);
 
     OrderIteratorPopulator orderIteratorPopulator(currentGrid.orderIterator());
 
@@ -263,9 +268,11 @@ void GridLayout::layout()
 
     auto previousGridItemRects = gridItemBorderBoxRects();
 
-    auto [ usedTrackSizes, gridItemRects, usedBlockContentSize ] = Layout::GridFormattingContext { gridBox(), layoutState() }.layout(gridLayoutConstraints);
+    auto [ usedTrackSizes, gridItemRects, usedBlockContentSize,
+        autoRepeatColumnsCount, autoRepeatRowsCount,
+        leadingImplicitColumnsCount, leadingImplicitRowsCount ] = Layout::GridFormattingContext { gridBox(), layoutState() }.layout(gridLayoutConstraints);
     updateGridItemRenderers(previousGridItemRects);
-    updateFormattingContextRootRenderer(usedBlockContentSize, gridItemRects);
+    updateFormattingContextRootRenderer(usedBlockContentSize, gridItemRects, autoRepeatColumnsCount, autoRepeatRowsCount, leadingImplicitColumnsCount, leadingImplicitRowsCount);
     layoutOutOfFlowBoxes(usedTrackSizes);
 
     CheckedRef renderGrid = gridBoxRenderer();
