@@ -56,6 +56,7 @@
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKFeature.h>
 #import <WebKit/_WKInspector.h>
+#import <WebKit/_WKInspectorPrivateForTesting.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <notify.h>
@@ -4633,6 +4634,75 @@ TEST(ProcessSwap, WebInspectorDelayedProcessLaunch)
     while (![webView _webProcessIdentifier])
         TestWebKitAPI::Util::spinRunLoop(10);
     EXPECT_NE(0, [webView _webProcessIdentifier]);
+
+    [[webView _inspector] close];
+}
+
+TEST(ProcessSwap, WebInspectorReconnectsPageRestoredFromBackForwardCache)
+{
+    auto processPoolConfiguration = psonProcessPoolConfiguration();
+    RetainPtr processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+
+    RetainPtr webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [webViewConfiguration setProcessPool:processPool.get()];
+    webViewConfiguration.get().preferences._developerExtrasEnabled = YES;
+
+    RetainPtr handler = adoptNS([[PSONScheme alloc] init]);
+    [webViewConfiguration setURLSchemeHandler:handler.get() forURLScheme:@"PSON"];
+
+    RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
+    RetainPtr delegate = adoptNS([[PSONNavigationDelegate alloc] init]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    if (!isUsingBackForwardCache(webView.get())) {
+        NSLog(@"ProcessSwap.WebInspectorReconnectsPageRestoredFromBackForwardCache: Test is skipped as back-forward cache is disabled");
+        return;
+    }
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.webkit.org/main1.html"]]];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    auto pid1 = [webView _webProcessIdentifier];
+
+    [[webView _inspector] show];
+    RetainPtr inspectorWebView = [[webView _inspector] inspectorWebView];
+    ASSERT_NOT_NULL(inspectorWebView.get());
+
+    auto currentPageTarget = [&] {
+        return [inspectorWebView stringByEvaluatingJavaScript:@"window.WI?.pageTarget?.identifier ?? ''"];
+    };
+
+    EXPECT_TRUE(TestWebKitAPI::Util::waitFor([&] {
+        return !!currentPageTarget().length;
+    }));
+    RetainPtr<NSString> originalPageTarget = currentPageTarget();
+
+    [inspectorWebView objectByEvaluatingJavaScript:@"window.unhandledRejections = []; window.addEventListener('unhandledrejection', (event) => unhandledRejections.push(String(event.reason?.message ?? event.reason))); true"];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.apple.com/main2.html"]]];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    EXPECT_NE(pid1, [webView _webProcessIdentifier]);
+    EXPECT_TRUE(TestWebKitAPI::Util::waitFor([&] {
+        NSString *pageTarget = currentPageTarget();
+        return pageTarget.length && ![pageTarget isEqualToString:originalPageTarget.get()];
+    }));
+
+    [webView goBack];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    EXPECT_EQ(pid1, [webView _webProcessIdentifier]);
+    EXPECT_TRUE(TestWebKitAPI::Util::waitFor([&] {
+        return [currentPageTarget() isEqualToString:originalPageTarget.get()];
+    }));
+
+    // Replies arrive in order, so this round trip flushes replies to the frontend's earlier commands.
+    id didReply = [inspectorWebView objectByCallingAsyncFunction:@"return await Promise.race([WI.pageTarget.RuntimeAgent.evaluate('1').then(() => true), new Promise((resolve) => setTimeout(() => resolve(false), 1000))]);" withArguments:@{ }];
+    EXPECT_TRUE([didReply boolValue]);
+    EXPECT_WK_STREQ(@"", [inspectorWebView stringByEvaluatingJavaScript:@"unhandledRejections.join(', ')"]);
 
     [[webView _inspector] close];
 }
