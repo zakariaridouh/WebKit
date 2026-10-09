@@ -55,7 +55,7 @@ private:
     TreeScope* NODELETE treeScope() const;
 
     void didAddSheet(CSSStyleSheet&);
-    void willRemoveSheet(CSSStyleSheet&);
+    void didRemoveSheet(CSSStyleSheet&);
 
     WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_treeScope;
     Vector<Ref<CSSStyleSheet>> m_sheets;
