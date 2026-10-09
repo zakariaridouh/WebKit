@@ -5428,6 +5428,9 @@ webkit.org/b/326561 [ x86_64 Release ] cssom/crash-font-family-invalid.html [ Pa
 webkit.org/b/322652 [ Debug ] workers/btoa-oom.html [ Pass Timeout ]
 webkit.org/b/325930 [ x86_64 Release ] imported/w3c/web-platform-tests/IndexedDB/transaction-inflight-worker-terminate.window.html [ Crash Pass ]
 
+# Gardening 2026-10-09
+webkit.org/b/326929 svg/text/bidi-dir-rtl.html [ ImageOnlyFailure ]
+
 # End: Common failures between GTK and WPE.
 
 #////////////////////////////////////////////////////////////////////////////////////////
