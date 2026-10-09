@@ -265,7 +265,7 @@ static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, Seria
         return isInterfaceExposed<JSImageBitmap>(globalObject);
 #if ENABLE(WEB_RTC)
     case RTCCertificateTag:
-        return isInterfaceExposed<JSRTCCertificate>(globalObject);
+        return isInterfaceExposedInGlobalObject<JSRTCCertificate>(globalObject);
 #endif
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     case OffscreenCanvasTransferTag:
