@@ -514,6 +514,7 @@ public:
 
     VMType vmType;
     bool m_mightBeExecutingTaintedCode { false };
+    bool m_mightHavePrevalentDomainTaintedCode { false };
     ClientData* clientData { nullptr };
 #if ENABLE(WEBASSEMBLY)
     Wasm::Context wasmContext;
@@ -635,6 +636,9 @@ public:
     bool mightBeExecutingTaintedCode() const { return m_mightBeExecutingTaintedCode; }
     bool* addressOfMightBeExecutingTaintedCode() LIFETIME_BOUND { return &m_mightBeExecutingTaintedCode; }
     void setMightBeExecutingTaintedCode(bool value = true) { m_mightBeExecutingTaintedCode = value; }
+
+    bool mightHavePrevalentDomainTaintedCode() const { return m_mightHavePrevalentDomainTaintedCode; }
+    void setMightHavePrevalentDomainTaintedCode() { m_mightHavePrevalentDomainTaintedCode = true; }
 
     AtomStringTable* atomStringTable() const { return m_atomStringTable; }
     WTF::SymbolRegistry& symbolRegistry() { return m_symbolRegistry.get(); }

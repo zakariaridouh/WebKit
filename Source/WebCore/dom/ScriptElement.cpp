@@ -93,7 +93,7 @@ ScriptElement::ScriptElement(Element& element, bool parserInserted, bool already
     , m_userGestureToken(UserGestureIndicator::currentUserGesture())
 {
     Ref vm = commonVM();
-    m_taintedOrigin = computeNewSourceTaintedOriginFromStack(vm, vm->topCallFrame);
+    m_taintedOrigin = computeNewSourceTaintednessFromStack(vm, vm->topCallFrame);
     if (parserInserted) {
         Ref document = element.document();
         if (RefPtr parser = document->scriptableDocumentParser(); parser && !document->isInDocumentWrite())
@@ -360,7 +360,7 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition)
 
 void ScriptElement::updateTaintedOriginFromSourceURL()
 {
-    if (m_taintedOrigin == JSC::SourceTaintedOrigin::KnownTainted)
+    if (m_taintedOrigin[JSC::SourceTaintKind::ScriptTrackingPrivacy] == JSC::SourceTaintedOrigin::KnownTainted)
         return;
 
     Ref document = element().document();
@@ -371,7 +371,7 @@ void ScriptElement::updateTaintedOriginFromSourceURL()
     if (!page->requiresScriptTrackingPrivacyProtections(hasSourceAttribute() ? document->encodingParseURL(sourceAttributeValue()) : document->url()))
         return;
 
-    m_taintedOrigin = JSC::SourceTaintedOrigin::KnownTainted;
+    m_taintedOrigin[JSC::SourceTaintKind::ScriptTrackingPrivacy] = JSC::SourceTaintedOrigin::KnownTainted;
 }
 
 bool ScriptElement::requestClassicScript(const String& sourceURL)
@@ -480,6 +480,18 @@ bool ScriptElement::requestModuleScript(const String& sourceText, const TextPosi
     return true;
 }
 
+static void markSourceAsPrevalentDomainTaintedIfNeeded(Document& document, const ScriptSourceCode& sourceCode)
+{
+    RefPtr script = sourceCode.cachedScript();
+    if (!script || !script->response().isFromPrevalentDomain())
+        return;
+
+    if (RegistrableDomain { script->response().url() }.matches(protect(document.topOrigin())->data()))
+        return;
+
+    JSC::markSourceAsPrevalentDomainTainted(document.vm(), sourceCode.provider());
+}
+
 void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
 {
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isScriptAllowed());
@@ -503,6 +515,8 @@ void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
     RefPtr frame = document->frame();
     if (!frame)
         return;
+
+    markSourceAsPrevalentDomainTaintedIfNeeded(document, sourceCode);
 
     IgnoreDestructiveWriteCountIncrementer ignoreDestructiveWriteCountIncrementer(m_isExternalScript ? document.ptr() : nullptr);
     CurrentScriptIncrementer currentScriptIncrementer(document, *this);

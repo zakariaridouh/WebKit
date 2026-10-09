@@ -423,7 +423,7 @@
 #include <JavaScriptCore/SlotVisitor.h>
 #include <JavaScriptCore/SlotVisitorMacros.h>
 #include <JavaScriptCore/SmallStrings.h>
-#include <JavaScriptCore/SourceTaintedOrigin.h>
+#include <JavaScriptCore/SourceTaintedness.h>
 #include <JavaScriptCore/SparseArrayValueMap.h>
 #include <JavaScriptCore/StackFrame.h>
 #include <JavaScriptCore/StackManager.h>

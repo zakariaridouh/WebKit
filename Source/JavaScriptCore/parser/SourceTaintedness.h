@@ -29,13 +29,16 @@
 #pragma once
 
 #include <JavaScriptCore/JSExportMacros.h>
+#include <array>
 #include <utility>
+#include <wtf/EnumeratedArray.h>
 #include <wtf/Forward.h>
 #include <wtf/TriState.h>
 
 namespace JSC {
 
 class CallFrame;
+class SourceProvider;
 class VM;
 
 enum class SourceTaintedOrigin : uint8_t {
@@ -54,11 +57,64 @@ inline TriState taintednessToTriState(SourceTaintedOrigin origin)
     return TriState::Indeterminate;
 }
 
+enum class SourceTaintKind : uint8_t {
+    ScriptTrackingPrivacy,
+    PrevalentDomain,
+};
+
+static constexpr std::array allSourceTaintKinds { SourceTaintKind::ScriptTrackingPrivacy, SourceTaintKind::PrevalentDomain };
+
+class SourceTaintedness {
+public:
+    constexpr SourceTaintedness() = default;
+
+    constexpr SourceTaintedness(SourceTaintedOrigin scriptTrackingPrivacyOrigin)
+    {
+        m_origins[SourceTaintKind::ScriptTrackingPrivacy] = scriptTrackingPrivacyOrigin;
+    }
+
+    static constexpr SourceTaintedness forEveryKind(SourceTaintedOrigin origin)
+    {
+        SourceTaintedness result;
+        result.m_origins.fill(origin);
+        return result;
+    }
+
+    constexpr SourceTaintedOrigin operator[](SourceTaintKind kind) const { return m_origins[kind]; }
+    constexpr SourceTaintedOrigin& operator[](SourceTaintKind kind) LIFETIME_BOUND { return m_origins[kind]; }
+
+    bool NODELETE couldBeTainted() const
+    {
+        for (auto origin : m_origins) {
+            if (origin != SourceTaintedOrigin::Untainted)
+                return true;
+        }
+        return false;
+    }
+
+    bool NODELETE isTainted() const
+    {
+        for (auto origin : m_origins) {
+            if (origin >= SourceTaintedOrigin::IndirectlyTainted)
+                return true;
+        }
+        return false;
+    }
+
+    friend bool operator==(const SourceTaintedness&, const SourceTaintedness&) = default;
+
+private:
+    EnumeratedArray<SourceTaintKind, SourceTaintedOrigin, allSourceTaintKinds.back()> m_origins { };
+};
 
 JS_EXPORT_PRIVATE std::pair<SourceTaintedOrigin, URL> sourceTaintedOriginFromStack(VM&, CallFrame*);
-JS_EXPORT_PRIVATE SourceTaintedOrigin computeNewSourceTaintedOriginFromStack(VM&, CallFrame*);
+JS_EXPORT_PRIVATE std::pair<SourceTaintedness, URL> sourceTaintednessFromStack(VM&, CallFrame*);
+JS_EXPORT_PRIVATE SourceTaintedness computeNewSourceTaintednessFromStack(VM&, CallFrame*);
 
 JS_EXPORT_PRIVATE String sourceTaintedOriginToString(SourceTaintedOrigin taintedness);
+
+JS_EXPORT_PRIVATE void markSourceAsPrevalentDomainTainted(VM&, SourceProvider&);
+JS_EXPORT_PRIVATE bool isPrevalentDomainTaintedCodeOnStack(VM&, CallFrame*);
 
 }
 

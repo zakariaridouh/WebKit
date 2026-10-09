@@ -298,6 +298,7 @@
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSCellInlines.h>
 #include <JavaScriptCore/MarkedSpaceInlines.h>
+#include <JavaScriptCore/SourceTaintedness.h>
 #include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/HexNumber.h>
@@ -6705,6 +6706,15 @@ String Internals::resourceLoadStatisticsForURL(const DOMURL& url)
 void Internals::setTrackingPreventionEnabled(bool enable)
 {
     DeprecatedGlobalSettings::setTrackingPreventionEnabled(enable);
+}
+
+bool Internals::isPrevalentDomainScriptOnStack() const
+{
+    RefPtr document = contextDocument();
+    if (!document)
+        return false;
+    Ref vm = document->vm();
+    return JSC::isPrevalentDomainTaintedCodeOnStack(vm, vm->topCallFrame);
 }
 
 String Internals::composedTreeAsText(Node& node)

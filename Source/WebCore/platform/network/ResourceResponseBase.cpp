@@ -87,6 +87,7 @@ ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData>&&
     , m_proxyName(data ? WTF::move(data->proxyName) : String { })
     , m_isRedirected(data ? data->isRedirected : false)
     , m_isRangeRequested(data ? data->isRangeRequested : false)
+    , m_isFromPrevalentDomain(data ? data->isFromPrevalentDomain : false)
     , m_tainting(data ? data->tainting : Tainting::Basic)
     , m_source(data ? data->source : Source::Unknown)
     , m_type(data ? data->type : Type::Default)
@@ -118,6 +119,7 @@ ResourceResponseData ResourceResponseData::isolatedCopy() const
     if (certificateInfo)
         result.certificateInfo = certificateInfo->isolatedCopy();
     result.ipAddressSpace = ipAddressSpace;
+    result.isFromPrevalentDomain = isFromPrevalentDomain;
     return result;
 }
 
@@ -146,6 +148,7 @@ ResourceResponseData ResourceResponseBase::crossThreadData() const
     if (m_certificateInfo)
         data.certificateInfo = m_certificateInfo->isolatedCopy();
     data.ipAddressSpace = m_ipAddressSpace;
+    data.isFromPrevalentDomain = m_isFromPrevalentDomain;
 
     return data;
 }
@@ -178,6 +181,7 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     response.m_isRangeRequested = data.isRangeRequested;
     response.m_certificateInfo = WTF::move(data.certificateInfo);
     response.m_ipAddressSpace = data.ipAddressSpace;
+    response.m_isFromPrevalentDomain = data.isFromPrevalentDomain;
     return response;
 }
 
@@ -929,7 +933,8 @@ std::optional<ResourceResponseData> ResourceResponseBase::getResponseData() cons
         String { m_proxyName },
         m_isRangeRequested,
         std::optional<CertificateInfo> { m_certificateInfo },
-        m_ipAddressSpace
+        m_ipAddressSpace,
+        m_isFromPrevalentDomain
     } };
 }
 
@@ -1070,7 +1075,8 @@ std::optional<WebCore::ResourceResponseData> Coder<WebCore::ResourceResponseData
         WTF::move(*proxyName),
         *isRangeRequested,
         WTF::move(*certificateInfo),
-        *ipAddressSpace
+        *ipAddressSpace,
+        false
     };
 }
 

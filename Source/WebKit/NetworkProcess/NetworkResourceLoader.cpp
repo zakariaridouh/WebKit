@@ -1525,6 +1525,7 @@ void NetworkResourceLoader::continueDidReceiveResponseAfterLocalNetworkAccessChe
         // a main resource because the embedding client must decide whether to allow the load.
         bool willWaitForContinueDidReceiveResponse = isMainResource();
         LOADER_RELEASE_LOG("didReceiveResponse: Sending WebResourceLoader::DidReceiveResponse IPC (willWaitForContinueDidReceiveResponse=%d)", willWaitForContinueDidReceiveResponse);
+        setIsFromPrevalentDomainIfNeeded(response);
         sendDidReceiveResponseWithPotentialProcessSwap(response, privateRelayed, willWaitForContinueDidReceiveResponse);
 
         if (shouldSendResourceLoadMessages())
@@ -2036,6 +2037,15 @@ static bool shouldSanitizeResponse(const NetworkProcess& process, std::optional<
     return !process.shouldDisableCORSForRequestTo(*pageIdentifier, url);
 }
 
+void NetworkResourceLoader::setIsFromPrevalentDomainIfNeeded(ResourceResponse& response) const
+{
+    if (m_parameters.options.destination != FetchOptions::Destination::Script)
+        return;
+
+    CheckedPtr session = protect(connectionToWebProcess())->networkSession();
+    response.setIsFromPrevalentDomain(session && session->isPrevalentDomain(response.url()));
+}
+
 ResourceResponse NetworkResourceLoader::sanitizeResponseIfPossible(ResourceResponse&& response, ResourceResponse::SanitizationType type)
 {
     if (shouldSanitizeResponse(Ref { m_connection->networkProcess() }.get(), pageID(), parameters().options, originalRequest().url()))
@@ -2484,6 +2494,7 @@ void NetworkResourceLoader::continueDidRetrieveCacheEntryAfterLocalNetworkAccess
 
     bool needsContinueDidReceiveResponseMessage = isMainResource();
     LOADER_RELEASE_LOG("didRetrieveCacheEntry: Sending WebResourceLoader::DidReceiveResponse IPC (needsContinueDidReceiveResponseMessage=%d)", needsContinueDidReceiveResponseMessage);
+    setIsFromPrevalentDomainIfNeeded(response);
     sendDidReceiveResponseWithPotentialProcessSwap(response, entry->privateRelayed(), needsContinueDidReceiveResponseMessage);
 
     if (needsContinueDidReceiveResponseMessage) {

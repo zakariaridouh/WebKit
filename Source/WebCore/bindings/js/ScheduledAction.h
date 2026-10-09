@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <JavaScriptCore/SourceTaintedOrigin.h>
+#include <JavaScriptCore/SourceTaintedness.h>
 #include <JavaScriptCore/Strong.h>
 #include <memory>
 #include <wtf/FixedVector.h>
@@ -65,7 +65,7 @@ private:
     JSC::Strong<JSC::JSObject> m_function;
     FixedVector<JSC::Strong<JSC::Unknown>> m_arguments;
     String m_code;
-    JSC::SourceTaintedOrigin m_sourceTaintedOrigin;
+    JSC::SourceTaintedness m_sourceTaintedOrigin;
 };
 
 } // namespace WebCore

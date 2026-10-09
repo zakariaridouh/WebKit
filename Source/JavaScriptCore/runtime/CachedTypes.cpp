@@ -1625,14 +1625,14 @@ public:
         m_sourceURLDirective.encode(encoder, sourceProvider.sourceURLDirective());
         m_sourceMappingURLDirective.encode(encoder, sourceProvider.sourceMappingURLDirective());
         m_startPosition.encode(encoder, sourceProvider.startPosition());
-        m_sourceTaintedOrigin = sourceProvider.sourceTaintedOrigin();
+        m_sourceTaintedOrigin = sourceProvider.sourceTaintedOrigin(SourceTaintKind::ScriptTrackingPrivacy);
     }
 
     void decode(Decoder& decoder, SourceProvider& sourceProvider) const
     {
         sourceProvider.setSourceURLDirective(m_sourceURLDirective.decode(decoder));
         sourceProvider.setSourceMappingURLDirective(m_sourceMappingURLDirective.decode(decoder));
-        sourceProvider.setSourceTaintedOrigin(m_sourceTaintedOrigin);
+        sourceProvider.setSourceTaintedOrigin(SourceTaintKind::ScriptTrackingPrivacy, m_sourceTaintedOrigin);
     }
 
 protected:

@@ -226,6 +226,9 @@ public:
     bool isRangeRequested() const { return m_isRangeRequested; }
     void setAsRangeRequested() { m_isRangeRequested = true; }
 
+    bool isFromPrevalentDomain() const { return m_isFromPrevalentDomain; }
+    void setIsFromPrevalentDomain(bool isFromPrevalentDomain) { m_isFromPrevalentDomain = isFromPrevalentDomain; }
+
     WEBCORE_EXPORT bool containsInvalidHTTPHeaders() const;
 
     WEBCORE_EXPORT static ResourceResponse dataURLResponse(const URL&, const DataURLDecoder::Result&);
@@ -295,6 +298,7 @@ private:
     mutable bool m_haveParsedContentRangeHeader : 1 { false };
     bool m_isRedirected : 1 { false };
     bool m_isRangeRequested : 1 { false };
+    bool m_isFromPrevalentDomain : 1 { false };
 
     Tainting m_tainting : bitWidthOfTainting { Tainting::Basic };
     Source m_source : bitWidthOfSource { Source::Unknown };
@@ -309,7 +313,7 @@ struct ResourceResponseData {
     ResourceResponseData() = default;
     ResourceResponseData(ResourceResponseData&&) = default;
     ResourceResponseData& operator=(ResourceResponseData&&) = default;
-    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, String&& proxyName, bool isRangeRequested, std::optional<CertificateInfo>&& certificateInfo, IPAddressSpace ipAddressSpace)
+    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, String&& proxyName, bool isRangeRequested, std::optional<CertificateInfo>&& certificateInfo, IPAddressSpace ipAddressSpace, bool isFromPrevalentDomain)
         : url(WTF::move(url))
         , mimeType(WTF::move(mimeType))
         , expectedContentLength(expectedContentLength)
@@ -329,6 +333,7 @@ struct ResourceResponseData {
         , isRangeRequested(isRangeRequested)
         , certificateInfo(WTF::move(certificateInfo))
         , ipAddressSpace(ipAddressSpace)
+        , isFromPrevalentDomain(isFromPrevalentDomain)
     {
     }
 
@@ -353,6 +358,7 @@ struct ResourceResponseData {
     bool isRangeRequested;
     std::optional<CertificateInfo> certificateInfo;
     IPAddressSpace ipAddressSpace;
+    bool isFromPrevalentDomain { false };
 };
 
 } // namespace WebCore

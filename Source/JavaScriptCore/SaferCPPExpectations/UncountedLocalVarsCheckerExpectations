@@ -69,7 +69,7 @@ llint/LLIntEntrypoint.cpp
 parser/Lexer.h
 parser/Parser.cpp
 parser/Parser.h
-parser/SourceTaintedOrigin.cpp
+parser/SourceTaintedness.cpp
 profiler/ProfilerDatabase.cpp
 runtime/CachedTypes.cpp
 runtime/FileBasedFuzzerAgent.cpp

@@ -38,7 +38,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <JavaScriptCore/LineColumn.h>
 #include <JavaScriptCore/SourceCharacters.h>
 #include <JavaScriptCore/SourceOrigin.h>
-#include <JavaScriptCore/SourceTaintedOrigin.h>
+#include <JavaScriptCore/SourceTaintedness.h>
 #include <optional>
 #include <span>
 #include <wtf/Lock.h>
@@ -109,7 +109,7 @@ class SourceProvider : public ThreadSafeRefCounted<SourceProvider> {
 public:
     static const intptr_t nullID = 1;
 
-    JS_EXPORT_PRIVATE SourceProvider(const SourceOrigin&, String&& sourceURL, String&& preRedirectURL, SourceTaintedOrigin, const TextPosition& startPosition, SourceProviderSourceType);
+    JS_EXPORT_PRIVATE SourceProvider(const SourceOrigin&, String&& sourceURL, String&& preRedirectURL, SourceTaintedness, const TextPosition& startPosition, SourceProviderSourceType);
 
     JS_EXPORT_PRIVATE virtual ~SourceProvider();
 
@@ -158,10 +158,11 @@ public:
 
     void setSourceURLDirective(const String& sourceURLDirective) { m_sourceURLDirective = sourceURLDirective; }
     void setSourceMappingURLDirective(const String& sourceMappingURLDirective) { m_sourceMappingURLDirective = sourceMappingURLDirective; }
-    void setSourceTaintedOrigin(SourceTaintedOrigin taintedness) { m_taintedness = taintedness; }
+    void setSourceTaintedOrigin(SourceTaintKind kind, SourceTaintedOrigin taintedness) { m_taintedness[kind] = taintedness; }
 
-    SourceTaintedOrigin sourceTaintedOrigin() const { return m_taintedness; }
-    bool couldBeTainted() const { return m_taintedness != SourceTaintedOrigin::Untainted; }
+    SourceTaintedness taintedness() const { return m_taintedness; }
+    SourceTaintedOrigin sourceTaintedOrigin(SourceTaintKind kind) const { return m_taintedness[kind]; }
+    bool NODELETE couldBeTainted() const { return m_taintedness.couldBeTainted(); }
 
     JS_EXPORT_PRIVATE void lockUnderlyingBuffer();
     JS_EXPORT_PRIVATE void unlockUnderlyingBuffer();
@@ -221,7 +222,7 @@ private:
     String m_sourceMappingURLDirective;
     TextPosition m_startPosition;
     SourceID m_id { 0 };
-    SourceTaintedOrigin m_taintedness;
+    SourceTaintedness m_taintedness;
 
     std::atomic<bool> m_sourceCodeDumped { false };
     Lock m_sourceCodeDumpLock;
@@ -234,7 +235,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSourceProvider);
 class StringSourceProvider : public SourceProvider {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StringSourceProvider, StringSourceProvider);
 public:
-    static Ref<StringSourceProvider> create(const String& source, const SourceOrigin& sourceOrigin, String sourceURL, SourceTaintedOrigin taintedness, const TextPosition& startPosition = TextPosition(), SourceProviderSourceType sourceType = SourceProviderSourceType::Program)
+    static Ref<StringSourceProvider> create(const String& source, const SourceOrigin& sourceOrigin, String sourceURL, SourceTaintedness taintedness, const TextPosition& startPosition = TextPosition(), SourceProviderSourceType sourceType = SourceProviderSourceType::Program)
     {
         return adoptRef(*new StringSourceProvider(source, sourceOrigin, taintedness, WTF::move(sourceURL), startPosition, sourceType));
     }
@@ -250,7 +251,7 @@ public:
     }
 
 protected:
-    StringSourceProvider(const String& source, const SourceOrigin& sourceOrigin, SourceTaintedOrigin taintedness, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType sourceType)
+    StringSourceProvider(const String& source, const SourceOrigin& sourceOrigin, SourceTaintedness taintedness, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType sourceType)
         : SourceProvider(sourceOrigin, WTF::move(sourceURL), String(), taintedness, startPosition, sourceType)
         , m_source(source.isNull() ? *StringImpl::empty() : *source.impl())
     {

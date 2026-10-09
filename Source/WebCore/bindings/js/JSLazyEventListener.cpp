@@ -78,7 +78,7 @@ JSLazyEventListener::JSLazyEventListener(CreationArguments&& arguments, const UR
     , m_sourceURL(sourceURL)
     , m_sourcePosition(convertZeroToOne(sourcePosition))
     , m_originalNode(WTF::move(arguments.node))
-    , m_sourceTaintedOrigin(JSC::computeNewSourceTaintedOriginFromStack(protect(arguments.document)->vm(), protect(arguments.document)->vm().topCallFrame))
+    , m_sourceTaintedOrigin(JSC::computeNewSourceTaintednessFromStack(protect(arguments.document)->vm(), protect(arguments.document)->vm().topCallFrame))
 {
 }
 

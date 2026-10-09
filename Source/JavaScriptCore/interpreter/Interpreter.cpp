@@ -175,7 +175,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
 
         auto programSource = programStr.data;
         if (SourceProfiler::g_profilerHook) [[unlikely]] {
-            SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+            SourceTaintedness sourceTaintedOrigin = computeNewSourceTaintednessFromStack(vm, callFrame);
             auto source = makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin);
             SourceProfiler::profile(SourceProfiler::Type::Eval, source);
         }
@@ -198,7 +198,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         TDZEnvironment variablesUnderTDZ;
         PrivateNameEnvironment privateNameEnvironment;
         JSScope::collectClosureVariablesUnderTDZ(callerScopeChain, variablesUnderTDZ, privateNameEnvironment);
-        SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+        SourceTaintedness sourceTaintedOrigin = computeNewSourceTaintednessFromStack(vm, callFrame);
 
         UnlinkedCodeBlock* callerUnlinkedCodeBlock = callerBaselineCodeBlock->unlinkedCodeBlock();
 
@@ -223,7 +223,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
             return { };
 
         // Skip the eval cache if tainted since another eval call could have a different taintedness.
-        if (sourceTaintedOrigin == SourceTaintedOrigin::Untainted)
+        if (!sourceTaintedOrigin.couldBeTainted())
             callerBaselineCodeBlock->directEvalCodeCache().set(globalObject, callerBaselineCodeBlock, cacheKey, eval);
     }
 
@@ -1062,7 +1062,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     StringView programSource = program->source().view();
     // Skip JSONP if the program is tainted. We want there to be a tainted
     // frame on the stack in case the program does an eval via a setter.
-    if (source.provider()->sourceTaintedOrigin() != SourceTaintedOrigin::Untainted)
+    if (source.provider()->couldBeTainted())
         goto failedJSONP;
 
     if (programSource.isNull())

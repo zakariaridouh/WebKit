@@ -1049,6 +1049,7 @@ public:
 
     String resourceLoadStatisticsForURL(const DOMURL&);
     void NODELETE setTrackingPreventionEnabled(bool);
+    bool isPrevalentDomainScriptOnStack() const;
 
     bool isReadableStreamDisturbed(ReadableStream&);
     void observeReadableStreamLifetime(ReadableStream&);

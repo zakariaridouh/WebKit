@@ -22,6 +22,7 @@
 #pragma once
 
 #include <JavaScriptCore/Forward.h>
+#include <JavaScriptCore/SourceTaintedness.h>
 #include <WebCore/ActiveDOMObject.h>
 #include <WebCore/ContainerNode.h>
 #include <WebCore/ContentSecurityPolicy.h>
@@ -84,7 +85,7 @@ public:
 
     ScriptType scriptType() const { return m_scriptType; }
 
-    JSC::SourceTaintedOrigin sourceTaintedOrigin() const { return m_taintedOrigin; }
+    JSC::SourceTaintedness sourceTaintedOrigin() const { return m_taintedOrigin; }
 
     static std::optional<ScriptType> determineScriptType(const String& typeAttribute, const String& languageAttribute, bool isHTMLDocument = true, bool speculationRulesPrefetchEnabled = false);
 
@@ -145,7 +146,7 @@ private:
 
     WeakRef<Element, WeakPtrImplWithEventTargetData> m_element;
     TextPosition m_startPosition { TextPosition::belowRangePosition() };
-    JSC::SourceTaintedOrigin m_taintedOrigin;
+    JSC::SourceTaintedness m_taintedOrigin;
     ParserInserted m_parserInserted : bitWidthOfParserInserted;
     bool m_isExternalScript : 1 { false };
     bool m_alreadyStarted : 1;

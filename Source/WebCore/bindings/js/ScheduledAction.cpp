@@ -72,7 +72,7 @@ ScheduledAction::ScheduledAction(DOMWrapperWorld& isolatedWorld, String&& code)
     : m_isolatedWorld(isolatedWorld)
     , m_function(isolatedWorld.vm())
     , m_code(WTF::move(code))
-    , m_sourceTaintedOrigin(JSC::computeNewSourceTaintedOriginFromStack(isolatedWorld.vm(), isolatedWorld.vm().topCallFrame))
+    , m_sourceTaintedOrigin(JSC::computeNewSourceTaintednessFromStack(isolatedWorld.vm(), isolatedWorld.vm().topCallFrame))
 {
 }
 
