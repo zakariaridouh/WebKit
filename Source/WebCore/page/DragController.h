@@ -94,7 +94,7 @@ public:
     OptionSet<DragSourceAction> delegateDragSourceAction(const IntPoint& rootViewPoint);
 
     RefPtr<Element> draggableElement(const LocalFrame*, Element* start, const IntPoint&, DragState&) const;
-    WEBCORE_EXPORT void dragEnded();
+    WEBCORE_EXPORT void dragEnded(MayExtendDragSession = MayExtendDragSession::No);
 
     WEBCORE_EXPORT void placeDragCaret(const IntPoint&);
 

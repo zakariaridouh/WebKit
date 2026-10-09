@@ -10936,12 +10936,16 @@ static std::optional<WebCore::DragOperation> coreDragOperationForUIDropOperation
     if (!session.allowsMoveOperation)
         dragOperationMask.remove(WebCore::DragOperation::Move);
 
+    OptionSet<WebCore::DragApplicationFlags> flags;
+    if (session.localDragSession && session.localDragSession == _dragDropInteractionState.dragSession())
+        flags.add(WebCore::DragApplicationFlags::IsSource);
+
     return {
         session,
         WebCore::roundedIntPoint(client),
         WebCore::roundedIntPoint(global),
         dragOperationMask,
-        { },
+        flags,
         WebKit::coreDragDestinationActionMask(dragDestinationAction),
         _page->webPageIDInMainFrameProcess()
     };

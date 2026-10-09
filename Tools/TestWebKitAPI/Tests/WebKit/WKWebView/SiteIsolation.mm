@@ -3408,6 +3408,62 @@ TEST(SiteIsolation, DragAndDropWithoutNavigation)
     EXPECT_FALSE(didDecideNavigationPolicy);
     EXPECT_EQ(windowDropCount, 1);
 }
+
+TEST(SiteIsolation, DragSecurityOriginCheck)
+{
+    auto runDragFromSubframeToMainFrame = [&](ASCIILiteral subframeDomain, bool siteIsolationEnabled, ASCIILiteral expectedEvents) {
+        auto mainframeHTML = makeString("<!DOCTYPE html>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<body style='margin: 0'>"
+        "<div id='dropzone' style='width: 400px; height: 100px; background-color: pink'></div>"
+        "<iframe src='https://"_s, subframeDomain, "/subframe' style='width: 400px; height: 200px; border: 0; display: block'></iframe>"
+        "<script>"
+        "    window.events = [];"
+        "    function addEvent(type) { if (!window.events.includes(type)) window.events.push(type) }"
+        "    dropzone.addEventListener('dragenter', e => { e.preventDefault(); addEvent('dragenter') });"
+        "    dropzone.addEventListener('dragover', e => { e.preventDefault(); addEvent('dragover') });"
+        "    dropzone.addEventListener('dragleave', e => addEvent('dragleave'));"
+        "    dropzone.addEventListener('drop', e => { e.preventDefault(); addEvent('drop') });"
+        "</script>"
+        "</body>"_s);
+
+        auto subframeHTML = "<!DOCTYPE html>"
+        "<body style='margin: 0'>"
+        "<div id='draggable' draggable='true' style='width: 100px; height: 100px; background-color: blue'></div>"
+        "<script>"
+        "    draggable.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', 'hello'));"
+        "</script>"
+        "</body>"_s;
+
+        HTTPServer server({
+            { "/mainframe"_s, { mainframeHTML } },
+            { "/subframe"_s, { subframeHTML } },
+        }, HTTPServer::Protocol::HttpsProxy);
+
+        RetainPtr navigationDelegate = adoptNS([TestNavigationDelegate new]);
+        [navigationDelegate allowAnyTLSCertificate];
+        RetainPtr configuration = server.httpsProxyConfiguration();
+        if (siteIsolationEnabled)
+            enableSiteIsolation(configuration.get());
+        RetainPtr simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:NSMakeRect(0, 0, 400, 400) configuration:configuration.get()]);
+        RetainPtr webView = [simulator webView];
+        [webView setNavigationDelegate:navigationDelegate.get()];
+
+        [webView loadURL:[NSURL URLWithString:@"https://domain1.com/mainframe"]];
+        [navigationDelegate waitForDidFinishNavigation];
+        [webView waitForNextPresentationUpdate];
+
+        [simulator runFrom:CGPointMake(50, 150) to:CGPointMake(200, 50)];
+
+        EXPECT_WK_STREQ(expectedEvents.characters(), [webView stringByEvaluatingJavaScript:@"window.events.join(',')"]);
+    };
+
+    runDragFromSubframeToMainFrame("domain2.com"_s, true, ""_s);
+    runDragFromSubframeToMainFrame("domain2.com"_s, false, ""_s);
+    runDragFromSubframeToMainFrame("domain1.com"_s, true, "dragenter,dragover,drop"_s);
+    runDragFromSubframeToMainFrame("domain1.com"_s, false, "dragenter,dragover,drop"_s);
+}
+
 #endif
 
 #if ENABLE(DRAG_SUPPORT) && PLATFORM(MAC)

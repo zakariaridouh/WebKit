@@ -214,9 +214,10 @@ void DragController::clearDragCaret()
     m_page->dragCaretController().clear();
 }
 
-void DragController::dragEnded()
+void DragController::dragEnded(MayExtendDragSession mayExtendDragSession)
 {
-    m_dragInitiator = nullptr;
+    if (mayExtendDragSession == MayExtendDragSession::No)
+        m_dragInitiator = nullptr;
     m_didInitiateDrag = false;
     m_documentUnderMouse = nullptr;
     clearDragCaret();
@@ -435,8 +436,14 @@ DragHandlingMethod DragController::tryDocumentDrag(LocalFrame& frame, const Drag
     if (!m_documentUnderMouse)
         return DragHandlingMethod::None;
 
-    if (m_dragInitiator && !protect(protect(m_documentUnderMouse)->securityOrigin())->canReceiveDragData(protect(protect(m_dragInitiator)->securityOrigin())))
+    if (m_dragInitiator) {
+        if (!protect(protect(m_documentUnderMouse)->securityOrigin())->canReceiveDragData(protect(protect(m_dragInitiator)->securityOrigin())))
+            return DragHandlingMethod::None;
+    } else if (dragData.flags().contains(DragApplicationFlags::IsSource)) {
+        // The drag was initiated by this page, but from a frame in another process.
+        // We can't check its origin but we know it is not a same-origin drag.
         return DragHandlingMethod::None;
+    }
 
     bool isHandlingDrag = false;
     if (destinationActionMask.contains(DragDestinationAction::DHTML)) {

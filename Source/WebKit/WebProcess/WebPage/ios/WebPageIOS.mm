@@ -1010,7 +1010,7 @@ Awaitable<DragInitiationResult> WebPage::requestAdditionalItemsForDragSession(st
     // This process is opaque to the UI process, which still maintains the old drag item in its drag session. Similarly, this persistent drag session
     // is opaque to the web process, which only sees that the current drag has ended, and that a new one is beginning.
     PlatformMouseEvent event(clientPosition, globalPosition, MouseButton::Left, PlatformEvent::Type::MouseMoved, 0, { }, MonotonicTime::now(), 0, WebCore::SyntheticClickType::NoTap, WebCore::MouseEventInputSource::UserDriven);
-    m_page->dragController().dragEnded();
+    m_page->dragController().dragEnded(MayExtendDragSession::Yes);
     RefPtr localRootFrame = this->localRootFrame(rootFrameID);
     if (!localRootFrame)
         co_return { false };
