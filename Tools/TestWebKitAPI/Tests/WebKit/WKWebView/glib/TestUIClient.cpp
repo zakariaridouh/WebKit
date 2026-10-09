@@ -55,9 +55,11 @@ public:
             , m_locationbarVisible(true)
             , m_resizable(true)
             , m_fullscreen(false)
+            , m_isPopup(false)
         {
 #if PLATFORM(GTK)
             zeroBytes(m_geometry);
+            m_hasCustomGeometry = false;
 #endif
         }
 
@@ -70,15 +72,18 @@ public:
             , m_locationbarVisible(webkit_window_properties_get_locationbar_visible(windowProperties))
             , m_resizable(webkit_window_properties_get_resizable(windowProperties))
             , m_fullscreen(webkit_window_properties_get_fullscreen(windowProperties))
+            , m_isPopup(webkit_window_properties_get_is_popup(windowProperties))
         {
 #if PLATFORM(GTK)
             webkit_window_properties_get_geometry(windowProperties, &m_geometry);
+            m_hasCustomGeometry = webkit_window_properties_get_has_custom_geometry(windowProperties);
 #endif
         }
 
 #if PLATFORM(GTK)
-        WindowProperties(cairo_rectangle_int_t* geometry, bool toolbarVisible, bool statusbarVisible, bool scrollbarsVisible, bool menubarVisible, bool locationbarVisible, bool resizable, bool fullscreen)
+        WindowProperties(cairo_rectangle_int_t* geometry, bool hasCustomGeometry, bool toolbarVisible, bool statusbarVisible, bool scrollbarsVisible, bool menubarVisible, bool locationbarVisible, bool resizable, bool fullscreen, bool isPopup = false)
             : m_isNull(false)
+            , m_hasCustomGeometry(hasCustomGeometry)
             , m_toolbarVisible(toolbarVisible)
             , m_statusbarVisible(statusbarVisible)
             , m_scrollbarsVisible(scrollbarsVisible)
@@ -86,11 +91,12 @@ public:
             , m_locationbarVisible(locationbarVisible)
             , m_resizable(resizable)
             , m_fullscreen(fullscreen)
+            , m_isPopup(isPopup)
         {
             m_geometry = *geometry;
         }
 #else
-        WindowProperties(bool toolbarVisible, bool statusbarVisible, bool scrollbarsVisible, bool menubarVisible, bool locationbarVisible, bool resizable, bool fullscreen)
+        WindowProperties(bool toolbarVisible, bool statusbarVisible, bool scrollbarsVisible, bool menubarVisible, bool locationbarVisible, bool resizable, bool fullscreen, bool isPopup = false)
             : m_isNull(false)
             , m_toolbarVisible(toolbarVisible)
             , m_statusbarVisible(statusbarVisible)
@@ -99,6 +105,7 @@ public:
             , m_locationbarVisible(locationbarVisible)
             , m_resizable(resizable)
             , m_fullscreen(fullscreen)
+            , m_isPopup(isPopup)
         {
         }
 #endif
@@ -112,6 +119,7 @@ public:
             g_assert_cmpint(m_geometry.y, ==, other.m_geometry.y);
             g_assert_cmpint(m_geometry.width, ==, other.m_geometry.width);
             g_assert_cmpint(m_geometry.height, ==, other.m_geometry.height);
+            g_assert_cmpint(static_cast<int>(m_hasCustomGeometry), ==, static_cast<int>(other.m_hasCustomGeometry));
 #endif
             g_assert_cmpint(static_cast<int>(m_toolbarVisible), ==, static_cast<int>(other.m_toolbarVisible));
             g_assert_cmpint(static_cast<int>(m_statusbarVisible), ==, static_cast<int>(other.m_statusbarVisible));
@@ -120,6 +128,7 @@ public:
             g_assert_cmpint(static_cast<int>(m_locationbarVisible), ==, static_cast<int>(other.m_locationbarVisible));
             g_assert_cmpint(static_cast<int>(m_resizable), ==, static_cast<int>(other.m_resizable));
             g_assert_cmpint(static_cast<int>(m_fullscreen), ==, static_cast<int>(other.m_fullscreen));
+            g_assert_cmpint(static_cast<int>(m_isPopup), ==, static_cast<int>(other.m_isPopup));
         }
 
     private:
@@ -127,6 +136,7 @@ public:
 
 #if PLATFORM(GTK)
         cairo_rectangle_int_t m_geometry;
+        bool m_hasCustomGeometry { false };
 #endif
         bool m_toolbarVisible;
         bool m_statusbarVisible;
@@ -136,6 +146,7 @@ public:
 
         bool m_resizable;
         bool m_fullscreen;
+        bool m_isPopup { false };
     };
 
     static void windowPropertiesNotifyCallback(GObject*, GParamSpec* paramSpec, UIClientTest* test)
@@ -439,6 +450,11 @@ public:
         m_windowProperties = windowProperties;
     }
 
+    void setFinalExpectedWindowProperties(const WindowProperties& windowProperties)
+    {
+        m_finalWindowProperties = windowProperties;
+    }
+
 #if PLATFORM(GTK)
     void setCreateNewWebViewsInWindowsWithDefaultSize(int width = 800, int height = 600)
     {
@@ -553,6 +569,11 @@ public:
     {
         g_assert_true(webView != m_webView.get());
 
+        WebKitWindowProperties* windowProperties = webkit_web_view_get_window_properties(webView);
+        g_assert_nonnull(windowProperties);
+        if (!m_finalWindowProperties.isNull())
+            WindowProperties(windowProperties).assertEqual(m_finalWindowProperties);
+
         m_webViewEvents.append(Close);
         g_signal_handlers_disconnect_by_data(webView, this);
         g_object_unref(webView);
@@ -572,6 +593,7 @@ public:
     gboolean m_expectedVideoMedia;
     gboolean m_expectedDisplayMedia;
     WindowProperties m_windowProperties;
+    WindowProperties m_finalWindowProperties;
     HashSet<WTF::String> m_windowPropertiesChanged;
     GRefPtr<WebKitHitTestResult> m_mouseTargetHitTestResult;
     unsigned m_mouseTargetModifiers;
@@ -823,9 +845,9 @@ static void testWebViewWindowProperties(UIClientTest* test, gconstpointer)
     static const char* windowPropertiesString = "left=100,top=150,width=400,height=400,location=no,menubar=no,status=no,toolbar=no,scrollbars=no";
 #if PLATFORM(GTK)
     cairo_rectangle_int_t geometry = { 100, 150, 400, 400 };
-    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&geometry, false, false, false, false, false, true, false));
+    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&geometry, true, false, false, false, false, false, true, false, true));
 #else
-    test->setExpectedWindowProperties(UIClientTest::WindowProperties(false, false, false, false, false, true, false));
+    test->setExpectedWindowProperties(UIClientTest::WindowProperties(false, false, false, false, false, true, false, true));
 #endif
 
     GUniquePtr<char> htmlString(g_strdup_printf("<html><body onLoad=\"window.open('', '', '%s').close();\"></body></html>", windowPropertiesString));
@@ -835,7 +857,9 @@ static void testWebViewWindowProperties(UIClientTest* test, gconstpointer)
     static constexpr ASCIILiteral propertiesChanged[] = {
 #if PLATFORM(GTK)
         "geometry"_s,
+        "has-custom-geometry"_s,
 #endif
+        "is-popup"_s,
         "locationbar-visible"_s, "menubar-visible"_s, "statusbar-visible"_s, "toolbar-visible"_s, "scrollbars-visible"_s
     };
     for (size_t i = 0; i < G_N_ELEMENTS(propertiesChanged); ++i)
@@ -854,7 +878,7 @@ static void testWebViewOpenWindowDefaultSize(UIClientTest* test, gconstpointer)
     // If no size specified for window.open(), then new windows open with the default window size.
     cairo_rectangle_int_t expectedGeometry = { 0, 0, 623, 715 };
     test->setCreateNewWebViewsInWindowsWithDefaultSize(expectedGeometry.width, expectedGeometry.height);
-    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&expectedGeometry, false, false, false, false, false, true, false));
+    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&expectedGeometry, true, false, false, false, false, false, true, false, true));
     test->loadHtml("<html><body onLoad=\"window.open('', '', 'left=0,top=0,location=no,menubar=no,status=no,toolbar=no,scrollbars=no').close();\"></body></html>", nullptr);
     test->waitUntilMainLoopFinishes();
 }
@@ -865,9 +889,44 @@ static void testWebViewOpenWindowNoDefaultSize(UIClientTest* test, gconstpointer
     // on the create signal, then new windows open with the size of the previous window.
     cairo_rectangle_int_t expectedGeometry = { 0, 0, 527, 671 };
     test->showInWindow(expectedGeometry.width, expectedGeometry.height);
-    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&expectedGeometry, false, false, false, false, false, true, false));
+    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&expectedGeometry, true, false, false, false, false, false, true, false, true));
     test->loadHtml("<html><body onLoad=\"window.open('', '', 'left=0,top=0,location=no,menubar=no,status=no,toolbar=no,scrollbars=no').close();\"></body></html>", nullptr);
     test->waitUntilMainLoopFinishes();
+}
+
+static void testWebViewOpenWindowNoFeatures(UIClientTest* test, gconstpointer)
+{
+    // If no features specified for window.open(), and new windows are not set to a specific default size with gtk_window_set_default_size()
+    // on the create signal, then new windows open with the size of the previous window, but hasCustomGeometry and isPopup are false.
+    cairo_rectangle_int_t expectedGeometry = { 0, 0, 527, 671 };
+    test->showInWindow(expectedGeometry.width, expectedGeometry.height);
+    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&expectedGeometry, false, true, true, true, true, true, true, false, false));
+    test->loadHtml("<html><body onLoad=\"window.open('', '').close();\"></body></html>", nullptr);
+    test->waitUntilMainLoopFinishes();
+}
+
+static void testWebViewOpenWindowZeroSize(UIClientTest* test, gconstpointer)
+{
+    // Zero width and height mean fallback to default window size, and are not considered custom geometry.
+    cairo_rectangle_int_t expectedGeometry = { 0, 0, 527, 671 };
+    test->showInWindow(expectedGeometry.width, expectedGeometry.height);
+    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&expectedGeometry, false, true, true, true, true, true, true, false, true));
+    test->loadHtml("<html><body onLoad=\"window.open('', '', 'width=0,height=0').close();\"></body></html>", nullptr);
+    test->waitUntilMainLoopFinishes();
+}
+
+static void testWebViewWindowPropertiesResizeTo(UIClientTest* test, gconstpointer)
+{
+    cairo_rectangle_int_t initialGeometry = { 0, 0, 527, 671 };
+    cairo_rectangle_int_t finalGeometry = { 0, 0, 300, 200 };
+    test->showInWindow(initialGeometry.width, initialGeometry.height);
+    test->setExpectedWindowProperties(UIClientTest::WindowProperties(&initialGeometry, false, true, true, true, true, true, true, false, false));
+    test->setFinalExpectedWindowProperties(UIClientTest::WindowProperties(&finalGeometry, true, true, true, true, true, true, true, false, false));
+    test->loadHtml("<html><body onLoad=\"var w = window.open('', ''); w.resizeTo(300, 200); w.close();\"></body></html>", nullptr);
+    test->waitUntilMainLoopFinishes();
+
+    g_assert_true(test->m_windowPropertiesChanged.contains("geometry"_s));
+    g_assert_true(test->m_windowPropertiesChanged.contains("has-custom-geometry"_s));
 }
 #endif
 
@@ -1806,6 +1865,9 @@ void beforeAll()
     // FIXME: Implement webkit_window_properties_get_geometry() in WPE.
     UIClientTest::add("WebKitWebView", "open-window-default-size", testWebViewOpenWindowDefaultSize);
     UIClientTest::add("WebKitWebView", "open-window-no-default-size", testWebViewOpenWindowNoDefaultSize);
+    UIClientTest::add("WebKitWebView", "open-window-no-features", testWebViewOpenWindowNoFeatures);
+    UIClientTest::add("WebKitWebView", "open-window-zero-size", testWebViewOpenWindowZeroSize);
+    UIClientTest::add("WebKitWebView", "open-window-resize-to", testWebViewWindowPropertiesResizeTo);
 #endif
     // FIXME: Implement mouse move in WPE.
 #if PLATFORM(GTK)
