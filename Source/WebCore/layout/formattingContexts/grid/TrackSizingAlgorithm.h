@@ -48,7 +48,7 @@ struct TrackSizingItem {
     const ComputedSizes computedSizes;
     const LayoutUnit borderAndPadding;
     const WTF::Range<size_t> spannedLines;
-    const LayoutUnit oppositeAxisConstraint;
+    const std::optional<LayoutUnit> oppositeAxisConstraint;
 };
 
 struct UnsizedTrack {

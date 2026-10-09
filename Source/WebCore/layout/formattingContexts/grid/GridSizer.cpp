@@ -46,44 +46,56 @@ GridSizer::GridSizer(const GridFormattingContext& gridFormattingContext, const G
 // If calculating the layout of a grid item in this step depends on the available space in the block axis,
 // assume the available space that it would have if any row with a definite max track sizing function
 // had that size and all other rows were infinite.
-static Vector<LayoutUnit> rowSizesForFirstIterationColumnSizing(const TrackSizingFunctionsList& rowTrackSizingFunctionsList, std::optional<LayoutUnit> gridContainerInnerBlockSize)
+static Vector<std::optional<LayoutUnit>> definiteRowSizesForFirstIterationColumnSizing(const TrackSizingFunctionsList& rowTrackSizingFunctionsList, std::optional<LayoutUnit> gridContainerInnerBlockSize)
 {
     return rowTrackSizingFunctionsList.map([&gridContainerInnerBlockSize](const TrackSizingFunctions& trackSizingFunctions) {
         return WTF::switchOn(trackSizingFunctions.max,
             [&](const Style::GridTrackBreadth& maxTrackSizingFunction) {
                 return WTF::switchOn(maxTrackSizingFunction,
-                    [&](const Style::GridTrackBreadthLength::Fixed& fixedValue) {
+                    [&](const Style::GridTrackBreadthLength::Fixed& fixedValue) -> std::optional<LayoutUnit> {
                         return Style::evaluate<LayoutUnit>(fixedValue, trackSizingFunctions.zoom);
                     },
-                    [&](const Style::GridTrackBreadthLength::Percentage& percentageValue) {
+                    [&](const Style::GridTrackBreadthLength::Percentage& percentageValue) -> std::optional<LayoutUnit> {
                         ASSERT_WITH_MESSAGE(gridContainerInnerBlockSize, "The formatting context should have transformed this track size to auto");
                         return Style::evaluate<LayoutUnit>(percentageValue, *gridContainerInnerBlockSize);
                     },
-                    [&](const Style::GridTrackBreadth::Calc calculatedValue) -> LayoutUnit {
+                    [&](const Style::GridTrackBreadth::Calc calculatedValue) -> std::optional<LayoutUnit> {
                         ASSERT_WITH_MESSAGE(gridContainerInnerBlockSize, "The formatting context should have transformed this track size to auto");
                         return Style::evaluate<LayoutUnit>(calculatedValue, *gridContainerInnerBlockSize, trackSizingFunctions.zoom);
                     },
-                    [](const CSS::Keyword::MinContent&) -> LayoutUnit {
-                        return LayoutUnit::max();
+                    [](const CSS::Keyword::MinContent&) -> std::optional<LayoutUnit> {
+                        return { };
                     },
-                    [](const CSS::Keyword::MaxContent&) {
-                        return LayoutUnit::max();
+                    [](const CSS::Keyword::MaxContent&) -> std::optional<LayoutUnit> {
+                        return { };
                     },
-                    [](const CSS::Keyword::Auto&) -> LayoutUnit {
-                        return LayoutUnit::max();
+                    [](const CSS::Keyword::Auto&) -> std::optional<LayoutUnit> {
+                        return { };
                     },
-                    [](const Style::GridTrackBreadth::Flex&) -> LayoutUnit {
-                        return LayoutUnit::max();
+                    [](const Style::GridTrackBreadth::Flex&) -> std::optional<LayoutUnit> {
+                        return { };
                     },
-                    [](const auto&) -> LayoutUnit {
+                    [](const auto&) -> std::optional<LayoutUnit> {
                         ASSERT_NOT_IMPLEMENTED_YET();
                         return { };
                     });
             },
-            [](const Style::GridTrackSize::FitContent&) -> LayoutUnit {
-                return LayoutUnit::max();
+            [](const Style::GridTrackSize::FitContent&) -> std::optional<LayoutUnit> {
+                return { };
             });
     });
+}
+
+static std::optional<LayoutUnit> gridAreaBlockSizeForFirstIterationColumnSizing(const PlacedGridItem& gridItem, const Vector<std::optional<LayoutUnit>>& definiteRowSizes, LayoutUnit rowGap)
+{
+    auto spannedRowSizes = definiteRowSizes.subspan(gridItem.rowStartLine(), gridItem.rowEndLine() - gridItem.rowStartLine());
+    if (std::ranges::any_of(spannedRowSizes, [](auto& rowSize) { return !rowSize; }))
+        return { };
+
+    auto sumOfRowSizes = std::accumulate(spannedRowSizes.begin(), spannedRowSizes.end(), 0_lu, [](LayoutUnit sum, auto& rowSize) {
+        return sum + *rowSize;
+    });
+    return sumOfRowSizes + GridLayoutUtils::totalGuttersSize(spannedRowSizes.size(), rowGap);
 }
 
 // Runs the track sizing algorithm over the grid columns. Grid items whose inline-axis contribution
@@ -98,11 +110,11 @@ TrackSizes GridSizer::sizeColumnTracks(const PlacedGridItems& placedGridItems, c
     std::optional<LayoutUnit> blockAxisAvailableSpace = layoutConstraints.blockAxis.scenario() == AxisConstraint::FreeSpaceScenario::Definite
         ? std::optional(layoutConstraints.blockAxis.availableSpace())
         : std::nullopt;
-    auto rowSizesForFirstColumnSizing = rowSizesForFirstIterationColumnSizing(rowTrackSizingFunctionsList, blockAxisAvailableSpace);
+    auto definiteRowSizesForFirstColumnSizing = definiteRowSizesForFirstIterationColumnSizing(rowTrackSizingFunctionsList, blockAxisAvailableSpace);
 
     auto columnTrackSizingItems = placedGridItems.map([&](const PlacedGridItem& gridItem) -> TrackSizingItem {
         auto usedInlineBorderAndPadding = formattingContext().integrationUtils().borderAndPaddingForGridItem(gridItem.layoutBox(), { }).first;
-        auto gridAreaBlockSize = GridLayoutUtils::gridAreaDimensionSize(gridItem.rowStartLine(), gridItem.rowEndLine(), rowSizesForFirstColumnSizing, layoutState.usedRowGap);
+        auto gridAreaBlockSize = gridAreaBlockSizeForFirstIterationColumnSizing(gridItem, definiteRowSizesForFirstColumnSizing, layoutState.usedRowGap);
         return { gridItem, gridItem.inlineAxisSizes(), usedInlineBorderAndPadding,
             { gridItem.columnStartLine(), gridItem.columnEndLine() }, gridAreaBlockSize };
     });
