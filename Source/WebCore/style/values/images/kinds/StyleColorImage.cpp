@@ -114,6 +114,11 @@ bool ColorImage::knownToBeOpaque(const RenderElement& renderer) const
     return resolvedColor(renderer).isOpaque();
 }
 
+bool ColorImage::containsCurrentColor() const
+{
+    return m_color.containsCurrentColor();
+}
+
 WebCore::Color ColorImage::resolvedColor(const RenderElement& renderer) const
 {
     return ColorResolver { renderer.style() }.colorResolvingCurrentColorApplyingColorFilter(m_color);

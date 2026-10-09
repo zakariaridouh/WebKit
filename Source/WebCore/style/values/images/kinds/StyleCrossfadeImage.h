@@ -69,6 +69,7 @@ private:
     ImageDrawResult drawAsPattern(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions, bool isForFirstLine) const final;
     bool currentFrameIsComplete(const RenderElement*) const final;
     bool knownToBeOpaque(const RenderElement&) const final;
+    bool containsCurrentColor() const final;
     bool canDrawAtSize(const RenderElement&, const FloatSize&) const final;
     InterpolationQuality interpolationQualityForImageDraw(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const void* layer, const LayoutSize&) const final;
     NaturalDimensions naturalDimensions(const RenderElement&, const ImageSizingContext&) const final;

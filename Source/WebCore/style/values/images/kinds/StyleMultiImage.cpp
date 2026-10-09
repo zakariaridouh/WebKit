@@ -258,5 +258,10 @@ InterpolationQuality MultiImage::interpolationQualityForImageDraw(GraphicsContex
     return protect(m_selectedImage)->interpolationQualityForImageDraw(context, renderer, concreteObjectSize, layer, size);
 }
 
+bool MultiImage::containsCurrentColor() const
+{
+    return m_selectedImage && protect(m_selectedImage)->containsCurrentColor();
+}
+
 } // namespace Style
 } // namespace WebCore

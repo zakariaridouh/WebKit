@@ -227,6 +227,12 @@ InterpolationQuality FilterImage::interpolationQualityForImageDraw(GraphicsConte
     return ImageQualityController::chooseInterpolationQualityForBitmapOfSize(context, renderer, calculateImageBufferBackendSize(size, 1), layer, size);
 }
 
+bool FilterImage::containsCurrentColor() const
+{
+    return (m_image && protect(m_image)->containsCurrentColor())
+        || m_filter.hasFilterThatRequiresRepaintForCurrentColorChange();
+}
+
 NaturalDimensions FilterImage::naturalDimensions(const RenderElement& renderer, const ImageSizingContext& context) const
 {
     if (RefPtr image = m_image)

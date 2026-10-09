@@ -240,5 +240,10 @@ bool GradientImage::knownToBeOpaque(const RenderElement& renderer) const
     return isOpaque(m_gradient, renderer.style());
 }
 
+bool GradientImage::containsCurrentColor() const
+{
+    return Style::containsCurrentColor(m_gradient);
+}
+
 } // namespace Style
 } // namespace WebCore

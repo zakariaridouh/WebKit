@@ -349,6 +349,15 @@ bool CrossfadeImage::knownToBeOpaque(const RenderElement& renderer) const
     });
 }
 
+bool CrossfadeImage::containsCurrentColor() const
+{
+    return withInputs([](const auto& inputs) {
+        return std::ranges::any_of(inputs, [](const auto& input) {
+            return input.image && protect(input.image)->containsCurrentColor();
+        });
+    });
+}
+
 bool CrossfadeImage::canDrawAtSize(const RenderElement& renderer, const FloatSize& size) const
 {
     if (size.isEmpty())
