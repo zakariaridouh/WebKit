@@ -980,8 +980,11 @@ private:
     template<FailureAction> T* expandCapacity(size_t newMinCapacity, T*);
     template<FailureAction, typename U> U* expandCapacity(size_t newMinCapacity, U*);
     template<FailureAction, typename U> bool appendSlowCase(U&&);
+    template<FailureAction> bool appendSlowCaseByValue(T);
     template<FailureAction, typename... Args> bool constructAndAppend(Args&&...);
     template<FailureAction, typename... Args> bool constructAndAppendSlowCase(Args&&...);
+    template<typename A> using SlowCaseArg = std::conditional_t<std::is_trivially_copyable_v<std::remove_cvref_t<A>> && std::is_trivially_copy_constructible_v<std::remove_cvref_t<A>> && !std::is_array_v<std::remove_cvref_t<A>> && sizeof(std::remove_cvref_t<A>) <= 2 * sizeof(void*), std::remove_cvref_t<A>, A&&>;
+    template<FailureAction, typename... SlowArgs> bool constructAndAppendSlowCaseOutOfLine(SlowArgs...);
 
     template<FailureAction, typename U> bool append(U&&);
     template<FailureAction, typename U, size_t Extent> bool append(std::span<const U, Extent>);
@@ -1563,7 +1566,11 @@ ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Mallo
         return true;
     }
 
-    return appendSlowCase<action, U>(std::forward<U>(value));
+    // A small trivially copyable argument needs no caller stack slot and is copied before the buffer grows.
+    if constexpr (std::is_same_v<std::remove_cvref_t<U>, T> && std::is_trivially_copyable_v<T> && std::is_trivially_copy_constructible_v<T> && sizeof(T) <= 2 * sizeof(void*))
+        return appendSlowCaseByValue<action>(value);
+    else
+        return appendSlowCase<action, U>(std::forward<U>(value));
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
@@ -1577,7 +1584,7 @@ ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Mallo
         return true;
     }
 
-    return constructAndAppendSlowCase<action>(std::forward<Args>(args)...);
+    return constructAndAppendSlowCaseOutOfLine<action, SlowCaseArg<Args>...>(std::forward<Args>(args)...);
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
@@ -1602,8 +1609,22 @@ bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendSlow
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+template<FailureAction action>
+NEVER_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendSlowCaseByValue(T value)
+{
+    return constructAndAppendSlowCase<action>(value);
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+template<FailureAction action, typename... SlowArgs>
+NEVER_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::constructAndAppendSlowCaseOutOfLine(SlowArgs... args)
+{
+    return constructAndAppendSlowCase<action>(std::forward<SlowArgs>(args)...);
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 template<FailureAction action, typename... Args>
-bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::constructAndAppendSlowCase(Args&&... args)
+ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::constructAndAppendSlowCase(Args&&... args)
 {
     static_assert(action == FailureAction::Crash || action == FailureAction::Report);
     ASSERT_WITH_SECURITY_IMPLICATION(size() == capacity());
