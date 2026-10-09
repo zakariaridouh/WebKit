@@ -841,8 +841,8 @@ public:
 
     const NetworkLoadPolicy& networkLoadPolicy() const final;
 
-    void NODELETE suspendDeviceMotionAndOrientationUpdates();
-    void NODELETE resumeDeviceMotionAndOrientationUpdates();
+    void suspendDeviceMotionAndOrientationUpdates();
+    void resumeDeviceMotionAndOrientationUpdates();
 
     void suspendFontLoading();
 
@@ -1438,7 +1438,7 @@ public:
     void updateAXCustomColorModeTextBackdrops();
 #endif
 
-    void NODELETE invalidateRenderingDependentRegions();
+    void invalidateRenderingDependentRegions();
     void invalidateEventRegionsForFrame(HTMLFrameOwnerElement&);
 
     void invalidateEventListenerRegions();
@@ -1463,8 +1463,8 @@ public:
     bool isContextThread() const final;
     WEBCORE_EXPORT bool isSecureContext() const final;
     bool crossOriginIsolated() const final;
-    bool NODELETE isInCrossOriginIsolatedAgentCluster() const;
-    bool NODELETE originAgentCluster() const;
+    bool isInCrossOriginIsolatedAgentCluster() const;
+    bool originAgentCluster() const;
     String agentClusterID() const final;
     bool isJSExecutionForbidden() const final { return false; }
 
@@ -1614,8 +1614,8 @@ public:
     bool mayHaveRenderedSVGForeignObjects() const { return m_mayHaveRenderedSVGForeignObjects; }
     void setMayHaveRenderedSVGForeignObjects() { m_mayHaveRenderedSVGForeignObjects = true; }
 
-    void NODELETE didAddTouchEventHandler(Node&);
-    void NODELETE didRemoveTouchEventHandler(Node&, EventHandlerRemoval = EventHandlerRemoval::One);
+    void didAddTouchEventHandler(Node&);
+    void didRemoveTouchEventHandler(Node&, EventHandlerRemoval = EventHandlerRemoval::One);
 
     void didRemoveEventTargetNode(Node&);
 
@@ -2031,14 +2031,14 @@ public:
 
     bool NODELETE hasHighlight() const;
     HighlightRegistry* highlightRegistryIfExists() const { return m_highlightRegistry.get(); }
-    HighlightRegistry& NODELETE highlightRegistry();
+    HighlightRegistry& highlightRegistry();
     void updateHighlightPositions();
 
     HighlightRegistry* fragmentHighlightRegistryIfExists() const { return m_fragmentHighlightRegistry.get(); }
-    HighlightRegistry& NODELETE fragmentHighlightRegistry();
+    HighlightRegistry& fragmentHighlightRegistry();
 
     HighlightRegistry* textExtractionHighlightRegistryIfExists() const { return m_textExtractionHighlightRegistry.get(); }
-    HighlightRegistry& NODELETE textExtractionHighlightRegistry();
+    HighlightRegistry& textExtractionHighlightRegistry();
 
 #if ENABLE(APP_HIGHLIGHTS)
     HighlightRegistry* appHighlightRegistryIfExists() { return m_appHighlightRegistry.get(); }
@@ -2312,7 +2312,7 @@ private:
 
     bool computeIsSecureContext() const;
 
-    void NODELETE platformSuspendOrStopActiveDOMObjects();
+    void platformSuspendOrStopActiveDOMObjects();
 
     void collectHighlightRangesFromRegister(Vector<WeakPtr<HighlightRange>>&, const HighlightRegistry&);
 

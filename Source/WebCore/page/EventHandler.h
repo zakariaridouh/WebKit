@@ -326,8 +326,8 @@ public:
 #if ENABLE(DRAG_SUPPORT)
     WEBCORE_EXPORT bool eventMayStartDrag(const PlatformMouseEvent&) const;
     
-    WEBCORE_EXPORT void NODELETE didStartDrag();
-    WEBCORE_EXPORT void NODELETE dragCancelled();
+    WEBCORE_EXPORT void didStartDrag();
+    WEBCORE_EXPORT void dragCancelled();
     WEBCORE_EXPORT std::optional<RemoteUserInputEventData> dragSourceEndedAt(const PlatformMouseEvent&, OptionSet<DragOperation>, MayExtendDragSession = MayExtendDragSession::No);
     WEBCORE_EXPORT void dragSourceEnded(const PlatformMouseEvent&, OptionSet<DragOperation>, MayExtendDragSession = MayExtendDragSession::No);
 #endif

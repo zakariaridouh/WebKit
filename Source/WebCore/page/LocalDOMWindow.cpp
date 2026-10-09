@@ -2112,7 +2112,7 @@ bool LocalDOMWindow::crossOriginIsolated() const
 // https://html.spec.whatwg.org/multipage/origin.html#dom-originagentcluster
 bool LocalDOMWindow::originAgentCluster() const
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     return document && document->originAgentCluster();
 }
 

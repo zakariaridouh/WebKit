@@ -63,7 +63,7 @@ enum class WordBounded : bool { No, Yes };
 static bool NODELETE isSearchInvisible(const Node& node)
 {
     // display:contents has no RenderStyle but its subtree is rendered; the element type checks below still apply.
-    RefPtr element = dynamicDowncast<Element>(node);
+    auto* element = dynamicDowncast<Element>(node);
     bool isDisplayContents = element && element->hasDisplayContents();
     if (!isDisplayContents && (!node.renderStyle() || node.renderStyle()->display() == Style::DisplayType::None))
         return true;

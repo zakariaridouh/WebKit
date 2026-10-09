@@ -666,7 +666,7 @@ auto Document::allDocuments() -> DocumentsMap::ValuesIteratorRange
     return allDocumentsMap().values();
 }
 
-static inline IntDegrees NODELETE currentOrientation(LocalFrame* frame)
+static inline IntDegrees currentOrientation(LocalFrame* frame)
 {
 #if ENABLE(ORIENTATION_EVENTS)
     if (frame)
@@ -1069,7 +1069,7 @@ void Document::commonTeardown()
     m_lazyLoadElementObserver = nullptr;
 }
 
-Quirks& Document::ensureQuirks()
+SUPPRESS_NODELETE Quirks& Document::ensureQuirks()
 {
     ASSERT(m_constructionDidFinish);
     lazyInitialize(m_quirks, makeUnique<Quirks>(*this));
@@ -9625,7 +9625,7 @@ void Document::didAddTouchEventHandler(Node& handler)
 #if ENABLE(TOUCH_EVENTS) || ENABLE(TOUCH_EVENT_REGIONS)
     m_touchEventTargets.add(handler);
 
-    if (auto* parent = parentDocument()) {
+    if (RefPtr parent = parentDocument()) {
         parent->didAddTouchEventHandler(*this);
         return;
     }
@@ -9645,7 +9645,7 @@ void Document::didRemoveTouchEventHandler(Node& handler, EventHandlerRemoval rem
 #if ENABLE(TOUCH_EVENTS) || ENABLE(TOUCH_EVENT_REGIONS)
     removeHandlerFromSet(m_touchEventTargets, handler, removalMode);
 
-    if (auto* parent = parentDocument())
+    if (RefPtr parent = parentDocument())
         parent->didRemoveTouchEventHandler(*this, removalMode);
 
     if (!shouldUseTouchEventRegions())
@@ -11405,8 +11405,8 @@ HTMLElement* Document::topmostHintPopover() const
 // "nearest inclusive open popover" definition: https://html.spec.whatwg.org/#nearest-inclusive-open-popover
 HTMLElement* Document::nearestOpenHintAncestor(Element& element) const
 {
-    for (Ref ancestor : composedTreeLineage(element)) {
-        auto* htmlElement = dynamicDowncast<HTMLElement>(ancestor.ptr());
+    for (auto& ancestor : composedTreeLineage(element)) {
+        auto* htmlElement = dynamicDowncast<HTMLElement>(ancestor);
         if (htmlElement && htmlElement->popoverData()
             && htmlElement->popoverData()->showingAsHint()
             && htmlElement->popoverData()->visibilityState() == PopoverVisibilityState::Showing)

@@ -1,6 +1,1 @@
-dom/Document.cpp
-dom/FragmentDirectiveRangeFinder.cpp
-dom/UserGestureIndicator.cpp
-page/EventHandler.cpp
-page/Quirks.cpp
-style/values/primitives/StyleValueHandleMap.h
+[ iOS ] dom/Document.cpp

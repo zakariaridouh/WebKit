@@ -80,7 +80,8 @@ template<typename ValueType> unsigned ValueHandleMap<ValueType>::insert(Ref<Valu
     return m_nextAvailableHandle++;
 }
 
-template<typename ValueType> ValueType& NODELETE ValueHandleMap<ValueType>::get(unsigned handle) const
+// HashMap lookups are not modeled by NoDeleteChecker but cannot destroy anything.
+template<typename ValueType> SUPPRESS_NODELETE ValueType& NODELETE ValueHandleMap<ValueType>::get(unsigned handle) const
 {
     auto entry = m_map.find(handle);
     ASSERT(entry != m_map.end());

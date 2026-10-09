@@ -6260,7 +6260,7 @@ void WebPage::didStartDrag(std::optional<FrameIdentifier> frameID)
     m_isStartingDrag = false;
 
     if (RefPtr frame = frameID ? WebProcess::singleton().webFrame(*frameID) : &mainWebFrame()) {
-        if (auto* localFrame = frame->coreLocalFrame())
+        if (RefPtr localFrame = frame->coreLocalFrame())
             localFrame->eventHandler().didStartDrag();
     }
 }

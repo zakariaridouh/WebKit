@@ -3316,7 +3316,7 @@ bool EventHandler::isElementAnAncestorOfLastElementUnderMouse(Element* element) 
     if (!element)
         return false;
 
-    for (WeakPtr weakElement : m_ancestorsOfLastElementUnderMouse) {
+    for (auto& weakElement : m_ancestorsOfLastElementUnderMouse) {
         if (weakElement == element)
             return true;
     }
