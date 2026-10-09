@@ -121,13 +121,9 @@ InlineBoxIterator Box::parentInlineBox() const
 
 LineBoxIterator Box::lineBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](const BoxLegacyPath& path) {
-        return LineBoxIterator(LineBoxIteratorLegacyPath(&path.rootInlineBox()));
-    }
-    , [](const BoxModernPath& path) {
+    return WTF::switchOn(m_pathVariant, [](const BoxModernPath& path) {
         return LineBoxIterator(LineBoxIteratorModernPath(path.inlineContent(), path.box().lineIndex()));
-    }
-    );
+    });
 }
 
 FloatRect Box::visualRect() const
@@ -213,11 +209,6 @@ LeafBoxIterator boxFor(const LayoutIntegration::InlineContent& content, size_t b
 const BoxModernPath& Box::modernPath() const
 {
     return std::get<BoxModernPath>(m_pathVariant);
-}
-
-const BoxLegacyPath& Box::legacyPath() const
-{
-    return std::get<BoxLegacyPath>(m_pathVariant);
 }
 
 }

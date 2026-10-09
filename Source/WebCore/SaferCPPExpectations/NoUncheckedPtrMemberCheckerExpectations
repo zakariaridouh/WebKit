@@ -23,8 +23,6 @@ rendering/GlyphDisplayListCache.cpp
 rendering/GridTrackSizingAlgorithm.h
 rendering/InlineBoxPainter.h
 rendering/LayoutRepainter.h
-rendering/LegacyInlineIterator.h
-rendering/LegacyLineLayout.h
 rendering/LogicalSelectionOffsetCaches.h
 rendering/PaintInfo.h
 rendering/PositionedLayoutConstraints.h
@@ -47,7 +45,6 @@ rendering/RenderTableSection.h
 rendering/RenderText.cpp
 rendering/TextDecorationPainter.h
 [ iOS ] rendering/cocoa/RenderThemeCocoa.mm
-rendering/line/BreakingContext.h
 rendering/mathml/RenderMathMLScripts.h
 rendering/shapes/ShapeOutsideInfo.h
 rendering/svg/SVGRenderingContext.h

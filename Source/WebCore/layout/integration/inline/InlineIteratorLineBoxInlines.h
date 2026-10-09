@@ -27,7 +27,6 @@
 
 #include "InlineIteratorBox.h"
 #include "InlineIteratorLineBox.h"
-#include "InlineIteratorLineBoxLegacyPathInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 
 namespace WebCore {

@@ -26,7 +26,6 @@
 #include "RenderSVGTextPath.h"
 #include "SVGElement.h"
 #include "SVGGeometryElement.h"
-#include "SVGInlineTextBoxInlines.h"
 #include "SVGLengthContext.h"
 #include "SVGTextContentElement.h"
 #include "SVGTextLayoutEngineBaseline.h"
@@ -310,7 +309,7 @@ static inline void dumpTextBoxes(const Vector<SVGTextChunkBox>& boxes)
 
 void SVGTextLayoutEngine::finishLayout()
 {
-    // After all text fragments are stored in their correpsonding SVGInlineTextBoxes, we can layout individual text chunks.
+    // After all text fragments are stored for their text boxes, we can layout individual text chunks.
     // Chunk layouting is only performed for line layout boxes, not for path layout, where it has already been done.
     m_chunkLayoutBuilder.layoutTextChunks(m_lineLayoutBoxes, m_lineLayoutChunkStarts);
 

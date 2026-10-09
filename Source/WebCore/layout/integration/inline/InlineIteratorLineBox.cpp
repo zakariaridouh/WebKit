@@ -29,7 +29,7 @@
 
 #include "InlineIteratorBoxInlines.h"
 #include "LayoutIntegrationLineLayout.h"
-#include "RenderBlockFlow.h"
+#include "RenderBlockFlowInlines.h"
 #include "RenderObjectDocument.h"
 #include "RenderView.h"
 #include "StyleComputedStyle+GettersInlines.h"
@@ -84,16 +84,14 @@ LineBoxIterator firstLineBoxFor(const RenderBlockFlow& flow)
 {
     if (CheckedPtr lineLayout = flow.inlineLayout())
         return lineLayout->firstLineBox();
-
-    return { LineBoxIteratorLegacyPath { flow.legacyRootBox() } };
+    return { };
 }
 
 LineBoxIterator lastLineBoxFor(const RenderBlockFlow& flow)
 {
     if (CheckedPtr lineLayout = flow.inlineLayout())
         return lineLayout->lastLineBox();
-
-    return { LineBoxIteratorLegacyPath { flow.legacyRootBox() } };
+    return { };
 }
 
 LineBoxIterator lineBoxFor(const LayoutIntegration::InlineContent& inlineContent, size_t lineIndex)

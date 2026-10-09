@@ -30,8 +30,6 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlowInlines.h"
 #include "RenderSVGText.h"
-#include "SVGInlineTextBox.h"
-#include "SVGRootInlineBox.h"
 #include "SVGTextBoxPainter.h"
 #include "SVGTextFragment.h"
 
@@ -107,11 +105,6 @@ const Vector<SVGTextFragment>& SVGTextBox::textFragments() const
     });
 }
 
-const SVGInlineTextBox* SVGTextBox::legacyInlineBox() const
-{
-    return downcast<SVGInlineTextBox>(TextBox::legacyInlineBox());
-}
-
 SVGTextBoxIterator::SVGTextBoxIterator(Box::PathVariant&& path)
     : TextBoxIterator(WTF::move(path))
 {
@@ -130,18 +123,12 @@ SVGTextBoxIterator firstSVGTextBoxFor(const RenderSVGInlineText& text)
             return { };
         return { *box };
     }
-
-    return { BoxLegacyPath { text.firstLegacyTextBox() } };
+    return { };
 }
 
 BoxRange<SVGTextBoxIterator> svgTextBoxesFor(const RenderSVGInlineText& text)
 {
     return { firstSVGTextBoxFor(text) };
-}
-
-SVGTextBoxIterator svgTextBoxFor(const SVGInlineTextBox* box)
-{
-    return { BoxLegacyPath { box } };
 }
 
 SVGTextBoxIterator svgTextBoxFor(const LayoutIntegration::InlineContent& inlineContent, size_t boxIndex)
@@ -161,16 +148,14 @@ BoxRange<BoxIterator> boxesFor(const RenderSVGText& svgText)
 {
     if (CheckedPtr lineLayout = svgText.inlineLayout())
         return { BoxIterator { *lineLayout->firstRootInlineBox() } };
-
-    return { BoxIterator { BoxLegacyPath { svgText.legacyRootBox() } } };
+    return { BoxIterator { } };
 }
 
 BoxIterator lastBoxFor(const RenderSVGText& svgText)
 {
     if (CheckedPtr lineLayout = svgText.inlineLayout())
         return lineLayout->lastBox();
-
-    return { BoxIterator { BoxLegacyPath { svgText.legacyRootBox() } } };
+    return { };
 }
 
 }

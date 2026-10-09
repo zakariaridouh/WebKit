@@ -31,19 +31,14 @@
 #if ASSERT_ENABLED
 
 #include "BlockFormattingState.h"
-#include "InlineDisplayContent.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutContext.h"
 #include "LayoutElementBox.h"
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutTreeBuilder.h"
-#include "LegacyInlineTextBox.h"
-#include "LegacyRootInlineBox.h"
 #include "RenderBlockFlowInlines.h"
 #include "RenderBoxInlines.h"
-#include "RenderInline.h"
-#include "RenderLineBreak.h"
 #include "RenderTableCell.h"
 #include "RenderTableSection.h"
 #include "RenderView.h"
@@ -62,111 +57,12 @@ static bool areEssentiallyEqual(LayoutUnit a, LayoutUnit b)
     return std::abs(a.rawValue() - b.rawValue()) <= epsilon;
 }
 
-static bool areEssentiallyEqual(float a, InlineLayoutUnit b)
-{
-    return areEssentiallyEqual(LayoutUnit { a }, LayoutUnit { b });
-}
-
 static bool areEssentiallyEqual(LayoutRect a, LayoutRect b)
 {
     return areEssentiallyEqual(a.x(), b.x())
         && areEssentiallyEqual(a.y(), b.y())
         && areEssentiallyEqual(a.width(), b.width())
         && areEssentiallyEqual(a.height(), b.height());
-}
-
-static bool checkForMatchingNonTextRuns(const InlineDisplay::Box& box, const WebCore::LegacyInlineBox& inlineBox)
-{
-    return areEssentiallyEqual(inlineBox.left(), box.left())
-        && areEssentiallyEqual(inlineBox.right(), box.right())
-        && areEssentiallyEqual(inlineBox.top(), box.top())
-        && areEssentiallyEqual(inlineBox.bottom(), box.bottom());
-}
-
-
-static bool checkForMatchingTextRuns(InlineDisplay::Box& box, const WebCore::LegacyInlineTextBox& inlineTextBox)
-{
-    if (!box.isTextOrSoftLineBreak())
-        return false;
-    return areEssentiallyEqual(inlineTextBox.left(), box.left())
-        && areEssentiallyEqual(inlineTextBox.right(), box.right())
-        && areEssentiallyEqual(inlineTextBox.top(), box.top())
-        && areEssentiallyEqual(inlineTextBox.bottom(), box.bottom())
-        && (inlineTextBox.isLineBreak() || (inlineTextBox.start() == box.text().start() && inlineTextBox.end() == box.text().end()));
-}
-
-static void collectFlowBoxSubtree(const LegacyInlineFlowBox& flowbox, Vector<WebCore::LegacyInlineBox*>& inlineBoxes)
-{
-    auto* inlineBox = flowbox.firstLeafDescendant();
-    auto* lastLeafDescendant = flowbox.lastLeafDescendant();
-    while (inlineBox) {
-        inlineBoxes.append(inlineBox);
-        if (inlineBox == lastLeafDescendant)
-            break;
-        inlineBox = inlineBox->nextLeafOnLine();
-    }
-}
-
-static void collectInlineBoxes(const RenderBlockFlow& root, Vector<WebCore::LegacyInlineBox*>& inlineBoxes)
-{
-    if (auto* rootBox = root.legacyRootBox()) {
-        for (auto* inlineBox = rootBox->firstChild(); inlineBox; inlineBox = inlineBox->nextOnLine()) {
-            if (auto* legacyInlineFlowBox = dynamicDowncast<LegacyInlineFlowBox>(inlineBox))
-                collectFlowBoxSubtree(*legacyInlineFlowBox, inlineBoxes);
-            else
-                inlineBoxes.append(inlineBox);
-        }
-    }
-}
-
-static bool outputMismatchingComplexLineInformationIfNeeded(TextStream& stream, const LayoutState& layoutState, const RenderBlockFlow& blockFlow, const ElementBox& inlineFormattingRoot)
-{
-    UNUSED_PARAM(layoutState);
-    UNUSED_PARAM(inlineFormattingRoot);
-    // FIXME: Populate display boxes.
-    auto boxes = InlineDisplay::Boxes { };
-    // Collect inlineboxes.
-    Vector<WebCore::LegacyInlineBox*> inlineBoxes;
-    collectInlineBoxes(blockFlow, inlineBoxes);
-
-    auto mismatched = false;
-    unsigned boxIndex = 0;
-
-    if (inlineBoxes.size() != boxes.size()) {
-        stream << "Warning: mismatching number of boxes: inlineboxes(" << inlineBoxes.size() << ") vs. inline boxes(" << boxes.size() << ")";
-        stream.nextLine();
-    }
-
-    for (unsigned inlineBoxIndex = 0; inlineBoxIndex < inlineBoxes.size() && boxIndex < boxes.size(); ++inlineBoxIndex) {
-        auto& box = boxes[boxIndex];
-        auto* inlineBox = inlineBoxes[inlineBoxIndex];
-        auto* inlineTextBox = dynamicDowncast<WebCore::LegacyInlineTextBox>(inlineBox);
-        bool matchingRuns = inlineTextBox ? checkForMatchingTextRuns(box, *inlineTextBox) : checkForMatchingNonTextRuns(box, *inlineBox);
-
-        if (!matchingRuns) {
-            
-            if (is<RenderLineBreak>(inlineBox->renderer())) {
-                // <br> positioning is weird at this point. It needs proper baseline.
-                ++boxIndex;
-                continue;
-            }
-
-            stream << "Mismatching: box";
-
-            if (inlineTextBox)
-                stream << " (" << inlineTextBox->start() << ", " << inlineTextBox->end() << ")";
-            stream << " (" << inlineBox->logicalLeft() << ", " << inlineBox->logicalTop() << ") (" << inlineBox->logicalWidth() << "x" << inlineBox->logicalHeight() << ")";
-
-            stream << " inline box";
-            if (box.isTextOrSoftLineBreak())
-                stream << " (" << box.text().start() << ", " << box.text().end() << ")";
-            stream << " (" << box.left() << ", " << box.top() << ") (" << box.width() << "x" << box.height() << ")";
-            stream.nextLine();
-            mismatched = true;
-        }
-        ++boxIndex;
-    }
-    return mismatched;
 }
 
 static bool outputMismatchingBlockBoxInformationIfNeeded(TextStream& stream, const LayoutState& layoutState, const RenderBox& renderer, const Box& layoutBox)
@@ -323,12 +219,8 @@ static bool verifyAndOutputSubtree(TextStream& stream, const LayoutState& contex
 
         if (auto* blockFlow = dynamicDowncast<RenderBlockFlow>(*childRenderBox); blockFlow && childLayoutBox->establishesInlineFormattingContext()) {
             ASSERT(blockFlow->childrenInline());
-            auto mismatchingGeometry = outputMismatchingBlockBoxInformationIfNeeded(stream, context, *blockFlow, *childLayoutBox);
-            if (mismatchingGeometry)
+            if (outputMismatchingBlockBoxInformationIfNeeded(stream, context, *blockFlow, *childLayoutBox))
                 return true;
-
-            auto& formattingRoot = downcast<ElementBox>(*childLayoutBox);
-            mismatchingGeometry |= outputMismatchingComplexLineInformationIfNeeded(stream, context, *blockFlow, formattingRoot);
         } else {
             auto mismatchingSubtreeGeometry = verifyAndOutputSubtree(stream, context, *childRenderBox, *childLayoutBox);
             mismatchingGeometry |= mismatchingSubtreeGeometry;

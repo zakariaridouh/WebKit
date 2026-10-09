@@ -6618,13 +6618,6 @@ UseGiantTiles:
   humanReadableName: "Use giant tiles"
   defaultValue: false
 
-UseIFCForSVGText:
-  type: bool
-  status: internal
-  humanReadableName: "Use IFC for SVG text"
-  humanReadableDescription: "Use IFC for SVG text rendering"
-  defaultValue: true
-
 UseImageDocumentForSubframePDF:
   type: bool
   status: embedder

@@ -44,9 +44,6 @@
 #include "InlineWalker.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LayoutRepainter.h"
-#include "LegacyInlineTextBox.h"
-#include "LegacyLineLayout.h"
-#include "LegacyRootInlineBox.h"
 #include "LineClampUpdater.h"
 #include "LineSelection.h"
 #include "LocalFrame.h"
@@ -212,27 +209,6 @@ RenderBlockFlow::~RenderBlockFlow() = default;
 
 void RenderBlockFlow::willBeDestroyed()
 {
-    if (!renderTreeBeingDestroyed()) {
-        if (legacyRootBox()) {
-            // We can't wait for RenderBox::destroy to clear the selection,
-            // because by then we will have nuked the line boxes.
-            if (isSelectionBorder())
-                frame().selection().setNeedsSelectionUpdate();
-
-            // If we are an anonymous block, then our line boxes might have children
-            // that will outlast this block. In the non-anonymous block case those
-            // children will be destroyed by the time we return from this function.
-            if (isAnonymousBlock()) {
-                if (auto* childBox = legacyRootBox()->firstChild())
-                    childBox->removeFromParent();
-            }
-        } else if (auto* parent = this->parent(); parent && parent->isSVGRenderer())
-            parent->dirtyLineFromChangedChild();
-    }
-
-    if (svgTextLayout())
-        svgTextLayout()->deleteLegacyRootBox();
-
     RenderBlock::willBeDestroyed();
 }
 
@@ -864,12 +840,7 @@ LayoutUnit RenderBlockFlow::shiftForAlignContent(LayoutUnit intrinsicLogicalHeig
     // Now shift all our content.
     if (CheckedPtr inlineLayout = this->inlineLayout())
         inlineLayout->shiftLinesByInBlockDirection(space);
-    else if (auto* svgTextLayout = this->svgTextLayout()) {
-        if (isHorizontalWritingMode())
-            svgTextLayout->shiftLineBy(0, space);
-        else
-            svgTextLayout->shiftLineBy(-space, 0);
-    } else {
+    else {
         for (CheckedPtr child = firstChildBox(); child; child = child->nextSiblingBox()) {
             // A float is in our float list too and moves with it below, so leave it alone here.
             if (child->isFloating())
@@ -1184,7 +1155,7 @@ void RenderBlockFlow::computeAndSetLineLayoutPath()
 {
     if (lineLayoutPath() != UndeterminedPath)
         return;
-    setLineLayoutPath(LayoutIntegration::LineLayout::canUseFor(*this) ? InlinePath : SvgTextPath);
+    setLineLayoutPath(InlinePath);
 }
 
 LayoutIntegration::LineLayout& RenderBlockFlow::ensureInlineLayout()
@@ -1200,14 +1171,7 @@ void RenderBlockFlow::layoutInlineChildren(RelayoutChildren relayoutChildren, La
 
     computeAndSetLineLayoutPath();
 
-    if (lineLayoutPath() == InlinePath)
-        return layoutInlineContent(relayoutChildren, previousHeight, repaintLogicalTop, repaintLogicalBottom);
-
-    if (!svgTextLayout())
-        m_lineLayout = makeUnique<LegacyLineLayout>(*this);
-
-    svgTextLayout()->layoutLineBoxes();
-    m_previousInlineLayoutContentTopAndBottomIncludingInkOverflow = { };
+    layoutInlineContent(relayoutChildren, previousHeight, repaintLogicalTop, repaintLogicalBottom);
 }
 
 void RenderBlockFlow::performBlockStepSizing(RenderBox& child, LayoutUnit blockStepSizeForChild) const
@@ -1627,9 +1591,6 @@ bool RenderBlockFlow::childrenPreventSelfCollapsing() const
 
     if (inlineLayout())
         return !inlineLayout()->isSelfCollapsingContent();
-
-    if (svgTextLayout())
-        return svgTextLayout()->lineCount();
 
     // Containers with no children.
     return false;
@@ -2765,12 +2726,6 @@ void RenderBlockFlow::repaintOverhangingFloats(bool paintAllDescendants)
     }
 }
 
-void RenderBlockFlow::dirtyLineFromChangedChild()
-{
-    if (svgTextLayout() && svgTextLayout()->legacyRootBox())
-        svgTextLayout()->legacyRootBox()->markDirty();
-}
-
 void RenderBlockFlow::paintColumnRules(PaintInfo& paintInfo, const LayoutPoint& point)
 {
     RenderBlock::paintColumnRules(paintInfo, point);
@@ -3556,13 +3511,8 @@ bool RenderBlockFlow::hitTestInlineChildren(const HitTestRequest& request, HitTe
 
 void RenderBlockFlow::addOverflowFromInlineChildren()
 {
-    if (inlineLayout()) {
+    if (inlineLayout())
         inlineLayout()->collectOverflow();
-        return;
-    }
-    
-    if (svgTextLayout())
-        svgTextLayout()->addOverflowFromInlineChildren();
 }
 
 void RenderBlockFlow::addOverflowFromInFlowChildren(OptionSet<ComputeOverflowOptions> options)
@@ -3707,10 +3657,9 @@ GapRects RenderBlockFlow::inlineSelectionGaps(RenderBlock& rootBlock, const Layo
         return { };
     }
 
-    // FIXME: Do we really need to check for SVG content here?
     // A line carrying nothing but a block level box still has gaps to fill: that box's own, and the ones beside it.
-    auto hasInlineOrSVGContent = (inlineLayout() && inlineLayout()->hasContentfulInlineOrBlockLine()) || (svgTextLayout() && svgTextLayout()->lineCount());
-    if (!hasInlineOrSVGContent) {
+    auto hasInlineContent = inlineLayout() && inlineLayout()->hasContentfulInlineOrBlockLine();
+    if (!hasInlineContent) {
         // Update our lastLogicalTop to be the bottom of the block. <hr>s or empty blocks with height can trip this case.
         if (containsStart)
             updateLastLogicalValues(blockDirectionOffset(rootBlock, offsetFromRootBlock) + logicalHeight(), logicalLeftSelectionOffset(rootBlock, logicalHeight(), cache), logicalRightSelectionOffset(rootBlock, logicalHeight(), cache));
@@ -3892,8 +3841,6 @@ int RenderBlockFlow::lineCount() const
     }
     if (inlineLayout())
         return inlineLayout()->lineCount();
-    if (svgTextLayout())
-        return svgTextLayout()->lineCount();
 
     return 0;
 }
@@ -4491,7 +4438,7 @@ void RenderBlockFlow::updateRepaintTopAndBottomAfterLayout(RelayoutChildren rela
     auto isFullLayout = selfNeedsLayout() || relayoutChildren == RelayoutChildren::Yes;
     if (isFullLayout) {
         if (!selfNeedsLayout()) {
-            // In order to really trigger full repaint, the block container has to have the self layout flag set (see LegacyLineLayout::layoutRunsAndFloats).
+            // In order to really trigger full repaint, the block container has to have the self layout flag set.
             // Without having it set, repaint after layout logic (see RenderElement::repaintAfterLayoutIfNeeded) only issues repaint on the diff of
             // before/after repaint bounds. It results in incorrect repaint when the inline content changes (new text) and expands the same time.
             // (it only affects shrink-to-fit type of containers).
@@ -4626,14 +4573,10 @@ void RenderBlockFlow::outputFloatingObjects(WTF::TextStream& stream, int depth) 
     }
 }
 
-void RenderBlockFlow::outputLineTreeAndMark(WTF::TextStream& stream, const LegacyInlineBox* markedBox, int depth) const
+void RenderBlockFlow::outputLineTree(WTF::TextStream& stream, int depth) const
 {
-    if (auto* inlineLayout = this->inlineLayout()) {
+    if (auto* inlineLayout = this->inlineLayout())
         inlineLayout->outputLineTree(stream, depth);
-        return;
-    }
-    if (auto* root = legacyRootBox())
-        root->outputLineTreeAndMark(stream, markedBox, depth);
 }
 #endif
 
@@ -5557,9 +5500,6 @@ bool RenderBlockFlow::tryComputeIntrinsicLogicalWidthsUsingInlinePath(LayoutUnit
         return false;
 
     computeAndSetLineLayoutPath();
-
-    if (lineLayoutPath() != InlinePath)
-        return false;
 
     if (!LayoutIntegration::LineLayout::canUseForIntrinsicWidthComputation(*this))
         return false;

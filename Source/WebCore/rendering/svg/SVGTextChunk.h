@@ -31,7 +31,6 @@ namespace WebCore {
 
 class AffineTransform;
 class RenderSVGInlineText;
-class SVGInlineTextBox;
 class SVGTextContentElement;
 
 using SVGTextFragmentMap = HashMap<InlineIterator::SVGTextBox::Key, Vector<SVGTextFragment>>;

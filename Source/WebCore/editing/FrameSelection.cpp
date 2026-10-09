@@ -68,7 +68,6 @@
 #include "InlineIteratorInlineBox.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineRunAndOffset.h"
-#include "LegacyInlineTextBox.h"
 #include "LineSelection.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"

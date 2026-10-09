@@ -47,7 +47,7 @@ namespace LayoutIntegration {
 
 inline static float endPaddingQuirkValue(const RenderBlockFlow& flow)
 {
-    // FIXME: It's the copy of the lets-adjust-overflow-for-the-caret behavior from LegacyLineLayout::addOverflowFromInlineChildren.
+    // FIXME: It's the copy of the lets-adjust-overflow-for-the-caret behavior from legacy line layout.
     auto endPadding = flow.hasNonVisibleOverflow() ? flow.paddingEnd() : 0_lu;
     if (!endPadding)
         endPadding = flow.endPaddingWidthForCaret();

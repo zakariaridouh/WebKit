@@ -1865,10 +1865,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     layout/integration/grid/LayoutIntegrationGridLayout.h
     layout/integration/inline/InlineIteratorBox.h
-    layout/integration/inline/InlineIteratorBoxLegacyPath.h
     layout/integration/inline/InlineIteratorBoxModernPath.h
     layout/integration/inline/InlineIteratorLineBox.h
-    layout/integration/inline/InlineIteratorLineBoxLegacyPath.h
     layout/integration/inline/InlineIteratorLineBoxModernPath.h
     layout/integration/inline/InlineIteratorLogicalOrderTraversal.h
     layout/integration/inline/InlineIteratorTextBox.h
@@ -3107,11 +3105,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/LayerAncestorClippingStack.h
     rendering/LayerFragment.h
     rendering/LayoutRepainter.h
-    rendering/LegacyInlineBox.h
-    rendering/LegacyInlineFlowBox.h
-    rendering/LegacyInlineTextBox.h
-    rendering/LegacyLineLayout.h
-    rendering/LegacyRootInlineBox.h
     rendering/LineClampUpdater.h
     rendering/MarkedText.h
     rendering/MotionPath.h
@@ -3153,7 +3146,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/RenderLayerSVGAdditions.h
     rendering/RenderLayerScrollableArea.h
     rendering/RenderLayoutState.h
-    rendering/RenderLineBoxList.h
     rendering/RenderListItem.h
     rendering/RenderMedia.h
     rendering/RenderMediaInlines.h
@@ -3171,7 +3163,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/RenderSelectionGeometry.h
     rendering/RenderText.h
     rendering/RenderTextControl.h
-    rendering/RenderTextLineBoxes.h
     rendering/RenderTheme.h
     rendering/RenderTreeAsText.h
     rendering/RenderTreeOrder.h
@@ -3187,8 +3178,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/TransformOperationData.h
     rendering/VisibleRectContext.h
 
-    rendering/line/LineWidth.h
-    rendering/line/TrailingObjects.h
 
     rendering/shapes/LayoutShape.h
     rendering/shapes/PathLayoutShape.h
@@ -3213,7 +3202,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/svg/RenderSVGInlineText.h
     rendering/svg/RenderSVGModelObject.h
     rendering/svg/SVGBoundingBoxComputation.h
-    rendering/svg/SVGInlineTextBox.h
     rendering/svg/SVGRenderSupport.h
     rendering/svg/SVGTextLayoutAttributes.h
     rendering/svg/SVGTextMetrics.h

@@ -28,7 +28,6 @@
 
 #include "AXObjectCache.h"
 #include "BreakablePositions.h"
-#include "BreakingContext.h"
 #include "DocumentMarkerController.h"
 #include "DocumentView.h"
 #include "FloatQuad.h"
@@ -49,7 +48,7 @@
 #include "LocalFrameView.h"
 #include "MathVariant.h"
 #include "Range.h"
-#include "RenderBlock.h"
+#include "RenderBlockFlowInlines.h"
 #include "RenderCombineText.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
@@ -59,7 +58,6 @@
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
 #include "SVGElementTypeHelpers.h"
-#include "SVGInlineTextBox.h"
 #include "SelectionGeometry.h"
 #include "Settings.h"
 #include "SurrogatePairAwareTextIterator.h"
@@ -345,6 +343,27 @@ String capitalize(const String& string, char32_t previousCharacter, const AtomSt
         }
     }
     return result == string ? string : result.toString();
+}
+
+static LayoutRect snappedSelectionRect(const LayoutRect& selectionRect, float logicalRight, WritingMode writingMode)
+{
+    auto snappedSelectionRect = enclosingIntRect(selectionRect);
+    LayoutUnit logicalWidth = snappedSelectionRect.width();
+    if (snappedSelectionRect.x() > logicalRight)
+        logicalWidth = 0;
+    else if (snappedSelectionRect.maxX() > logicalRight)
+        logicalWidth = logicalRight - snappedSelectionRect.x();
+
+    if (writingMode.isHorizontal()) {
+        return {
+            snappedSelectionRect.x(), selectionRect.y(),
+            logicalWidth, selectionRect.height(),
+        };
+    }
+    return {
+        selectionRect.y(), snappedSelectionRect.x(),
+        selectionRect.height(), logicalWidth,
+    };
 }
 
 static LayoutRect selectionRectForTextBox(const InlineIterator::TextBox& textBox, unsigned rangeStart, unsigned rangeEnd)
@@ -763,7 +782,7 @@ Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end
     bool computeIndividualCharacterRects = behavior.contains(RenderObject::BoundingRectBehavior::ComputeIndividualCharacterRects);
 
     // Work around signed/unsigned issues. This function takes unsigneds, and is often passed UINT_MAX
-    // to mean "all the way to the end". LegacyInlineTextBox coordinates are unsigneds, so changing this
+    // to mean "all the way to the end". Text box coordinates are unsigneds, so changing this
     // function to take ints causes various internal mismatches. But selectionRect takes ints, and
     // passing UINT_MAX to it causes trouble. Ideally we'd change selectionRect to take unsigneds, but
     // that would cause many ripple effects, so for now we'll just clamp our unsigned parameters to INT_MAX.

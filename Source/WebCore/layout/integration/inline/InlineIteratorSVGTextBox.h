@@ -31,7 +31,6 @@
 namespace WebCore {
 
 class RenderSVGText;
-class SVGInlineTextBox;
 struct SVGTextFragment;
 
 namespace InlineIterator {
@@ -46,8 +45,6 @@ public:
     const Vector<SVGTextFragment>& textFragments() const;
 
     const RenderSVGInlineText& renderer() const { return downcast<RenderSVGInlineText>(TextBox::renderer()); }
-
-    const SVGInlineTextBox* legacyInlineBox() const LIFETIME_BOUND;
 
     using Key = std::pair<const RenderSVGInlineText*, unsigned>;
 };
@@ -69,7 +66,6 @@ private:
 
 SVGTextBoxIterator firstSVGTextBoxFor(const RenderSVGInlineText&);
 BoxRange<SVGTextBoxIterator> svgTextBoxesFor(const RenderSVGInlineText&);
-SVGTextBoxIterator svgTextBoxFor(const SVGInlineTextBox*);
 SVGTextBoxIterator svgTextBoxFor(const LayoutIntegration::InlineContent&, size_t boxIndex);
 
 BoxRange<BoxIterator> boxesFor(const RenderSVGText&);

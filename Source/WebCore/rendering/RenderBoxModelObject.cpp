@@ -44,8 +44,6 @@
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorInlineBox.h"
 #include "LayoutIntegrationLineLayout.h"
-#include "LegacyInlineFlowBox.h"
-#include "LegacyRootInlineBox.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Path.h"
@@ -1020,45 +1018,30 @@ LayoutRect RenderBoxModelObject::firstFragmentBorderBoxRect() const
 {
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this))
         return lineLayout->firstInlineBoxRect(*this);
-    if (auto* inlineBox = firstLegacyInlineBoxFor(*this))
-        return { flooredLayoutPoint(inlineBox->locationIncludingFlipping()), LayoutSize { inlineBox->size() } };
     return { };
 }
 
 LayoutUnit RenderBoxModelObject::paddingBoxLogicalWidth() const
 {
+    if (!LayoutIntegration::LineLayout::containing(*this))
+        return { };
+
+    auto inlineBox = InlineIterator::lineLeftmostInlineBoxFor(*this);
+    if (!inlineBox)
+        return { };
+
     auto firstInlineBoxPaddingBoxLeft = LayoutUnit { };
     auto lastInlineBoxPaddingBoxRight = LayoutUnit { };
-
-    if (LayoutIntegration::LineLayout::containing(*this)) {
-        if (auto inlineBox = InlineIterator::lineLeftmostInlineBoxFor(*this)) {
-            if (writingMode().isBidiLTR()) {
-                firstInlineBoxPaddingBoxLeft = inlineBox->logicalLeftIgnoringInlineDirection() + borderStart();
-                for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
-                ASSERT(inlineBox);
-                lastInlineBoxPaddingBoxRight = inlineBox->logicalRightIgnoringInlineDirection() - borderEnd();
-            } else {
-                lastInlineBoxPaddingBoxRight = inlineBox->logicalRightIgnoringInlineDirection() - borderStart();
-                for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
-                ASSERT(inlineBox);
-                firstInlineBoxPaddingBoxLeft = inlineBox->logicalLeftIgnoringInlineDirection() + borderEnd();
-            }
-            return std::max(0_lu, lastInlineBoxPaddingBoxRight - firstInlineBoxPaddingBoxLeft);
-        }
-        return { };
-    }
-
-    auto* firstInlineBox = firstLegacyInlineBoxFor(*this);
-    auto* lastInlineBox = lastLegacyInlineBoxFor(*this);
-    if (!firstInlineBox || !lastInlineBox)
-        return { };
-
     if (writingMode().isBidiLTR()) {
-        firstInlineBoxPaddingBoxLeft = firstInlineBox->logicalLeft();
-        lastInlineBoxPaddingBoxRight = lastInlineBox->logicalRight();
+        firstInlineBoxPaddingBoxLeft = inlineBox->logicalLeftIgnoringInlineDirection() + borderStart();
+        for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
+        ASSERT(inlineBox);
+        lastInlineBoxPaddingBoxRight = inlineBox->logicalRightIgnoringInlineDirection() - borderEnd();
     } else {
-        lastInlineBoxPaddingBoxRight = firstInlineBox->logicalRight();
-        firstInlineBoxPaddingBoxLeft = lastInlineBox->logicalLeft();
+        lastInlineBoxPaddingBoxRight = inlineBox->logicalRightIgnoringInlineDirection() - borderStart();
+        for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
+        ASSERT(inlineBox);
+        firstInlineBoxPaddingBoxLeft = inlineBox->logicalLeftIgnoringInlineDirection() + borderEnd();
     }
     return std::max(0_lu, lastInlineBoxPaddingBoxRight - firstInlineBoxPaddingBoxLeft);
 }
@@ -1179,34 +1162,7 @@ LayoutRect RenderBoxModelObject::borderBoxRectInContainer() const
             }
             return enclosingIntRect(layout->enclosingBorderBoxRectFor(*this));
         }
-
-        auto* firstInlineBox = firstLegacyInlineBoxFor(*this);
-        auto* lastInlineBox = lastLegacyInlineBoxFor(*this);
-
-        // See <rdar://problem/5289721>, for an unknown reason the linked list here is sometimes inconsistent, first is non-zero and last is zero. We have been
-        // unable to reproduce this at all (and consequently unable to figure ot why this is happening). The assert will hopefully catch the problem in debug
-        // builds and help us someday figure out why. We also put in a redundant check of lastLineBox() to avoid the crash for now.
-        ASSERT(!firstInlineBox == !lastInlineBox); // Either both are null or both exist.
-        if (!firstInlineBox || !lastInlineBox)
-            return { };
-
-        // Return the width of the minimal left side and the maximal right side.
-        float logicalLeftSide = 0;
-        float logicalRightSide = 0;
-        for (auto* curr = firstInlineBox; curr; curr = curr->nextLineBox()) {
-            if (curr == firstInlineBox || curr->logicalLeft() < logicalLeftSide)
-                logicalLeftSide = curr->logicalLeft();
-            if (curr == firstInlineBox || curr->logicalRight() > logicalRightSide)
-                logicalRightSide = curr->logicalRight();
-        }
-
-        bool isHorizontal = writingMode().isHorizontal();
-
-        float x = isHorizontal ? logicalLeftSide : firstInlineBox->x();
-        float y = isHorizontal ? firstInlineBox->y() : logicalLeftSide;
-        float width = isHorizontal ? logicalRightSide - logicalLeftSide : lastInlineBox->logicalBottom() - x;
-        float height = isHorizontal ? lastInlineBox->logicalBottom() - y : logicalRightSide - logicalLeftSide;
-        return enclosingIntRect(FloatRect { x, y, width, height });
+        return { };
     };
 
     return boundingBoxOfFragments();
@@ -1230,7 +1186,7 @@ auto RenderBoxModelObject::localRectsForRepaint(RepaintOutlineBounds) const -> R
     ASSERT_UNUSED(insideSelfPaintingInlineBox, !view().frameView().layoutContext().isPaintOffsetCacheEnabled() || style().pseudoElementType() == PseudoElementType::FirstLetter || insideSelfPaintingInlineBox());
 #endif
 
-    if (!firstLegacyInlineBoxFor(*this) && !LayoutIntegration::LineLayout::containing(*this))
+    if (!LayoutIntegration::LineLayout::containing(*this))
         return { };
 
     auto repaintRect = visualOverflowRect();
@@ -1260,31 +1216,7 @@ LayoutRect RenderBoxModelObject::visualOverflowRect() const
         }
         return layout->inkOverflowBoundingBoxRectFor(*this);
     }
-
-    auto* firstInlineBox = firstLegacyInlineBoxFor(*this);
-    auto* lastInlineBox = lastLegacyInlineBoxFor(*this);
-    if (!firstInlineBox || !lastInlineBox)
-        return { };
-
-    // Return the width of the minimal left side and the maximal right side.
-    LayoutUnit logicalLeftSide = LayoutUnit::max();
-    LayoutUnit logicalRightSide = LayoutUnit::min();
-    for (auto* curr = firstInlineBox; curr; curr = curr->nextLineBox()) {
-        logicalLeftSide = std::min(logicalLeftSide, curr->logicalLeftVisualOverflow());
-        logicalRightSide = std::max(logicalRightSide, curr->logicalRightVisualOverflow());
-    }
-
-    const LegacyRootInlineBox& firstRootBox = firstInlineBox->root();
-    const LegacyRootInlineBox& lastRootBox = lastInlineBox->root();
-
-    LayoutUnit logicalTop = firstInlineBox->logicalTopVisualOverflow(firstRootBox.lineTop());
-    LayoutUnit logicalWidth = logicalRightSide - logicalLeftSide;
-    LayoutUnit logicalHeight = lastInlineBox->logicalBottomVisualOverflow(lastRootBox.lineBottom()) - logicalTop;
-
-    LayoutRect rect(logicalLeftSide, logicalTop, logicalWidth, logicalHeight);
-    if (!writingMode().isHorizontal())
-        rect = rect.transposedRect();
-    return rect;
+    return { };
 }
 
 Vector<FloatRect> RenderBoxModelObject::localBorderBoxRects() const
@@ -1295,13 +1227,7 @@ Vector<FloatRect> RenderBoxModelObject::localBorderBoxRects() const
             return { FloatRect { } };
         return inlineBoxRects;
     }
-
-    Vector<FloatRect> rects;
-    for (auto* box = firstLegacyInlineBoxFor(*this); box; box = box->nextLineBox())
-        rects.append(FloatRect { box->topLeft(), box->size() });
-    if (rects.isEmpty())
-        rects.append({ });
-    return rects;
+    return { FloatRect { } };
 }
 
 void RenderBoxModelObject::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const

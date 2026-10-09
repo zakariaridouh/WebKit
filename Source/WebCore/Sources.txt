@@ -3039,7 +3039,6 @@ rendering/AncestorSubgridIterator.cpp @header:RenderStyleGetters @cost:5
 rendering/AutoTableLayout.cpp @header:RenderStyleGetters @cost:6
 rendering/BackgroundPainter.cpp @header:RenderStyleGetters @cost:7
 rendering/BaselineAlignment.cpp @header:RenderStyleGetters @cost:4
-rendering/BidiRun.cpp
 rendering/BlockStepSizing.cpp @header:RenderStyleGetters @cost:4
 rendering/BorderEdge.cpp @header:RenderStyleGetters @cost:4
 rendering/BorderPainter.cpp @header:RenderStyleGetters @cost:6
@@ -3076,13 +3075,7 @@ rendering/RelayoutScopeForScrollbarChange.cpp @header:RenderStyleGetters @cost:5
 rendering/ScrollbarUpdateScope.cpp @header:RenderStyleGetters
 rendering/LayoutDisallowedScope.cpp
 rendering/LayoutRepainter.cpp
-rendering/LegacyInlineBox.cpp @header:RenderStyleGetters @cost:5
-rendering/LegacyInlineFlowBox.cpp @header:RenderStyleGetters @cost:6
-rendering/LegacyInlineIterator.cpp @header:RenderStyleGetters @cost:4
-rendering/LegacyInlineTextBox.cpp @header:RenderStyleGetters @cost:7
 rendering/LegacyLineClampUpdater.cpp
-rendering/LegacyLineLayout.cpp @header:RenderStyleGetters @cost:7
-rendering/LegacyRootInlineBox.cpp @header:RenderStyleGetters @cost:5
 rendering/LineClampUpdater.cpp
 rendering/MarkedText.cpp @header:RenderStyleGetters @cost:6
 rendering/MotionPath.cpp @header:RenderStyleGetters @cost:5
@@ -3130,7 +3123,6 @@ rendering/RenderLayerModelObject.cpp @header:RenderStyleGetters @cost:8
 rendering/RenderLayerSVGAdditions.cpp @header:RenderStyleGetters @cost:7
 rendering/RenderLayerScrollableArea.cpp @header:RenderStyleGetters @cost:8
 rendering/RenderLayoutState.cpp @header:RenderStyleGetters @cost:6
-rendering/RenderLineBoxList.cpp @header:RenderStyleGetters @cost:5
 rendering/RenderLineBreak.cpp @header:RenderStyleGetters @cost:6
 rendering/RenderListBox.cpp @header:RenderStyleGetters @cost:8
 rendering/RenderListItem.cpp @header:RenderStyleGetters @cost:7
@@ -3166,7 +3158,6 @@ rendering/RenderTextControl.cpp @header:RenderStyleGetters
 rendering/RenderTextControlMultiLine.cpp @header:RenderStyleGetters
 rendering/RenderTextControlSingleLine.cpp @header:RenderStyleGetters
 rendering/RenderTextFragment.cpp @header:RenderStyleGetters
-rendering/RenderTextLineBoxes.cpp @header:RenderStyleGetters
 rendering/RenderTheme.cpp @header:RenderStyleGetters
 rendering/RenderTreeAsText.cpp @header:RenderStyleGetters
 rendering/RenderTreeOrder.cpp
@@ -3186,10 +3177,6 @@ rendering/TextDecorationPainter.cpp @header:RenderStyleGetters
 rendering/TextPaintStyle.cpp @header:RenderStyleGetters
 rendering/TextPainter.cpp @header:RenderStyleGetters
 rendering/TransformOperationData.cpp
-rendering/line/LineBreaker.cpp @header:RenderStyleGetters
-rendering/line/LineInfo.cpp @header:RenderStyleGetters
-rendering/line/LineWidth.cpp @header:RenderStyleGetters
-rendering/line/TrailingObjects.cpp @header:RenderStyleGetters
 rendering/mathml/MathMLStyle.cpp @header:RenderStyleGetters
 rendering/mathml/MathOperator.cpp @header:RenderStyleGetters
 rendering/mathml/RenderMathMLBlock.cpp @header:RenderStyleGetters
@@ -3257,13 +3244,10 @@ rendering/svg/RenderSVGViewportContainer.cpp @header:RenderStyleGetters
 rendering/svg/SVGBoundingBoxComputation.cpp @header:RenderStyleGetters
 rendering/svg/SVGContainerLayout.cpp @header:RenderStyleGetters
 rendering/svg/SVGImageIntrinsicSizing.cpp @header:RenderStyleGetters
-rendering/svg/SVGInlineFlowBox.cpp
-rendering/svg/SVGInlineTextBox.cpp @header:RenderStyleGetters
 rendering/svg/SVGPathFromElement.cpp @header:RenderStyleGetters
 rendering/svg/SVGRenderSupport.cpp @header:RenderStyleGetters
 rendering/svg/SVGRenderTreeAsText.cpp @header:RenderStyleGetters
 rendering/svg/SVGRenderingContext.cpp @header:RenderStyleGetters
-rendering/svg/SVGRootInlineBox.cpp
 rendering/svg/SVGTextBoxPainter.cpp @header:RenderStyleGetters
 rendering/svg/SVGTextChunk.cpp @header:RenderStyleGetters
 rendering/svg/SVGTextChunkBuilder.cpp

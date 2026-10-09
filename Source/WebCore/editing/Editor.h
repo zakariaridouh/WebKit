@@ -445,7 +445,7 @@ public:
     WEBCORE_EXPORT bool getCompositionSelection(unsigned& selectionStart, unsigned& selectionEnd) const;
     bool hasDeadKeyComposition() const;
 
-    // getting international text input composition state (for use by LegacyInlineTextBox)
+    // getting international text input composition state (for use by text painting)
     Text* compositionNode() const { return m_compositionNode.get(); }
     unsigned compositionStart() const { return m_compositionStart; }
     unsigned compositionEnd() const { return m_compositionEnd; }

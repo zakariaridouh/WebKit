@@ -51,9 +51,6 @@ public:
 
     const RenderText& renderer() const { return downcast<RenderText>(Box::renderer()); }
 
-    // FIXME: Remove. For intermediate porting steps only.
-    const LegacyInlineTextBox* legacyInlineBox() const { return downcast<LegacyInlineTextBox>(Box::legacyInlineBox()); }
-
     // This returns the next text box generated for the same RenderText/Layout::InlineTextBox.
     TextBoxIterator nextTextBox() const;
 };
@@ -82,7 +79,6 @@ private:
 };
 
 TextBoxIterator lineLeftmostTextBoxFor(const RenderText&);
-TextBoxIterator textBoxFor(const LegacyInlineTextBox*);
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent&, const InlineDisplay::Box&);
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent&, size_t boxIndex);
 BoxRange<TextBoxIterator> textBoxesFor(const RenderText&);

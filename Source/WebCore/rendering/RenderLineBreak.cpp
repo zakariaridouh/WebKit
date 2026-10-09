@@ -37,7 +37,6 @@
 #include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
-#include "SVGInlineTextBox.h"
 #include "SelectionGeometry.h"
 #include "VisiblePosition.h"
 #include <wtf/TZoneMallocInlines.h>

@@ -28,7 +28,6 @@
 
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlowInlines.h"
-#include "RenderSVGInline.h"
 #include "StyleComputedStyle+GettersInlines.h"
 
 namespace WebCore {
@@ -130,19 +129,14 @@ InlineBoxIterator lineLeftmostInlineBoxFor(const RenderBoxModelObject& inlineBox
 {
     if (CheckedPtr lineLayout = LayoutIntegration::LineLayout::containing(inlineBox))
         return lineLayout->firstInlineBoxFor(inlineBox);
-    return { BoxLegacyPath { firstLegacyInlineBoxFor(inlineBox) } };
+    return { };
 }
 
 InlineBoxIterator firstRootInlineBoxFor(const RenderBlockFlow& block)
 {
     if (CheckedPtr lineLayout = block.inlineLayout())
         return lineLayout->firstRootInlineBox();
-    return { BoxLegacyPath { block.legacyRootBox() } };
-}
-
-InlineBoxIterator inlineBoxFor(const LegacyInlineFlowBox& legacyInlineFlowBox)
-{
-    return { BoxLegacyPath { &legacyInlineFlowBox } };
+    return { };
 }
 
 InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent& content, const InlineDisplay::Box& box)

@@ -36,7 +36,6 @@
 #include "RenderObjectDocument.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGText.h"
-#include "SVGInlineTextBox.h"
 #include "SVGPaintServerHandlingInlines.h"
 #include "SVGResourcesCache.h"
 #include "SVGTextFragment.h"
@@ -47,12 +46,6 @@
 #include "TextPainter.h"
 
 namespace WebCore {
-
-LegacySVGTextBoxPainter::LegacySVGTextBoxPainter(const SVGInlineTextBox& textBox, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
-    : SVGTextBoxPainter(InlineIterator::BoxLegacyPath { &textBox }, paintInfo, paintOffset)
-{
-}
-
 
 ModernSVGTextBoxPainter::ModernSVGTextBoxPainter(const LayoutIntegration::InlineContent& inlineContent, size_t boxIndex, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     : SVGTextBoxPainter(InlineIterator::BoxModernPath { inlineContent, boxIndex }, paintInfo, paintOffset)
@@ -172,7 +165,7 @@ void SVGTextBoxPainter<TextBoxPath>::paint()
     if (renderer().usedStyle().visibility() != UsedVisibility::Visible)
         return;
 
-    // Note: We're explicitly not supporting composition & custom underlines and custom highlighters - unlike LegacyInlineTextBox.
+    // Note: We're explicitly not supporting composition & custom underlines and custom highlighters - unlike TextBoxPainter.
     // If we ever need that for SVG, it's very easy to refactor and reuse the code.
 
     auto& parentRenderer = this->parentRenderer();
@@ -687,6 +680,5 @@ std::pair<unsigned, unsigned> SVGTextBoxPainter<TextBoxPath>::selectionStartEnd(
 }
 
 template class SVGTextBoxPainter<InlineIterator::BoxModernPath>;
-template class SVGTextBoxPainter<InlineIterator::BoxLegacyPath>;
 
 }

@@ -979,7 +979,7 @@ VisiblePosition previousLinePosition(const VisiblePosition& visiblePosition, Lay
     if (auto box = visiblePosition.inlineBoxAndOffset().box) {
         lineBox = box->lineBox()->previous();
         // We want to skip zero height boxes.
-        // This could happen in case it is a LegacyRootInlineBox with trailing floats.
+        // This could happen in case of a line with trailing floats.
         // A line whose content is a block level box (block-in-inline) is not a line to move the caret
         // onto either: the position to move to is inside that block, which the candidate search finds.
         if (!lineBox || !lineBox->logicalHeight() || !lineBox->lineLeftmostLeafBox() || lineBox->hasBlockContent())
@@ -1038,7 +1038,7 @@ VisiblePosition nextLinePosition(const VisiblePosition& visiblePosition, LayoutU
     if (auto box = visiblePosition.inlineBoxAndOffset().box) {
         lineBox = box->lineBox()->next();
         // We want to skip zero height boxes.
-        // This could happen in case it is a LegacyRootInlineBox with trailing floats.
+        // This could happen in case of a line with trailing floats.
         // A line whose content is a block level box (block-in-inline) is not a line to move the caret
         // onto either: the position to move to is inside that block, which the candidate search finds.
         if (!lineBox || !lineBox->logicalHeight() || !lineBox->lineLeftmostLeafBox() || lineBox->hasBlockContent())

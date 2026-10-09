@@ -46,7 +46,6 @@
 #include "HitTestResult.h"
 #include "InspectorInstrumentation.h"
 #include "LayoutBox.h"
-#include "LayoutIntegrationCoverage.h"
 #include "LegacyRenderSVGModelObject.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
@@ -1375,7 +1374,7 @@ void RenderObject::showLineTreeForThis() const
     TextStream stream(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
     outputRenderTreeLegend(stream);
     outputRenderObject(stream, false, 1);
-    blockFlow->outputLineTreeAndMark(stream, nullptr, 2);
+    blockFlow->outputLineTree(stream, 2);
     SAFE_WTFLOGALWAYS("%s", stream.release().utf8());
 }
 
@@ -1482,7 +1481,7 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
 
     if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(*this); renderBlock && renderBlock->createsNewFormattingContext()) {
         if (CheckedPtr blockBox = dynamicDowncast<RenderBlockFlow>(*renderBlock))
-            stream << (blockBox->childrenInline() && LayoutIntegration::canUseForLineLayout(*blockBox) ? "M" : "L");
+            stream << (blockBox->childrenInline() ? "M" : "L");
         else if (is<RenderFlexibleBox>(*renderBlock))
             stream << "M";
         else
@@ -1606,7 +1605,7 @@ void RenderObject::outputRenderSubTreeAndMark(TextStream& stream, const RenderOb
 
     if (auto* blockFlow = dynamicDowncast<RenderBlockFlow>(*this)) {
         blockFlow->outputFloatingObjects(stream, depth + 1);
-        blockFlow->outputLineTreeAndMark(stream, nullptr, depth + 1);
+        blockFlow->outputLineTree(stream, depth + 1);
     }
 
     for (CheckedPtr child = firstChildSlow(); child; child = child->nextSibling())
@@ -1959,10 +1958,6 @@ void RenderObject::willBeDestroyed()
 
 void RenderObject::insertedIntoTree()
 {
-    // FIXME: We should ASSERT(isRooted()) here but generated content makes some out-of-order insertion.
-    if (!isFloating() && parent()->isSVGRenderer() && parent()->childrenInline())
-        protect(parent())->dirtyLineFromChangedChild();
-
 #if ENABLE(AX_CUSTOM_COLOR_MODE)
     AXCustomColorSVGClassifier::invalidateCharacteristics(*this);
 #endif

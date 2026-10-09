@@ -23,7 +23,6 @@
 
 #include "FloatConversion.h"
 #include "FontCascadeInlines.h"
-#include "LegacyInlineFlowBox.h"
 #include "RenderBlockFlow.h"
 #include "RenderElementInlines.h"
 #include "RenderInline.h"
@@ -31,7 +30,6 @@
 #include "RenderSVGInlineText.h"
 #include "RenderSVGText.h"
 #include "SVGElementTypeHelpers.h"
-#include "SVGInlineTextBoxInlines.h"
 #include "SVGTextBoxPainter.h"
 #include "VisiblePosition.h"
 #include <wtf/MathExtras.h>

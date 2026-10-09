@@ -36,6 +36,7 @@ class BoxModernPath;
 
 class LineBoxIteratorModernPath {
 public:
+    LineBoxIteratorModernPath() = default;
     LineBoxIteratorModernPath(const LayoutIntegration::InlineContent& inlineContent, size_t lineIndex)
         : m_inlineContent(&inlineContent)
         , m_lineIndex(lineIndex)

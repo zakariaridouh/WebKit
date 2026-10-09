@@ -116,10 +116,8 @@
 #include <WebCore/InlineDisplayLine.h>
 #include <WebCore/InlineItem.h>
 #include <WebCore/InlineIteratorBox.h>
-#include <WebCore/InlineIteratorBoxLegacyPath.h>
 #include <WebCore/InlineIteratorBoxModernPath.h>
 #include <WebCore/InlineIteratorLineBox.h>
-#include <WebCore/InlineIteratorLineBoxLegacyPath.h>
 #include <WebCore/InlineIteratorLineBoxModernPath.h>
 #include <WebCore/InlineIteratorLogicalOrderTraversal.h>
 #include <WebCore/InlineIteratorTextBox.h>
@@ -133,11 +131,6 @@
 #include <WebCore/LayoutIntegrationInlineContent.h>
 #include <WebCore/LayoutShape.h>
 #include <WebCore/LayoutUnits.h>
-#include <WebCore/LegacyInlineBox.h>
-#include <WebCore/LegacyInlineFlowBox.h>
-#include <WebCore/LegacyInlineTextBox.h>
-#include <WebCore/LegacyRootInlineBox.h>
-#include <WebCore/LineWidth.h>
 #include <WebCore/LocalizedStrings.h>
 #include <WebCore/MarginTypes.h>
 #include <WebCore/OwnerPermissionsPolicyData.h>
@@ -165,9 +158,7 @@
 #include <WebCore/RenderOverflow.h>
 #include <WebCore/RenderSVGInlineText.h>
 #include <WebCore/RenderText.h>
-#include <WebCore/RenderTextLineBoxes.h>
 #include <WebCore/RotationDirection.h>
-#include <WebCore/SVGInlineTextBox.h>
 #include <WebCore/SVGTextLayoutAttributes.h>
 #include <WebCore/SVGTextMetrics.h>
 #include <WebCore/ScrollSnapOffsetsInfo.h>

@@ -32,7 +32,6 @@ class RenderObject;
 class RenderSVGInlineText;
 class RenderSVGTextPath;
 class SVGElement;
-class SVGInlineTextBox;
 
 namespace Style {
 class ComputedStyle;
@@ -51,15 +50,15 @@ struct SVGTextLayoutBox {
 
 // SVGTextLayoutEngine performs the second layout phase for SVG text.
 //
-// The InlineBox tree was created, containing the text chunk information, necessary to apply
+// The display boxes were created, containing the text chunk information, necessary to apply
 // certain SVG specific text layout properties (text-length adjustments and text-anchor).
 // The second layout phase uses the SVGTextLayoutAttributes stored in the individual
 // RenderSVGInlineText renderers to compute the final positions for each character
-// which are stored in the SVGInlineTextBox objects.
+// which are stored as SVGTextFragments of the text boxes.
 
 class SVGTextLayoutEngine {
 public:
-    // Collects the fragments in a map keyed by (renderer, start), see takeFragmentMap().
+    // Collects the fragments in a map keyed by (renderer, start).
     SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>&);
     // Appends the fragments of each text box to fragmentsForBoxes[box.index]. The vector must not be resized while the engine exists.
     SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>&, Vector<Vector<SVGTextFragment>>& fragmentsForBoxes);
@@ -74,7 +73,6 @@ public:
     void layoutInlineTextBox(const SVGTextLayoutBox&);
 
     void finishLayout();
-    SVGTextFragmentMap takeFragmentMap() { return WTF::move(m_fragmentMap); }
 
 private:
     void NODELETE updateCharacterPositionIfNeeded(float& x, float& y);

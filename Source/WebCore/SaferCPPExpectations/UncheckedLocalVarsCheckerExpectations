@@ -20,10 +20,6 @@ rendering/GridLayoutFunctions.cpp
 rendering/GridTrackSizingAlgorithm.cpp
 rendering/HitTestResult.cpp
 rendering/InlineBoxPainter.cpp
-rendering/LegacyInlineBox.cpp
-rendering/LegacyInlineFlowBox.cpp
-rendering/LegacyInlineIterator.h
-rendering/LegacyLineLayout.cpp
 rendering/MarkedText.cpp
 rendering/PositionedLayoutConstraints.cpp
 rendering/RenderAttachment.cpp
@@ -76,8 +72,6 @@ rendering/TextBoxTrimmer.cpp
 rendering/TextDecorationPainter.cpp
 rendering/cocoa/RenderThemeCocoa.mm
 [ iOS ] rendering/ios/RenderThemeIOS.mm
-rendering/line/BreakingContext.h
-rendering/line/LineInlineHeaders.h
 rendering/mathml/MathMLStyle.cpp
 rendering/mathml/MathOperator.cpp
 rendering/mathml/RenderMathMLBlock.cpp

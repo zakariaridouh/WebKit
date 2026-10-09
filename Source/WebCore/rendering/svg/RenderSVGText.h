@@ -31,14 +31,8 @@
 
 namespace WebCore {
 
-namespace InlineIterator {
-class InlineBoxIterator;
-}
-
 class RenderSVGInlineText;
-class SVGRootInlineBox;
 class SVGTextElement;
-class SVGTextLayoutEngine;
 
 class RenderSVGText final : public RenderSVGBlock {
     WTF_MAKE_TZONE_ALLOCATED(RenderSVGText);
@@ -60,7 +54,6 @@ public:
     static RenderSVGText* NODELETE locateRenderSVGTextAncestor(RenderObject&);
     static const RenderSVGText* NODELETE locateRenderSVGTextAncestor(const RenderObject&);
 
-    bool needsReordering() const { return m_needsReordering; }
     Vector<SVGTextLayoutAttributes*>& layoutAttributes() LIFETIME_BOUND { return m_layoutAttributes; }
 
     void subtreeChildWasAdded(RenderObject*);
@@ -85,8 +78,6 @@ public:
 
     void updatePositionAndOverflow(const FloatRect&);
 
-    SVGRootInlineBox* legacyRootBox() const;
-
     void updateLocalTransform();
     AffineTransform computeLocalTransform() const;
     AffineTransform localTransform() const override { return m_localTransform; }
@@ -110,10 +101,6 @@ private:
 
     bool layoutInlineChildrenWithoutLineLayout();
     void computePerCharacterLayoutInformation();
-    void layoutCharactersInTextBoxes(const InlineIterator::InlineBoxIterator&, SVGTextLayoutEngine&);
-    FloatRect layoutChildBoxes(LegacyInlineFlowBox*, SVGTextFragmentMap&);
-    void layoutRootBox(const FloatRect&);
-    void reorderValueListsToLogicalOrder();
 
     void willBeDestroyed() override;
 
@@ -128,7 +115,6 @@ private:
 
     SVGPaintServerCache* svgPaintServerCache() const final { return &m_svgPaintServerCache; }
 
-    bool m_needsReordering : 1 { false };
     bool m_needsPositioningValuesUpdate : 1 { false };
     bool m_needsTransformUpdate : 1 { true }; // FIXME: [LBSE] Only needed for legacy SVG engine.
     bool m_needsTextMetricsUpdate : 1 { false };

@@ -31,7 +31,6 @@
 #include "GraphicsContext.h"
 #include "InlineIteratorTextBox.h"
 #include "LayoutIntegrationInlineContent.h"
-#include "LegacyInlineTextBox.h"
 #include "RenderCombineText.h"
 #include "RenderLayer.h"
 #include "StyleAppleColorFilter.h"
@@ -267,12 +266,7 @@ String TextPainter::cachedGlyphDisplayListsForTextNodeAsText(Text& textNode, Opt
     StringBuilder builder;
 
     for (auto textBox : InlineIterator::textBoxesFor(*protect(textNode.renderer()))) {
-        RefPtr<const DisplayList::DisplayList> displayList;
-        if (auto* legacyInlineBox = textBox.legacyInlineBox())
-            displayList = TextPainter::glyphDisplayListIfExists(*legacyInlineBox);
-        else
-            displayList = TextPainter::glyphDisplayListIfExists(*textBox.inlineBox());
-        if (displayList) {
+        if (RefPtr displayList = TextPainter::glyphDisplayListIfExists(*textBox.inlineBox())) {
             builder.append(displayList->asText(flags));
             builder.append('\n');
         }

@@ -104,8 +104,6 @@ protected:
     bool shouldPaint(PaintInfo&, const LayoutPoint&);
     LayoutRect NODELETE localSelectionRect(bool checkWhetherSelected = true) const; // This is in local coordinates, but it's a physical rect (so the top left corner is physical top left).
 
-    void willBeDestroyed() override;
-
     virtual void layoutShadowContent(const LayoutSize&);
 
     LayoutUnit computeReplacedLogicalWidthRespectingMinMaxWidth(LayoutUnit logicalWidth, IsComputingIntrinsicSize = IsComputingIntrinsicSize::No) const;

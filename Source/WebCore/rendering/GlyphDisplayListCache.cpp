@@ -28,7 +28,6 @@
 
 #include "DisplayListItems.h"
 #include "InlineDisplayBox.h"
-#include "LegacyInlineTextBox.h"
 #include "PaintInfo.h"
 #include "RenderLayer.h"
 #include "StyleComputedStyle+GettersInlines.h"
@@ -149,11 +148,6 @@ RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getDisplayList(con
     return nullptr;
 }
 
-RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::get(const LegacyInlineTextBox& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
-{
-    return getDisplayList(run, font, context, textRun, paintInfo);
-}
-
 RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::get(const InlineDisplay::Box& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
 {
     return getDisplayList(run, font, context, textRun, paintInfo);
@@ -167,11 +161,6 @@ RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExistsImpl(co
     if (auto entry = m_entriesForLayoutRun.get(&run))
         return &entry->displayList();
     return nullptr;
-}
-
-RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExists(const LegacyInlineTextBox& run)
-{
-    return getIfExistsImpl(run);
 }
 
 RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExists(const InlineDisplay::Box& run)

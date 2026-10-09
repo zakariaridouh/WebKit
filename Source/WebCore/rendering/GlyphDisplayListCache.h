@@ -40,7 +40,6 @@
 
 namespace WebCore {
 
-class LegacyInlineTextBox;
 struct PaintInfo;
 
 namespace InlineDisplay {
@@ -98,13 +97,10 @@ public:
 
     static GlyphDisplayListCache& NODELETE singleton();
 
-    RefPtr<const DisplayList::DisplayList> get(const LegacyInlineTextBox&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
     RefPtr<const DisplayList::DisplayList> get(const InlineDisplay::Box&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
 
-    RefPtr<const DisplayList::DisplayList> getIfExists(const LegacyInlineTextBox&);
     RefPtr<const DisplayList::DisplayList> getIfExists(const InlineDisplay::Box&);
 
-    void remove(const LegacyInlineTextBox& run) { remove(&run); }
     void remove(const InlineDisplay::Box& run) { remove(&run); }
 
     void clear();

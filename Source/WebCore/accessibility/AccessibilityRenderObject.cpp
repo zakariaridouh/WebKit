@@ -88,7 +88,6 @@
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorLogicalOrderTraversal.h"
 #include "InlineIteratorTextBoxInlines.h"
-#include "LegacyLineLayout.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShape.h"
 #include "LineSelection.h"
@@ -1316,9 +1315,7 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     // Results in a lot of useless generics being exposed, which is wasteful. We should remove this.
     WeakPtr blockFlow = dynamicDowncast<RenderBlockFlow>(*m_renderer);
     if (blockFlow && m_renderer->childrenInline() && !canSetFocusAttribute() && !blockFlow->hasBlocksInInlineLayout()) {
-        // FIXME: Do we really need to check for SVG content here?
-        auto hasInlineOrSVGContent = blockFlow->hasContentfulInlineLine() || (blockFlow->svgTextLayout() && blockFlow->svgTextLayout()->lineCount());
-        return !hasInlineOrSVGContent && !clickableSelfOrAncestor();
+        return !blockFlow->hasContentfulInlineLine() && !clickableSelfOrAncestor();
     }
 
     if (isCanvas()) {

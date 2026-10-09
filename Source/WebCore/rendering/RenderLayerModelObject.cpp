@@ -289,11 +289,6 @@ bool RenderLayerModelObject::shouldPlaceVerticalScrollbarOnLeft() const
 #endif
 }
 
-std::optional<LayoutRect> RenderLayerModelObject::cachedLayerClippedOverflowRect() const
-{
-    return hasLayer() ? layer()->cachedClippedOverflowRect() : std::nullopt;
-}
-
 bool RenderLayerModelObject::startAnimation(double timeOffset, const GraphicsLayerAnimation& animation, const BlendingKeyframes& keyframes)
 {
     if (!layer() || !layer()->backing())

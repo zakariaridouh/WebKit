@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <WebCore/InlineIteratorBoxLegacyPath.h>
 #include <WebCore/InlineIteratorBoxModernPath.h>
 
 namespace WebCore {
@@ -50,8 +49,7 @@ struct EndIterator { };
 class Box {
 public:
     using PathVariant = Variant<
-        BoxModernPath,
-        BoxLegacyPath
+        BoxModernPath
     >;
 
     Box(PathVariant&&);
@@ -101,8 +99,6 @@ public:
     CheckedRef<const Style::ComputedStyle> style() const;
     WritingMode writingMode() const { return style()->writingMode(); }
 
-    // FIXME: Remove. For intermediate porting steps only.
-    const LegacyInlineBox* legacyInlineBox() const LIFETIME_BOUND;
     const InlineDisplay::Box* inlineBox() const LIFETIME_BOUND;
 
     // Text-relative left/right
@@ -123,7 +119,6 @@ public:
     size_t lineIndex() const;
 
     const BoxModernPath& modernPath() const LIFETIME_BOUND;
-    const BoxLegacyPath& legacyPath() const LIFETIME_BOUND;
 
 protected:
     friend class BoxIterator;
@@ -139,7 +134,7 @@ private:
 
 class BoxIterator {
 public:
-    BoxIterator() : m_box(BoxLegacyPath { nullptr }) { };
+    BoxIterator() : m_box(BoxModernPath { }) { };
     BoxIterator(Box::PathVariant&&);
     BoxIterator(const Box&);
 
@@ -321,13 +316,6 @@ inline CheckedRef<const Style::ComputedStyle> Box::style() const
     return WTF::switchOn(m_pathVariant, [](auto& path) -> CheckedRef<const Style::ComputedStyle> {
         return path.style();
     });
-}
-
-inline const LegacyInlineBox* Box::legacyInlineBox() const
-{
-    if (!std::holds_alternative<BoxLegacyPath>(m_pathVariant))
-        return nullptr;
-    return std::get<BoxLegacyPath>(m_pathVariant).legacyInlineBox();
 }
 
 inline const InlineDisplay::Box* Box::inlineBox() const

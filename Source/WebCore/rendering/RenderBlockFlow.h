@@ -31,10 +31,6 @@ namespace WebCore {
 
 class FloatingObject;
 class FloatingObjects;
-class LegacyInlineBox;
-class LegacyLineLayout;
-class LegacyRootInlineBox;
-class LineBreaker;
 class RenderMultiColumnFlow;
 enum FloatingObjectType : uint8_t;
 struct FloatingObjectHashFunctions;
@@ -158,8 +154,6 @@ protected:
     // RenderBlockFlows override these methods, since they are the only class that supports margin collapsing.
     LayoutUnit collapsedMarginBefore() const final { return maxPositiveMarginBefore() - maxNegativeMarginBefore(); }
     LayoutUnit collapsedMarginAfter() const final { return maxPositiveMarginAfter() - maxNegativeMarginAfter(); }
-
-    void dirtyLineFromChangedChild() final;
 
     void paintColumnRules(PaintInfo&, const LayoutPoint&) override;
 
@@ -331,8 +325,6 @@ public:
 
     LayoutPoint NODELETE flipFloatForWritingModeForChild(const FloatingObject&, const LayoutPoint&) const;
 
-    inline LegacyRootInlineBox* legacyRootBox() const; // Defined in RenderBlockFlowInlines.h
-
     void setChildrenInline(bool) final;
 
     bool hasContentfulInlineOrBlockLine() const;
@@ -347,7 +339,7 @@ public:
     void invalidateLineLayout(InvalidationReason);
     void NODELETE computeAndSetLineLayoutPath();
 
-    enum LineLayoutPath { UndeterminedPath = 0, InlinePath, SvgTextPath };
+    enum LineLayoutPath { UndeterminedPath = 0, InlinePath };
     LineLayoutPath lineLayoutPath() const { return static_cast<LineLayoutPath>(renderBlockFlowLineLayoutPath()); }
     void setLineLayoutPath(LineLayoutPath path) { setRenderBlockFlowLineLayoutPath(path); }
 
@@ -355,14 +347,12 @@ public:
 
     bool containsNonZeroBidiLevel() const;
 
-    inline const LegacyLineLayout* svgTextLayout() const; // Defined in RenderBlockFlowInlines.h
-    inline LegacyLineLayout* svgTextLayout(); // Defined in RenderBlockFlowInlines.h
     inline const LayoutIntegration::LineLayout* inlineLayout() const; // Defined in RenderBlockFlowInlines.h
     inline LayoutIntegration::LineLayout* inlineLayout(); // Defined in RenderBlockFlowInlines.h
 
 #if ENABLE(TREE_DEBUGGING)
     void outputFloatingObjects(WTF::TextStream&, int depth) const;
-    void outputLineTreeAndMark(WTF::TextStream&, const LegacyInlineBox* markedBox, int depth) const;
+    void outputLineTree(WTF::TextStream&, int depth) const;
 #endif
 
     // Returns the logicalOffset at the top of the next page. If the offset passed in is already at the top of the current page,
@@ -508,8 +498,6 @@ private:
     
     PositionWithAffinity positionForPointWithInlineChildren(const LayoutPoint& pointInLogicalContents, HitTestSource) override;
 
-    inline bool hasSvgTextLayout() const; // Defined in RenderBlockFlowInlines.h
-
     inline bool hasInlineLayout() const; // Defined in RenderBlockFlowInlines.h
     void layoutInlineContent(RelayoutChildren, LayoutUnit previousHeight, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom);
     struct InlineContentStatus {
@@ -574,8 +562,7 @@ private:
     std::unique_ptr<Layout::InlineContentCache> m_inlineContentCache;
     Variant<
         std::monostate,
-        std::unique_ptr<LayoutIntegration::LineLayout>,
-        std::unique_ptr<LegacyLineLayout>
+        std::unique_ptr<LayoutIntegration::LineLayout>
     > m_lineLayout;
 };
 

@@ -25,18 +25,21 @@
 
 #pragma once
 
-#include <WebCore/InlineIteratorBoxLegacyPath.h>
 #include <WebCore/LayoutElementBox.h>
 #include <WebCore/LayoutInlineTextBox.h>
 #include <WebCore/LayoutIntegrationInlineContent.h>
 #include <WebCore/RenderBlockFlow.h>
+#include <WebCore/RenderSVGInlineText.h>
 #include <WebCore/TextBoxSelectableRange.h>
 
 namespace WebCore {
 namespace InlineIterator {
 
+enum class TextRunMode { Painting, Editing };
+
 class BoxModernPath {
 public:
+    BoxModernPath() = default;
     BoxModernPath(const LayoutIntegration::InlineContent& inlineContent)
         : m_inlineContent(&inlineContent)
     {

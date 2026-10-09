@@ -35,8 +35,6 @@ rendering/BackgroundPainter.cpp
 rendering/BorderPainter.cpp
 rendering/HitTestResult.cpp
 rendering/LayerAncestorClippingStack.cpp
-rendering/LegacyInlineFlowBox.cpp
-rendering/LegacyLineLayout.cpp
 rendering/MarkedText.cpp
 rendering/RenderBlock.cpp
 rendering/RenderBox.cpp

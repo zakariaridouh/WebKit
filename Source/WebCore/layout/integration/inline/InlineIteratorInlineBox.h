@@ -41,9 +41,6 @@ public:
 
     RectEdges<bool> closedEdges() const;
 
-    // FIXME: Remove. For intermediate porting steps only.
-    const LegacyInlineFlowBox* legacyInlineBox() const LIFETIME_BOUND { return downcast<LegacyInlineFlowBox>(Box::legacyInlineBox()); }
-
     InlineBoxIterator nextInlineBoxLineRightward() const;
     InlineBoxIterator nextInlineBoxLineLeftward() const;
     InlineBoxIterator iterator() const;
@@ -75,7 +72,6 @@ private:
 InlineBoxIterator lineLeftmostInlineBoxFor(const RenderBoxModelObject&);
 InlineBoxIterator firstRootInlineBoxFor(const RenderBlockFlow&);
 
-InlineBoxIterator inlineBoxFor(const LegacyInlineFlowBox&);
 InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent&, const InlineDisplay::Box&);
 InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent&, size_t boxIndex);
 

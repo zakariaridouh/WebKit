@@ -28,9 +28,7 @@
 
 namespace WebCore {
 
-class LegacyInlineFlowBox;
 class RenderObject;
-class SVGInlineTextBox;
 
 class SVGTextQuery {
 public:

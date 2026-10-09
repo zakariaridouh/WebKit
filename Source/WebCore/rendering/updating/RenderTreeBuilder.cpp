@@ -1047,11 +1047,6 @@ static void resetRendererStateOnDetach(RenderElement& parent, RenderObject& chil
 
     if (willBeDestroyed == RenderTreeBuilder::WillBeDestroyed::No)
         child.setNeedsLayoutAndInvalidateContentLogicalWidths();
-
-    // If we have a line box wrapper, delete it.
-    if (CheckedPtr textRenderer = dynamicDowncast<RenderSVGInlineText>(child))
-        textRenderer->removeAndDestroyLegacyTextBoxes();
-
 }
 
 RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement& parent, RenderObject& child, WillBeDestroyed willBeDestroyed)

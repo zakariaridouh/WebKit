@@ -28,7 +28,6 @@
 namespace WebCore {
 
 class RenderSVGInlineText;
-class SVGInlineTextBox;
 
 // The laid out fragments of one text box, in line order.
 struct SVGTextChunkBox {
@@ -41,7 +40,7 @@ struct SVGTextChunkBox {
 // SVGTextChunkBuilder performs the third layout phase for SVG text.
 //
 // Phase one built the layout information from the SVG DOM stored in the RenderSVGInlineText objects (SVGTextLayoutAttributes).
-// Phase two performed the actual per-character layout, computing the final positions for each character, stored in the SVGInlineTextBox objects (SVGTextFragment).
+// Phase two performed the actual per-character layout, computing the final positions for each character, stored as SVGTextFragments of the text boxes.
 // Phase three performs all modifications that have to be applied to each individual text chunk (text-anchor & textLength).
 
 class SVGTextChunkBuilder {

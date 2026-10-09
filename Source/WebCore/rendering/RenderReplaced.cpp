@@ -125,14 +125,6 @@ bool RenderReplaced::shouldRespectZeroIntrinsicHeight() const
     return false;
 }
 
-void RenderReplaced::willBeDestroyed()
-{
-    if (!renderTreeBeingDestroyed() && parent())
-        parent()->dirtyLineFromChangedChild();
-
-    RenderBox::willBeDestroyed();
-}
-
 void RenderReplaced::styleDidChange(Style::Difference diff, const Style::ComputedStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);

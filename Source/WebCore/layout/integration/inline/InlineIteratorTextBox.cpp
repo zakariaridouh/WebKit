@@ -31,7 +31,6 @@
 #include "InlineIteratorTextBoxInlines.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderCombineText.h"
-#include "SVGInlineTextBox.h"
 #include "StyleComputedStyle+GettersInlines.h"
 
 namespace WebCore {
@@ -73,16 +72,8 @@ TextBoxIterator lineLeftmostTextBoxFor(const RenderText& text)
     if (CheckedPtr lineLayout = LayoutIntegration::LineLayout::containing(text))
         return lineLayout->textBoxesFor(text);
 
-    if (CheckedPtr svgText = dynamicDowncast<RenderSVGInlineText>(text))
-        return { BoxLegacyPath { svgText->firstLegacyTextBox() } };
-
     // During teardown we may hit this codepath _after_ the display content is destroyed (e.g. calling repaint on RenderText).
-    return { BoxLegacyPath { nullptr } };
-}
-
-TextBoxIterator textBoxFor(const LegacyInlineTextBox* legacyInlineTextBox)
-{
-    return { BoxLegacyPath { legacyInlineTextBox } };
+    return { };
 }
 
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, const InlineDisplay::Box& box)

@@ -26,7 +26,6 @@
 #pragma once
 
 #include <WebCore/FontBaseline.h>
-#include <WebCore/InlineIteratorLineBoxLegacyPath.h>
 #include <WebCore/InlineIteratorLineBoxModernPath.h>
 #include <WebCore/RenderBlockFlow.h>
 
@@ -45,8 +44,7 @@ struct EndLineBoxIterator { };
 class LineBox {
 public:
     using PathVariant = Variant<
-        LineBoxIteratorModernPath,
-        LineBoxIteratorLegacyPath
+        LineBoxIteratorModernPath
     >;
 
     LineBox(PathVariant&&);
@@ -111,8 +109,7 @@ private:
 
 class LineBoxIterator {
 public:
-    LineBoxIterator() : m_lineBox(LineBoxIteratorLegacyPath { nullptr }) { };
-    LineBoxIterator(const LegacyRootInlineBox* rootInlineBox) : m_lineBox(LineBoxIteratorLegacyPath { rootInlineBox }) { };
+    LineBoxIterator() : m_lineBox(LineBoxIteratorModernPath { }) { };
     LineBoxIterator(LineBox::PathVariant&&);
     LineBoxIterator(const LineBox&);
 

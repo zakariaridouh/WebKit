@@ -158,8 +158,6 @@ public:
     bool mayHaveNonScalingStrokeInSubtree() const { return m_mayHaveNonScalingStrokeInSubtree; }
     void setMayHaveNonScalingStrokeInSubtreeIncludingAncestors();
 
-    virtual void dirtyLineFromChangedChild() { }
-
     void setChildNeedsLayout(MarkingBehavior = MarkingBehavior::MarkContainingBlockChain);
     void setOutOfFlowChildNeedsStaticPositionLayout();
     void NODELETE clearChildNeedsLayout();

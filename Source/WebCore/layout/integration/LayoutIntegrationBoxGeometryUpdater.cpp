@@ -32,7 +32,6 @@
 #include "InlineWalker.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LegacyRenderSVGRoot.h"
-#include "LegacyRootInlineBox.h"
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
 #include "MultiRepresentationHEICMetrics.h"
 #endif
@@ -532,12 +531,6 @@ static std::optional<LayoutUnit> baselineForBox(const RenderBox& renderBox)
 
         if (auto* inlineLayout = blockFlow->inlineLayout())
             return inlineLayout->lastLineBaseline();
-
-        if (blockFlow->svgTextLayout()) {
-            auto& style = blockFlow->firstLineStyle();
-            // LegacyInlineFlowBox::placeBoxesInBlockDirection will flip lines in case of verticalLR mode, so we can assume verticalRL for now.
-            return LayoutUnit(blockFlow->legacyRootBox()->logicalTop() + style.metricsOfPrimaryFont().intAscent(blockFlow->legacyRootBox()->baselineType()));
-        }
 
         ASSERT_NOT_REACHED();
         return marginBoxBottom;

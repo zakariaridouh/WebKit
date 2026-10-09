@@ -23,7 +23,6 @@
 #pragma once
 
 #include <WebCore/GapRects.h>
-#include <WebCore/LineWidth.h>
 #include <WebCore/RenderBox.h>
 #include <WebCore/TextRun.h>
 #include <memory>

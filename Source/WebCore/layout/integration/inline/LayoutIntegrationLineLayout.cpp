@@ -174,7 +174,7 @@ static bool shouldInvalidateLineLayoutAfterChangeFor(const RenderBlockFlow& root
             if (siblingHasRelativeDimensions || (!isAnyOf<RenderText, RenderLineBreak, RenderReplaced>(*sibling)))
                 return true;
         }
-        return !canUseForLineLayout(rootBlockContainer);
+        return false;
     };
     switch (typeOfChange) {
     case TypeOfChangeForInvalidation::NodeRemoval:
@@ -334,11 +334,6 @@ LineLayout* LineLayout::containing(RenderObject& renderer)
 const LineLayout* LineLayout::containing(const RenderObject& renderer)
 {
     return containing(const_cast<RenderObject&>(renderer));
-}
-
-bool LineLayout::canUseFor(const RenderBlockFlow& flow)
-{
-    return canUseForLineLayout(flow);
 }
 
 bool LineLayout::canUseForIntrinsicWidthComputation(const RenderBlockFlow& flow)

@@ -55,7 +55,6 @@ class HitTestLocation;
 class HitTestRequest;
 class HitTestResult;
 class HostWindow;
-class LegacyInlineBox;
 class LocalFrame;
 class LocalFrameViewLayoutContext;
 class Node;

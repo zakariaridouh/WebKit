@@ -36,7 +36,6 @@ class TextStream;
 
 namespace WebCore {
 
-class LegacyInlineBox;
 class RenderElement;
 class RenderObject;
 class RenderText;

@@ -1,6 +1,5 @@
 css/values/primitives/CSSPrimitiveData.h
 dom/ElementInlinesLight.h
 layout/formattingContexts/inline/InlineFormattingContext.h
-rendering/RenderTextLineBoxes.h
 style/StyleBuilderState.h
 style/StyleExtractorState.h
