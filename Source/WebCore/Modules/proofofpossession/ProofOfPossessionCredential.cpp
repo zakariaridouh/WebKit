@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,52 +24,33 @@
  */
 
 #include "config.h"
-#include "BasicCredential.h"
+#include "ProofOfPossessionCredential.h"
 
-#if ENABLE(WEB_AUTHN)
+#if ENABLE(PROOF_OF_POSSESSION)
 
-#include "AuthenticatorCoordinator.h"
-#include "DocumentPage.h"
-#include "JSDOMPromiseDeferred.h"
+#include "ProofOfPossessionResponse.h"
+#include <wtf/UUID.h>
 
 namespace WebCore {
 
-BasicCredential::BasicCredential(const String& id, Type type, Discovery discovery)
-    : m_id(id)
-    , m_type(type)
-    , m_discovery(discovery)
+Ref<ProofOfPossessionCredential> ProofOfPossessionCredential::create(ProofOfPossessionResponse&& response)
+{
+    return adoptRef(*new ProofOfPossessionCredential(WTF::move(response)));
+}
+
+ProofOfPossessionCredential::ProofOfPossessionCredential(ProofOfPossessionResponse&& response)
+    : BasicCredential(createVersion4UUIDString(), Type::ProofOfPossession, Discovery::Remote)
+    , m_encryptedIdentifierWithProof(WTF::move(response.encryptedIdentifierWithProof))
+    , m_providerData(response.providerData ? RefPtr { ProofOfPossessionProviderInfo::create(WTF::move(*response.providerData)) } : nullptr)
+    , m_issuerPublicKey(WTF::move(response.issuerPublicKey))
+    , m_encryptedSubject(WTF::move(response.encryptedSubject))
+    , m_clientDataJSON(WTF::move(response.clientDataJSON))
+    , m_transferProof(WTF::move(response.transferProof))
 {
 }
 
-BasicCredential::~BasicCredential() = default;
-
-String BasicCredential::type() const
-{
-    switch (m_type) {
-    case Type::DigitalCredential:
-        return "digital"_s;
-
-#if ENABLE(PROOF_OF_POSSESSION)
-    case Type::ProofOfPossession:
-        return "proof-of-possession"_s;
-#endif
-
-    case Type::PublicKey:
-        return "public-key"_s;
-    }
-
-    ASSERT_NOT_REACHED();
-    return emptyString();
-}
-
-void BasicCredential::isConditionalMediationAvailable(Document& document, DOMPromiseDeferred<IDLBoolean>&& promise)
-{
-    if (RefPtr page = document.page())
-        page->authenticatorCoordinator().isConditionalMediationAvailable(document, WTF::move(promise));
-    else
-        promise.reject(Exception { ExceptionCode::InvalidStateError });
-}
+ProofOfPossessionCredential::~ProofOfPossessionCredential() = default;
 
 } // namespace WebCore
 
-#endif // ENABLE(WEB_AUTHN)
+#endif // ENABLE(PROOF_OF_POSSESSION)

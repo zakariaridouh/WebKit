@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,53 +23,33 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "BasicCredential.h"
+#pragma once
 
-#if ENABLE(WEB_AUTHN)
+#if ENABLE(PROOF_OF_POSSESSION)
 
-#include "AuthenticatorCoordinator.h"
-#include "DocumentPage.h"
-#include "JSDOMPromiseDeferred.h"
+#include <WebCore/ProofOfPossessionProviderData.h>
+#include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-BasicCredential::BasicCredential(const String& id, Type type, Discovery discovery)
-    : m_id(id)
-    , m_type(type)
-    , m_discovery(discovery)
-{
-}
+class ProofOfPossessionProviderInfo final : public RefCounted<ProofOfPossessionProviderInfo> {
+    WTF_MAKE_TZONE_ALLOCATED(ProofOfPossessionProviderInfo);
+public:
+    static Ref<ProofOfPossessionProviderInfo> create(ProofOfPossessionProviderData&& data) { return adoptRef(*new ProofOfPossessionProviderInfo(WTF::move(data))); }
 
-BasicCredential::~BasicCredential() = default;
+    RefPtr<ArrayBuffer> encryptedErrorInfo() const { return m_data.encryptedErrorInfo; }
+    RefPtr<ArrayBuffer> encryptedKey() const { return m_data.encryptedKey; }
 
-String BasicCredential::type() const
-{
-    switch (m_type) {
-    case Type::DigitalCredential:
-        return "digital"_s;
-
-#if ENABLE(PROOF_OF_POSSESSION)
-    case Type::ProofOfPossession:
-        return "proof-of-possession"_s;
-#endif
-
-    case Type::PublicKey:
-        return "public-key"_s;
+private:
+    explicit ProofOfPossessionProviderInfo(ProofOfPossessionProviderData&& data)
+        : m_data(WTF::move(data))
+    {
     }
 
-    ASSERT_NOT_REACHED();
-    return emptyString();
-}
-
-void BasicCredential::isConditionalMediationAvailable(Document& document, DOMPromiseDeferred<IDLBoolean>&& promise)
-{
-    if (RefPtr page = document.page())
-        page->authenticatorCoordinator().isConditionalMediationAvailable(document, WTF::move(promise));
-    else
-        promise.reject(Exception { ExceptionCode::InvalidStateError });
-}
+    const ProofOfPossessionProviderData m_data;
+};
 
 } // namespace WebCore
 
-#endif // ENABLE(WEB_AUTHN)
+#endif // ENABLE(PROOF_OF_POSSESSION)
