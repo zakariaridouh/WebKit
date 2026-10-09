@@ -953,7 +953,10 @@ void RenderBlockFlow::layoutInFlowChildren(RelayoutChildren relayoutChildren, La
         auto layoutChildren = [&](RelayoutChildren relayoutChildren) {
             childrenInline() ? layoutInlineChildren(relayoutChildren, previousHeight, repaintLogicalTop, repaintLogicalBottom) : layoutBlockChildren(relayoutChildren, maxFloatLogicalBottom);
         };
-        layoutChildren(relayoutChildren);
+        // Content takes its lines off the line-clamp budget as it gets laid out, so content in this line-clamp container's formatting context can't be skipped over.
+        auto* layoutState = view().frameView().layoutContext().layoutState();
+        auto hasLineClamp = layoutState && layoutState->lineClamp();
+        layoutChildren(hasLineClamp ? RelayoutChildren::Yes : relayoutChildren);
 
         auto autoClamp = lineClampUpdater.isAutoLineClampRoot() ? lineClampUpdater.autoClampPoint() : std::nullopt;
         auto ellipsisIsOnLastLine = lineClampUpdater.isLineClampRoot() && contentFitsWithinMaximumLines(*this);
