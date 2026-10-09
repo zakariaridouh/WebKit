@@ -144,6 +144,13 @@ static ApplePayPaymentMethod convert(PKPaymentMethod *paymentMethod)
         result.displayName = displayName.get();
     if (RetainPtr<NSString> network = paymentMethod.network)
         result.network = network.get();
+#if HAVE(PASSKIT_ISSUING_REGION_CODE)
+    // FIXME: <rdar://188823158> (Remove PKPaymentMethod issuingRegionCode staging code from WebKit)
+    if ([paymentMethod respondsToSelector:@selector(issuingRegionCode)]) {
+        if (RetainPtr<NSString> issuingRegionCode = paymentMethod.issuingRegionCode)
+            result.issuingRegionCode = issuingRegionCode.get();
+    }
+#endif
     result.billingContact = convert(retainPtr(paymentMethod.billingAddress).get());
     result.type = convert(paymentMethod.type);
     result.paymentPass = convert(retainPtr(paymentMethod.paymentPass).get());

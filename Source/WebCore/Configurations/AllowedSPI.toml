@@ -107,6 +107,13 @@ symbols = [
 ]
 requires-sdk = ["iOS <= 26.4"]
 
+[[staging]]
+cleanup = "rdar://188823158"
+selectors = [
+    { name = "issuingRegionCode", class = "PKPaymentMethod" },
+]
+requires = ["HAVE_PASSKIT_ISSUING_REGION_CODE"]
+
 [[temporary-usage]]
 request = "rdar://168834967"
 cleanup = "rdar://168834815"
