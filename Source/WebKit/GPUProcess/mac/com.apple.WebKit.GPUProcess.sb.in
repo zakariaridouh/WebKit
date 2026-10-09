@@ -91,6 +91,8 @@
 
 (define (allow-paravirtualization)
     (allow iokit-open-service (iokit-registry-entry-class "AppleVideoToolboxParavirtualizationDriver"))
+    (allow iokit-open-service (iokit-registry-entry-class "AppleM2ScalerParavirtDriver"))
+    (allow iokit-open-user-client (iokit-user-client-class "IOSurfaceAcceleratorParavirtClient"))
 
     (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
         (allow iokit-open-user-client
