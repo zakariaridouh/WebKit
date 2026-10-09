@@ -12113,6 +12113,9 @@ IGNORE_CLANG_WARNINGS_END
         LBasicBlock bitsContinuation = m_out.newBlock();
         LBasicBlock bigCharacter = m_out.newBlock();
 
+        // FIXME: Need to cage strings!
+        // https://bugs.webkit.org/show_bug.cgi?id=174924
+        LValue characters = m_out.loadPtr(stringImpl, m_heaps.StringImpl_data);
         m_out.branch(
             m_out.testIsZero32(
                 m_out.load32(stringImpl, m_heaps.StringImpl_hashAndFlags),
@@ -12121,11 +12124,9 @@ IGNORE_CLANG_WARNINGS_END
 
         m_out.appendTo(is8Bit, is16Bit);
 
-        // FIXME: Need to cage strings!
-        // https://bugs.webkit.org/show_bug.cgi?id=174924
         TypedPointer char8BitBaseIndex = m_node->op() == StringAt
-            ? m_out.baseIndex(m_heaps.characters8, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), m_out.zeroExtPtr(index))
-            : baseIndexWithProvenValue(m_heaps.characters8, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), index, m_graph.child(m_node, 1));
+            ? m_out.baseIndex(m_heaps.characters8, characters, m_out.zeroExtPtr(index))
+            : baseIndexWithProvenValue(m_heaps.characters8, characters, index, m_graph.child(m_node, 1));
         LValue char8BitValue = m_out.load8ZeroExt32(char8BitBaseIndex);
         ValueFromBlock char8Bit = m_out.anchor(char8BitValue);
         m_out.jump(bitsContinuation);
@@ -12133,8 +12134,8 @@ IGNORE_CLANG_WARNINGS_END
         m_out.appendTo(is16Bit, bigCharacter);
 
         TypedPointer char16BitBaseIndex = m_node->op() == StringAt
-            ? m_out.baseIndex(m_heaps.characters16, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), m_out.zeroExtPtr(index))
-            : baseIndexWithProvenValue(m_heaps.characters16, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), index, m_graph.child(m_node, 1));
+            ? m_out.baseIndex(m_heaps.characters16, characters, m_out.zeroExtPtr(index))
+            : baseIndexWithProvenValue(m_heaps.characters16, characters, index, m_graph.child(m_node, 1));
         LValue char16BitValue = m_out.load16ZeroExt32(char16BitBaseIndex);
         ValueFromBlock char16Bit = m_out.anchor(char16BitValue);
         m_out.branch(
@@ -12280,6 +12281,9 @@ IGNORE_CLANG_WARNINGS_END
         if (!m_node->arrayMode().isInBounds())
             speculate(Uncountable, noValue(), nullptr, m_out.aboveOrEqual(index, length));
 
+        // FIXME: Need to cage strings!
+        // https://bugs.webkit.org/show_bug.cgi?id=174924
+        LValue characters = m_out.loadPtr(stringImpl, m_heaps.StringImpl_data);
         m_out.branch(
             m_out.testIsZero32(
                 m_out.load32(stringImpl, m_heaps.StringImpl_hashAndFlags),
@@ -12287,28 +12291,26 @@ IGNORE_CLANG_WARNINGS_END
             unsure(is16Bit), unsure(is8Bit));
 
         LBasicBlock lastNext = m_out.appendTo(is8Bit, is16Bit);
-        // FIXME: Need to cage strings!
-        // https://bugs.webkit.org/show_bug.cgi?id=174924
         ValueFromBlock char8Bit = m_out.anchor(m_out.load8ZeroExt32(baseIndexWithProvenValue(
-            m_heaps.characters8, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), index, m_node->child2())));
+            m_heaps.characters8, characters, index, m_node->child2())));
         m_out.jump(continuation);
 
         m_out.appendTo(is16Bit, isLeadSurrogate);
         LValue leadCharacter = m_out.load16ZeroExt32(baseIndexWithProvenValue(
-            m_heaps.characters16, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), index, m_node->child2()));
+            m_heaps.characters16, characters, index, m_node->child2()));
         ValueFromBlock char16Bit = m_out.anchor(leadCharacter);
-        LValue nextIndex = m_out.add(index, m_out.int32One);
-        m_out.branch(m_out.aboveOrEqual(nextIndex, length), unsure(continuation), unsure(isLeadSurrogate));
+        m_out.branch(m_out.notEqual(m_out.bitAnd(leadCharacter, m_out.constInt32(0xfffffc00)), m_out.constInt32(0xd800)), unsure(continuation), unsure(isLeadSurrogate));
 
         m_out.appendTo(isLeadSurrogate, mayHaveTrailSurrogate);
-        m_out.branch(m_out.notEqual(m_out.bitAnd(leadCharacter, m_out.constInt32(0xfffffc00)), m_out.constInt32(0xd800)), unsure(continuation), unsure(mayHaveTrailSurrogate));
+        LValue nextIndex = m_out.add(index, m_out.int32One);
+        m_out.branch(m_out.aboveOrEqual(nextIndex, length), unsure(continuation), unsure(mayHaveTrailSurrogate));
 
         m_out.appendTo(mayHaveTrailSurrogate, hasTrailSurrogate);
         JSValue indexValue = provenValue(m_node->child2());
         JSValue nextIndexValue;
         if (indexValue && indexValue.isInt32() && indexValue.asInt32() != INT32_MAX)
             nextIndexValue = jsNumber(indexValue.asInt32() + 1);
-        LValue trailCharacter = m_out.load16ZeroExt32(m_out.baseIndex(m_heaps.characters16, m_out.loadPtr(stringImpl, m_heaps.StringImpl_data), m_out.zeroExtPtr(nextIndex), nextIndexValue));
+        LValue trailCharacter = m_out.load16ZeroExt32(m_out.baseIndex(m_heaps.characters16, characters, m_out.zeroExtPtr(nextIndex), nextIndexValue));
         m_out.branch(m_out.notEqual(m_out.bitAnd(trailCharacter, m_out.constInt32(0xfffffc00)), m_out.constInt32(0xdc00)), unsure(continuation), unsure(hasTrailSurrogate));
 
         m_out.appendTo(hasTrailSurrogate, continuation);
@@ -18365,7 +18367,7 @@ IGNORE_CLANG_WARNINGS_END
         LValue stringImpl = m_out.loadPtr(string, m_heaps.JSString_value);
         LValue length = m_out.load32NonNegative(stringImpl, m_heaps.StringImpl_length);
         // position >= length is an unsigned compare, which also catches position == doneIndex (-1).
-        m_out.branch(m_out.aboveOrEqual(position, length), unsure(doneBlock), unsure(is8BitCheck));
+        m_out.branch(m_out.aboveOrEqual(position, length), rarely(doneBlock), usually(is8BitCheck));
 
         m_out.appendTo(is8BitCheck, is8Bit);
         LValue data = m_out.loadPtr(stringImpl, m_heaps.StringImpl_data);
@@ -21262,9 +21264,8 @@ IGNORE_CLANG_WARNINGS_END
         LValue maxSize = m_out.sub(strLength, from);
         LValue span;
         if (length) {
-            // span = max(0, min(length, maxSize))
-            LValue clamped = m_out.select(m_out.lessThan(length, maxSize), length, maxSize);
-            span = m_out.select(m_out.lessThan(clamped, m_out.int32Zero), m_out.int32Zero, clamped);
+            // span = min(length, maxSize). A negative span takes the empty case below, so there is no need to clamp it to 0.
+            span = m_out.select(m_out.lessThan(length, maxSize), length, maxSize);
         } else
             span = maxSize;
 
@@ -22754,8 +22755,7 @@ IGNORE_CLANG_WARNINGS_END
 
         LBasicBlock notTriviallyUnequalCase = m_out.newBlock();
         LBasicBlock notEmptyCase = m_out.newBlock();
-        LBasicBlock leftReadyCase = m_out.newBlock();
-        LBasicBlock rightReadyCase = m_out.newBlock();
+        LBasicBlock bothReadyCase = m_out.newBlock();
         LBasicBlock widthMatchedCase = m_out.newBlock();
         LBasicBlock is16BitCase = m_out.newBlock();
         LBasicBlock byteLengthReady = m_out.newBlock();
@@ -22772,20 +22772,19 @@ IGNORE_CLANG_WARNINGS_END
         LBasicBlock slowCase = m_out.newBlock();
         LBasicBlock continuation = m_out.newBlock();
 
-        if (leftAtom)
-            m_out.jump(leftReadyCase);
-        else
-            m_out.branch(isRopeString(leftJSString, leftJSStringEdge), rarely(ropeCase), usually(leftReadyCase));
-
-        LBasicBlock lastNext = m_out.appendTo(leftReadyCase, rightReadyCase);
-        if (rightAtom)
-            m_out.jump(rightReadyCase);
-        else
-            m_out.branch(isRopeString(rightJSString, rightJSStringEdge), rarely(ropeCase), usually(rightReadyCase));
-
-        m_out.appendTo(rightReadyCase, notTriviallyUnequalCase);
         LValue left = leftAtom ? nullptr : m_out.loadPtr(leftJSString, m_heaps.JSString_value);
         LValue right = rightAtom ? nullptr : m_out.loadPtr(rightJSString, m_heaps.JSString_value);
+        LValue ropeBits = nullptr;
+        if (left && canBeRope(leftJSStringEdge))
+            ropeBits = left;
+        if (right && canBeRope(rightJSStringEdge))
+            ropeBits = ropeBits ? m_out.bitOr(ropeBits, right) : right;
+        if (ropeBits)
+            m_out.branch(m_out.testNonZeroPtr(ropeBits, m_out.constIntPtr(JSString::isRopeInPointer)), rarely(ropeCase), usually(bothReadyCase));
+        else
+            m_out.jump(bothReadyCase);
+
+        LBasicBlock lastNext = m_out.appendTo(bothReadyCase, notTriviallyUnequalCase);
         LValue leftLength = leftAtom
             ? m_out.constInt32(leftConst.length())
             : m_out.load32(left, m_heaps.StringImpl_length);
@@ -22802,17 +22801,14 @@ IGNORE_CLANG_WARNINGS_END
 
         // Mixed-width pairs bail to the slow path; the runtime helper handles cross-width equality.
         m_out.appendTo(notEmptyCase, widthMatchedCase);
-        LValue leftIs8Bit = leftAtom
+        LValue leftFlags = leftAtom
             ? m_out.constInt32(leftConst.is8Bit() ? StringImpl::flagIs8Bit() : 0)
-            : m_out.bitAnd(
-                m_out.load32(left, m_heaps.StringImpl_hashAndFlags),
-                m_out.constInt32(StringImpl::flagIs8Bit()));
-        LValue rightIs8Bit = rightAtom
+            : m_out.load32(left, m_heaps.StringImpl_hashAndFlags);
+        LValue rightFlags = rightAtom
             ? m_out.constInt32(rightConst.is8Bit() ? StringImpl::flagIs8Bit() : 0)
-            : m_out.bitAnd(
-                m_out.load32(right, m_heaps.StringImpl_hashAndFlags),
-                m_out.constInt32(StringImpl::flagIs8Bit()));
-        m_out.branch(m_out.notEqual(leftIs8Bit, rightIs8Bit), rarely(slowCase), usually(widthMatchedCase));
+            : m_out.load32(right, m_heaps.StringImpl_hashAndFlags);
+        LValue leftIs8Bit = m_out.bitAnd(leftFlags, m_out.constInt32(StringImpl::flagIs8Bit()));
+        m_out.branch(m_out.testNonZero32(m_out.bitXor(leftFlags, rightFlags), m_out.constInt32(StringImpl::flagIs8Bit())), rarely(slowCase), usually(widthMatchedCase));
 
         // 8-bit is the common case: fall through with byteLength == length. 16-bit converts char-count
         // to byte-count via length << 1 so the byte-addressed loops below work unchanged.
