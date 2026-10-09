@@ -1230,6 +1230,9 @@ void RenderBlockFlow::performBlockStepSizing(RenderBox& child, LayoutUnit blockS
 
 void RenderBlockFlow::layoutBlockChild(RenderBox& child, MarginInfo& marginInfo, LayoutUnit& previousFloatLogicalBottom, LayoutUnit& maxFloatLogicalBottom)
 {
+    // This happens before the child's own layout, so its descendants are already up to date by the time it lays them out.
+    LineClampUpdater::setIsForcedHidden(child, LineClampUpdater::isAfterClampPoint(child));
+
     LayoutUnit oldPosMarginBefore = maxPositiveMarginBefore();
     LayoutUnit oldNegMarginBefore = maxNegativeMarginBefore();
 

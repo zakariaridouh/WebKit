@@ -32,6 +32,7 @@
 #include "RenderBlockFlow.h"
 #include "RenderBlockFlowInlines.h"
 #include "RenderBoxInlines.h"
+#include "RenderChildIterator.h"
 #include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "StyleDisplay.h"
@@ -230,6 +231,36 @@ std::optional<LineClampUpdater::AutoClampPoint> LineClampUpdater::autoClampPoint
             clampPointAfterPreviousChild = AutoClampPoint { CheckedRef { *child } };
     }
     return { };
+}
+
+static void setIsHiddenByLineClamp(RenderElement& renderer, const RenderBox& invisibleBox, bool isHidden)
+{
+    renderer.setIsHiddenByLineClamp(isHidden);
+    for (CheckedRef child : childrenOfType<RenderElement>(renderer)) {
+        // "Any absolutely positioned box which has an invisible box within its containing block chain, and all of its descendants."
+        if (child->isOutOfFlowPositioned()) {
+            CheckedPtr containingBlock = child->containingBlock();
+            if (!containingBlock || (containingBlock != &invisibleBox && !containingBlock->isDescendantOf(&invisibleBox)))
+                continue;
+        }
+        setIsHiddenByLineClamp(child, invisibleBox, isHidden);
+    }
+}
+
+bool LineClampUpdater::isAfterClampPoint(const RenderObject& renderer)
+{
+    // "Within a line-clamp container, the following boxes and line boxes become invisible boxes:
+    // Any in-flow or floating boxes that follow the clamp point in the box tree."
+    // https://drafts.csswg.org/css-overflow-4/#line-clamp-containers
+    auto lineClamp = renderer.view().frameView().layoutContext().layoutState()->lineClamp();
+    return lineClamp && lineClamp->shouldDiscardOverflow && !lineClamp->maximumLines;
+}
+
+void LineClampUpdater::setIsForcedHidden(RenderBox& renderer, bool isHidden)
+{
+    if (renderer.isHiddenByLineClamp() == isHidden)
+        return;
+    setIsHiddenByLineClamp(renderer, renderer, isHidden);
 }
 
 } // namespace WebCore

@@ -47,6 +47,10 @@ public:
     void setClampAfterBox(const RenderBox&);
     void resetLineClamp();
 
+    // Whether content laid out now comes after the clamp point (the line-clamp budget is used up).
+    static bool isAfterClampPoint(const RenderObject&);
+    static void setIsForcedHidden(RenderBox&, bool);
+
 private:
     const CheckedRef<const RenderBlock> m_blockContainer;
     bool m_isLineClampRoot { false };
