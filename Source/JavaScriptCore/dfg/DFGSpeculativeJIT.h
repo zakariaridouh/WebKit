@@ -1700,6 +1700,10 @@ public:
     void compileGlobalIsFinite(Node*);
     void compileNumberIsFinite(Node*);
     void compileNumberIsSafeInteger(Node*);
+    void emitDoubleIsNaN(FPRReg numberFPR, GPRReg resultGPR);
+    void emitDoubleIsFinite(FPRReg numberFPR, GPRReg resultGPR, FPRReg scratchFPR);
+    void emitDoubleIsSafeInteger(FPRReg numberFPR, GPRReg resultGPR, GPRReg scratchGPR, FPRReg scratchFPR, FPRReg limitFPR);
+    JumpList unboxDoubleForNumberPredicate(Edge, GPRReg argumentGPR, GPRReg resultGPR, FPRReg numberFPR, bool resultForInt32);
     void compileToIntegerOrInfinity(Node*);
     void compileToLength(Node*);
     void compileResolvePromiseFirstResolving(Node*);

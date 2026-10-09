@@ -16031,32 +16031,57 @@ IGNORE_CLANG_WARNINGS_END
         }
     }
 
+    LValue doubleIsNaN(LValue number)
+    {
+        return m_out.doubleNotEqualOrUnordered(number, number);
+    }
+
+    LValue doubleIsFinite(LValue number)
+    {
+        LValue difference = m_out.doubleSub(number, number);
+        return m_out.doubleEqual(difference, difference);
+    }
+
+    LValue doubleIsSafeInteger(LValue number)
+    {
+        LValue isInteger = m_out.doubleEqual(number, m_out.doubleTrunc(number));
+        LValue isInRange = m_out.doubleLessThanOrEqual(m_out.doubleAbs(number), m_out.constDouble(maxSafeInteger()));
+        return m_out.bitAnd(isInteger, isInRange);
+    }
+
+    LValue numberPredicate(Edge edge, bool resultForInt32, NOESCAPE const Invocable<void(LValue)> auto& doublePredicate)
+    {
+        LValue value = lowJSValue(edge);
+
+        LBasicBlock notInt32Case = m_out.newBlock();
+        LBasicBlock doubleCase = m_out.newBlock();
+        LBasicBlock continuation = m_out.newBlock();
+
+        Vector<ValueFromBlock, 3> results;
+        results.append(m_out.anchor(m_out.constInt32(resultForInt32)));
+        m_out.branch(isInt32(value, provenType(edge)), unsure(continuation), unsure(notInt32Case));
+
+        LBasicBlock lastNext = m_out.appendTo(notInt32Case, doubleCase);
+        results.append(m_out.anchor(m_out.booleanFalse));
+        m_out.branch(isNotNumber(value, provenType(edge) & ~SpecInt32Only), unsure(continuation), unsure(doubleCase));
+
+        m_out.appendTo(doubleCase, continuation);
+        results.append(m_out.anchor(doublePredicate(unboxDouble(value))));
+        m_out.jump(continuation);
+
+        m_out.appendTo(continuation, lastNext);
+        return m_out.phi(Int32, results);
+    }
+
     void compileNumberIsNaN()
     {
         switch (m_node->child1().useKind()) {
         case DoubleRepUse: {
-            LValue argument = lowDouble(m_node->child1());
-            setBoolean(m_out.doubleNotEqualOrUnordered(argument, argument));
+            setBoolean(doubleIsNaN(lowDouble(m_node->child1())));
             break;
         }
         case UntypedUse: {
-            LValue argument = lowJSValue(m_node->child1());
-            bool mayBeInt32 = abstractValue(m_node->child1()).m_type & SpecInt32Only;
-            if (mayBeInt32) {
-                LBasicBlock notInt32NumberCase = m_out.newBlock();
-                LBasicBlock continuation = m_out.newBlock();
-
-                ValueFromBlock fastResult = m_out.anchor(m_out.constInt32(0));
-                m_out.branch(isInt32(argument, provenType(m_node->child1())), unsure(continuation), unsure(notInt32NumberCase));
-
-                LBasicBlock lastNext = m_out.appendTo(notInt32NumberCase, continuation);
-                ValueFromBlock slowResult = m_out.anchor(vmCall(Int32, operationNumberIsNaN, argument));
-                m_out.jump(continuation);
-
-                m_out.appendTo(continuation, lastNext);
-                setBoolean(m_out.phi(Int32, fastResult, slowResult));
-            } else
-                setBoolean(vmCall(Int32, operationNumberIsNaN, argument));
+            setBoolean(numberPredicate(m_node->child1(), /* resultForInt32 */ false, [&](LValue number) { return doubleIsNaN(number); }));
             break;
         }
         default:
@@ -16099,29 +16124,11 @@ IGNORE_CLANG_WARNINGS_END
     {
         switch (m_node->child1().useKind()) {
         case DoubleRepUse: {
-            LValue argument = lowDouble(m_node->child1());
-            LValue result = m_out.doubleSub(argument, argument);
-            setBoolean(m_out.doubleEqual(result, result));
+            setBoolean(doubleIsFinite(lowDouble(m_node->child1())));
             break;
         }
         case UntypedUse: {
-            LValue argument = lowJSValue(m_node->child1());
-            bool mayBeInt32 = abstractValue(m_node->child1()).m_type & SpecInt32Only;
-            if (mayBeInt32) {
-                LBasicBlock notInt32NumberCase = m_out.newBlock();
-                LBasicBlock continuation = m_out.newBlock();
-
-                ValueFromBlock fastResult = m_out.anchor(m_out.constInt32(1));
-                m_out.branch(isInt32(argument, provenType(m_node->child1())), unsure(continuation), unsure(notInt32NumberCase));
-
-                LBasicBlock lastNext = m_out.appendTo(notInt32NumberCase, continuation);
-                ValueFromBlock slowResult = m_out.anchor(vmCall(Int32, operationNumberIsFinite, argument));
-                m_out.jump(continuation);
-
-                m_out.appendTo(continuation, lastNext);
-                setBoolean(m_out.phi(Int32, fastResult, slowResult));
-            } else
-                setBoolean(vmCall(Int32, operationNumberIsFinite, argument));
+            setBoolean(numberPredicate(m_node->child1(), /* resultForInt32 */ true, [&](LValue number) { return doubleIsFinite(number); }));
             break;
         }
         default:
@@ -16134,38 +16141,11 @@ IGNORE_CLANG_WARNINGS_END
     {
         switch (m_node->child1().useKind()) {
         case DoubleRepUse: {
-            LValue argument = lowDouble(m_node->child1());
-
-            // check if the value is an integer
-            LValue isInteger = m_out.doubleEqual(argument, m_out.doubleTrunc(argument));
-
-            // check if the value is in the range
-            LValue limit = m_out.constDouble(maxSafeInteger());
-            LValue isInRange = m_out.doubleLessThanOrEqual(m_out.doubleAbs(argument), limit);
-
-            LValue result = m_out.bitAnd(isInteger, isInRange);
-
-            setBoolean(result);
+            setBoolean(doubleIsSafeInteger(lowDouble(m_node->child1())));
             break;
         }
         case UntypedUse: {
-            LValue argument = lowJSValue(m_node->child1());
-            bool mayBeInt32 = abstractValue(m_node->child1()).m_type & SpecInt32Only;
-            if (mayBeInt32) {
-                LBasicBlock notInt32NumberCase = m_out.newBlock();
-                LBasicBlock continuation = m_out.newBlock();
-
-                ValueFromBlock fastResult = m_out.anchor(m_out.constInt32(1));
-                m_out.branch(isInt32(argument, provenType(m_node->child1())), unsure(continuation), unsure(notInt32NumberCase));
-
-                LBasicBlock lastNext = m_out.appendTo(notInt32NumberCase, continuation);
-                ValueFromBlock slowResult = m_out.anchor(vmCall(Int32, operationNumberIsSafeInteger, argument));
-                m_out.jump(continuation);
-
-                m_out.appendTo(continuation, lastNext);
-                setBoolean(m_out.phi(Int32, fastResult, slowResult));
-            } else
-                setBoolean(vmCall(Int32, operationNumberIsSafeInteger, argument));
+            setBoolean(numberPredicate(m_node->child1(), /* resultForInt32 */ true, [&](LValue number) { return doubleIsSafeInteger(number); }));
             break;
         }
         default:

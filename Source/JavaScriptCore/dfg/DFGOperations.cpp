@@ -5195,22 +5195,6 @@ JSC_DEFINE_JIT_OPERATION(operationIsFinite, UCPUStrictInt32, (JSGlobalObject* gl
     OPERATION_RETURN(scope, toUCPUStrictInt32(std::isfinite(argument.toNumber(globalObject))));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationNumberIsFinite, UCPUStrictInt32, (EncodedJSValue value))
-{
-    JSValue argument = JSValue::decode(value);
-    if (!argument.isNumber())
-        return toUCPUStrictInt32(0);
-    return toUCPUStrictInt32(!!std::isfinite(argument.asNumber()));
-}
-
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationNumberIsNaN, UCPUStrictInt32, (EncodedJSValue value))
-{
-    JSValue argument = JSValue::decode(value);
-    if (!argument.isNumber())
-        return toUCPUStrictInt32(0);
-    return toUCPUStrictInt32(!!std::isnan(argument.asNumber()));
-}
-
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationNumberIsSafeInteger, UCPUStrictInt32, (EncodedJSValue value))
 {
     JSValue argument = JSValue::decode(value);
@@ -5219,6 +5203,11 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationNumberIsSafeInteger, UCPUStrictInt32,
     if (!argument.isDouble())
         return toUCPUStrictInt32(0);
     return toUCPUStrictInt32(!!isSafeInteger(argument.asDouble()));
+}
+
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationNumberIsSafeIntegerDouble, UCPUStrictInt32, (double value))
+{
+    return toUCPUStrictInt32(!!isSafeInteger(value));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationIsNaN, UCPUStrictInt32, (JSGlobalObject* globalObject, EncodedJSValue value))

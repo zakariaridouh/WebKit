@@ -18114,39 +18114,73 @@ void SpeculativeJIT::compileGlobalIsNaN(Node* node)
     }
 }
 
+void SpeculativeJIT::emitDoubleIsNaN(FPRReg numberFPR, GPRReg resultGPR)
+{
+    compareDouble(DoubleNotEqualOrUnordered, numberFPR, numberFPR, resultGPR);
+}
+
+void SpeculativeJIT::emitDoubleIsFinite(FPRReg numberFPR, GPRReg resultGPR, FPRReg scratchFPR)
+{
+    subDouble(numberFPR, numberFPR, scratchFPR);
+    compareDouble(DoubleEqualAndOrdered, scratchFPR, scratchFPR, resultGPR);
+}
+
+void SpeculativeJIT::emitDoubleIsSafeInteger(FPRReg numberFPR, GPRReg resultGPR, GPRReg scratchGPR, FPRReg scratchFPR, FPRReg limitFPR)
+{
+    ASSERT(supportsFloatingPointRounding());
+    truncDouble(numberFPR, scratchFPR);
+    compareDouble(DoubleEqualAndOrdered, numberFPR, scratchFPR, resultGPR);
+
+    absDouble(numberFPR, scratchFPR);
+    move64ToDouble(TrustedImm64(std::bit_cast<uint64_t>(maxSafeInteger())), limitFPR);
+    compareDouble(DoubleLessThanOrEqualAndOrdered, scratchFPR, limitFPR, scratchGPR);
+    and32(scratchGPR, resultGPR);
+}
+
+// Falls through with the unboxed double in numberFPR. Every returned jump leaves the final result in resultGPR.
+SpeculativeJIT::JumpList SpeculativeJIT::unboxDoubleForNumberPredicate(Edge edge, GPRReg argumentGPR, GPRReg resultGPR, FPRReg numberFPR, bool resultForInt32)
+{
+    SpeculatedType type = m_interpreter.forNode(edge).m_type;
+    JumpList done;
+    if (type & SpecInt32Only) {
+        move(TrustedImm32(resultForInt32), resultGPR);
+        done.append(branchIfInt32(argumentGPR));
+    }
+    if (type & ~SpecFullNumber) {
+        move(TrustedImm32(0), resultGPR);
+        done.append(branchIfNotNumber(argumentGPR));
+    }
+    unboxDouble(argumentGPR, resultGPR, numberFPR);
+    return done;
+}
+
 void SpeculativeJIT::compileNumberIsNaN(Node* node)
 {
     switch (node->child1().useKind()) {
     case DoubleRepUse: {
         SpeculateDoubleOperand argument(this, node->child1());
-        GPRTemporary scratch(this);
+        GPRTemporary result(this);
 
         FPRReg argumentFPR = argument.fpr();
-        GPRReg scratchGPR = scratch.gpr();
+        GPRReg resultGPR = result.gpr();
 
-        compareDouble(DoubleNotEqualOrUnordered, argumentFPR, argumentFPR, scratchGPR);
-        unblessedBooleanResult(scratchGPR, node);
+        emitDoubleIsNaN(argumentFPR, resultGPR);
+        unblessedBooleanResult(resultGPR, node);
         break;
     }
     case UntypedUse: {
         JSValueOperand argument(this, node->child1());
-        GPRTemporary scratch1(this);
-
-        bool mayBeInt32 = m_interpreter.forNode(node->child1()).m_type & SpecInt32Only;
+        GPRTemporary result(this);
+        FPRTemporary number(this);
 
         GPRReg argumentGPR = argument.gpr();
-        GPRReg scratch1GPR = scratch1.gpr();
+        GPRReg resultGPR = result.gpr();
+        FPRReg numberFPR = number.fpr();
 
-        flushRegisters();
-        Jump isInt32;
-        if (mayBeInt32) {
-            move(TrustedImm32(0), scratch1GPR);
-            isInt32 = branchIfInt32(argumentGPR);
-        }
-        callOperation(operationNumberIsNaN, scratch1GPR, argumentGPR);
-        if (mayBeInt32)
-            isInt32.link(this);
-        unblessedBooleanResult(scratch1GPR, node);
+        JumpList done = unboxDoubleForNumberPredicate(node->child1(), argumentGPR, resultGPR, numberFPR, /* resultForInt32 */ false);
+        emitDoubleIsNaN(numberFPR, resultGPR);
+        done.link(this);
+        unblessedBooleanResult(resultGPR, node);
         break;
     }
     default:
@@ -18190,37 +18224,32 @@ void SpeculativeJIT::compileNumberIsFinite(Node* node)
     switch (node->child1().useKind()) {
     case DoubleRepUse: {
         SpeculateDoubleOperand argument(this, node->child1());
-        GPRTemporary scratch(this);
-        FPRTemporary diff(this);
+        GPRTemporary result(this);
+        FPRTemporary scratch(this);
 
         FPRReg argumentFPR = argument.fpr();
-        GPRReg scratchGPR = scratch.gpr();
-        FPRReg diffFPR = diff.fpr();
+        GPRReg resultGPR = result.gpr();
+        FPRReg scratchFPR = scratch.fpr();
 
-        subDouble(argumentFPR, argumentFPR, diffFPR);
-        compareDouble(DoubleEqualAndOrdered, diffFPR, diffFPR, scratchGPR);
-        unblessedBooleanResult(scratchGPR, node);
+        emitDoubleIsFinite(argumentFPR, resultGPR, scratchFPR);
+        unblessedBooleanResult(resultGPR, node);
         break;
     }
     case UntypedUse: {
         JSValueOperand argument(this, node->child1());
-        GPRTemporary scratch1(this);
-
-        bool mayBeInt32 = m_interpreter.forNode(node->child1()).m_type & SpecInt32Only;
+        GPRTemporary result(this);
+        FPRTemporary number(this);
+        FPRTemporary scratch(this);
 
         GPRReg argumentGPR = argument.gpr();
-        GPRReg scratch1GPR = scratch1.gpr();
+        GPRReg resultGPR = result.gpr();
+        FPRReg numberFPR = number.fpr();
+        FPRReg scratchFPR = scratch.fpr();
 
-        flushRegisters();
-        Jump isInt32;
-        if (mayBeInt32) {
-            move(TrustedImm32(1), scratch1GPR);
-            isInt32 = branchIfInt32(argumentGPR);
-        }
-        callOperation(operationNumberIsFinite, scratch1GPR, argumentGPR);
-        if (mayBeInt32)
-            isInt32.link(this);
-        unblessedBooleanResult(scratch1GPR, node);
+        JumpList done = unboxDoubleForNumberPredicate(node->child1(), argumentGPR, resultGPR, numberFPR, /* resultForInt32 */ true);
+        emitDoubleIsFinite(numberFPR, resultGPR, scratchFPR);
+        done.link(this);
+        unblessedBooleanResult(resultGPR, node);
         break;
     }
     default:
@@ -18233,57 +18262,67 @@ void SpeculativeJIT::compileNumberIsSafeInteger(Node* node)
 {
     switch (node->child1().useKind()) {
     case DoubleRepUse: {
+        if (!supportsFloatingPointRounding()) {
+            SpeculateDoubleOperand argument(this, node->child1());
+
+            FPRReg argumentFPR = argument.fpr();
+
+            flushRegisters();
+            GPRFlushedCallResult result(this);
+            GPRReg resultGPR = result.gpr();
+            callOperationWithoutExceptionCheck(operationNumberIsSafeIntegerDouble, resultGPR, argumentFPR);
+            unblessedBooleanResult(resultGPR, node);
+            break;
+        }
+
         SpeculateDoubleOperand argument(this, node->child1());
+        GPRTemporary result(this);
         GPRTemporary scratch(this);
-        GPRTemporary isValid(this);
-        FPRTemporary temp(this);
+        FPRTemporary scratchFloat(this);
         FPRTemporary limit(this);
 
         FPRReg argumentFPR = argument.fpr();
+        GPRReg resultGPR = result.gpr();
         GPRReg scratchGPR = scratch.gpr();
-        GPRReg isValidGPR = isValid.gpr();
-        FPRReg tempFPR = temp.fpr();
+        FPRReg scratchFPR = scratchFloat.fpr();
         FPRReg limitFPR = limit.fpr();
 
-        // check if the value is an integer
-        if (supportsFloatingPointRounding()) {
-            truncDouble(argumentFPR, tempFPR);
-            compareDouble(DoubleEqualAndOrdered, argumentFPR, tempFPR, isValidGPR);
-        } else {
-            silentSpillAllRegisters(tempFPR);
-            callOperationWithoutExceptionCheck(Math::truncDouble, tempFPR, argumentFPR);
-            silentFillAllRegisters();
-            compareDouble(DoubleEqualAndOrdered, argumentFPR, tempFPR, isValidGPR);
-        }
-
-        // check if the value is in the range
-        absDouble(argumentFPR, tempFPR);
-        move64ToDouble(TrustedImm64(std::bit_cast<uint64_t>(maxSafeInteger())), limitFPR);
-        compareDouble(DoubleLessThanOrEqualAndOrdered, tempFPR, limitFPR, scratchGPR);
-        and32(scratchGPR, isValidGPR);
-
-        unblessedBooleanResult(isValidGPR, node);
+        emitDoubleIsSafeInteger(argumentFPR, resultGPR, scratchGPR, scratchFPR, limitFPR);
+        unblessedBooleanResult(resultGPR, node);
         break;
     }
     case UntypedUse: {
-        JSValueOperand argument(this, node->child1());
-        GPRTemporary scratch1(this);
+        if (!supportsFloatingPointRounding()) {
+            JSValueOperand argument(this, node->child1());
 
-        bool mayBeInt32 = m_interpreter.forNode(node->child1()).m_type & SpecInt32Only;
+            GPRReg argumentGPR = argument.gpr();
+
+            flushRegisters();
+            GPRFlushedCallResult result(this);
+            GPRReg resultGPR = result.gpr();
+            callOperation(operationNumberIsSafeInteger, resultGPR, argumentGPR);
+            unblessedBooleanResult(resultGPR, node);
+            break;
+        }
+
+        JSValueOperand argument(this, node->child1());
+        GPRTemporary result(this);
+        GPRTemporary scratch(this);
+        FPRTemporary number(this);
+        FPRTemporary scratchFloat(this);
+        FPRTemporary limit(this);
 
         GPRReg argumentGPR = argument.gpr();
-        GPRReg scratch1GPR = scratch1.gpr();
+        GPRReg resultGPR = result.gpr();
+        GPRReg scratchGPR = scratch.gpr();
+        FPRReg numberFPR = number.fpr();
+        FPRReg scratchFPR = scratchFloat.fpr();
+        FPRReg limitFPR = limit.fpr();
 
-        flushRegisters();
-        Jump isInt32;
-        if (mayBeInt32) {
-            move(TrustedImm32(1), scratch1GPR);
-            isInt32 = branchIfInt32(argumentGPR);
-        }
-        callOperation(operationNumberIsSafeInteger, scratch1GPR, argumentGPR);
-        if (mayBeInt32)
-            isInt32.link(this);
-        unblessedBooleanResult(scratch1GPR, node);
+        JumpList done = unboxDoubleForNumberPredicate(node->child1(), argumentGPR, resultGPR, numberFPR, /* resultForInt32 */ true);
+        emitDoubleIsSafeInteger(numberFPR, resultGPR, scratchGPR, scratchFPR, limitFPR);
+        done.link(this);
+        unblessedBooleanResult(resultGPR, node);
         break;
     }
     default:
