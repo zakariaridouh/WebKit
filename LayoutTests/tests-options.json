@@ -4232,6 +4232,9 @@
     "imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/script-not-executed-after-shutdown.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/html/semantics/scripting-1/the-template-element/reflect-html-for.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/html/semantics/tabular-data/processing-model-1/span-limits.html": [
         "slow"
     ],
