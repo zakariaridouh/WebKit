@@ -861,13 +861,14 @@ std::pair<bool, std::optional<Vector<ElementRuleCollector::ScopingRootWithDistan
                     addScopingRootWithDistance(implicitParentNode);
                 } else {
                     // Constructed stylesheet without owner node.
-                    // Check if it's adopted by shadow roots and use the shadow host as scoping root.
+                    // Use the shadow host as scoping root for adopting shadow roots, and the document itself for adopting documents.
                     for (const auto& adoptingTreeScope : client->adoptingTreeScopes()) {
                         if (auto* shadowRoot = dynamicDowncast<ShadowRoot>(adoptingTreeScope)) {
                             const auto* shadowHost = shadowRoot->host();
                             if (shadowHost && &shadowHost->document() == &this->element().document())
                                 addScopingRootWithDistance(shadowHost);
-                        }
+                        } else if (&adoptingTreeScope == &this->element().document())
+                            addScopingRootWithDistance(&adoptingTreeScope);
                     }
                 }
             };

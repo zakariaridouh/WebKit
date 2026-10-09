@@ -335,6 +335,33 @@ static SelectorChecker::LocalContext localContextForParent(const SelectorChecker
     return updatedContext;
 }
 
+static bool isScopeOnlyCompoundSelector(const CSSSelector& selector)
+{
+    if (selector.match() != CSSSelector::Match::PseudoClass || selector.precedingInComplexSelector())
+        return false;
+    switch (selector.pseudoClass()) {
+    case CSSSelector::PseudoClass::Scope:
+        return true;
+    case CSSSelector::PseudoClass::Is:
+    case CSSSelector::PseudoClass::Where:
+        for (auto& subselector : *selector.selectorList()) {
+            if (isScopeOnlyCompoundSelector(subselector))
+                return true;
+        }
+        return false;
+    default:
+        return false;
+    }
+}
+
+// A document scoping root is not an element, so the ancestor traversal never reaches it.
+static bool matchesDocumentScopingRoot(const SelectorChecker::CheckingContext& checkingContext, const CSSSelector& selector, const ContainerNode* ancestor)
+{
+    return is<Document>(checkingContext.scope)
+        && ancestor == checkingContext.scope
+        && isScopeOnlyCompoundSelector(selector);
+}
+
 // Recursive check of selectors and combinators
 // It can return 4 different values:
 // * SelectorMatches          - the selector matches the element e
@@ -461,13 +488,18 @@ SelectorChecker::MatchResult SelectorChecker::matchRecursively(CheckingContext& 
             if (result.match == Match::SelectorMatches || result.match == Match::SelectorFailsCompletely)
                 return MatchResult::updateWithMatchType(result, matchType);
         }
+        if (matchesDocumentScopingRoot(checkingContext, *nextContext.selector, &context.element->treeScope().rootNode()))
+            return MatchResult::matches(matchType);
         return MatchResult::fails(Match::SelectorFailsCompletely);
 
     case CSSSelector::Relation::Child:
         {
             nextContext = localContextForParent(nextContext);
-            if (!nextContext.element)
+            if (!nextContext.element) {
+                if (matchesDocumentScopingRoot(checkingContext, *nextContext.selector, context.element->parentNode()))
+                    return MatchResult::matches(matchType);
                 return MatchResult::fails(Match::SelectorFailsCompletely);
+            }
             nextContext.firstSelectorOfTheFragment = nextContext.selector;
             EnumSet<PseudoElementType> ignoredPseudoElements;
             MatchResult result = matchRecursively(checkingContext, nextContext, ignoredPseudoElements);
