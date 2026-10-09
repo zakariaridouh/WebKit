@@ -430,13 +430,17 @@ bool ScriptElement::requestModuleScript(const String& sourceText, const TextPosi
 
         String sourceURL = sourceAttributeValue();
         if (StringView(sourceURL).containsOnly<isASCIIWhitespace<char16_t>>()) {
-            dispatchErrorEvent();
+            queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [](auto& element) {
+                element.dispatchErrorEvent();
+            });
             return false;
         }
 
         auto moduleScriptRootURL = document->encodingParseURL(sourceURL);
         if (!moduleScriptRootURL.isValid()) {
-            dispatchErrorEvent();
+            queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [](auto& element) {
+                element.dispatchErrorEvent();
+            });
             return false;
         }
 
