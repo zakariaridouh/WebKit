@@ -922,6 +922,11 @@ static void invalidateNonScalingStrokeCachesInSubtree(RenderElement& renderer)
     }
 }
 
+bool RenderLayerModelObject::transformReferenceBoxIsSVGViewport() const
+{
+    return transformBoxToCSSBoxType(style().transformBox()) == CSSBoxType::ViewBox;
+}
+
 void RenderLayerModelObject::invalidateNonScalingStrokeCachesInSubtreeForSVG(const std::optional<AffineTransform>& oldTransform, const AffineTransform& newTransform)
 {
     if (!mayHaveNonScalingStrokeInSubtree())

@@ -164,6 +164,7 @@ public:
     void invalidateCachedSVGBoundingBoxesOfAncestors() const;
     void invalidateNonScalingStrokeCachesInSubtreeForSVG(const std::optional<AffineTransform>& oldTransform, const AffineTransform& newTransform);
 
+    bool transformReferenceBoxIsSVGViewport() const;
     inline bool shouldUsePositionedClipping() const;
 
 #if ASSERT_ENABLED

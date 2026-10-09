@@ -1335,7 +1335,7 @@
 		329C0C2528BD96EB00F187D2 /* NodeName.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3227A92728BD744A00BC2697 /* NodeName.cpp */; };
 		32EAFB8D274C5EA600650557 /* FontCascadeCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 32EAFB8B274C5EA500650557 /* FontCascadeCache.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		3320B8F03AA379B81B48F469 /* UnifiedSource24-header-RenderStyleGetters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 675EA032FFAF2A4098F106D8 /* UnifiedSource24-header-RenderStyleGetters.cpp */; };
-		334408C433F8CA4C10044234 /* SVGLayerTransformUpdater.h in Headers */ = {isa = PBXBuildFile; fileRef = 3344077412D9BC4A00044234 /* SVGLayerTransformUpdater.h */; };
+		334408C433F8CA4C10044234 /* SVGTransformLayoutScope.h in Headers */ = {isa = PBXBuildFile; fileRef = 3344077412D9BC4A00044234 /* SVGTransformLayoutScope.h */; };
 		334408C433F8CA4C10044551 /* SVGTransformComputation.h in Headers */ = {isa = PBXBuildFile; fileRef = 3344077412D9BC4A00044551 /* SVGTransformComputation.h */; };
 		334408C433F8CA4C10044777 /* SVGImageIntrinsicSizing.h in Headers */ = {isa = PBXBuildFile; fileRef = 3344077412D9BC4A00044777 /* SVGImageIntrinsicSizing.h */; };
 		334408C433F8CA4C10A328F4 /* SVGVisitedRendererTracking.h in Headers */ = {isa = PBXBuildFile; fileRef = 3344077412D9BC4A00A328F4 /* SVGVisitedRendererTracking.h */; };
@@ -10991,7 +10991,7 @@
 		331FF67DE197B57393C46AA7 /* RenderMathMLSpace.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderMathMLSpace.h; sourceTree = "<group>"; };
 		333F704E0FB49CA2008E12A6 /* Notification.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Notification.idl; sourceTree = "<group>"; };
 		333F704F0FB49CA2008E12A6 /* Notification.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Notification.h; sourceTree = "<group>"; };
-		3344077412D9BC4A00044234 /* SVGLayerTransformUpdater.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SVGLayerTransformUpdater.h; sourceTree = "<group>"; };
+		3344077412D9BC4A00044234 /* SVGTransformLayoutScope.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SVGTransformLayoutScope.h; sourceTree = "<group>"; };
 		3344077412D9BC4A00044551 /* SVGTransformComputation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SVGTransformComputation.h; sourceTree = "<group>"; };
 		3344077412D9BC4A00044777 /* SVGImageIntrinsicSizing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SVGImageIntrinsicSizing.h; sourceTree = "<group>"; };
 		3344077412D9BC4A00044778 /* SVGImageIntrinsicSizing.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SVGImageIntrinsicSizing.cpp; sourceTree = "<group>"; };
@@ -25244,7 +25244,6 @@
 				0854B00E1255E4E600B9CDD0 /* SVGInlineTextBox.cpp */,
 				0854B00F1255E4E600B9CDD0 /* SVGInlineTextBox.h */,
 				CDF747E5270F6966008FEEEC /* SVGInlineTextBoxInlines.h */,
-				3344077412D9BC4A00044234 /* SVGLayerTransformUpdater.h */,
 				436708AF12D9CA4B00044234 /* SVGMarkerData.h */,
 				BCAB56F42F01A4E50087F79C /* SVGPaintServerCache.h */,
 				BCAB56F52F01A4E50087F79C /* SVGPaintServerCacheInlines.h */,
@@ -25285,6 +25284,7 @@
 				0854B0121255E4E600B9CDD0 /* SVGTextQuery.cpp */,
 				0854B0131255E4E600B9CDD0 /* SVGTextQuery.h */,
 				3344077412D9BC4A00044551 /* SVGTransformComputation.h */,
+				3344077412D9BC4A00044234 /* SVGTransformLayoutScope.h */,
 				3344077412D9BC4A00A328F4 /* SVGVisitedRendererTracking.h */,
 			);
 			path = svg;
@@ -50180,7 +50180,6 @@
 				0854B01F1255E4E600B9CDD0 /* SVGInlineFlowBox.h in Headers */,
 				0854B0211255E4E600B9CDD0 /* SVGInlineTextBox.h in Headers */,
 				CDF747E6270F6966008FEEEC /* SVGInlineTextBoxInlines.h in Headers */,
-				334408C433F8CA4C10044234 /* SVGLayerTransformUpdater.h in Headers */,
 				7134496E146941B300720312 /* SVGLengthContext.h in Headers */,
 				B2227A360D00BF220071B782 /* SVGLengthList.h in Headers */,
 				7CCEBFC01DD8F6AB002C40B8 /* SVGLengthValue.h in Headers */,
@@ -50270,6 +50269,7 @@
 				B2227AD70D00BF220071B782 /* SVGTransform.h in Headers */,
 				334408C433F8CA4C10044551 /* SVGTransformComputation.h in Headers */,
 				B2227ADD0D00BF220071B782 /* SVGTransformDistance.h in Headers */,
+				334408C433F8CA4C10044234 /* SVGTransformLayoutScope.h in Headers */,
 				B2227ADF0D00BF220071B782 /* SVGTransformList.h in Headers */,
 				7CE58D581DD7D96D00128552 /* SVGTransformValue.h in Headers */,
 				B2227AE20D00BF220071B782 /* SVGTRefElement.h in Headers */,

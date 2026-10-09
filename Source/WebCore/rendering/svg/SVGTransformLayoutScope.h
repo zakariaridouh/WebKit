@@ -20,21 +20,22 @@
 #pragma once
 
 #include "RenderLayerModelObject.h"
-#include <wtf/WeakPtr.h>
+#include <wtf/CheckedRef.h>
 
 namespace WebCore {
 
-// FIXME: This class should be renamed, as well as 'updateLayerTransform', since LBSE uses it also for non-layered use-cases.
-class SVGLayerTransformUpdater {
-    WTF_MAKE_NONCOPYABLE(SVGLayerTransformUpdater);
+class SVGTransformLayoutScope {
+    WTF_MAKE_NONCOPYABLE(SVGTransformLayoutScope);
 public:
-    SVGLayerTransformUpdater(RenderLayerModelObject& renderer)
+    SVGTransformLayoutScope(RenderLayerModelObject& renderer)
         : m_renderer(renderer)
     {
-        if (m_renderer->hasLayer()) {
+        bool hasLayer = m_renderer->hasLayer();
+        if (hasLayer || m_renderer->transformReferenceBoxIsSVGViewport())
             m_transformReferenceBox = m_renderer->transformReferenceBoxRect();
+
+        if (hasLayer)
             m_layerTransform = m_renderer->layerTransform();
-        }
 
         // Always call updateLayerTransform(), even without a layer. SVG renderers
         // (e.g. RenderSVGViewportContainer) compute supplemental transforms (viewBox,
@@ -42,7 +43,7 @@ public:
         m_renderer->updateLayerTransform();
     }
 
-    ~SVGLayerTransformUpdater()
+    ~SVGTransformLayoutScope()
     {
         if (m_renderer->transformReferenceBoxRect() == m_transformReferenceBox)
             return;
@@ -50,6 +51,8 @@ public:
         m_renderer->updateLayerTransform();
     }
 
+    // FIXME: m_layerTransform points at the layer's own matrix, which updateLayerTransform() rewrites
+    // in place, so this never sees a change unless the layer gains or loses its transform.
     bool layerTransformChanged() const
     {
         auto* layerTransform = m_renderer->layerTransform();
@@ -63,8 +66,8 @@ public:
     }
 
 private:
-    SingleThreadWeakRef<RenderLayerModelObject> m_renderer;
-    FloatRect m_transformReferenceBox;
+    const CheckedRef<RenderLayerModelObject> m_renderer;
+    std::optional<FloatRect> m_transformReferenceBox;
     TransformationMatrix* m_layerTransform { nullptr };
 };
 
