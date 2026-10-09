@@ -2556,6 +2556,12 @@ function(WEBKIT_DEFINE_MACOS_RESOURCES)
     add_custom_target(WebKitCorePredictionModel ALL DEPENDS ${WebKit_RESOURCES_DIR}/corePrediction_model)
     add_dependencies(WebKit WebKitCorePredictionModel)
 
+    WEBKIT_COPY_FILES(WebKit_CopyLocalizedResources
+        DESTINATION ${WebKit_RESOURCES_DIR}/en.lproj
+        FILES ${WEBKIT_DIR}/en.lproj/InfoPlist.strings
+        FLATTENED NO_SYMLINK)
+    add_dependencies(WebKit WebKit_CopyLocalizedResources)
+
     file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/WebKit.framework/Versions/A/Frameworks)
     file(CREATE_LINK ../../../../libWebKitSwift.dylib
         ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/WebKit.framework/Versions/A/Frameworks/libWebKitSwift.dylib SYMBOLIC)
