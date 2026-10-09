@@ -1,14 +1,97 @@
+[ macOS ] Modules/cache/DOMCache.cpp
+[ macOS ] Modules/filesystem/WorkerFileSystemStorageConnection.cpp
+[ macOS ] Modules/indexeddb/server/UniqueIDBDatabase.cpp
+[ macOS ] Modules/mediastream/UserMediaRequest.cpp
+[ macOS ] Modules/permissions/Permissions.cpp
+[ macOS ] Modules/push-api/PushManager.cpp
+[ macOS ] Modules/storage/WorkerStorageConnection.cpp
+[ macOS ] accessibility/AXObjectCache.cpp
+[ macOS ] accessibility/AXObjectCacheInlines.h
+[ macOS ] accessibility/AXTableHelpers.cpp
+[ macOS ] accessibility/isolatedtree/AXIsolatedTree.cpp
+[ macOS ] bindings/js/InternalReadableStreamDefaultReader.cpp
+[ macOS ] bindings/js/InternalWritableStreamWriter.cpp
+[ macOS ] bindings/js/JSDOMConvertUnion.h
+[ macOS ] bindings/js/JSDOMWrapperCache.h
+[ macOS ] bindings/js/JSDeprecatedCSSOMValueCustom.cpp
+[ macOS ] crypto/algorithms/CryptoAlgorithmECDH.cpp
+[ macOS ] crypto/algorithms/CryptoAlgorithmX25519.cpp
+[ macOS ] css/CSSCursorImageValue.cpp
+[ macOS ] css/CSSFontFace.cpp
+[ macOS ] css/CSSPropertyInitialValues.cpp
+[ macOS ] css/CSSStyleProperties.cpp
+[ macOS ] css/CSSValue.cpp
+[ macOS ] css/MutableStyleProperties.cpp
+[ macOS ] css/ShorthandSerializer.cpp
+[ macOS ] css/StyleSheetContents.cpp
+[ macOS ] css/query/MediaQueryFeatures.cpp
+[ macOS ] css/typedom/CSSNumericValue.cpp
+[ macOS ] css/typedom/CSSStyleValueFactory.cpp
+[ macOS ] css/typedom/DeclaredStylePropertyMap.cpp
+[ macOS ] css/typedom/InlineStylePropertyMap.cpp
+[ macOS ] css/values/CSSValueAggregates.h
+[ macOS ] dom/DataTransfer.cpp
+[ macOS ] dom/Document.cpp
+[ macOS ] dom/Range.cpp
+[ macOS ] dom/WindowEventLoop.cpp
+[ macOS ] editing/ApplyStyleCommand.cpp
+[ macOS ] editing/CompositeEditCommand.cpp
+[ macOS ] editing/Editing.cpp
+[ macOS ] html/HTMLFormElement.cpp
+[ macOS ] html/HTMLMediaElement.cpp
+[ macOS ] html/HTMLSelectedContentElement.cpp
+[ macOS ] html/HTMLSummaryElement.cpp
+[ macOS ] html/HTMLTextFormControlElement.cpp
+[ macOS ] html/MediaElementSession.cpp
+[ macOS ] html/canvas/WebGL2RenderingContext.cpp
+[ macOS ] html/canvas/WebGLRenderingContextBase.cpp
+[ macOS ] html/track/TextTrackList.cpp
+[ macOS ] html/track/VTTCue.cpp
+[ macOS ] inspector/InspectorOverlay.cpp
+[ macOS ] inspector/agents/InspectorCSSAgent.cpp
+[ macOS ] inspector/agents/InspectorDOMStorageAgent.cpp
+[ macOS ] inspector/agents/InspectorIndexedDBAgent.cpp
+[ macOS ] inspector/agents/frame/FrameCSSAgent.cpp
+[ macOS ] inspector/agents/page/PageDOMDebuggerAgent.cpp
+[ macOS ] loader/archive/cf/LegacyWebArchive.cpp
+[ macOS ] mathml/MathMLSelectElement.cpp
+[ macOS ] page/EventHandler.cpp
+[ macOS ] page/ScreenOrientation.cpp
+[ macOS ] page/scrolling/ScrollLatchingController.cpp
+[ macOS ] page/scrolling/ScrollingTree.cpp
+[ macOS ] platform/audio/HRTFPanner.cpp
+[ macOS ] platform/graphics/GraphicsLayer.cpp
+[ macOS ] platform/graphics/Path.cpp
+[ macOS ] platform/graphics/ca/cocoa/PlatformCAFiltersCocoa.mm
+[ macOS ] rendering/RenderBoxModelObject.cpp
 rendering/RenderCounter.cpp
 rendering/RenderLayer.cpp
+[ macOS ] rendering/RenderLayerBacking.cpp
 rendering/RenderLayerBackingSVGAdditions.cpp
 rendering/RenderLayerCompositor.cpp
+[ macOS ] rendering/RenderLayerScrollableArea.cpp
+[ macOS ] rendering/RenderObject.cpp
+[ macOS ] rendering/RenderText.cpp
 rendering/RenderTreeAsText.cpp
+[ macOS ] rendering/svg/SVGTextLayoutAttributesBuilder.cpp
+[ macOS ] rendering/updating/RenderTreeUpdater.cpp
+[ macOS ] storage/StorageEventDispatcher.cpp
 style/ElementRuleCollector.cpp
 style/StyleBuilderCustom.h
 style/StyleDocumentScope.cpp
+[ macOS ] style/StyleInterpolation.cpp
 style/StyleInvalidationFunctions.h
+[ macOS ] style/StyleTreeResolver.cpp
 style/UserAgentStyle.cpp
 style/computed/StyleComputedStyleBase+SettersInlines.h
 style/computed/StyleComputedStyleBase.cpp
 style/computed/StyleComputedStyleProperties+SettersCustomInlines.h
-style/values/primitives/StyleLengthResolution.cpp
+[ macOS ] style/computed/data/StyleCustomPropertyData.cpp
+[ macOS ] style/values/anchor-position/StylePositionTryFallback.cpp
+[ macOS ] style/values/backgrounds/StyleFillLayers.h
+[ iOS ] style/values/primitives/StyleLengthResolution.cpp
+[ macOS ] style/values/scroll-animations/StyleScrollFunction.cpp
+[ macOS ] style/values/will-change/StyleWillChange.cpp
+[ macOS ] workers/service/SWClientConnection.cpp
+[ macOS ] workers/service/ServiceWorkerWindowClient.cpp
+[ macOS ] workers/service/context/SWContextManager.cpp

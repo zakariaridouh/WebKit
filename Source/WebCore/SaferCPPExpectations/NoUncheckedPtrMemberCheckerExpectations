@@ -4,6 +4,7 @@ css/SelectorFilter.h
 dom/CollectionIndexCache.h
 dom/Node.cpp
 dom/Node.h
+[ macOS ] dom/ShadowRoot.h
 layout/formattingContexts/inline/AbstractLineBuilder.h
 layout/formattingContexts/inline/InlineContentBreaker.h
 layout/formattingContexts/inline/InlineFormattingContext.h
@@ -14,6 +15,7 @@ layout/formattingContexts/inline/invalidation/InlineInvalidation.cpp
 layout/integration/LayoutIntegrationBoxTreeUpdater.h
 layout/integration/inline/LayoutIntegrationInlineContentBuilder.h
 layout/integration/inline/LayoutIntegrationInlineContentPainter.h
+[ macOS ] layout/layouttree/FormattingContextBoxIterator.h
 layout/layouttree/LayoutChildIterator.h
 layout/layouttree/LayoutContainingBlockChainIterator.h
 layout/layouttree/LayoutDescendantIterator.h

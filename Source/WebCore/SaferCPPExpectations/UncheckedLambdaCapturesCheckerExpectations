@@ -1,0 +1,5 @@
+[ macOS ] Modules/webaudio/AudioContext.cpp
+[ macOS ] dom/Document.cpp
+[ macOS ] rendering/BorderPainter.cpp
+[ macOS ] rendering/RenderGrid.cpp
+[ macOS ] rendering/RenderListBox.cpp

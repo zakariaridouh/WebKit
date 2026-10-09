@@ -1,8 +1,70 @@
+[ macOS ] Modules/WebGPU/GPUDevice.cpp
+[ macOS ] Modules/async-clipboard/ClipboardItemBindingsDataSource.cpp
+[ macOS ] Modules/cache/DOMCache.cpp
+[ macOS ] Modules/device-posture/DevicePosture.cpp
+[ macOS ] Modules/encryptedmedia/MediaKeySystemAccess.cpp
+[ macOS ] Modules/fetch/WindowOrWorkerGlobalScopeFetch.cpp
+[ macOS ] Modules/geolocation/Geolocation.cpp
+[ macOS ] Modules/indexeddb/IDBTransaction.cpp
+[ macOS ] Modules/indexeddb/server/SQLiteIDBCursor.cpp
+[ macOS ] Modules/mediacontrols/MediaControlsHost.cpp
+[ macOS ] Modules/mediarecorder/MediaRecorder.cpp
+[ macOS ] Modules/mediasession/MediaSession.cpp
+[ macOS ] Modules/mediasource/SourceBuffer.cpp
+[ macOS ] Modules/mediastream/CanvasCaptureMediaStreamTrack.cpp
+[ macOS ] Modules/mediastream/MediaStream.cpp
+[ macOS ] Modules/mediastream/RTCPeerConnection.cpp
+[ macOS ] Modules/mediastream/UserMediaRequest.cpp
+[ macOS ] Modules/model-element/HTMLModelElement.cpp
+[ macOS ] Modules/pictureinpicture/HTMLVideoElementPictureInPicture.cpp
+[ macOS ] Modules/remoteplayback/RemotePlayback.cpp
+[ macOS ] Modules/web-locks/WebLockManager.cpp
+[ macOS ] Modules/webaudio/AudioScheduledSourceNode.cpp
+[ macOS ] Modules/webaudio/AudioWorklet.cpp
+[ macOS ] Modules/webaudio/AudioWorkletNode.cpp
+[ macOS ] Modules/webaudio/BiquadDSPKernel.cpp
+[ macOS ] Modules/webaudio/DelayDSPKernel.cpp
+[ macOS ] Modules/webaudio/ScriptProcessorNode.cpp
+[ macOS ] Modules/webcodecs/WebCodecsVideoDecoder.cpp
+[ macOS ] Modules/webtransport/WebTransport.cpp
 StyleBuilderGenerated.cpp
 StyleExtractorGenerated.cpp
+[ macOS ] accessibility/AXCoreObject.cpp
+[ macOS ] accessibility/AXCrossProcessSearch.cpp
+[ macOS ] accessibility/AXGeometryManager.cpp
+[ macOS ] accessibility/AXObjectCache.cpp
+[ macOS ] accessibility/AXSearchManager.cpp
+[ macOS ] accessibility/AXTextMarker.cpp
+[ macOS ] accessibility/AccessibilityListBoxOption.cpp
+[ macOS ] accessibility/AccessibilityNodeObject.cpp
+[ macOS ] accessibility/AccessibilityObject.cpp
+[ macOS ] accessibility/AccessibilityRenderObject.cpp
+[ macOS ] accessibility/AccessibilityScrollView.cpp
+[ macOS ] accessibility/isolatedtree/AXIsolatedObject.cpp
+[ macOS ] accessibility/isolatedtree/AXIsolatedObject.h
+[ macOS ] accessibility/isolatedtree/AXIsolatedTree.cpp
+[ macOS ] animation/KeyframeEffect.cpp
+[ macOS ] animation/KeyframeEffectStack.cpp
+[ macOS ] animation/StyleOriginatedAnimation.cpp
+[ macOS ] animation/WebAnimation.cpp
+[ macOS ] bindings/js/JSCustomElementInterface.cpp
+[ macOS ] bindings/js/JSDOMGuardedObject.cpp
+[ macOS ] bindings/js/ScriptController.cpp
 css/CSSStyleProperties.cpp
+[ macOS ] css/FontFace.cpp
+[ macOS ] css/MediaQueryMatcher.cpp
+[ macOS ] css/PropertySetCSSDescriptors.cpp
 css/SelectorCheckerTestFunctions.h
+[ macOS ] css/parser/CSSParser.cpp
+[ macOS ] css/parser/SizesAttributeParser.cpp
+[ macOS ] css/query/ContainerQueryFeatures.cpp
+[ macOS ] css/query/MediaQueryEvaluator.cpp
+[ macOS ] css/query/MediaQueryFeatures.cpp
+[ macOS ] css/typedom/ComputedStylePropertyMapReadOnly.cpp
+[ macOS ] css/typedom/InlineStylePropertyMap.cpp
+[ macOS ] dom/ActiveDOMObject.cpp
 dom/Attr.cpp
+[ macOS ] dom/BroadcastChannel.cpp
 dom/CollectionIndexCacheInlines.h
 dom/ComposedTreeIterator.h
 dom/ContentVisibilityDocumentState.cpp
@@ -14,7 +76,11 @@ dom/DocumentFullscreen.cpp
 dom/Element.cpp
 dom/ElementInternals.cpp
 dom/ElementIteratorInlines.h
+[ macOS ] dom/ElementTextDirection.cpp
 dom/EventLoop.cpp
+[ macOS ] dom/EventPath.cpp
+[ macOS ] dom/EventSender.h
+[ macOS ] dom/ExtensionStyleSheets.cpp
 dom/IdTargetObserver.cpp
 dom/InlineStyleSheetOwner.cpp
 dom/LiveNodeListInlines.h
@@ -23,15 +89,59 @@ dom/MutationObserver.cpp
 dom/MutationObserverRegistration.cpp
 dom/NamedNodeMap.cpp
 dom/Node.cpp
-dom/NodeRareData.h
+[ iOS ] dom/NodeRareData.h
 dom/PendingScript.cpp
 dom/Position.cpp
+[ macOS ] dom/ProcessingInstruction.cpp
+[ macOS ] dom/PseudoElement.cpp
 dom/Range.cpp
 dom/ScriptElement.cpp
+[ macOS ] dom/ScriptExecutionContextInlines.h
+[ macOS ] dom/SelectorQuery.cpp
 dom/ShadowRoot.cpp
+[ macOS ] dom/StyledElement.cpp
 dom/TreeScopeOrderedMap.cpp
 dom/TypedElementDescendantIteratorInlines.h
 dom/ViewTransition.cpp
+[ macOS ] editing/Editor.cpp
+[ macOS ] editing/EditorCommand.cpp
+[ macOS ] editing/FrameSelection.cpp
+[ macOS ] editing/RenderedPosition.cpp
+[ macOS ] fileapi/Blob.cpp
+[ macOS ] history/CachedFrame.cpp
+[ macOS ] html/BaseDateAndTimeInputType.cpp
+[ macOS ] html/CachedHTMLCollectionInlines.h
+[ macOS ] html/DOMFormData.cpp
+[ macOS ] html/HTMLFormControlElement.cpp
+[ macOS ] html/HTMLFormElement.cpp
+[ macOS ] html/HTMLImageElement.cpp
+[ macOS ] html/HTMLInputElement.cpp
+[ macOS ] html/HTMLLinkElement.cpp
+[ macOS ] html/HTMLMediaElement.cpp
+[ macOS ] html/HTMLSelectElement.cpp
+[ macOS ] html/HTMLSlotElement.cpp
+[ macOS ] html/HTMLTextFormControlElement.cpp
+[ macOS ] html/MediaElementSession.cpp
+[ macOS ] html/SearchInputType.cpp
+[ macOS ] html/TextFieldInputType.cpp
+[ macOS ] html/ValidatedFormListedElement.cpp
+[ macOS ] html/canvas/CanvasRenderingContext2DBase.cpp
+[ macOS ] html/canvas/GPUBasedCanvasRenderingContext.cpp
+[ macOS ] html/canvas/WebGLProgram.cpp
+[ macOS ] html/parser/HTMLDocumentParser.cpp
+[ macOS ] html/shadow/MediaControlTextTrackContainerElement.cpp
+[ macOS ] html/shadow/TextControlInnerElements.cpp
+[ macOS ] inspector/InspectorFrontendAPIDispatcher.cpp
+[ macOS ] inspector/InspectorFrontendHost.cpp
+[ macOS ] inspector/agents/InspectorCSSAgent.cpp
+[ macOS ] inspector/agents/InspectorDOMAgent.cpp
+[ macOS ] inspector/agents/InspectorNetworkAgent.cpp
+[ macOS ] inspector/agents/frame/FrameCSSAgent.cpp
+[ macOS ] inspector/agents/frame/FrameDOMAgent.cpp
+[ macOS ] inspector/agents/frame/FrameDebuggerAgent.cpp
+[ macOS ] inspector/agents/frame/FrameRuntimeAgent.cpp
+[ macOS ] inspector/agents/page/PageDebuggerAgent.cpp
+[ macOS ] inspector/agents/page/PageRuntimeAgent.cpp
 layout/floats/FloatingContext.cpp
 layout/floats/PlacedFloats.cpp
 layout/formattingContexts/FormattingGeometry.cpp
@@ -57,14 +167,18 @@ layout/formattingContexts/inline/TextOnlySimpleLineBuilder.cpp
 layout/formattingContexts/inline/display/InlineDisplayContentBuilder.cpp
 layout/formattingContexts/inline/display/InlineDisplayLineBuilder.cpp
 layout/formattingContexts/inline/ruby/RubyFormattingContext.cpp
+[ macOS ] layout/formattingContexts/inline/text/TextUtil.cpp
 layout/formattingContexts/table/TableFormattingContext.cpp
 layout/formattingContexts/table/TableFormattingGeometry.cpp
+[ macOS ] layout/formattingContexts/table/TableFormattingQuirks.cpp
 layout/formattingContexts/table/TableGrid.cpp
 layout/formattingContexts/table/TableLayout.cpp
 layout/integration/LayoutIntegrationBoxGeometryUpdater.cpp
 layout/integration/LayoutIntegrationBoxTreeUpdater.cpp
 layout/integration/LayoutIntegrationFormattingContextLayout.cpp
+[ macOS ] layout/integration/flex/FlexIntegrationUtils.cpp
 layout/integration/flex/LayoutIntegrationFlexLayout.cpp
+[ macOS ] layout/integration/grid/LayoutIntegrationGridLayout.cpp
 layout/integration/inline/InlineIteratorBox.cpp
 layout/integration/inline/InlineIteratorBoxModernPath.h
 layout/integration/inline/InlineIteratorLineBox.cpp
@@ -79,7 +193,29 @@ layout/integration/inline/LineSelection.h
 layout/layouttree/FormattingContextBoxIterator.h
 layout/layouttree/LayoutContainingBlockChainIterator.h
 layout/layouttree/LayoutTreeBuilder.cpp
+[ macOS ] loader/DocumentLoader.cpp
+[ macOS ] loader/FrameLoader.cpp
+[ macOS ] loader/PolicyChecker.cpp
+[ macOS ] page/ElementTargetingController.cpp
+[ macOS ] page/EventHandler.cpp
+[ macOS ] page/IntelligenceTextEffectsSupport.cpp
 page/IntersectionObserver.cpp
+[ macOS ] page/LocalFrameView.cpp
+[ macOS ] page/LocalFrameViewLayoutContext.cpp
+[ macOS ] page/ResizeObserver.cpp
+[ macOS ] page/csp/ContentSecurityPolicyMediaListDirective.cpp
+[ macOS ] page/csp/ContentSecurityPolicyTrustedTypesDirective.cpp
+[ macOS ] page/mac/EventHandlerMac.mm
+[ macOS ] page/mac/ImageOverlayControllerMac.mm
+[ macOS ] page/text-extraction/TextExtraction.cpp
+[ macOS ] page/writing-tools/WritingToolsController.mm
+[ macOS ] platform/audio/MediaSessionManagerInterface.cpp
+[ macOS ] platform/cocoa/PlaybackSessionModelMediaElement.mm
+[ macOS ] platform/cocoa/VideoPresentationModelVideoElement.mm
+[ macOS ] platform/gamepad/cocoa/GameControllerGamepad.mm
+[ macOS ] platform/gamepad/cocoa/GameControllerGamepadProvider.mm
+[ macOS ] platform/mediastream/AudioTrackPrivateMediaStream.cpp
+[ macOS ] platform/mediastream/MediaStreamTrackPrivate.cpp
 [ macOS ] rendering/AccessibilityRegionContext.cpp
 rendering/AttachmentLayout.mm
 rendering/AutoTableLayout.cpp
@@ -92,6 +228,7 @@ rendering/CounterNode.cpp
 rendering/EllipsisBoxPainter.cpp
 rendering/FixedTableLayout.cpp
 rendering/FloatingObjects.cpp
+[ macOS ] rendering/GridLanesLayout.cpp
 rendering/GridTrackSizingAlgorithm.cpp
 rendering/HitTestResult.cpp
 rendering/ImageQualityController.cpp
@@ -101,6 +238,7 @@ rendering/LogicalSelectionOffsetCachesInlines.h
 rendering/MarkedText.cpp
 rendering/MarkedText.h
 rendering/MotionPath.cpp
+[ macOS ] rendering/OutlinePainter.cpp
 rendering/PositionedLayoutConstraints.cpp
 rendering/RegionContext.h
 rendering/RenderAttachment.cpp
@@ -124,6 +262,7 @@ rendering/RenderFragmentedFlow.cpp
 rendering/RenderFrameSet.cpp
 rendering/RenderGeometryMap.cpp
 rendering/RenderGrid.cpp
+[ macOS ] rendering/RenderHighlight.cpp
 rendering/RenderImage.cpp
 rendering/RenderImageResource.cpp
 rendering/RenderIterator.h
@@ -141,9 +280,11 @@ rendering/RenderListOutsideMarker.cpp
 rendering/RenderMenuList.cpp
 rendering/RenderMultiColumnFlow.cpp
 rendering/RenderMultiColumnSet.cpp
+[ macOS ] rendering/RenderMultiColumnSpannerPlaceholder.cpp
 rendering/RenderObject.cpp
 rendering/RenderReplaced.cpp
 rendering/RenderReplica.cpp
+[ macOS ] rendering/RenderSelection.cpp
 rendering/RenderSelectionGeometry.cpp
 rendering/RenderTable.cpp
 rendering/RenderTableCaption.cpp
@@ -162,6 +303,7 @@ rendering/RenderVTTCue.cpp
 rendering/RenderView.cpp
 rendering/RenderViewTransitionCapture.cpp
 rendering/RenderWidget.cpp
+[ macOS ] rendering/ScrollbarUpdateScope.cpp
 rendering/StyledMarkedText.cpp
 rendering/TextAutoSizing.cpp
 rendering/TextBoxPainter.cpp
@@ -191,6 +333,7 @@ rendering/svg/RenderSVGInline.cpp
 rendering/svg/RenderSVGInlineText.cpp
 rendering/svg/RenderSVGModelObject.cpp
 rendering/svg/RenderSVGResourceClipper.cpp
+[ macOS ] rendering/svg/RenderSVGResourceContainer.cpp
 rendering/svg/RenderSVGResourceFilterInlines.h
 rendering/svg/RenderSVGRoot.cpp
 rendering/svg/RenderSVGShape.cpp
@@ -198,6 +341,7 @@ rendering/svg/RenderSVGText.cpp
 rendering/svg/RenderSVGViewportContainer.cpp
 rendering/svg/SVGBoundingBoxComputation.cpp
 rendering/svg/SVGContainerLayout.cpp
+[ macOS ] rendering/svg/SVGRenderSupport.cpp
 rendering/svg/SVGRenderTreeAsText.cpp
 rendering/svg/SVGRenderingContext.cpp
 rendering/svg/SVGTextBoxPainter.cpp
@@ -211,6 +355,7 @@ rendering/svg/SVGVisitedRendererTracking.h
 rendering/svg/legacy/LegacyRenderSVGContainer.cpp
 rendering/svg/legacy/LegacyRenderSVGImage.cpp
 rendering/svg/legacy/LegacyRenderSVGModelObject.cpp
+[ macOS ] rendering/svg/legacy/LegacyRenderSVGResource.cpp
 rendering/svg/legacy/LegacyRenderSVGResourceClipper.cpp
 rendering/svg/legacy/LegacyRenderSVGResourceContainer.cpp
 rendering/svg/legacy/LegacyRenderSVGResourceFilter.cpp
@@ -237,6 +382,7 @@ rendering/updating/RenderTreeUpdaterGeneratedContent.cpp
 rendering/updating/RenderTreeUpdaterViewTransition.cpp
 style/AnchorPositionEvaluator.cpp
 style/AttributeChangeInvalidation.cpp
+[ macOS ] style/ChildChangeInvalidation.cpp
 style/ClassChangeInvalidation.cpp
 style/ElementRuleCollector.cpp
 style/InlineTextBoxStyle.cpp
@@ -254,13 +400,29 @@ style/StyleExtractor.cpp
 style/StyleExtractorCustom.h
 style/StyleInvalidationFunctions.h
 style/StyleInvalidator.cpp
+[ macOS ] style/StyleResolveForDocument.cpp
 style/StyleResolver.cpp
 style/StyleScope.cpp
+[ macOS ] style/StyleScopeRuleSets.cpp
+[ macOS ] style/StyleSubstitutionResolver.cpp
 style/StyleTreeResolver.cpp
 style/Styleable.cpp
 style/Styleable.h
 style/computed/StyleComputedStyle.cpp
 style/computed/StyleComputedStyleBase.cpp
+[ macOS ] style/computed/data/StyleFontData.cpp
 style/values/grid/StyleGridPositionsResolver.cpp
 style/values/images/kinds/StyleGradientImage.cpp
+[ macOS ] style/values/non-standard/StyleWebKitTextStrokeWidth.cpp
 style/values/primitives/StyleLengthResolution.cpp
+[ macOS ] svg/SVGFontFaceElement.cpp
+[ macOS ] svg/SVGLengthContext.cpp
+[ macOS ] testing/Internals.cpp
+[ macOS ] testing/MockGamepadProvider.cpp
+[ macOS ] workers/Worker.cpp
+[ macOS ] workers/service/ServiceWorkerGlobalScope.cpp
+[ macOS ] workers/service/background-fetch/BackgroundFetchManager.cpp
+[ macOS ] workers/service/background-fetch/BackgroundFetchRegistration.cpp
+[ macOS ] workers/service/server/SWRegistrationDatabase.cpp
+[ macOS ] xml/parser/XMLDocumentParser.cpp
+[ macOS ] xml/parser/XMLDocumentParserLibxml2.cpp
