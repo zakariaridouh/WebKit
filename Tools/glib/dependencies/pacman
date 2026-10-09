@@ -41,6 +41,7 @@ PACKAGES=(
     libsystemd
     libtasn1
     libtool
+    libva
     libwebp
     libxslt
     m4

@@ -41,6 +41,7 @@ PACKAGES=(
     libtasn1-devel
     libvorbis-devel
     libv4l-devel
+    libva-devel
     libvpx-devel
     libwebp-devel
     libxkbcommon-x11-devel
