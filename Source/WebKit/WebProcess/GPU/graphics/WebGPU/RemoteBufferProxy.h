@@ -29,7 +29,7 @@
 
 #include "RemoteDeviceProxy.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUBuffer.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebKit::WebGPU {
@@ -37,7 +37,7 @@ namespace WebKit::WebGPU {
 class ConvertToBackingContext;
 static constexpr size_t maxCrossProcessResourceCopySize = 16 * MB;
 
-class RemoteBufferProxy final : public ::WebGPU::Buffer {
+class RemoteBufferProxy final : public WebCore::WebGPU::Buffer {
     WTF_MAKE_TZONE_ALLOCATED(RemoteBufferProxy);
 public:
     static Ref<RemoteBufferProxy> create(RemoteDeviceProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier, bool mappedAtCreation)
@@ -50,18 +50,6 @@ public:
     RemoteDeviceProxy& parent() { return m_parent; }
     RemoteGPUProxy& root() { return m_parent->root(); }
 
-    void mapAsync(OptionSet<::WebGPU::MapMode>, uint64_t offset, std::optional<uint64_t> sizeForMap, CompletionHandler<void(bool)>&&) final;
-    void getMappedRange(uint64_t offset, std::optional<uint64_t>, NOESCAPE const Function<void(std::span<uint8_t>)>&) final;
-    std::span<uint8_t> getBufferContents() final;
-    void unmap() final;
-    void copyFrom(std::span<const uint8_t>, size_t offset) final;
-
-    void destroy() final;
-    void generateAValidationError() final;
-
-    void setLabel(String&&) final;
-    bool isValid() const final;
-
 private:
     friend class DowncastConvertToBackingContext;
 
@@ -71,6 +59,8 @@ private:
     RemoteBufferProxy(RemoteBufferProxy&&) = delete;
     RemoteBufferProxy& operator=(const RemoteBufferProxy&) = delete;
     RemoteBufferProxy& operator=(RemoteBufferProxy&&) = delete;
+
+    bool isRemoteBufferProxy() const final { return true; }
 
     WebGPUIdentifier backing() const { return m_backing; }
     
@@ -90,17 +80,27 @@ private:
         return protect(root().streamClientConnection())->sendWithAsyncReply(std::forward<T>(message), std::forward<C>(completionHandler), backing());
     }
 
+    void mapAsync(WebCore::WebGPU::MapModeFlags, WebCore::WebGPU::Size64 offset, std::optional<WebCore::WebGPU::Size64> sizeForMap, CompletionHandler<void(bool)>&&) final;
+    void getMappedRange(WebCore::WebGPU::Size64 offset, std::optional<WebCore::WebGPU::Size64>, NOESCAPE const Function<void(std::span<uint8_t>)>&) final;
+    std::span<uint8_t> getBufferContents() final;
+    void unmap() final;
+    void copyFrom(std::span<const uint8_t>, size_t offset) final;
+
+    void destroy() final;
+    void generateAValidationError() final;
+
+    void setLabelInternal(const String&) final;
+
     WebGPUIdentifier m_backing;
     const Ref<ConvertToBackingContext> m_convertToBackingContext;
     const Ref<RemoteDeviceProxy> m_parent;
-    OptionSet<::WebGPU::MapMode> m_mapModeFlags;
+    WebCore::WebGPU::MapModeFlags m_mapModeFlags;
 };
 
 } // namespace WebKit::WebGPU
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebGPU::RemoteBufferProxy)
-    // In the Web Process, every WebGPU::Buffer is a RemoteBufferProxy.
-    static bool isType(const ::WebGPU::Buffer&) { return true; }
+    static bool isType(const WebCore::WebGPU::Buffer& buffer) { return buffer.isRemoteBufferProxy(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GPU_PROCESS)

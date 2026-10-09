@@ -23,6 +23,9 @@
 header: "WebGPUComputePassTimestampWrites.h"
 
 #if ENABLE(GPU_PROCESS)
-header: "WebGPUComputePassTimestampWrites.h"
-using WebKit::WebGPU::ComputePassTimestampWrites = WebKit::WebGPU::RenderPassTimestampWrites
+[AdditionalEncoder=StreamConnectionEncoder, CustomHeader] struct WebKit::WebGPU::ComputePassTimestampWrites {
+    WebKit::WebGPUIdentifier querySet
+    WebCore::WebGPU::Size32 beginningOfPassWriteIndex
+    WebCore::WebGPU::Size32 endOfPassWriteIndex
+}
 #endif

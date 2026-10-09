@@ -48,11 +48,11 @@ using GPUVideoSource = Ref<HTMLVideoElement>;
 struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
 
 #if ENABLE(VIDEO)
-    static WebGPUVideoSourceIdentifier mediaIdentifierForSource(const GPUVideoSource& videoSource)
+    static WebGPU::VideoSourceIdentifier mediaIdentifierForSource(const GPUVideoSource& videoSource)
     {
 #if ENABLE(WEB_CODECS)
         return WTF::switchOn(videoSource,
-            [&](const Ref<HTMLVideoElement>& videoElement) -> WebGPUVideoSourceIdentifier {
+            [&](const Ref<HTMLVideoElement>& videoElement) -> WebGPU::VideoSourceIdentifier {
                 RefPtr player = videoElement->player();
                 // Player needs to run in the GPU process to use the accelerated path
                 if (player && player->isHostedInGPUProcess()) {
@@ -64,7 +64,7 @@ struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
                     result = player->videoFrameForCurrentTime();
                 return result;
             },
-            [&](const Ref<WebCodecsVideoFrame>& videoFrame) -> WebGPUVideoSourceIdentifier {
+            [&](const Ref<WebCodecsVideoFrame>& videoFrame) -> WebGPU::VideoSourceIdentifier {
                 return videoFrame->internalFrame();
             }
         );
@@ -113,7 +113,7 @@ struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
     }
 #endif
 
-    WebGPUExternalTextureDescriptor convertToBacking() const
+    WebGPU::ExternalTextureDescriptor convertToBacking() const
     {
         return {
             { label },

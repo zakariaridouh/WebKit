@@ -38,7 +38,7 @@
 namespace WebCore {
 
 struct GPUDeviceDescriptor : public GPUObjectDescriptorBase {
-    WebGPUDeviceDescriptor convertToBacking() const
+    WebGPU::DeviceDescriptor convertToBacking() const
     {
         // An entry whose value is explicitly undefined requests nothing, so drop it rather than
         // letting the backing layer reject it as an unsupported limit.

@@ -29,14 +29,17 @@
 
 #include "RemoteGPU.h"
 #include "StreamMessageReceiver.h"
-#include "WebGPUCommandBufferDescriptor.h"
 #include "WebGPUExtent3D.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUIntegralTypes.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore::WebGPU {
+class CommandEncoder;
+}
 
 namespace IPC {
 class Connection;
@@ -48,6 +51,7 @@ namespace WebKit {
 class GPUConnectionToWebProcess;
 
 namespace WebGPU {
+struct CommandBufferDescriptor;
 struct ComputePassDescriptor;
 struct ImageCopyBuffer;
 struct ImageCopyTexture;
@@ -58,7 +62,7 @@ struct RenderPassDescriptor;
 class RemoteCommandEncoder final : public IPC::StreamMessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteCommandEncoder);
 public:
-    static Ref<RemoteCommandEncoder> create(GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteGPU& gpu, ::WebGPU::CommandEncoder& commandEncoder, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, WebGPUIdentifier identifier)
+    static Ref<RemoteCommandEncoder> create(GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteGPU& gpu, WebCore::WebGPU::CommandEncoder& commandEncoder, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, WebGPUIdentifier identifier)
     {
         return adoptRef(*new RemoteCommandEncoder(gpuConnectionToWebProcess, gpu, commandEncoder, objectHeap, WTF::move(streamConnection), identifier));
     }
@@ -72,14 +76,14 @@ public:
 private:
     friend class WebGPU::ObjectHeap;
 
-    RemoteCommandEncoder(GPUConnectionToWebProcess&, RemoteGPU&, ::WebGPU::CommandEncoder&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, WebGPUIdentifier);
+    RemoteCommandEncoder(GPUConnectionToWebProcess&, RemoteGPU&, WebCore::WebGPU::CommandEncoder&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, WebGPUIdentifier);
 
     RemoteCommandEncoder(const RemoteCommandEncoder&) = delete;
     RemoteCommandEncoder(RemoteCommandEncoder&&) = delete;
     RemoteCommandEncoder& operator=(const RemoteCommandEncoder&) = delete;
     RemoteCommandEncoder& operator=(RemoteCommandEncoder&&) = delete;
 
-    ::WebGPU::CommandEncoder& backing() { return m_backing; }
+    WebCore::WebGPU::CommandEncoder& backing() { return m_backing; }
 
     void didReceiveStreamMessage(IPC::StreamServerConnection&, IPC::Decoder&) final;
 
@@ -88,10 +92,10 @@ private:
 
     void copyBufferToBuffer(
         WebGPUIdentifier source,
-        uint64_t sourceOffset,
+        WebCore::WebGPU::Size64 sourceOffset,
         WebGPUIdentifier destination,
-        uint64_t destinationOffset,
-        uint64_t);
+        WebCore::WebGPU::Size64 destinationOffset,
+        WebCore::WebGPU::Size64);
 
     void copyBufferToTexture(
         const WebGPU::ImageCopyBuffer& source,
@@ -110,28 +114,28 @@ private:
 
     void clearBuffer(
         WebGPUIdentifier buffer,
-        uint64_t offset = 0,
-        std::optional<uint64_t> = std::nullopt);
+        WebCore::WebGPU::Size64 offset = 0,
+        std::optional<WebCore::WebGPU::Size64> = std::nullopt);
 
     void pushDebugGroup(String&& groupLabel);
     void popDebugGroup();
     void insertDebugMarker(String&& markerLabel);
 
-    void writeTimestamp(WebGPUIdentifier, uint32_t queryIndex);
+    void writeTimestamp(WebGPUIdentifier, WebCore::WebGPU::Size32 queryIndex);
 
     void resolveQuerySet(
         WebGPUIdentifier,
-        uint32_t firstQuery,
-        uint32_t queryCount,
+        WebCore::WebGPU::Size32 firstQuery,
+        WebCore::WebGPU::Size32 queryCount,
         WebGPUIdentifier destination,
-        uint64_t destinationOffset);
+        WebCore::WebGPU::Size64 destinationOffset);
 
     void finish(const WebGPU::CommandBufferDescriptor&, WebGPUIdentifier);
 
     void setLabel(String&&);
     void destruct();
 
-    const Ref<::WebGPU::CommandEncoder> m_backing;
+    const Ref<WebCore::WebGPU::CommandEncoder> m_backing;
     WeakRef<WebGPU::ObjectHeap> m_objectHeap;
     const Ref<IPC::StreamServerConnection> m_streamConnection;
     WebGPUIdentifier m_identifier;

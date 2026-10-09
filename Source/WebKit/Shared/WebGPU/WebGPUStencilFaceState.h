@@ -27,16 +27,17 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUCompareFunction.h>
+#include <WebCore/WebGPUStencilOperation.h>
 #include <optional>
 
 namespace WebKit::WebGPU {
 
 struct StencilFaceState {
-    ::WebGPU::CompareFunction compare { ::WebGPU::CompareFunction::Always };
-    ::WebGPU::StencilOperation failOp { ::WebGPU::StencilOperation::Keep };
-    ::WebGPU::StencilOperation depthFailOp { ::WebGPU::StencilOperation::Keep };
-    ::WebGPU::StencilOperation passOp { ::WebGPU::StencilOperation::Keep };
+    WebCore::WebGPU::CompareFunction compare { WebCore::WebGPU::CompareFunction::Always };
+    WebCore::WebGPU::StencilOperation failOp { WebCore::WebGPU::StencilOperation::Keep };
+    WebCore::WebGPU::StencilOperation depthFailOp { WebCore::WebGPU::StencilOperation::Keep };
+    WebCore::WebGPU::StencilOperation passOp { WebCore::WebGPU::StencilOperation::Keep };
 };
 
 } // namespace WebKit::WebGPU

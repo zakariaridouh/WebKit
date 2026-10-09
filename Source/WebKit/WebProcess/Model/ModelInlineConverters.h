@@ -71,111 +71,111 @@ static WebModel::VertexSemantic toVertexSemantic(WKBridgeVertexSemantic semantic
     }
 }
 
-static ::WebGPU::VertexFormat toVertexFormat(MTLVertexFormat format)
+static WebCore::WebGPU::VertexFormat toVertexFormat(MTLVertexFormat format)
 {
     switch (format) {
     case MTLVertexFormatUChar:
-        return ::WebGPU::VertexFormat::Uint8;
+        return WebCore::WebGPU::VertexFormat::Uint8;
     case MTLVertexFormatUChar2:
-        return ::WebGPU::VertexFormat::Uint8x2;
+        return WebCore::WebGPU::VertexFormat::Uint8x2;
     case MTLVertexFormatUChar4:
-        return ::WebGPU::VertexFormat::Uint8x4;
+        return WebCore::WebGPU::VertexFormat::Uint8x4;
     case MTLVertexFormatChar:
-        return ::WebGPU::VertexFormat::Sint8;
+        return WebCore::WebGPU::VertexFormat::Sint8;
     case MTLVertexFormatChar2:
-        return ::WebGPU::VertexFormat::Sint8x2;
+        return WebCore::WebGPU::VertexFormat::Sint8x2;
     case MTLVertexFormatChar4:
-        return ::WebGPU::VertexFormat::Sint8x4;
+        return WebCore::WebGPU::VertexFormat::Sint8x4;
     case MTLVertexFormatUCharNormalized:
-        return ::WebGPU::VertexFormat::Unorm8;
+        return WebCore::WebGPU::VertexFormat::Unorm8;
     case MTLVertexFormatUChar2Normalized:
-        return ::WebGPU::VertexFormat::Unorm8x2;
+        return WebCore::WebGPU::VertexFormat::Unorm8x2;
     case MTLVertexFormatUChar4Normalized:
-        return ::WebGPU::VertexFormat::Unorm8x4;
+        return WebCore::WebGPU::VertexFormat::Unorm8x4;
     case MTLVertexFormatCharNormalized:
-        return ::WebGPU::VertexFormat::Snorm8;
+        return WebCore::WebGPU::VertexFormat::Snorm8;
     case MTLVertexFormatChar2Normalized:
-        return ::WebGPU::VertexFormat::Snorm8x2;
+        return WebCore::WebGPU::VertexFormat::Snorm8x2;
     case MTLVertexFormatChar4Normalized:
-        return ::WebGPU::VertexFormat::Snorm8x4;
+        return WebCore::WebGPU::VertexFormat::Snorm8x4;
     case MTLVertexFormatUShort:
-        return ::WebGPU::VertexFormat::Uint16;
+        return WebCore::WebGPU::VertexFormat::Uint16;
     case MTLVertexFormatUShort2:
-        return ::WebGPU::VertexFormat::Uint16x2;
+        return WebCore::WebGPU::VertexFormat::Uint16x2;
     case MTLVertexFormatUShort4:
-        return ::WebGPU::VertexFormat::Uint16x4;
+        return WebCore::WebGPU::VertexFormat::Uint16x4;
     case MTLVertexFormatShort:
-        return ::WebGPU::VertexFormat::Sint16;
+        return WebCore::WebGPU::VertexFormat::Sint16;
     case MTLVertexFormatShort2:
-        return ::WebGPU::VertexFormat::Sint16x2;
+        return WebCore::WebGPU::VertexFormat::Sint16x2;
     case MTLVertexFormatShort4:
-        return ::WebGPU::VertexFormat::Sint16x4;
+        return WebCore::WebGPU::VertexFormat::Sint16x4;
     case MTLVertexFormatUShortNormalized:
-        return ::WebGPU::VertexFormat::Unorm16;
+        return WebCore::WebGPU::VertexFormat::Unorm16;
     case MTLVertexFormatUShort2Normalized:
-        return ::WebGPU::VertexFormat::Unorm16x2;
+        return WebCore::WebGPU::VertexFormat::Unorm16x2;
     case MTLVertexFormatUShort4Normalized:
-        return ::WebGPU::VertexFormat::Unorm16x4;
+        return WebCore::WebGPU::VertexFormat::Unorm16x4;
     case MTLVertexFormatShortNormalized:
-        return ::WebGPU::VertexFormat::Snorm16;
+        return WebCore::WebGPU::VertexFormat::Snorm16;
     case MTLVertexFormatShort2Normalized:
-        return ::WebGPU::VertexFormat::Snorm16x2;
+        return WebCore::WebGPU::VertexFormat::Snorm16x2;
     case MTLVertexFormatShort4Normalized:
-        return ::WebGPU::VertexFormat::Snorm16x4;
+        return WebCore::WebGPU::VertexFormat::Snorm16x4;
     case MTLVertexFormatHalf:
-        return ::WebGPU::VertexFormat::Float16;
+        return WebCore::WebGPU::VertexFormat::Float16;
     case MTLVertexFormatHalf2:
-        return ::WebGPU::VertexFormat::Float16x2;
+        return WebCore::WebGPU::VertexFormat::Float16x2;
     case MTLVertexFormatHalf4:
-        return ::WebGPU::VertexFormat::Float16x4;
+        return WebCore::WebGPU::VertexFormat::Float16x4;
     case MTLVertexFormatFloat:
-        return ::WebGPU::VertexFormat::Float32;
+        return WebCore::WebGPU::VertexFormat::Float32;
     case MTLVertexFormatFloat2:
-        return ::WebGPU::VertexFormat::Float32x2;
+        return WebCore::WebGPU::VertexFormat::Float32x2;
     case MTLVertexFormatFloat3:
-        return ::WebGPU::VertexFormat::Float32x3;
+        return WebCore::WebGPU::VertexFormat::Float32x3;
     case MTLVertexFormatFloat4:
-        return ::WebGPU::VertexFormat::Float32x4;
+        return WebCore::WebGPU::VertexFormat::Float32x4;
     case MTLVertexFormatUInt:
-        return ::WebGPU::VertexFormat::Uint32;
+        return WebCore::WebGPU::VertexFormat::Uint32;
     case MTLVertexFormatUInt2:
-        return ::WebGPU::VertexFormat::Uint32x2;
+        return WebCore::WebGPU::VertexFormat::Uint32x2;
     case MTLVertexFormatUInt3:
-        return ::WebGPU::VertexFormat::Uint32x3;
+        return WebCore::WebGPU::VertexFormat::Uint32x3;
     case MTLVertexFormatUInt4:
-        return ::WebGPU::VertexFormat::Uint32x4;
+        return WebCore::WebGPU::VertexFormat::Uint32x4;
     case MTLVertexFormatInt:
-        return ::WebGPU::VertexFormat::Sint32;
+        return WebCore::WebGPU::VertexFormat::Sint32;
     case MTLVertexFormatInt2:
-        return ::WebGPU::VertexFormat::Sint32x2;
+        return WebCore::WebGPU::VertexFormat::Sint32x2;
     case MTLVertexFormatInt3:
-        return ::WebGPU::VertexFormat::Sint32x3;
+        return WebCore::WebGPU::VertexFormat::Sint32x3;
     case MTLVertexFormatInt4:
-        return ::WebGPU::VertexFormat::Sint32x4;
+        return WebCore::WebGPU::VertexFormat::Sint32x4;
     case MTLVertexFormatInt1010102Normalized:
-        return ::WebGPU::VertexFormat::Snorm1010102;
+        return WebCore::WebGPU::VertexFormat::Snorm1010102;
     case MTLVertexFormatUInt1010102Normalized:
-        return ::WebGPU::VertexFormat::Unorm1010102;
+        return WebCore::WebGPU::VertexFormat::Unorm1010102;
     case MTLVertexFormatUChar4Normalized_BGRA:
-        return ::WebGPU::VertexFormat::Unorm8x4Bgra;
+        return WebCore::WebGPU::VertexFormat::Unorm8x4Bgra;
     default:
         RELEASE_ASSERT_NOT_REACHED("%s - USD file is corrupt", __PRETTY_FUNCTION__);
     }
 }
 
-static ::WebGPU::PrimitiveTopology toPrimitiveTopology(MTLPrimitiveType topology)
+static WebCore::WebGPU::PrimitiveTopology toPrimitiveTopology(MTLPrimitiveType topology)
 {
     switch (topology) {
     case MTLPrimitiveTypePoint:
-        return ::WebGPU::PrimitiveTopology::PointList;
+        return WebCore::WebGPU::PrimitiveTopology::PointList;
     case MTLPrimitiveTypeLine:
-        return ::WebGPU::PrimitiveTopology::LineList;
+        return WebCore::WebGPU::PrimitiveTopology::LineList;
     case MTLPrimitiveTypeLineStrip:
-        return ::WebGPU::PrimitiveTopology::LineStrip;
+        return WebCore::WebGPU::PrimitiveTopology::LineStrip;
     case MTLPrimitiveTypeTriangle:
-        return ::WebGPU::PrimitiveTopology::TriangleList;
+        return WebCore::WebGPU::PrimitiveTopology::TriangleList;
     case MTLPrimitiveTypeTriangleStrip:
-        return ::WebGPU::PrimitiveTopology::TriangleStrip;
+        return WebCore::WebGPU::PrimitiveTopology::TriangleStrip;
     default:
         RELEASE_ASSERT_NOT_REACHED("%s - USD file is corrupt", __PRETTY_FUNCTION__);
     }
@@ -211,241 +211,241 @@ static WebModel::VertexStepFunction toStepFunction(MTLVertexStepFunction stepFun
     }
 }
 
-static ::WebGPU::TextureViewDimension toTextureViewDimension(MTLTextureType textureType)
+static WebCore::WebGPU::TextureViewDimension toTextureViewDimension(MTLTextureType textureType)
 {
     switch (textureType) {
     case MTLTextureType1D:
-        return ::WebGPU::TextureViewDimension::_1d;
+        return WebCore::WebGPU::TextureViewDimension::_1d;
     case MTLTextureType2D:
-        return ::WebGPU::TextureViewDimension::_2d;
+        return WebCore::WebGPU::TextureViewDimension::_2d;
     case MTLTextureType2DArray:
-        return ::WebGPU::TextureViewDimension::_2dArray;
+        return WebCore::WebGPU::TextureViewDimension::_2dArray;
     case MTLTextureTypeCube:
-        return ::WebGPU::TextureViewDimension::Cube;
+        return WebCore::WebGPU::TextureViewDimension::Cube;
     case MTLTextureTypeCubeArray:
-        return ::WebGPU::TextureViewDimension::CubeArray;
+        return WebCore::WebGPU::TextureViewDimension::CubeArray;
     case MTLTextureType3D:
-        return ::WebGPU::TextureViewDimension::_3d;
+        return WebCore::WebGPU::TextureViewDimension::_3d;
     default:
         RELEASE_ASSERT_NOT_REACHED("%s - USD file is corrupt", __PRETTY_FUNCTION__);
     }
 }
 
-static ::WebGPU::TextureFormat toTextureFormat(MTLPixelFormat pixelFormat)
+static WebCore::WebGPU::TextureFormat toTextureFormat(MTLPixelFormat pixelFormat)
 {
     switch (pixelFormat) {
     case MTLPixelFormatR8Unorm:
-        return ::WebGPU::TextureFormat::R8unorm;
+        return WebCore::WebGPU::TextureFormat::R8unorm;
     case MTLPixelFormatR8Snorm:
-        return ::WebGPU::TextureFormat::R8snorm;
+        return WebCore::WebGPU::TextureFormat::R8snorm;
     case MTLPixelFormatR8Uint:
-        return ::WebGPU::TextureFormat::R8uint;
+        return WebCore::WebGPU::TextureFormat::R8uint;
     case MTLPixelFormatR8Sint:
-        return ::WebGPU::TextureFormat::R8sint;
+        return WebCore::WebGPU::TextureFormat::R8sint;
     case MTLPixelFormatR16Uint:
-        return ::WebGPU::TextureFormat::R16uint;
+        return WebCore::WebGPU::TextureFormat::R16uint;
     case MTLPixelFormatR16Sint:
-        return ::WebGPU::TextureFormat::R16sint;
+        return WebCore::WebGPU::TextureFormat::R16sint;
     case MTLPixelFormatR16Float:
-        return ::WebGPU::TextureFormat::R16float;
+        return WebCore::WebGPU::TextureFormat::R16float;
     case MTLPixelFormatRG8Unorm:
-        return ::WebGPU::TextureFormat::Rg8unorm;
+        return WebCore::WebGPU::TextureFormat::Rg8unorm;
     case MTLPixelFormatRG8Snorm:
-        return ::WebGPU::TextureFormat::Rg8snorm;
+        return WebCore::WebGPU::TextureFormat::Rg8snorm;
     case MTLPixelFormatRG8Uint:
-        return ::WebGPU::TextureFormat::Rg8uint;
+        return WebCore::WebGPU::TextureFormat::Rg8uint;
     case MTLPixelFormatRG8Sint:
-        return ::WebGPU::TextureFormat::Rg8sint;
+        return WebCore::WebGPU::TextureFormat::Rg8sint;
     case MTLPixelFormatR32Float:
-        return ::WebGPU::TextureFormat::R32float;
+        return WebCore::WebGPU::TextureFormat::R32float;
     case MTLPixelFormatR32Uint:
-        return ::WebGPU::TextureFormat::R32uint;
+        return WebCore::WebGPU::TextureFormat::R32uint;
     case MTLPixelFormatR32Sint:
-        return ::WebGPU::TextureFormat::R32sint;
+        return WebCore::WebGPU::TextureFormat::R32sint;
     case MTLPixelFormatRG16Uint:
-        return ::WebGPU::TextureFormat::Rg16uint;
+        return WebCore::WebGPU::TextureFormat::Rg16uint;
     case MTLPixelFormatRG16Sint:
-        return ::WebGPU::TextureFormat::Rg16sint;
+        return WebCore::WebGPU::TextureFormat::Rg16sint;
     case MTLPixelFormatRG16Float:
-        return ::WebGPU::TextureFormat::Rg16float;
+        return WebCore::WebGPU::TextureFormat::Rg16float;
     case MTLPixelFormatRGBA8Unorm:
-        return ::WebGPU::TextureFormat::Rgba8unorm;
+        return WebCore::WebGPU::TextureFormat::Rgba8unorm;
     case MTLPixelFormatRGBA8Unorm_sRGB:
-        return ::WebGPU::TextureFormat::Rgba8unormSRGB;
+        return WebCore::WebGPU::TextureFormat::Rgba8unormSRGB;
     case MTLPixelFormatRGBA8Snorm:
-        return ::WebGPU::TextureFormat::Rgba8snorm;
+        return WebCore::WebGPU::TextureFormat::Rgba8snorm;
     case MTLPixelFormatRGBA8Uint:
-        return ::WebGPU::TextureFormat::Rgba8uint;
+        return WebCore::WebGPU::TextureFormat::Rgba8uint;
     case MTLPixelFormatRGBA8Sint:
-        return ::WebGPU::TextureFormat::Rgba8sint;
+        return WebCore::WebGPU::TextureFormat::Rgba8sint;
     case MTLPixelFormatBGRA8Unorm:
-        return ::WebGPU::TextureFormat::Bgra8unorm;
+        return WebCore::WebGPU::TextureFormat::Bgra8unorm;
     case MTLPixelFormatBGRA8Unorm_sRGB:
-        return ::WebGPU::TextureFormat::Bgra8unormSRGB;
+        return WebCore::WebGPU::TextureFormat::Bgra8unormSRGB;
     case MTLPixelFormatRGB10A2Unorm:
-        return ::WebGPU::TextureFormat::Rgb10a2unorm;
+        return WebCore::WebGPU::TextureFormat::Rgb10a2unorm;
     case MTLPixelFormatRG11B10Float:
-        return ::WebGPU::TextureFormat::Rg11b10ufloat;
+        return WebCore::WebGPU::TextureFormat::Rg11b10ufloat;
     case MTLPixelFormatRGB9E5Float:
-        return ::WebGPU::TextureFormat::Rgb9e5ufloat;
+        return WebCore::WebGPU::TextureFormat::Rgb9e5ufloat;
     case MTLPixelFormatRGB10A2Uint:
-        return ::WebGPU::TextureFormat::Rgb10a2uint;
+        return WebCore::WebGPU::TextureFormat::Rgb10a2uint;
     case MTLPixelFormatRG32Float:
-        return ::WebGPU::TextureFormat::Rg32float;
+        return WebCore::WebGPU::TextureFormat::Rg32float;
     case MTLPixelFormatRG32Uint:
-        return ::WebGPU::TextureFormat::Rg32uint;
+        return WebCore::WebGPU::TextureFormat::Rg32uint;
     case MTLPixelFormatRG32Sint:
-        return ::WebGPU::TextureFormat::Rg32sint;
+        return WebCore::WebGPU::TextureFormat::Rg32sint;
     case MTLPixelFormatRGBA16Uint:
-        return ::WebGPU::TextureFormat::Rgba16uint;
+        return WebCore::WebGPU::TextureFormat::Rgba16uint;
     case MTLPixelFormatRGBA16Sint:
-        return ::WebGPU::TextureFormat::Rgba16sint;
+        return WebCore::WebGPU::TextureFormat::Rgba16sint;
     case MTLPixelFormatRGBA16Float:
-        return ::WebGPU::TextureFormat::Rgba16float;
+        return WebCore::WebGPU::TextureFormat::Rgba16float;
     case MTLPixelFormatRGBA32Float:
-        return ::WebGPU::TextureFormat::Rgba32float;
+        return WebCore::WebGPU::TextureFormat::Rgba32float;
     case MTLPixelFormatRGBA32Uint:
-        return ::WebGPU::TextureFormat::Rgba32uint;
+        return WebCore::WebGPU::TextureFormat::Rgba32uint;
     case MTLPixelFormatRGBA32Sint:
-        return ::WebGPU::TextureFormat::Rgba32sint;
+        return WebCore::WebGPU::TextureFormat::Rgba32sint;
     case MTLPixelFormatStencil8:
-        return ::WebGPU::TextureFormat::Stencil8;
+        return WebCore::WebGPU::TextureFormat::Stencil8;
     case MTLPixelFormatDepth16Unorm:
-        return ::WebGPU::TextureFormat::Depth16unorm;
+        return WebCore::WebGPU::TextureFormat::Depth16unorm;
     case MTLPixelFormatDepth32Float:
-        return ::WebGPU::TextureFormat::Depth24plus;
+        return WebCore::WebGPU::TextureFormat::Depth24plus;
     case MTLPixelFormatDepth32Float_Stencil8:
-        return ::WebGPU::TextureFormat::Depth24plusStencil8;
+        return WebCore::WebGPU::TextureFormat::Depth24plusStencil8;
     case MTLPixelFormatETC2_RGB8:
-        return ::WebGPU::TextureFormat::Etc2Rgb8unorm;
+        return WebCore::WebGPU::TextureFormat::Etc2Rgb8unorm;
     case MTLPixelFormatETC2_RGB8_sRGB:
-        return ::WebGPU::TextureFormat::Etc2Rgb8unormSRGB;
+        return WebCore::WebGPU::TextureFormat::Etc2Rgb8unormSRGB;
     case MTLPixelFormatETC2_RGB8A1:
-        return ::WebGPU::TextureFormat::Etc2Rgb8a1unorm;
+        return WebCore::WebGPU::TextureFormat::Etc2Rgb8a1unorm;
     case MTLPixelFormatETC2_RGB8A1_sRGB:
-        return ::WebGPU::TextureFormat::Etc2Rgb8a1unormSRGB;
+        return WebCore::WebGPU::TextureFormat::Etc2Rgb8a1unormSRGB;
     case MTLPixelFormatEAC_RGBA8:
-        return ::WebGPU::TextureFormat::Etc2Rgba8unorm;
+        return WebCore::WebGPU::TextureFormat::Etc2Rgba8unorm;
     case MTLPixelFormatEAC_RGBA8_sRGB:
-        return ::WebGPU::TextureFormat::Etc2Rgba8unormSRGB;
+        return WebCore::WebGPU::TextureFormat::Etc2Rgba8unormSRGB;
     case MTLPixelFormatEAC_R11Unorm:
-        return ::WebGPU::TextureFormat::EacR11unorm;
+        return WebCore::WebGPU::TextureFormat::EacR11unorm;
     case MTLPixelFormatEAC_R11Snorm:
-        return ::WebGPU::TextureFormat::EacR11snorm;
+        return WebCore::WebGPU::TextureFormat::EacR11snorm;
     case MTLPixelFormatEAC_RG11Unorm:
-        return ::WebGPU::TextureFormat::EacRg11unorm;
+        return WebCore::WebGPU::TextureFormat::EacRg11unorm;
     case MTLPixelFormatEAC_RG11Snorm:
-        return ::WebGPU::TextureFormat::EacRg11snorm;
+        return WebCore::WebGPU::TextureFormat::EacRg11snorm;
     case MTLPixelFormatASTC_4x4_LDR:
-        return ::WebGPU::TextureFormat::Astc4x4Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc4x4Unorm;
     case MTLPixelFormatASTC_4x4_sRGB:
-        return ::WebGPU::TextureFormat::Astc4x4UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc4x4UnormSRGB;
     case MTLPixelFormatASTC_5x4_LDR:
-        return ::WebGPU::TextureFormat::Astc5x4Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc5x4Unorm;
     case MTLPixelFormatASTC_5x4_sRGB:
-        return ::WebGPU::TextureFormat::Astc5x4UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc5x4UnormSRGB;
     case MTLPixelFormatASTC_5x5_LDR:
-        return ::WebGPU::TextureFormat::Astc5x5Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc5x5Unorm;
     case MTLPixelFormatASTC_5x5_sRGB:
-        return ::WebGPU::TextureFormat::Astc5x5UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc5x5UnormSRGB;
     case MTLPixelFormatASTC_6x5_LDR:
-        return ::WebGPU::TextureFormat::Astc6x5Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc6x5Unorm;
     case MTLPixelFormatASTC_6x5_sRGB:
-        return ::WebGPU::TextureFormat::Astc6x5UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc6x5UnormSRGB;
     case MTLPixelFormatASTC_6x6_LDR:
-        return ::WebGPU::TextureFormat::Astc6x6Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc6x6Unorm;
     case MTLPixelFormatASTC_6x6_sRGB:
-        return ::WebGPU::TextureFormat::Astc6x6UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc6x6UnormSRGB;
     case MTLPixelFormatASTC_8x5_LDR:
-        return ::WebGPU::TextureFormat::Astc8x5Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc8x5Unorm;
     case MTLPixelFormatASTC_8x5_sRGB:
-        return ::WebGPU::TextureFormat::Astc8x5UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc8x5UnormSRGB;
     case MTLPixelFormatASTC_8x6_LDR:
-        return ::WebGPU::TextureFormat::Astc8x6Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc8x6Unorm;
     case MTLPixelFormatASTC_8x6_sRGB:
-        return ::WebGPU::TextureFormat::Astc8x6UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc8x6UnormSRGB;
     case MTLPixelFormatASTC_8x8_LDR:
-        return ::WebGPU::TextureFormat::Astc8x8Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc8x8Unorm;
     case MTLPixelFormatASTC_8x8_sRGB:
-        return ::WebGPU::TextureFormat::Astc8x8UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc8x8UnormSRGB;
     case MTLPixelFormatASTC_10x5_LDR:
-        return ::WebGPU::TextureFormat::Astc10x5Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc10x5Unorm;
     case MTLPixelFormatASTC_10x5_sRGB:
-        return ::WebGPU::TextureFormat::Astc10x5UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc10x5UnormSRGB;
     case MTLPixelFormatASTC_10x6_LDR:
-        return ::WebGPU::TextureFormat::Astc10x6Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc10x6Unorm;
     case MTLPixelFormatASTC_10x6_sRGB:
-        return ::WebGPU::TextureFormat::Astc10x6UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc10x6UnormSRGB;
     case MTLPixelFormatASTC_10x8_LDR:
-        return ::WebGPU::TextureFormat::Astc10x8Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc10x8Unorm;
     case MTLPixelFormatASTC_10x8_sRGB:
-        return ::WebGPU::TextureFormat::Astc10x8UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc10x8UnormSRGB;
     case MTLPixelFormatASTC_10x10_LDR:
-        return ::WebGPU::TextureFormat::Astc10x10Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc10x10Unorm;
     case MTLPixelFormatASTC_10x10_sRGB:
-        return ::WebGPU::TextureFormat::Astc10x10UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc10x10UnormSRGB;
     case MTLPixelFormatASTC_12x10_LDR:
-        return ::WebGPU::TextureFormat::Astc12x10Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc12x10Unorm;
     case MTLPixelFormatASTC_12x10_sRGB:
-        return ::WebGPU::TextureFormat::Astc12x10UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc12x10UnormSRGB;
     case MTLPixelFormatASTC_12x12_LDR:
-        return ::WebGPU::TextureFormat::Astc12x12Unorm;
+        return WebCore::WebGPU::TextureFormat::Astc12x12Unorm;
     case MTLPixelFormatASTC_12x12_sRGB:
-        return ::WebGPU::TextureFormat::Astc12x12UnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Astc12x12UnormSRGB;
 #if !PLATFORM(WATCHOS)
     case MTLPixelFormatBC1_RGBA:
-        return ::WebGPU::TextureFormat::Bc1RgbaUnorm;
+        return WebCore::WebGPU::TextureFormat::Bc1RgbaUnorm;
     case MTLPixelFormatBC1_RGBA_sRGB:
-        return ::WebGPU::TextureFormat::Bc1RgbaUnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Bc1RgbaUnormSRGB;
     case MTLPixelFormatBC2_RGBA:
-        return ::WebGPU::TextureFormat::Bc2RgbaUnorm;
+        return WebCore::WebGPU::TextureFormat::Bc2RgbaUnorm;
     case MTLPixelFormatBC2_RGBA_sRGB:
-        return ::WebGPU::TextureFormat::Bc2RgbaUnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Bc2RgbaUnormSRGB;
     case MTLPixelFormatBC3_RGBA:
-        return ::WebGPU::TextureFormat::Bc3RgbaUnorm;
+        return WebCore::WebGPU::TextureFormat::Bc3RgbaUnorm;
     case MTLPixelFormatBC3_RGBA_sRGB:
-        return ::WebGPU::TextureFormat::Bc3RgbaUnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Bc3RgbaUnormSRGB;
     case MTLPixelFormatBC4_RUnorm:
-        return ::WebGPU::TextureFormat::Bc4RUnorm;
+        return WebCore::WebGPU::TextureFormat::Bc4RUnorm;
     case MTLPixelFormatBC4_RSnorm:
-        return ::WebGPU::TextureFormat::Bc4RSnorm;
+        return WebCore::WebGPU::TextureFormat::Bc4RSnorm;
     case MTLPixelFormatBC5_RGUnorm:
-        return ::WebGPU::TextureFormat::Bc5RgUnorm;
+        return WebCore::WebGPU::TextureFormat::Bc5RgUnorm;
     case MTLPixelFormatBC5_RGSnorm:
-        return ::WebGPU::TextureFormat::Bc5RgSnorm;
+        return WebCore::WebGPU::TextureFormat::Bc5RgSnorm;
     case MTLPixelFormatBC6H_RGBUfloat:
-        return ::WebGPU::TextureFormat::Bc6hRgbUfloat;
+        return WebCore::WebGPU::TextureFormat::Bc6hRgbUfloat;
     case MTLPixelFormatBC6H_RGBFloat:
-        return ::WebGPU::TextureFormat::Bc6hRgbFloat;
+        return WebCore::WebGPU::TextureFormat::Bc6hRgbFloat;
     case MTLPixelFormatBC7_RGBAUnorm:
-        return ::WebGPU::TextureFormat::Bc7RgbaUnorm;
+        return WebCore::WebGPU::TextureFormat::Bc7RgbaUnorm;
     case MTLPixelFormatBC7_RGBAUnorm_sRGB:
-        return ::WebGPU::TextureFormat::Bc7RgbaUnormSRGB;
+        return WebCore::WebGPU::TextureFormat::Bc7RgbaUnormSRGB;
 #endif
-    case MTLPixelFormatR16Unorm:   return ::WebGPU::TextureFormat::R16unorm;
-    case MTLPixelFormatR16Snorm:   return ::WebGPU::TextureFormat::R16snorm;
-    case MTLPixelFormatRG16Unorm:  return ::WebGPU::TextureFormat::Rg16unorm;
-    case MTLPixelFormatRG16Snorm:  return ::WebGPU::TextureFormat::Rg16snorm;
-    case MTLPixelFormatRGBA16Unorm: return ::WebGPU::TextureFormat::Rgba16unorm;
-    case MTLPixelFormatRGBA16Snorm: return ::WebGPU::TextureFormat::Rgba16snorm;
+    case MTLPixelFormatR16Unorm:   return WebCore::WebGPU::TextureFormat::R16unorm;
+    case MTLPixelFormatR16Snorm:   return WebCore::WebGPU::TextureFormat::R16snorm;
+    case MTLPixelFormatRG16Unorm:  return WebCore::WebGPU::TextureFormat::Rg16unorm;
+    case MTLPixelFormatRG16Snorm:  return WebCore::WebGPU::TextureFormat::Rg16snorm;
+    case MTLPixelFormatRGBA16Unorm: return WebCore::WebGPU::TextureFormat::Rgba16unorm;
+    case MTLPixelFormatRGBA16Snorm: return WebCore::WebGPU::TextureFormat::Rgba16snorm;
     case MTLPixelFormatInvalid:
     default:
         RELEASE_ASSERT_NOT_REACHED("%s - USD file is corrupt", __PRETTY_FUNCTION__);
     }
 }
 
-static OptionSet<::WebGPU::TextureUsage> toTextureUsageFlags(MTLTextureUsage textureUsage)
+static WebCore::WebGPU::TextureUsageFlags toTextureUsageFlags(MTLTextureUsage textureUsage)
 {
-    OptionSet<::WebGPU::TextureUsage> flags;
+    WebCore::WebGPU::TextureUsageFlags flags;
 
     if (textureUsage & MTLTextureUsageShaderRead)
-        flags.add(::WebGPU::TextureUsage::TextureBinding);
+        flags.add(WebCore::WebGPU::TextureUsage::TextureBinding);
     if (textureUsage & MTLTextureUsageShaderWrite)
-        flags.add(::WebGPU::TextureUsage::StorageBinding);
+        flags.add(WebCore::WebGPU::TextureUsage::StorageBinding);
     if (textureUsage & MTLTextureUsageRenderTarget)
-        flags.add(::WebGPU::TextureUsage::RenderAttachment);
+        flags.add(WebCore::WebGPU::TextureUsage::RenderAttachment);
     if (textureUsage & MTLTextureUsagePixelFormatView)
-        flags.add(::WebGPU::TextureUsage::CopySource);
+        flags.add(WebCore::WebGPU::TextureUsage::CopySource);
 
     return flags;
 }

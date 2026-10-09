@@ -31,9 +31,8 @@
 
 namespace WebCore {
 
-GPUTextureView::GPUTextureView(Ref<WebGPU::TextureView>&& backing, String&& label, const GPUTexture& texture)
+GPUTextureView::GPUTextureView(Ref<WebGPU::TextureView>&& backing, const GPUTexture& texture)
     : m_backing(WTF::move(backing))
-    , m_label(WTF::move(label))
     , m_device(texture.device())
     , m_isCanvasBacking(texture.isCanvasBacking())
 {
@@ -52,12 +51,11 @@ GPUDevice* GPUTextureView::device() const
 
 String GPUTextureView::label() const
 {
-    return m_label;
+    return m_backing->label();
 }
 
 void GPUTextureView::setLabel(String&& label)
 {
-    m_label = label;
     m_backing->setLabel(WTF::move(label));
 }
 

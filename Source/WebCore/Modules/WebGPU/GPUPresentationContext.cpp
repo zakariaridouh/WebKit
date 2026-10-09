@@ -48,19 +48,11 @@ bool GPUPresentationContext::configure(const GPUCanvasConfiguration& canvasConfi
         canvasConfiguration.viewFormats
     };
 
-    auto configuration = canvasConfiguration.convertToBacking(reportValidationErrors);
-    m_backing->configure({
-        .device = configuration.device,
-        .format = configuration.format,
-        .usage = configuration.usage,
-        .viewFormats = configuration.viewFormats.span(),
-        .colorSpace = convertToWebGPU(configuration.colorSpace),
-        .toneMappingMode = configuration.toneMappingMode,
-        .compositingAlphaMode = configuration.compositingAlphaMode,
-        .reportValidationErrors = configuration.reportValidationErrors,
-        .width = width,
-        .height = height,
-    });
+    if (!m_backing->configure(canvasConfiguration.convertToBacking(reportValidationErrors))) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
     return true;
 }
 
@@ -84,7 +76,7 @@ void GPUPresentationContext::present(uint32_t frameIndex, bool presentBacking)
 {
     m_currentTexture = nullptr;
     if (presentBacking)
-        m_backing->present(frameIndex);
+        m_backing->present(frameIndex, presentBacking);
 }
 
 } // namespace WebCore

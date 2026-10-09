@@ -26,13 +26,13 @@
 #pragma once
 
 #include "GPUIntegralTypes.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUMultisampleState.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 struct GPUMultisampleState {
-    ::WebGPU::MultisampleState convertToBacking() const
+    WebGPU::MultisampleState convertToBacking() const
     {
         return {
             count,

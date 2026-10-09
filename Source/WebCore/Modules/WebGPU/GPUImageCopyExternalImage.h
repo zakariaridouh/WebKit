@@ -55,7 +55,7 @@ struct GPUImageCopyExternalImage {
         Ref<HTMLCanvasElement>
     >;
 
-    WebGPUExternalImageSource convertToBacking(RefPtr<ImageBuffer>&& imageBuffer = nullptr, bool premultipliedAlpha = true, std::optional<WebGPUVideoSourceIdentifier>&& videoSource = std::nullopt) const
+    WebGPU::ImageCopyExternalImage convertToBacking(RefPtr<ImageBuffer>&& imageBuffer = nullptr, bool premultipliedAlpha = true, std::optional<WebGPU::VideoSourceIdentifier>&& videoSource = std::nullopt) const
     {
         return {
             origin ? std::optional { WebCore::convertToBacking(*origin) } : std::nullopt,

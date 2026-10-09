@@ -28,7 +28,6 @@
 #include "IDLTypes.h"
 #include "JSDOMSetLike.h"
 #include "WebGPUSupportedFeatures.h"
-#include <WebCore/WebGPUCppAPI.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -37,24 +36,23 @@ namespace WebCore {
 
 class GPUSupportedFeatures : public RefCounted<GPUSupportedFeatures> {
 public:
-    static Ref<GPUSupportedFeatures> create(Ref<WebGPUSupportedFeatures>&& backing)
+    static Ref<GPUSupportedFeatures> create(Ref<WebGPU::SupportedFeatures>&& backing)
     {
         return adoptRef(*new GPUSupportedFeatures(WTF::move(backing)));
     }
-    static Ref<GPUSupportedFeatures> create(const Vector<::WebGPU::FeatureName>&);
 
     void initializeSetLike(DOMSetAdapter&) const;
 
-    WebGPUSupportedFeatures& backing() { return m_backing; }
-    const WebGPUSupportedFeatures& backing() const { return m_backing; }
+    WebGPU::SupportedFeatures& backing() { return m_backing; }
+    const WebGPU::SupportedFeatures& backing() const { return m_backing; }
 
 private:
-    GPUSupportedFeatures(Ref<WebGPUSupportedFeatures>&& backing)
+    GPUSupportedFeatures(Ref<WebGPU::SupportedFeatures>&& backing)
         : m_backing(WTF::move(backing))
     {
     }
 
-    const Ref<WebGPUSupportedFeatures> m_backing;
+    const Ref<WebGPU::SupportedFeatures> m_backing;
 };
 
 }

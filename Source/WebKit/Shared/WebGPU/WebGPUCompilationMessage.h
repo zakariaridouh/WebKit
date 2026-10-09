@@ -27,11 +27,21 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUCompilationMessageType.h>
+#include <cstdint>
+#include <optional>
+#include <wtf/text/WTFString.h>
 
 namespace WebKit::WebGPU {
 
-using CompilationMessage = ::WebGPU::CompilationMessage;
+struct CompilationMessage {
+    String message;
+    WebCore::WebGPU::CompilationMessageType type { WebCore::WebGPU::CompilationMessageType::Error };
+    uint64_t lineNum { 0 };
+    uint64_t linePos { 0 };
+    uint64_t offset { 0 };
+    uint64_t length { 0 };
+};
 
 } // namespace WebKit::WebGPU
 

@@ -22,7 +22,7 @@
 
 #if ENABLE(GPU_PROCESS)
 [AdditionalEncoder=StreamConnectionEncoder] struct WebKit::WebGPU::ImageCopyTextureTagged : WebKit::WebGPU::ImageCopyTexture {
-    WebCore::PredefinedColorSpace colorSpace;
+    WebCore::WebGPU::PredefinedColorSpace colorSpace;
     bool premultipliedAlpha;
 };
 #endif

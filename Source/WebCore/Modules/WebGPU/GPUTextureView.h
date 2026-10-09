@@ -26,7 +26,7 @@
 #pragma once
 
 #include "EventTarget.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUTextureView.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
@@ -39,16 +39,16 @@ class GPUTexture;
 
 class GPUTextureView : public RefCountedAndCanMakeWeakPtr<GPUTextureView> {
 public:
-    static Ref<GPUTextureView> create(Ref<::WebGPU::TextureView>&& backing, String&& label, const GPUTexture& texture)
+    static Ref<GPUTextureView> create(Ref<WebGPU::TextureView>&& backing, const GPUTexture& texture)
     {
-        return adoptRef(*new GPUTextureView(WTF::move(backing), WTF::move(label), texture));
+        return adoptRef(*new GPUTextureView(WTF::move(backing), texture));
     }
 
     String NODELETE label() const;
     void setLabel(String&&);
 
-    ::WebGPU::TextureView& backing() { return m_backing; }
-    const ::WebGPU::TextureView& backing() const { return m_backing; }
+    WebGPU::TextureView& backing() { return m_backing; }
+    const WebGPU::TextureView& backing() const { return m_backing; }
     bool isCanvasBacking() const { return m_isCanvasBacking; }
 
     GPUDevice* device() const;
@@ -56,10 +56,9 @@ public:
     bool hasActiveInspectorCanvasCallTracer() const;
 
 private:
-    GPUTextureView(Ref<::WebGPU::TextureView>&&, String&& label, const GPUTexture&);
+    GPUTextureView(Ref<WebGPU::TextureView>&&, const GPUTexture&);
 
-    const Ref<::WebGPU::TextureView> m_backing;
-    String m_label;
+    const Ref<WebGPU::TextureView> m_backing;
     WeakPtr<GPUDevice, WeakPtrImplWithEventTargetData> m_device;
     const bool m_isCanvasBacking;
 };

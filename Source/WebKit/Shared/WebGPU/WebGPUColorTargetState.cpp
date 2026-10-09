@@ -34,7 +34,7 @@
 
 namespace WebKit::WebGPU {
 
-std::optional<ColorTargetState> ConvertToBackingContext::convertToBacking(const ::WebGPU::ColorTargetState& colorTargetState)
+std::optional<ColorTargetState> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::ColorTargetState& colorTargetState)
 {
     std::optional<BlendState> blend;
     if (colorTargetState.blend) {
@@ -43,23 +43,19 @@ std::optional<ColorTargetState> ConvertToBackingContext::convertToBacking(const 
             return std::nullopt;
     }
 
-    return { { colorTargetState.format, WTF::move(blend), colorTargetState.writeMask.toRaw() } };
+    return { { colorTargetState.format, WTF::move(blend), colorTargetState.writeMask } };
 }
 
-std::optional<::WebGPU::ColorTargetState> ConvertFromBackingContext::convertFromBacking(const ColorTargetState& colorTargetState)
+std::optional<WebCore::WebGPU::ColorTargetState> ConvertFromBackingContext::convertFromBacking(const ColorTargetState& colorTargetState)
 {
-    std::optional<::WebGPU::BlendState> blend;
+    std::optional<WebCore::WebGPU::BlendState> blend;
     if (colorTargetState.blend) {
         blend = convertFromBacking(*colorTargetState.blend);
         if (!blend)
             return std::nullopt;
     }
 
-    auto writeMask = OptionSet<::WebGPU::ColorWrite>::fromRaw(colorTargetState.writeMask & WebCore::webGPUColorWriteMaskAll);
-    // A bit that is not a color channel is carried along, so that the pipeline rejects the mask.
-    if (colorTargetState.writeMask & ~WebCore::webGPUColorWriteMaskAll)
-        writeMask.add(::WebGPU::ColorWrite::Invalid);
-    return { { colorTargetState.format, WTF::move(blend), writeMask } };
+    return { { colorTargetState.format, WTF::move(blend), colorTargetState.writeMask } };
 }
 
 } // namespace WebKit

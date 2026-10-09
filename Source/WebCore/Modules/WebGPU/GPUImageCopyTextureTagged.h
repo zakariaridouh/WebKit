@@ -32,10 +32,15 @@
 namespace WebCore {
 
 struct GPUImageCopyTextureTagged : public GPUImageCopyTexture {
-    WebGPUImageCopyTextureTagged convertToBacking() const
+    WebGPU::ImageCopyTextureTagged convertToBacking() const
     {
         return {
-            GPUImageCopyTexture::convertToBacking(),
+            {
+                texture->backing(),
+                mipLevel,
+                origin ? std::optional { WebCore::convertToBacking(*origin) } : std::nullopt,
+                WebCore::convertToBacking(aspect),
+            },
             colorSpace,
             premultipliedAlpha,
         };

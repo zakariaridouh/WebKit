@@ -27,11 +27,18 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUObjectDescriptorBase.h"
+#include <WebCore/WebGPUBufferUsage.h>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <optional>
 
 namespace WebKit::WebGPU {
 
-using BufferDescriptor = ::WebGPU::BufferDescriptor;
+struct BufferDescriptor : public ObjectDescriptorBase {
+    WebCore::WebGPU::Size64 size { 0 };
+    WebCore::WebGPU::BufferUsageFlags usage;
+    bool mappedAtCreation { false };
+};
 
 } // namespace WebKit::WebGPU
 

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUPowerPreference.h"
 #include <cstdint>
 
 namespace WebCore {
@@ -35,13 +35,13 @@ enum class GPUPowerPreference : uint8_t {
     HighPerformance,
 };
 
-inline ::WebGPU::PowerPreference convertToBacking(GPUPowerPreference powerPreference)
+inline WebGPU::PowerPreference convertToBacking(GPUPowerPreference powerPreference)
 {
     switch (powerPreference) {
     case GPUPowerPreference::LowPower:
-        return ::WebGPU::PowerPreference::LowPower;
+        return WebGPU::PowerPreference::LowPower;
     case GPUPowerPreference::HighPerformance:
-        return ::WebGPU::PowerPreference::HighPerformance;
+        return WebGPU::PowerPreference::HighPerformance;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }

@@ -37,7 +37,6 @@ class ColorSpace;
 class GraphicsContextGL;
 class ImageBuffer;
 class SerializedImageBuffer;
-class WebGPUIntegration;
 
 struct ImageBufferTransferHandle;
 
@@ -46,6 +45,10 @@ struct GraphicsContextGLAttributes;
 struct ImageBufferFormat;
 enum class RenderingMode : uint8_t;
 enum class RenderingPurpose : uint8_t;
+
+namespace WebGPU {
+class GPU;
+}
 
 class GraphicsClient {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(GraphicsClient);
@@ -66,7 +69,7 @@ public:
     virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const = 0;
 #endif
 #if HAVE(WEBGPU_IMPLEMENTATION)
-    virtual RefPtr<WebCore::WebGPUIntegration> createGPUForWebGPU() const = 0;
+    virtual RefPtr<WebCore::WebGPU::GPU> createGPUForWebGPU() const = 0;
 #endif
 
 private:

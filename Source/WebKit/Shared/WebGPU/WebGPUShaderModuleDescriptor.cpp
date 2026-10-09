@@ -34,25 +34,40 @@
 
 namespace WebKit::WebGPU {
 
-std::optional<ShaderModuleDescriptor> ConvertToBackingContext::convertToBacking(const ::WebGPU::ShaderModuleDescriptor& shaderModuleDescriptor)
+std::optional<ShaderModuleDescriptor> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::ShaderModuleDescriptor& shaderModuleDescriptor)
 {
-    auto hints = WTF::map(shaderModuleDescriptor.hints, [&](auto& hint) {
-        return makeKeyValuePair(hint.entryPoint, ShaderModuleCompilationHint { convertToBacking(hint.layout.get()) });
-    });
-    return { { { shaderModuleDescriptor.label }, shaderModuleDescriptor.code, WTF::move(hints) } };
-}
+    auto base = convertToBacking(static_cast<const WebCore::WebGPU::ObjectDescriptorBase&>(shaderModuleDescriptor));
+    if (!base)
+        return std::nullopt;
 
-std::optional<::WebGPU::ShaderModuleDescriptor> ConvertFromBackingContext::convertFromBacking(const ShaderModuleDescriptor& shaderModuleDescriptor, Vector<::WebGPU::ShaderModuleCompilationHint>& hintsStorage)
-{
-    hintsStorage.reserveInitialCapacity(shaderModuleDescriptor.hints.size());
+    Vector<KeyValuePair<String, ShaderModuleCompilationHint>> hints;
+    hints.reserveInitialCapacity(shaderModuleDescriptor.hints.size());
     for (const auto& hint : shaderModuleDescriptor.hints) {
-        RefPtr pipelineLayout = convertPipelineLayoutFromBacking(hint.value.pipelineLayout);
-        if (!pipelineLayout)
+        auto value = convertToBacking(hint.value);
+        if (!value)
             return std::nullopt;
-        hintsStorage.append({ .entryPoint = hint.key, .layout = pipelineLayout.releaseNonNull() });
+        hints.append(makeKeyValuePair(hint.key, WTF::move(*value)));
     }
 
-    return { { shaderModuleDescriptor.label, shaderModuleDescriptor.code, hintsStorage.span() } };
+    return { { WTF::move(*base), shaderModuleDescriptor.code, WTF::move(hints) } };
+}
+
+std::optional<WebCore::WebGPU::ShaderModuleDescriptor> ConvertFromBackingContext::convertFromBacking(const ShaderModuleDescriptor& shaderModuleDescriptor)
+{
+    auto base = convertFromBacking(static_cast<const ObjectDescriptorBase&>(shaderModuleDescriptor));
+    if (!base)
+        return std::nullopt;
+
+    Vector<KeyValuePair<String, WebCore::WebGPU::ShaderModuleCompilationHint>> hints;
+    hints.reserveInitialCapacity(shaderModuleDescriptor.hints.size());
+    for (const auto& hint : shaderModuleDescriptor.hints) {
+        auto value = convertFromBacking(hint.value);
+        if (!value)
+            return std::nullopt;
+        hints.append(makeKeyValuePair(hint.key, WTF::move(*value)));
+    }
+
+    return { { WTF::move(*base), shaderModuleDescriptor.code, WTF::move(hints) } };
 }
 
 } // namespace WebKit

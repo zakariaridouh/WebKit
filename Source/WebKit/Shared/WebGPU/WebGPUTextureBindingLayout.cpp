@@ -30,11 +30,11 @@
 
 #include "WebGPUConvertFromBackingContext.h"
 #include "WebGPUConvertToBackingContext.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUTextureBindingLayout.h>
 
 namespace WebKit::WebGPU {
 
-std::optional<TextureBindingLayout> ConvertToBackingContext::convertToBacking(const ::WebGPU::TextureBindingLayout& textureBindingLayout)
+std::optional<TextureBindingLayout> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::TextureBindingLayout& textureBindingLayout)
 {
     return { TextureBindingLayout {
         .sampleType = textureBindingLayout.sampleType,
@@ -43,9 +43,9 @@ std::optional<TextureBindingLayout> ConvertToBackingContext::convertToBacking(co
     } };
 }
 
-std::optional<::WebGPU::TextureBindingLayout> ConvertFromBackingContext::convertFromBacking(const TextureBindingLayout& textureBindingLayout)
+std::optional<WebCore::WebGPU::TextureBindingLayout> ConvertFromBackingContext::convertFromBacking(const TextureBindingLayout& textureBindingLayout)
 {
-    return { ::WebGPU::TextureBindingLayout {
+    return { WebCore::WebGPU::TextureBindingLayout {
         .sampleType = textureBindingLayout.sampleType,
         .viewDimension = textureBindingLayout.viewDimension,
         .multisampled = textureBindingLayout.multisampled

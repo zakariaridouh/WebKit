@@ -33,7 +33,7 @@
 namespace WebCore {
 
 struct GPUShaderModuleCompilationHint {
-    WebGPUShaderModuleCompilationHint convertToBacking(const Ref<GPUPipelineLayout>& autoLayout) const
+    WebGPU::ShaderModuleCompilationHint convertToBacking(const Ref<GPUPipelineLayout>& autoLayout) const
     {
         return {
             convertPipelineLayoutToBacking(layout, autoLayout)

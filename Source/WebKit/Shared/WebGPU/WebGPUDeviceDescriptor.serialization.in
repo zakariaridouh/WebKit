@@ -22,7 +22,7 @@
 
 #if ENABLE(GPU_PROCESS)
 [AdditionalEncoder=StreamConnectionEncoder] struct WebKit::WebGPU::DeviceDescriptor : WebKit::WebGPU::ObjectDescriptorBase {
-    Vector<::WebGPU::FeatureName> requiredFeatures;
-    std::optional<WebKit::WebGPU::SupportedLimits> requiredLimits;
+    Vector<WebCore::WebGPU::FeatureName> requiredFeatures;
+    Vector<KeyValuePair<String, uint64_t>> requiredLimits;
 };
 #endif

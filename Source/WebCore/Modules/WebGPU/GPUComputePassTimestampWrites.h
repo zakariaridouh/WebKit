@@ -27,31 +27,28 @@
 
 #include "GPUIntegralTypes.h"
 #include "GPUQuerySet.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUComputePassTimestampWrites.h"
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-// The query set index that stands for a missing one.
-constexpr uint32_t webGPUQuerySetIndexUndefined = 0xffffffff;
-
 struct GPUComputePassTimestampWrites {
-    ::WebGPU::PassTimestampWrites convertToBacking() const
+    WebGPU::ComputePassTimestampWrites convertToBacking() const
     {
         return {
-            .querySet = querySet->backing(),
-            .beginningOfPassWriteIndex = beginningOfPassWriteIndex,
-            .endOfPassWriteIndex = endOfPassWriteIndex,
+            querySet->backing(),
+            beginningOfPassWriteIndex.value_or(WebGPU::kQuerySetIndexUndefined),
+            endOfPassWriteIndex.value_or(WebGPU::kQuerySetIndexUndefined),
         };
     }
 
     Ref<JSON::Object> toJSON() const;
 
     Ref<GPUQuerySet> querySet;
-    std::optional<GPUSize32> beginningOfPassWriteIndex { webGPUQuerySetIndexUndefined };
-    std::optional<GPUSize32> endOfPassWriteIndex { webGPUQuerySetIndexUndefined };
+    std::optional<GPUSize32> beginningOfPassWriteIndex { WebGPU::kQuerySetIndexUndefined };
+    std::optional<GPUSize32> endOfPassWriteIndex { WebGPU::kQuerySetIndexUndefined };
 };
 
 }

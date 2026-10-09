@@ -28,16 +28,20 @@
 #if ENABLE(WEBXR_LAYERS) && ENABLE(WEBGPU)
 
 #include "GPUTextureFormat.h"
+#include "WebGPUXRBinding.h"
 #include "WebXRSession.h"
 #include "XREye.h"
 #include "XRGPUProjectionLayerInit.h"
-#include <WebCore/WebGPUCppAPI.h>
 
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
+
+namespace WebGPU {
+class XRBinding;
+}
 
 enum class GPUTextureFormat : uint8_t;
 
@@ -90,7 +94,7 @@ private:
 
     ExceptionOr<Ref<XRGPUSubImage>> getSubImage(XRProjectionLayer&, XREye);
 
-    const RefPtr<::WebGPU::XRBinding> m_backing;
+    const RefPtr<WebGPU::XRBinding> m_backing;
     const RefPtr<WebXRSession> m_session;
     std::optional<XRGPUProjectionLayerInit> m_init;
     const Ref<GPUDevice> m_device;

@@ -29,41 +29,53 @@
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
 #include "ProcessIdentity.h"
+#include "WebGPUDowncastConvertToBackingContext.h"
 #include "WebGPUImpl.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUPtr.h"
+#include <WebGPU/WebGPUExt.h>
+#include <wtf/BlockPtr.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/darwin/WeakLinking.h>
 
-namespace WebGPU {
-WTF_WEAK_LINK_FORCE_IMPORT(createInstance);
-}
+WTF_WEAK_LINK_FORCE_IMPORT(wgpuCreateInstance);
 #endif
 
-namespace WebCore {
+namespace WebCore::WebGPU {
 
-RefPtr<WebGPUIntegration> createWebGPUIntegration(WebGPUScheduleWorkFunction&& scheduleWorkFunction, const ProcessIdentity* webProcessIdentity)
+RefPtr<GPU> create(ScheduleWorkFunction&& scheduleWorkFunction, const WebCore::ProcessIdentity* webProcessIdentity)
 {
 #if !HAVE(TASK_IDENTITY_TOKEN)
     UNUSED_PARAM(webProcessIdentity);
 #endif
-    ::WebGPU::InstanceDescriptor descriptor {
-        .scheduleWork = WTF::move(scheduleWorkFunction),
+    auto scheduleWorkBlock = makeBlockPtr([scheduleWorkFunction = WTF::move(scheduleWorkFunction)](WGPUWorkItem workItem)
+    {
+        scheduleWorkFunction(Function<void()>(makeBlockPtr(WTF::move(workItem))));
+    });
+
+    WGPUInstanceCocoaDescriptor cocoaDescriptor = {
+        .chain = { nullptr, static_cast<WGPUSType>(WGPUSTypeExtended_InstanceCocoaDescriptor) },
+        .scheduleWorkBlock = scheduleWorkBlock.get(),
 #if HAVE(TASK_IDENTITY_TOKEN)
-        .webProcessResourceOwner = webProcessIdentity ? std::optional { webProcessIdentity->taskId() } : std::nullopt,
-#elif PLATFORM(COCOA)
-        .webProcessResourceOwner = std::nullopt,
+        .webProcessResourceOwner = webProcessIdentity ? &webProcessIdentity->taskId() : nullptr,
+#else
+        .webProcessResourceOwner = nullptr,
 #endif
     };
 
-    if (!&::WebGPU::createInstance)
+    WGPUInstanceDescriptor descriptor = {
+        .nextInChain = &cocoaDescriptor.chain,
+    };
+
+    if (!&wgpuCreateInstance)
         return nullptr;
-    RefPtr instance = ::WebGPU::createInstance(WTF::move(descriptor));
+    auto instance = adoptWebGPU(wgpuCreateInstance(&descriptor));
     if (!instance)
         return nullptr;
-    return WebGPUIntegrationImpl::create(instance.releaseNonNull());
+    auto convertToBackingContext = DowncastConvertToBackingContext::create();
+    return GPUImpl::create(WTF::move(instance), convertToBackingContext);
 }
 
-} // namespace WebCore
+} // namespace WebCore::WebGPU
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

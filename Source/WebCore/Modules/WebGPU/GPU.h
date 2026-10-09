@@ -48,7 +48,7 @@ struct GPURequestAdapterOptions;
 
 class GPU : public RefCounted<GPU> {
 public:
-    static Ref<GPU> create(Ref<WebGPUIntegration>&& backing)
+    static Ref<GPU> create(Ref<WebGPU::GPU>&& backing)
     {
         return adoptRef(*new GPU(WTF::move(backing)));
     }
@@ -65,14 +65,14 @@ public:
     RefPtr<GPUCompositorIntegration> createCompositorIntegration();
 
     void paintToCanvas(NativeImage&, const IntSize&, GraphicsContext&);
-    const WebGPUIntegration& backing() const { return m_backing; }
-    WebGPUIntegration& backing() { return m_backing; }
+    const WebGPU::GPU& backing() const { return m_backing; }
+    WebGPU::GPU& backing() { return m_backing; }
 
 private:
-    GPU(Ref<WebGPUIntegration>&&);
+    GPU(Ref<WebGPU::GPU>&&);
 
     struct PendingRequestAdapterArguments;
-    const Ref<WebGPUIntegration> m_backing;
+    const Ref<WebGPU::GPU> m_backing;
     const Ref<WGSLLanguageFeatures> m_wgslLanguageFeatures;
 };
 

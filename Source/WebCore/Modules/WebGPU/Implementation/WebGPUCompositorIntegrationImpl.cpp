@@ -28,26 +28,30 @@
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
+#include "WebGPUConvertToBackingContext.h"
 #include "WebGPUDevice.h"
+#include "WebGPUQueue.h"
+#include "WebGPUTextureFormat.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <WebCore/IOSurface.h>
 #include <WebCore/NativeImage.h>
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebGPU/WebGPUExt.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/spi/cocoa/IOSurfaceSPI.h>
 
-namespace WebCore {
+namespace WebCore::WebGPU {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGPUCompositorIntegrationImpl);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CompositorIntegrationImpl);
 
-WebGPUCompositorIntegrationImpl::WebGPUCompositorIntegrationImpl()
+CompositorIntegrationImpl::CompositorIntegrationImpl(ConvertToBackingContext& convertToBackingContext)
+    : m_convertToBackingContext(convertToBackingContext)
 {
 }
 
-WebGPUCompositorIntegrationImpl::~WebGPUCompositorIntegrationImpl() = default;
+CompositorIntegrationImpl::~CompositorIntegrationImpl() = default;
 
-void WebGPUCompositorIntegrationImpl::prepareForDisplay(uint32_t frameIndex, CompletionHandler<void()>&& completionHandler)
+void CompositorIntegrationImpl::prepareForDisplay(uint32_t frameIndex, CompletionHandler<void()>&& completionHandler)
 {
     if (RefPtr presentationContext = m_presentationContext)
         presentationContext->present(frameIndex);
@@ -55,21 +59,21 @@ void WebGPUCompositorIntegrationImpl::prepareForDisplay(uint32_t frameIndex, Com
     m_onSubmittedWorkScheduledCallback(WTF::move(completionHandler));
 }
 
-Seconds WebGPUCompositorIntegrationImpl::lastFrameGPUCost() const
+Seconds CompositorIntegrationImpl::lastFrameGPUCost() const
 {
     if (RefPtr presentationContext = m_presentationContext)
         return presentationContext->lastFrameGPUCost();
     return 0_s;
 }
 
-Seconds WebGPUCompositorIntegrationImpl::lastFramePresentStall() const
+Seconds CompositorIntegrationImpl::lastFramePresentStall() const
 {
     if (RefPtr presentationContext = m_presentationContext)
         return presentationContext->lastFramePresentStall();
     return 0_s;
 }
 
-void WebGPUCompositorIntegrationImpl::updateContentsHeadroom(float headroom)
+void CompositorIntegrationImpl::updateContentsHeadroom(float headroom)
 {
 #if HAVE(SUPPORT_HDR_DISPLAY)
     for (auto& ioSurface : m_renderBuffers)
@@ -80,14 +84,15 @@ void WebGPUCompositorIntegrationImpl::updateContentsHeadroom(float headroom)
 }
 
 #if PLATFORM(COCOA)
-Vector<MachSendRight> WebGPUCompositorIntegrationImpl::recreateRenderBuffers(int width, int height, WebCore::ColorSpace&& colorSpace, WebCore::AlphaPremultiplication alphaMode, WebGPU::TextureFormat textureFormat, unsigned bufferCount, WebGPU::Device& device)
+Vector<MachSendRight> CompositorIntegrationImpl::recreateRenderBuffers(int width, int height, WebCore::ColorSpace&& colorSpace, WebCore::AlphaPremultiplication alphaMode, TextureFormat textureFormat, unsigned bufferCount, Device& device)
 {
     m_renderBuffers.clear();
     m_device = device;
     m_alphaMode = alphaMode;
 
     if (RefPtr presentationContext = m_presentationContext) {
-        presentationContext->unconfigure();
+        static_cast<PresentationContext*>(presentationContext.get())->unconfigure();
+        presentationContext->setSize(width, height);
     }
 
     constexpr int max2DTextureSize = 16384;
@@ -95,12 +100,12 @@ Vector<MachSendRight> WebGPUCompositorIntegrationImpl::recreateRenderBuffers(int
     height = std::max(1, std::min(max2DTextureSize, height));
     IOSurface::Format colorFormat;
     switch (textureFormat) {
-    case WebGPU::TextureFormat::Rgba8unorm:
-    case WebGPU::TextureFormat::Rgba8unormSRGB:
+    case TextureFormat::Rgba8unorm:
+    case TextureFormat::Rgba8unormSRGB:
         colorFormat = alphaMode == AlphaPremultiplication::Unpremultiplied ? IOSurface::Format::RGBX : IOSurface::Format::RGBA;
         break;
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    case WebGPU::TextureFormat::Rgba16float:
+    case TextureFormat::Rgba16float:
         colorFormat = IOSurface::Format::RGBA16F;
         break;
 #endif
@@ -114,10 +119,12 @@ Vector<MachSendRight> WebGPUCompositorIntegrationImpl::recreateRenderBuffers(int
             m_renderBuffers.append(makeUniqueRefFromNonNullUniquePtr(WTF::move(buffer)));
     }
 
-    auto renderBuffers = m_renderBuffers.map([](auto& ioSurface) {
-        return ioSurface->surface();
-    });
-    m_renderBuffersWereRecreatedCallback(renderBuffers.span());
+    {
+        auto renderBuffers = adoptCF(CFArrayCreateMutable(kCFAllocatorDefault, m_renderBuffers.size(), &kCFTypeArrayCallBacks));
+        for (auto& ioSurface : m_renderBuffers)
+            CFArrayAppendValue(renderBuffers.get(), ioSurface->surface());
+        m_renderBuffersWereRecreatedCallback(static_cast<CFArrayRef>(renderBuffers));
+    }
 
     return m_renderBuffers.map([](const auto& renderBuffer) {
         return renderBuffer->createSendRight();
@@ -125,15 +132,15 @@ Vector<MachSendRight> WebGPUCompositorIntegrationImpl::recreateRenderBuffers(int
 }
 #endif
 
-void WebGPUCompositorIntegrationImpl::withDisplayBufferAsNativeImage(uint32_t bufferIndex, Function<void(WebCore::NativeImage*)> completion)
+void CompositorIntegrationImpl::withDisplayBufferAsNativeImage(uint32_t bufferIndex, Function<void(WebCore::NativeImage*)> completion)
 {
-    if (!m_renderBuffers.size() || bufferIndex >= m_renderBuffers.size() || !m_device.get())
+    if (!m_renderBuffers.size() || bufferIndex >= m_renderBuffers.size() || !m_device)
         return completion(nullptr);
 
     RefPtr<NativeImage> displayImage;
     bool isIOSurfaceSupportedFormat = false;
     if (RefPtr presentationContextPtr = m_presentationContext)
-        displayImage = NativeImage::create(presentationContextPtr->getTextureAsNativeImage(bufferIndex, isIOSurfaceSupportedFormat));
+        displayImage = presentationContextPtr->getMetalTextureAsNativeImage(bufferIndex, isIOSurfaceSupportedFormat);
 
     if (!displayImage) {
         if (!isIOSurfaceSupportedFormat)
@@ -153,11 +160,11 @@ void WebGPUCompositorIntegrationImpl::withDisplayBufferAsNativeImage(uint32_t bu
     completion(displayImage.get());
 }
 
-void WebGPUCompositorIntegrationImpl::paintCompositedResultsToCanvas(WebCore::ImageBuffer&, uint32_t)
+void CompositorIntegrationImpl::paintCompositedResultsToCanvas(WebCore::ImageBuffer&, uint32_t)
 {
     ASSERT_NOT_REACHED();
 }
 
-} // namespace WebCore
+} // namespace WebCore::WebGPU
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

@@ -35,7 +35,9 @@
 #include "StreamServerConnection.h"
 #include "WebGPUObjectHeap.h"
 #include "WebGPUTextureViewDescriptor.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUTexture.h>
+#include <WebCore/WebGPUTextureView.h>
+#include <WebCore/WebGPUTextureViewDescriptor.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, m_streamConnection)
@@ -44,7 +46,7 @@ namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteTexture);
 
-RemoteTexture::RemoteTexture(GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteGPU& gpu, ::WebGPU::Texture& texture, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, WebGPUIdentifier identifier)
+RemoteTexture::RemoteTexture(GPUConnectionToWebProcess& gpuConnectionToWebProcess, RemoteGPU& gpu, WebCore::WebGPU::Texture& texture, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, WebGPUIdentifier identifier)
     : m_backing(texture)
     , m_objectHeap(objectHeap)
     , m_streamConnection(WTF::move(streamConnection))
@@ -64,8 +66,15 @@ void RemoteTexture::stopListeningForIPC()
 
 void RemoteTexture::createView(const std::optional<WebGPU::TextureViewDescriptor>& descriptor, WebGPUIdentifier identifier)
 {
+    std::optional<WebCore::WebGPU::TextureViewDescriptor> convertedDescriptor;
     Ref objectHeap = m_objectHeap.get();
-    auto textureView = protect(m_backing)->createView(descriptor);
+
+    if (descriptor) {
+        auto resultDescriptor = objectHeap->convertFromBacking(*descriptor);
+        MESSAGE_CHECK(resultDescriptor);
+        convertedDescriptor = WTF::move(resultDescriptor);
+    }
+    auto textureView = protect(m_backing)->createView(convertedDescriptor);
     MESSAGE_CHECK(textureView);
     auto remoteTextureView = RemoteTextureView::create(textureView.releaseNonNull(), objectHeap, protect(m_streamConnection), protect(m_gpu), identifier);
     objectHeap->addObject(identifier, remoteTextureView);

@@ -30,9 +30,8 @@
 
 namespace WebCore {
 
-GPUExternalTexture::GPUExternalTexture(Ref<WebGPU::ExternalTexture>&& backing, String&& label, GPUDevice& device)
+GPUExternalTexture::GPUExternalTexture(Ref<WebGPU::ExternalTexture>&& backing, GPUDevice& device)
     : m_backing(WTF::move(backing))
-    , m_label(WTF::move(label))
     , m_device(device)
 {
 }
@@ -50,12 +49,11 @@ GPUDevice* GPUExternalTexture::device() const
 
 String GPUExternalTexture::label() const
 {
-    return m_label;
+    return m_backing->label();
 }
 
 void GPUExternalTexture::setLabel(String&& label)
 {
-    m_label = label;
     m_backing->setLabel(WTF::move(label));
 }
 

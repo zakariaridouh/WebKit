@@ -50,7 +50,7 @@ RemoteComputePipelineProxy::~RemoteComputePipelineProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-Ref<::WebGPU::BindGroupLayout> RemoteComputePipelineProxy::getBindGroupLayout(uint32_t index)
+Ref<WebCore::WebGPU::BindGroupLayout> RemoteComputePipelineProxy::getBindGroupLayout(uint32_t index)
 {
     // "A new GPUBindGroupLayout wrapper is returned each time"
     auto identifier = WebGPUIdentifier::generate();
@@ -60,16 +60,10 @@ Ref<::WebGPU::BindGroupLayout> RemoteComputePipelineProxy::getBindGroupLayout(ui
     return RemoteBindGroupLayoutProxy::create(protect(m_parent->root()), m_convertToBackingContext, identifier);
 }
 
-void RemoteComputePipelineProxy::setLabel(String&& label)
+void RemoteComputePipelineProxy::setLabelInternal(const String& label)
 {
-    auto sendResult = send(Messages::RemoteComputePipeline::SetLabel(WTF::move(label)));
+    auto sendResult = send(Messages::RemoteComputePipeline::SetLabel(label));
     UNUSED_VARIABLE(sendResult);
-}
-
-bool RemoteComputePipelineProxy::isValid() const
-{
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebKit::WebGPU

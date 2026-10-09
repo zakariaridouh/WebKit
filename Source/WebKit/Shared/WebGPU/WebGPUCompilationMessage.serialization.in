@@ -21,16 +21,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if ENABLE(GPU_PROCESS)
-header: <WebGPU/WebGPUCpp.h>
-[AdditionalEncoder=StreamConnectionEncoder, CustomHeader] struct ::WebGPU::CompilationMessage {
+[AdditionalEncoder=StreamConnectionEncoder] struct WebKit::WebGPU::CompilationMessage {
     String message;
-    ::WebGPU::CompilationMessageType type;
+    WebCore::WebGPU::CompilationMessageType type;
     uint64_t lineNum;
     uint64_t linePos;
     uint64_t offset;
     uint64_t length;
 };
-
-header: "WebGPUCompilationMessage.h"
-using WebKit::WebGPU::CompilationMessage = ::WebGPU::CompilationMessage;
 #endif

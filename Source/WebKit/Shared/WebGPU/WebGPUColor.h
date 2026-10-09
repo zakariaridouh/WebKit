@@ -27,11 +27,20 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include <WebCore/WebGPUCppAPI.h>
+#include <optional>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebKit::WebGPU {
 
-using Color = ::WebGPU::Color;
+struct ColorDict {
+    double r { 0 };
+    double g { 0 };
+    double b { 0 };
+    double a { 0 };
+};
+
+using Color = Variant<Vector<double>, ColorDict>;
 
 } // namespace WebKit::WebGPU
 

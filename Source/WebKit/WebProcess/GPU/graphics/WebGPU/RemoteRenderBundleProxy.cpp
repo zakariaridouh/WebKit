@@ -49,16 +49,10 @@ RemoteRenderBundleProxy::~RemoteRenderBundleProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteRenderBundleProxy::setLabel(String&& label)
+void RemoteRenderBundleProxy::setLabelInternal(const String& label)
 {
-    auto sendResult = send(Messages::RemoteRenderBundle::SetLabel(WTF::move(label)));
+    auto sendResult = send(Messages::RemoteRenderBundle::SetLabel(label));
     UNUSED_VARIABLE(sendResult);
-}
-
-bool RemoteRenderBundleProxy::isValid() const
-{
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebKit::WebGPU

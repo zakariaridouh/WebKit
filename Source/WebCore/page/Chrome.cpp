@@ -568,7 +568,7 @@ RefPtr<GraphicsContextGL> Chrome::createGraphicsContextGL(const GraphicsContextG
 }
 #endif
 #if HAVE(WEBGPU_IMPLEMENTATION)
-RefPtr<WebGPUIntegration> Chrome::createGPUForWebGPU() const
+RefPtr<WebGPU::GPU> Chrome::createGPUForWebGPU() const
 {
     return m_client->createGPUForWebGPU();
 }

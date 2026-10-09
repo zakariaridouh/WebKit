@@ -15,6 +15,7 @@ set(WebGPU_PRIVATE_FRAMEWORK_HEADERS
     WGPUTextureImpl.h
     WGPUTextureViewImpl.h
     WebGPU.h
+    WebGPUCppBridge.h
     WebGPUExt.h
 )
 

@@ -29,14 +29,14 @@
 
 #include "RemoteDeviceProxy.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUSampler.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebKit::WebGPU {
 
 class ConvertToBackingContext;
 
-class RemoteSamplerProxy final : public ::WebGPU::Sampler {
+class RemoteSamplerProxy final : public WebCore::WebGPU::Sampler {
     WTF_MAKE_TZONE_ALLOCATED(RemoteSamplerProxy);
 public:
     static Ref<RemoteSamplerProxy> create(RemoteDeviceProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier)
@@ -49,9 +49,6 @@ public:
     RemoteDeviceProxy& parent() const { return m_parent; }
     RemoteGPUProxy& root() { return m_parent->root(); }
 
-    void setLabel(String&&) final;
-    bool isValid() const final;
-
 private:
     friend class DowncastConvertToBackingContext;
 
@@ -62,6 +59,8 @@ private:
     RemoteSamplerProxy& operator=(const RemoteSamplerProxy&) = delete;
     RemoteSamplerProxy& operator=(RemoteSamplerProxy&&) = delete;
 
+    bool isRemoteSamplerProxy() const final { return true; }
+
     WebGPUIdentifier backing() const { return m_backing; }
     
     template<typename T>
@@ -69,6 +68,8 @@ private:
     {
         return protect(root().streamClientConnection())->send(std::forward<T>(message), backing());
     }
+
+    void setLabelInternal(const String&) final;
 
     WebGPUIdentifier m_backing;
     const Ref<ConvertToBackingContext> m_convertToBackingContext;
@@ -78,8 +79,7 @@ private:
 } // namespace WebKit::WebGPU
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebGPU::RemoteSamplerProxy)
-    // In the Web Process, every WebGPU::Sampler is a RemoteSamplerProxy.
-    static bool isType(const ::WebGPU::Sampler&) { return true; }
+    static bool isType(const WebCore::WebGPU::Sampler& sampler) { return sampler.isRemoteSamplerProxy(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GPU_PROCESS)

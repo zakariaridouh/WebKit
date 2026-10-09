@@ -29,7 +29,8 @@
 
 #include "RemoteGPUProxy.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPUPresentationContext.h>
 #include <array>
 #include <wtf/TZoneMalloc.h>
 
@@ -42,7 +43,7 @@ namespace WebKit::WebGPU {
 class ConvertToBackingContext;
 class RemoteTextureProxy;
 
-class RemotePresentationContextProxy final : public ::WebGPU::PresentationContext {
+class RemotePresentationContextProxy final : public WebCore::WebGPU::PresentationContext {
     WTF_MAKE_TZONE_ALLOCATED(RemotePresentationContextProxy);
 public:
     static Ref<RemotePresentationContextProxy> create(RemoteGPUProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier)
@@ -55,17 +56,7 @@ public:
     RemoteGPUProxy& parent() const { return m_parent; }
     RemoteGPUProxy& root() { return m_parent->root(); }
 
-    void configure(const ::WebGPU::CanvasConfiguration&) final;
-    void unconfigure() final;
-    void present(uint32_t frameIndex) final;
-    RefPtr<::WebGPU::Texture> getCurrentTexture(uint32_t) final;
-    Seconds lastFrameGPUCost() const final;
-    Seconds lastFramePresentStall() const final;
-#if PLATFORM(COCOA)
-    RetainPtr<CGImageRef> getTextureAsNativeImage(uint32_t, bool& isIOSurfaceSupportedFormat) final;
-#endif
-    void setLabel(String&&) final { }
-    bool isValid() const final;
+    void present(uint32_t frameIndex, bool = false) final;
 
 private:
     friend class DowncastConvertToBackingContext;
@@ -77,13 +68,22 @@ private:
     RemotePresentationContextProxy& operator=(const RemotePresentationContextProxy&) = delete;
     RemotePresentationContextProxy& operator=(RemotePresentationContextProxy&&) = delete;
 
+    bool isRemotePresentationContextProxy() const final { return true; }
+
     WebGPUIdentifier backing() const { return m_backing; }
+
+    RefPtr<WebCore::NativeImage> getMetalTextureAsNativeImage(uint32_t, bool& isIOSurfaceSupportedFormat) final;
 
     template<typename T>
     [[nodiscard]] IPC::Error send(T&& message)
     {
         return protect(root().streamClientConnection())->send(std::forward<T>(message), backing());
     }
+
+    bool configure(const WebCore::WebGPU::CanvasConfiguration&) final;
+    void unconfigure() final;
+
+    RefPtr<WebCore::WebGPU::Texture> getCurrentTexture(uint32_t) final;
 
     WebGPUIdentifier m_backing;
     const Ref<ConvertToBackingContext> m_convertToBackingContext;
@@ -95,8 +95,7 @@ private:
 } // namespace WebKit::WebGPU
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebGPU::RemotePresentationContextProxy)
-    // In the Web Process, every WebGPU::PresentationContext is a RemotePresentationContextProxy.
-    static bool isType(const ::WebGPU::PresentationContext&) { return true; }
+    static bool isType(const WebCore::WebGPU::PresentationContext& context) { return context.isRemotePresentationContextProxy(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GPU_PROCESS)

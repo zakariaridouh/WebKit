@@ -34,9 +34,9 @@
 
 namespace WebKit::WebGPU {
 
-std::optional<FragmentState> ConvertToBackingContext::convertToBacking(const ::WebGPU::FragmentState& fragmentState)
+std::optional<FragmentState> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::FragmentState& fragmentState)
 {
-    auto base = convertToBacking(fragmentState.stage);
+    auto base = convertToBacking(static_cast<const WebCore::WebGPU::ProgrammableStage&>(fragmentState));
     if (!base)
         return std::nullopt;
 
@@ -55,24 +55,25 @@ std::optional<FragmentState> ConvertToBackingContext::convertToBacking(const ::W
     return { { WTF::move(*base), WTF::move(targets) } };
 }
 
-std::optional<::WebGPU::FragmentState> ConvertFromBackingContext::convertFromBacking(const FragmentState& fragmentState, RenderPipelineDescriptorStorage& storage)
+std::optional<WebCore::WebGPU::FragmentState> ConvertFromBackingContext::convertFromBacking(const FragmentState& fragmentState)
 {
-    auto stage = convertFromBacking(static_cast<const ProgrammableStage&>(fragmentState), storage.fragmentConstants);
-    if (!stage)
+    auto base = convertFromBacking(static_cast<const ProgrammableStage&>(fragmentState));
+    if (!base)
         return std::nullopt;
 
-    storage.fragmentTargets.reserveInitialCapacity(fragmentState.targets.size());
+    Vector<std::optional<WebCore::WebGPU::ColorTargetState>> targets;
+    targets.reserveInitialCapacity(fragmentState.targets.size());
     for (const auto& backingTarget : fragmentState.targets) {
         if (backingTarget) {
             auto target = convertFromBacking(*backingTarget);
             if (!target)
                 return std::nullopt;
-            storage.fragmentTargets.append(WTF::move(*target));
+            targets.append(WTF::move(*target));
         } else
-            storage.fragmentTargets.append(std::nullopt);
+            targets.append(std::nullopt);
     }
 
-    return { { WTF::move(*stage), storage.fragmentTargets.span() } };
+    return { { WTF::move(*base), WTF::move(targets) } };
 }
 
 } // namespace WebKit

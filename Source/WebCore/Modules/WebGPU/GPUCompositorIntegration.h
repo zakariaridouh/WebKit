@@ -26,8 +26,6 @@
 #pragma once
 
 #include "WebGPUCompositorIntegration.h"
-#include "WebGPUDevice.h"
-#include <WebCore/WebGPUCppAPI.h>
 #include <optional>
 #include <wtf/MachSendRight.h>
 #include <wtf/Ref.h>
@@ -35,18 +33,24 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+namespace WebGPU {
+class Device;
+
+enum class TextureFormat : uint8_t;
+}
+
 class ColorSpace;
 class ImageBuffer;
 
 class GPUCompositorIntegration : public RefCountedAndCanMakeWeakPtr<GPUCompositorIntegration> {
 public:
-    static Ref<GPUCompositorIntegration> create(Ref<WebGPUCompositorIntegration>&& backing)
+    static Ref<GPUCompositorIntegration> create(Ref<WebGPU::CompositorIntegration>&& backing)
     {
         return adoptRef(*new GPUCompositorIntegration(WTF::move(backing)));
     }
 
 #if PLATFORM(COCOA)
-    Vector<MachSendRight> recreateRenderBuffers(int width, int height, WebCore::ColorSpace&&, WebCore::AlphaPremultiplication, ::WebGPU::TextureFormat, unsigned bufferCount, ::WebGPU::Device&) const;
+    Vector<MachSendRight> recreateRenderBuffers(int width, int height, WebCore::ColorSpace&&, WebCore::AlphaPremultiplication, WebCore::WebGPU::TextureFormat, unsigned bufferCount, WebCore::WebGPU::Device&) const;
 #endif
 
     void prepareForDisplay(uint32_t frameIndex, CompletionHandler<void()>&&);
@@ -54,19 +58,19 @@ public:
     Seconds lastFrameGPUCost() const { return m_backing->lastFrameGPUCost(); }
     Seconds lastFramePresentStall() const { return m_backing->lastFramePresentStall(); }
 
-    WebGPUCompositorIntegration& backing() { return m_backing; }
-    const WebGPUCompositorIntegration& backing() const { return m_backing; }
+    WebGPU::CompositorIntegration& backing() { return m_backing; }
+    const WebGPU::CompositorIntegration& backing() const { return m_backing; }
 
     void paintCompositedResultsToCanvas(WebCore::ImageBuffer&, uint32_t);
     void updateContentsHeadroom(float);
 
 private:
-    GPUCompositorIntegration(Ref<WebGPUCompositorIntegration>&& backing)
+    GPUCompositorIntegration(Ref<WebGPU::CompositorIntegration>&& backing)
         : m_backing(WTF::move(backing))
     {
     }
 
-    const Ref<WebGPUCompositorIntegration> m_backing;
+    const Ref<WebGPU::CompositorIntegration> m_backing;
 };
 
 }

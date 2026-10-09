@@ -35,7 +35,7 @@
 #include "RemoteXRSubImageProxy.h"
 #include "WebGPUConvertToBackingContext.h"
 #include <WebCore/ImageBuffer.h>
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUTextureFormat.h>
 
 namespace WebKit::WebGPU {
 
@@ -54,7 +54,7 @@ RemoteXRBindingProxy::~RemoteXRBindingProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-RefPtr<::WebGPU::XRProjectionLayer> RemoteXRBindingProxy::createProjectionLayer(const ::WebGPU::XRProjectionLayerDescriptor& descriptor)
+RefPtr<WebCore::WebGPU::XRProjectionLayer> RemoteXRBindingProxy::createProjectionLayer(const WebCore::WebGPU::XRProjectionLayerInit& descriptor)
 {
     auto identifier = WebGPUIdentifier::generate();
 
@@ -66,7 +66,13 @@ RefPtr<::WebGPU::XRProjectionLayer> RemoteXRBindingProxy::createProjectionLayer(
     return result;
 }
 
-RefPtr<::WebGPU::XRSubImage> RemoteXRBindingProxy::getViewSubImage(::WebGPU::XRProjectionLayer& projectionLayer)
+RefPtr<WebCore::WebGPU::XRSubImage> RemoteXRBindingProxy::getSubImage(WebCore::WebGPU::XRProjectionLayer&, WebCore::WebXRFrame&, std::optional<WebCore::WebGPU::XREye>/* = "none"*/)
+{
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+RefPtr<WebCore::WebGPU::XRSubImage> RemoteXRBindingProxy::getViewSubImage(WebCore::WebGPU::XRProjectionLayer& projectionLayer)
 {
     auto identifier = WebGPUIdentifier::generate();
     auto sendResult = send(Messages::RemoteXRBinding::GetViewSubImage(downcast<RemoteXRProjectionLayerProxy>(projectionLayer).backing(), identifier));
@@ -77,10 +83,9 @@ RefPtr<::WebGPU::XRSubImage> RemoteXRBindingProxy::getViewSubImage(::WebGPU::XRP
     return result;
 }
 
-bool RemoteXRBindingProxy::isValid() const
+WebCore::WebGPU::TextureFormat RemoteXRBindingProxy::getPreferredColorFormat()
 {
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
+    return WebCore::WebGPU::TextureFormat::Bgra8unorm;
 }
 
 } // namespace WebKit::WebGPU

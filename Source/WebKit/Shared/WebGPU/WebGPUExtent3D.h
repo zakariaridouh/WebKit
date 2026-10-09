@@ -27,11 +27,19 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <optional>
+#include <wtf/Vector.h>
 
 namespace WebKit::WebGPU {
 
-using Extent3D = ::WebGPU::Extent3D;
+struct Extent3DDict {
+    WebCore::WebGPU::IntegerCoordinate width { 0 };
+    WebCore::WebGPU::IntegerCoordinate height { 0 };
+    WebCore::WebGPU::IntegerCoordinate depthOrArrayLayers { 0 };
+};
+
+using Extent3D = Variant<Vector<WebCore::WebGPU::IntegerCoordinate>, Extent3DDict>;
 
 } // namespace WebKit::WebGPU
 

@@ -22,18 +22,18 @@
 
 #if ENABLE(GPU_PROCESS)
 [AdditionalEncoder=StreamConnectionEncoder] struct WebKit::WebGPU::DepthStencilState {
-    ::WebGPU::TextureFormat format;
+    WebCore::WebGPU::TextureFormat format;
 
     std::optional<bool> depthWriteEnabled;
-    std::optional<::WebGPU::CompareFunction> depthCompare;
+    std::optional<WebCore::WebGPU::CompareFunction> depthCompare;
 
     WebKit::WebGPU::StencilFaceState stencilFront;
     WebKit::WebGPU::StencilFaceState stencilBack;
 
-    std::optional<uint32_t> stencilReadMask;
-    std::optional<uint32_t> stencilWriteMask;
+    std::optional<WebCore::WebGPU::StencilValue> stencilReadMask;
+    std::optional<WebCore::WebGPU::StencilValue> stencilWriteMask;
 
-    int32_t depthBias;
+    WebCore::WebGPU::DepthBias depthBias;
     float depthBiasSlopeScale;
     float depthBiasClamp;
 };

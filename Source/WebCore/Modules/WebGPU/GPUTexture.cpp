@@ -31,7 +31,7 @@
 #include "GPUTextureDescriptor.h"
 #include "GPUTextureView.h"
 #include "GPUTextureViewDescriptor.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUTextureViewDescriptor.h"
 #include <wtf/CheckedArithmetic.h>
 
 namespace WebCore {
@@ -59,7 +59,6 @@ static uint32_t getDimension(auto& extent3D)
 
 GPUTexture::GPUTexture(Ref<WebGPU::Texture>&& backing, const GPUTextureDescriptor& descriptor, GPUDevice& device, bool isCanvasBacking)
     : m_backing(WTF::move(backing))
-    , m_label(descriptor.label)
     , m_format(descriptor.format)
     , m_width(getDimension<0>(descriptor.size))
     , m_height(getDimension<1>(descriptor.size))
@@ -90,12 +89,11 @@ GPUDevice* GPUTexture::device() const
 
 String GPUTexture::label() const
 {
-    return m_label;
+    return m_backing->label();
 }
 
 void GPUTexture::setLabel(String&& label)
 {
-    m_label = label;
     m_backing->setLabel(WTF::move(label));
 }
 
@@ -113,11 +111,10 @@ ExceptionOr<Ref<GPUTextureView>> GPUTexture::createView(const std::optional<GPUT
         if (auto error = m_device->errorValidatingSupportedFormat(*textureViewDescriptor->format))
             return Exception { ExceptionCode::TypeError, makeString("GPUTexture.createView: Unsupported texture format: "_s, *error) };
     }
-    auto backingDescriptor = convertToBacking(textureViewDescriptor);
-    RefPtr view = m_backing->createView(backingDescriptor);
+    RefPtr view = m_backing->createView(convertToBacking(textureViewDescriptor));
     if (!view)
         return Exception { ExceptionCode::InvalidStateError, "GPUTexture.createView: Unable to create view."_s };
-    return GPUTextureView::create(view.releaseNonNull(), WTF::move(backingDescriptor.label), *this);
+    return GPUTextureView::create(view.releaseNonNull(), *this);
 }
 
 void GPUTexture::destroy()

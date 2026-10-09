@@ -22,7 +22,7 @@
 
 #if ENABLE(GPU_PROCESS)
 [AdditionalEncoder=StreamConnectionEncoder] struct WebKit::WebGPU::BufferBindingLayout {
-    ::WebGPU::BufferBindingType type
+    WebCore::WebGPU::BufferBindingType type
     bool hasDynamicOffset
-    uint64_t minBindingSize
+    WebCore::WebGPU::Size64 minBindingSize
 }

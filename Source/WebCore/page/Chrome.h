@@ -53,6 +53,10 @@ struct FaceDetectorOptions;
 class TextDetector;
 }
 
+namespace WebGPU {
+class GPU;
+}
+
 enum class BroadcastFocusedElement : bool;
 enum class PlatformEventModifier : uint8_t;
 enum class TextDirection : bool;
@@ -82,7 +86,6 @@ class PopupMenu;
 class PopupMenuClient;
 class PopupOpeningObserver;
 class SearchPopupMenu;
-class WebGPUIntegration;
 class WorkerClient;
 
 struct AppHighlight;
@@ -143,7 +146,7 @@ public:
     RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
 #endif
 #if HAVE(WEBGPU_IMPLEMENTATION)
-    RefPtr<WebGPUIntegration> createGPUForWebGPU() const override;
+    RefPtr<WebGPU::GPU> createGPUForWebGPU() const override;
 #endif
     RefPtr<ShapeDetection::BarcodeDetector> createBarcodeDetector(const ShapeDetection::BarcodeDetectorOptions&) const;
     void getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&&) const;

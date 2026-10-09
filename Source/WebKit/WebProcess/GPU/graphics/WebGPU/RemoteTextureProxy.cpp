@@ -52,7 +52,7 @@ RemoteTextureProxy::~RemoteTextureProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-static bool NODELETE equalDescriptors(const std::optional<::WebGPU::TextureViewDescriptor>& a, const std::optional<::WebGPU::TextureViewDescriptor>& b)
+static bool NODELETE equalDescriptors(const std::optional<WebCore::WebGPU::TextureViewDescriptor>& a, const std::optional<WebCore::WebGPU::TextureViewDescriptor>& b)
 {
     if (!a && !b)
         return true;
@@ -69,20 +69,27 @@ static bool NODELETE equalDescriptors(const std::optional<::WebGPU::TextureViewD
         && a->arrayLayerCount == b->arrayLayerCount;
 }
 
-RefPtr<::WebGPU::TextureView> RemoteTextureProxy::createView(const std::optional<::WebGPU::TextureViewDescriptor>& descriptor)
+RefPtr<WebCore::WebGPU::TextureView> RemoteTextureProxy::createView(const std::optional<WebCore::WebGPU::TextureViewDescriptor>& descriptor)
 {
     if (m_isCanvasBacking && m_lastCreatedView && equalDescriptors(descriptor, m_lastCreatedViewDescriptor))
         return m_lastCreatedView;
 
+    std::optional<TextureViewDescriptor> convertedDescriptor;
     Ref convertToBackingContext = m_convertToBackingContext;
 
+    if (descriptor) {
+        convertedDescriptor = convertToBackingContext->convertToBacking(*descriptor);
+        if (!convertedDescriptor)
+            return nullptr;
+    }
+
     auto identifier = WebGPUIdentifier::generate();
-    auto sendResult = send(Messages::RemoteTexture::CreateView(descriptor, identifier));
+    auto sendResult = send(Messages::RemoteTexture::CreateView(*convertedDescriptor, identifier));
     if (sendResult != IPC::Error::NoError)
         return nullptr;
 
     auto result = RemoteTextureViewProxy::create(*this, convertToBackingContext, identifier);
-    result->setLabel(descriptor ? String { descriptor->label } : String { });
+    result->setLabel(WTF::move(convertedDescriptor->label));
     if (!m_isCanvasBacking)
         return result;
 
@@ -103,16 +110,10 @@ void RemoteTextureProxy::undestroy()
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteTextureProxy::setLabel(String&& label)
+void RemoteTextureProxy::setLabelInternal(const String& label)
 {
-    auto sendResult = send(Messages::RemoteTexture::SetLabel(WTF::move(label)));
+    auto sendResult = send(Messages::RemoteTexture::SetLabel(label));
     UNUSED_VARIABLE(sendResult);
-}
-
-bool RemoteTextureProxy::isValid() const
-{
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebKit::WebGPU

@@ -26,7 +26,7 @@
 #pragma once
 
 #include "GPUCompilationMessage.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUCompilationInfo.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -34,22 +34,23 @@ namespace WebCore {
 
 class GPUCompilationInfo : public RefCounted<GPUCompilationInfo> {
 public:
-    static Ref<GPUCompilationInfo> create(::WebGPU::CompilationInfo&& backing)
+    static Ref<GPUCompilationInfo> create(Ref<WebGPU::CompilationInfo>&& backing)
     {
         return adoptRef(*new GPUCompilationInfo(WTF::move(backing)));
     }
 
     Vector<Ref<GPUCompilationMessage>> messages() const;
 
-    const ::WebGPU::CompilationInfo& backing() const { return m_backing; }
+    WebGPU::CompilationInfo& backing() { return m_backing; }
+    const WebGPU::CompilationInfo& backing() const { return m_backing; }
 
 private:
-    GPUCompilationInfo(::WebGPU::CompilationInfo&& backing)
+    GPUCompilationInfo(Ref<WebGPU::CompilationInfo>&& backing)
         : m_backing(WTF::move(backing))
     {
     }
 
-    const ::WebGPU::CompilationInfo m_backing;
+    const Ref<WebGPU::CompilationInfo> m_backing;
 };
 
 }

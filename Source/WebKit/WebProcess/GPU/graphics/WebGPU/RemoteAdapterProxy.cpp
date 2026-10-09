@@ -37,11 +37,9 @@ namespace WebKit::WebGPU {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteAdapterProxy);
 
-RemoteAdapterProxy::RemoteAdapterProxy(Vector<::WebGPU::FeatureName>&& features, const ::WebGPU::Limits& limits, ::WebGPU::AdapterInfo&& info, bool xrCompatible, RemoteGPUProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier)
-    : m_backing(identifier)
-    , m_features(WTF::move(features))
-    , m_limits(limits)
-    , m_info(WTF::move(info))
+RemoteAdapterProxy::RemoteAdapterProxy(String&& name, WebCore::WebGPU::SupportedFeatures& features, WebCore::WebGPU::SupportedLimits& limits, bool isFallbackAdapter, bool xrCompatible, RemoteGPUProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier, uint32_t subgroupMinSize, uint32_t subgroupMaxSize)
+    : Adapter(WTF::move(name), features, limits, isFallbackAdapter, subgroupMinSize, subgroupMaxSize)
+    , m_backing(identifier)
     , m_convertToBackingContext(convertToBackingContext)
     , m_parent(parent)
     , m_xrCompatible(xrCompatible)
@@ -54,7 +52,7 @@ RemoteAdapterProxy::~RemoteAdapterProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteAdapterProxy::requestDevice(const ::WebGPU::DeviceDescriptor& descriptor, CompletionHandler<void(RefPtr<::WebGPU::Device>&&)>&& callback)
+void RemoteAdapterProxy::requestDevice(const WebCore::WebGPU::DeviceDescriptor& descriptor, CompletionHandler<void(RefPtr<WebCore::WebGPU::Device>&&)>&& callback)
 {
     Ref convertToBackingContext = m_convertToBackingContext;
     auto convertedDescriptor = convertToBackingContext->convertToBacking(descriptor);
@@ -68,21 +66,58 @@ void RemoteAdapterProxy::requestDevice(const ::WebGPU::DeviceDescriptor& descrip
     if (!sendResult.succeeded())
         return callback(nullptr);
 
-    auto [features, supportedLimits] = sendResult.takeReply();
+    auto [supportedFeatures, supportedLimits] = sendResult.takeReply();
     if (!supportedLimits.maxTextureDimension2D) {
         callback(nullptr);
         return;
     }
 
-    auto result = RemoteDeviceProxy::create(WTF::move(features), WebGPU::convertFromBacking(supportedLimits), *this, convertToBackingContext, identifier, queueIdentifier);
+    auto resultSupportedFeatures = WebCore::WebGPU::SupportedFeatures::create(WTF::move(supportedFeatures.features));
+    auto resultSupportedLimits = WebCore::WebGPU::SupportedLimits::create(
+        supportedLimits.maxTextureDimension1D,
+        supportedLimits.maxTextureDimension2D,
+        supportedLimits.maxTextureDimension3D,
+        supportedLimits.maxTextureArrayLayers,
+        supportedLimits.maxBindGroups,
+        supportedLimits.maxBindGroupsPlusVertexBuffers,
+        supportedLimits.maxBindingsPerBindGroup,
+        supportedLimits.maxDynamicUniformBuffersPerPipelineLayout,
+        supportedLimits.maxDynamicStorageBuffersPerPipelineLayout,
+        supportedLimits.maxSampledTexturesPerShaderStage,
+        supportedLimits.maxSamplersPerShaderStage,
+        supportedLimits.maxStorageBuffersPerShaderStage,
+        supportedLimits.maxStorageTexturesPerShaderStage,
+        supportedLimits.maxUniformBuffersPerShaderStage,
+        supportedLimits.maxUniformBufferBindingSize,
+        supportedLimits.maxStorageBufferBindingSize,
+        supportedLimits.minUniformBufferOffsetAlignment,
+        supportedLimits.minStorageBufferOffsetAlignment,
+        supportedLimits.maxVertexBuffers,
+        supportedLimits.maxBufferSize,
+        supportedLimits.maxVertexAttributes,
+        supportedLimits.maxVertexBufferArrayStride,
+        supportedLimits.maxInterStageShaderVariables,
+        supportedLimits.maxColorAttachments,
+        supportedLimits.maxColorAttachmentBytesPerSample,
+        supportedLimits.maxComputeWorkgroupStorageSize,
+        supportedLimits.maxComputeInvocationsPerWorkgroup,
+        supportedLimits.maxComputeWorkgroupSizeX,
+        supportedLimits.maxComputeWorkgroupSizeY,
+        supportedLimits.maxComputeWorkgroupSizeZ,
+        supportedLimits.maxComputeWorkgroupsPerDimension,
+        supportedLimits.maxStorageBuffersInFragmentStage,
+        supportedLimits.maxStorageTexturesInFragmentStage,
+        supportedLimits.maxStorageBuffersInVertexStage,
+        supportedLimits.maxStorageTexturesInVertexStage
+    );
+    auto result = RemoteDeviceProxy::create(WTF::move(resultSupportedFeatures), WTF::move(resultSupportedLimits), *this, convertToBackingContext, identifier, queueIdentifier);
     result->setLabel(WTF::move(convertedDescriptor->label));
     callback(WTF::move(result));
 }
 
-bool RemoteAdapterProxy::isValid() const
+bool RemoteAdapterProxy::xrCompatible()
 {
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
+    return m_xrCompatible;
 }
 
 } // namespace WebKit::WebGPU

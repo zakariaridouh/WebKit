@@ -30,16 +30,16 @@
 
 #include "WebGPUConvertFromBackingContext.h"
 #include "WebGPUConvertToBackingContext.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUImageDataLayout.h>
 
 namespace WebKit::WebGPU {
 
-std::optional<ImageDataLayout> ConvertToBackingContext::convertToBacking(const ::WebGPU::TexelCopyBufferLayout& imageDataLayout)
+std::optional<ImageDataLayout> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::ImageDataLayout& imageDataLayout)
 {
     return { { imageDataLayout.offset, imageDataLayout.bytesPerRow, imageDataLayout.rowsPerImage } };
 }
 
-std::optional<::WebGPU::TexelCopyBufferLayout> ConvertFromBackingContext::convertFromBacking(const ImageDataLayout& imageDataLayout)
+std::optional<WebCore::WebGPU::ImageDataLayout> ConvertFromBackingContext::convertFromBacking(const ImageDataLayout& imageDataLayout)
 {
     return { { imageDataLayout.offset, imageDataLayout.bytesPerRow, imageDataLayout.rowsPerImage } };
 }

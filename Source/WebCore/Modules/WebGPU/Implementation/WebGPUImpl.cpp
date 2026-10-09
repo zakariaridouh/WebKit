@@ -28,217 +28,97 @@
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
+#include "WebGPUAdapterImpl.h"
 #include "WebGPUCompositorIntegrationImpl.h"
-#include "WebGPUExternalTextureDescriptor.h"
-#include "WebGPUImageCopyExternalImage.h"
-#include "WebGPUImageCopyTextureTagged.h"
 #include "WebGPUPresentationContextDescriptor.h"
-#include <WebCore/ColorSpace.h>
+#include "WebGPUPresentationContextImpl.h"
 #include <WebCore/GraphicsContext.h>
-#include <WebCore/IOSurface.h>
-#include <WebCore/ImageBuffer.h>
 #include <WebCore/IntSize.h>
 #include <WebCore/NativeImage.h>
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebGPU/WebGPUExt.h>
 #include <wtf/BlockPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
-namespace WebCore {
+namespace WebCore::WebGPU {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGPUIntegrationImpl);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GPUImpl);
 
-WebGPUIntegrationImpl::WebGPUIntegrationImpl(Ref<::WebGPU::Instance>&& instance)
+GPUImpl::GPUImpl(WebGPUPtr<WGPUInstance>&& instance, ConvertToBackingContext& convertToBackingContext)
     : m_backing(WTF::move(instance))
+    , m_convertToBackingContext(convertToBackingContext)
 {
 }
 
-WebGPUIntegrationImpl::~WebGPUIntegrationImpl() = default;
+GPUImpl::~GPUImpl() = default;
 
-void WebGPUIntegrationImpl::requestAdapter(const WebGPU::RequestAdapterOptions& options, CompletionHandler<void(RefPtr<WebGPU::Adapter>&&)>&& callback)
+static void requestAdapterCallback(WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message, void* userdata)
 {
-    auto backingOptions = options;
+    auto block = reinterpret_cast<void(^)(WGPURequestAdapterStatus, WGPUAdapter, const char*)>(userdata);
+    block(status, adapter, message);
+    Block_release(block); // Block_release is matched with Block_copy below in GPUImpl::requestAdapter().
+}
+
+void GPUImpl::requestAdapter(const RequestAdapterOptions& options, CompletionHandler<void(RefPtr<Adapter>&&)>&& callback)
+{
+    Ref convertToBackingContext = m_convertToBackingContext;
+
+    WGPURequestAdapterOptions backingOptions {
+        .compatibleSurface = nullptr,
 #if CPU(X86_64)
-    backingOptions.powerPreference = WebGPU::PowerPreference::HighPerformance;
+        .powerPreference = WGPUPowerPreference_HighPerformance,
+#else
+        .powerPreference = options.powerPreference ? convertToBackingContext->convertToBacking(*options.powerPreference) : static_cast<WGPUPowerPreference>(WGPUPowerPreference_Undefined),
 #endif
-    m_backing->requestAdapter(backingOptions, WTF::move(callback));
+        .backendType = WGPUBackendType_Metal,
+        .forceFallbackAdapter = options.forceFallbackAdapter,
+        .xrCompatible = options.xrCompatible,
+    };
+
+    auto blockPtr = makeBlockPtr([convertToBackingContext = convertToBackingContext.copyRef(), callback = WTF::move(callback)](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char*) mutable {
+        if (status == WGPURequestAdapterStatus_Success)
+            callback(AdapterImpl::create(adoptWebGPU(adapter), convertToBackingContext));
+        else
+            callback(nullptr);
+    });
+    wgpuInstanceRequestAdapter(m_backing.get(), &backingOptions, &requestAdapterCallback, Block_copy(blockPtr.get())); // Block_copy is matched with Block_release above in requestAdapterCallback().
 }
 
-RefPtr<WebGPU::PresentationContext> WebGPUIntegrationImpl::createPresentationContext(const WebGPUPresentationContextDescriptor& presentationContextDescriptor)
+static WTF::Function<void(CompletionHandler<void()>&&)> convert(WGPUOnSubmittedWorkScheduledCallback&& onSubmittedWorkScheduledCallback)
 {
-    // Every WebCore::WebGPUCompositorIntegration that WebGPUIntegrationImpl creates is a WebGPUCompositorIntegrationImpl.
-    Ref compositorIntegration = downcast<WebGPUCompositorIntegrationImpl>(presentationContextDescriptor.compositorIntegration.get());
+    return [onSubmittedWorkScheduledCallback = makeBlockPtr(WTF::move(onSubmittedWorkScheduledCallback))](CompletionHandler<void()>&& completionHandler) {
+        onSubmittedWorkScheduledCallback(makeBlockPtr(WTF::move(completionHandler)).get());
+    };
+}
 
-    RefPtr result = m_backing->createPresentationContext({
-        .registerCompositorIntegration = [&](auto&& renderBuffersWereRecreated, auto&& onSubmittedWorkScheduled) {
-            compositorIntegration->registerCallbacks(WTF::move(renderBuffersWereRecreated), WTF::move(onSubmittedWorkScheduled));
-        },
+RefPtr<PresentationContext> GPUImpl::createPresentationContext(const PresentationContextDescriptor& presentationContextDescriptor)
+{
+    Ref compositorIntegration { m_convertToBackingContext->convertToBacking(protect(presentationContextDescriptor.compositorIntegration)) };
+
+    auto registerCallbacksBlock = makeBlockPtr([&](WGPURenderBuffersWereRecreatedBlockCallback renderBuffersWereRecreatedCallback, WGPUOnSubmittedWorkScheduledCallback onSubmittedWorkScheduledCallback) {
+        compositorIntegration->registerCallbacks(makeBlockPtr(WTF::move(renderBuffersWereRecreatedCallback)), convert(WTF::move(onSubmittedWorkScheduledCallback)));
     });
-    if (result)
-        compositorIntegration->setPresentationContext(*result);
+
+    WGPUSurfaceDescriptorCocoaCustomSurface cocoaDescriptor {
+        .chain = { nullptr, static_cast<WGPUSType>(WGPUSTypeExtended_SurfaceDescriptorCocoaSurfaceBacking) },
+        .compositorIntegrationRegister = registerCallbacksBlock.get(),
+    };
+
+    WGPUSurfaceDescriptor surfaceDescriptor {
+        .nextInChain = &cocoaDescriptor.chain,
+        .label = { },
+    };
+
+    auto result = PresentationContextImpl::create(adoptWebGPU(wgpuInstanceCreateSurface(m_backing.get(), &surfaceDescriptor)), m_convertToBackingContext);
+    compositorIntegration->setPresentationContext(result);
     return result;
 }
 
-RefPtr<WebGPUCompositorIntegration> WebGPUIntegrationImpl::createCompositorIntegration()
+RefPtr<CompositorIntegration> GPUImpl::createCompositorIntegration()
 {
-    return WebGPUCompositorIntegrationImpl::create();
+    return CompositorIntegrationImpl::create(m_convertToBackingContext);
 }
 
-#if ENABLE(VIDEO)
-static ::WebGPU::VideoFrameRotation NODELETE convertToAPI(VideoFrameRotation rotation)
-{
-    switch (rotation) {
-    case VideoFrameRotation::None:
-        return ::WebGPU::VideoFrameRotation::None;
-    case VideoFrameRotation::Right:
-        return ::WebGPU::VideoFrameRotation::Right;
-    case VideoFrameRotation::UpsideDown:
-        return ::WebGPU::VideoFrameRotation::UpsideDown;
-    case VideoFrameRotation::Left:
-        return ::WebGPU::VideoFrameRotation::Left;
-    }
-
-    ASSERT_NOT_REACHED();
-    return ::WebGPU::VideoFrameRotation::None;
-}
-#endif
-
-// The IOSurface format an accelerated ImageBuffer of this pixel format is backed by, expressed as the
-// equivalent texture format, plus whether its alpha channel holds meaningful data. std::nullopt for
-// the formats GPUQueue::copyExternalImageToTexture keeps on the CPU readback path.
-struct SourceTextureFormat {
-    ::WebGPU::TextureFormat format;
-    bool hasAlpha;
-};
-
-static std::optional<SourceTextureFormat> NODELETE sourceTextureFormat(PixelFormat pixelFormat)
-{
-    switch (pixelFormat) {
-    case PixelFormat::RGBA8:
-        return SourceTextureFormat { ::WebGPU::TextureFormat::Rgba8unorm, true };
-    case PixelFormat::BGRA8:
-        return SourceTextureFormat { ::WebGPU::TextureFormat::Bgra8unorm, true };
-    case PixelFormat::BGRX8:
-        // IOSurface::Format::BGRX uses the same IOSurface pixel format as BGRA, but CoreGraphics
-        // renders into it with kCGImageAlphaNoneSkipFirst, so the alpha byte is undefined.
-        return SourceTextureFormat { ::WebGPU::TextureFormat::Bgra8unorm, false };
-    case PixelFormat::RGBX8:
-        return SourceTextureFormat { ::WebGPU::TextureFormat::Rgba8unorm, false };
-#if ENABLE(PIXEL_FORMAT_RGBA16F)
-    case PixelFormat::RGBA16F:
-        return SourceTextureFormat { ::WebGPU::TextureFormat::Rgba16float, true };
-#endif
-#if ENABLE(PIXEL_FORMAT_RGBA16)
-    case PixelFormat::RGBA16:
-        return SourceTextureFormat { ::WebGPU::TextureFormat::Rgba16unorm, true };
-#endif
-#if ENABLE(PIXEL_FORMAT_RGB10)
-    case PixelFormat::RGB10:
-#endif
-#if ENABLE(PIXEL_FORMAT_RGB10A8)
-    case PixelFormat::RGB10A8:
-#endif
-#if ENABLE(PIXEL_FORMAT_RGB10) || ENABLE(PIXEL_FORMAT_RGB10A8)
-        // Packed 10-bit surfaces have no single-plane MTLPixelFormat equivalent.
-        return std::nullopt;
-#endif
-    }
-
-    ASSERT_NOT_REACHED();
-    return std::nullopt;
-}
-
-void WebGPUIntegrationImpl::copyExternalImageToTexture(WebGPU::Queue& queue, const WebGPUExternalImageSource& source, const WebGPUImageCopyTextureTagged& destination, const WebGPU::Extent3D& copySize)
-{
-    ::WebGPU::ImageCopyExternalImage backingSource;
-    backingSource.origin = source.origin.value_or(WebGPU::Origin2D { });
-    backingSource.flipY = source.flipY;
-    backingSource.hasAlpha = false;
-    // An ImageBitmap created with premultiplyAlpha: "none" was put into its buffer straight, so
-    // the caller has to say; a buffer a 2D context composited is premultiplied.
-    backingSource.premultipliedAlpha = source.premultipliedAlpha;
-
-#if ENABLE(VIDEO)
-    if (source.videoSource) {
-        // The decoded frame the GPU process resolved for us. Its extent, its crop and its primaries
-        // all travel with the frame, so the backing queue reads them off it rather than being told
-        // here; and a decoded frame is opaque, so its alpha is replaced with 1 the way an external
-        // texture's is.
-        auto* pixelBuffer = std::get_if<RetainPtr<CVPixelBufferRef>>(&*source.videoSource);
-        if (!pixelBuffer || !*pixelBuffer)
-            return;
-
-        backingSource.pixelBuffer = *pixelBuffer;
-        // The display transform is the one thing about the frame its pixel buffer does not carry.
-        backingSource.pixelBufferRotation = convertToAPI(source.videoSourceRotation);
-        backingSource.pixelBufferIsMirrored = source.videoSourceIsMirrored;
-        backingSource.premultipliedAlpha = true;
-    } else
-#endif
-    {
-        RefPtr sourceImageBuffer = source.imageBuffer;
-        if (!sourceImageBuffer)
-            return;
-
-        // Only accelerated ImageBuffers have an IOSurface to wrap in an MTLTexture. GPUQueue rejects
-        // unaccelerated sources before we get here, but the backing may have been dropped since.
-        auto* surface = sourceImageBuffer->surface();
-        if (!surface)
-            return;
-
-        auto sourceSize = sourceImageBuffer->truncatedLogicalSize();
-        if (!sourceSize.width() || !sourceSize.height())
-            return;
-
-        auto sourceFormat = sourceTextureFormat(sourceImageBuffer->pixelFormat());
-        if (!sourceFormat)
-            return;
-
-        backingSource.source = surface->surface();
-        backingSource.sourceFormat = sourceFormat->format;
-        backingSource.sourceSize = { static_cast<uint32_t>(sourceSize.width()), static_cast<uint32_t>(sourceSize.height()) };
-        backingSource.hasAlpha = sourceFormat->hasAlpha;
-        backingSource.colorSpace = sourceImageBuffer->colorSpace() == ColorSpace::DisplayP3() ? ::WebGPU::PredefinedColorSpace::DisplayP3 : ::WebGPU::PredefinedColorSpace::SRGB;
-    }
-
-    queue.copyExternalImageToTexture(backingSource, {
-        .texture = destination.texture,
-        .mipLevel = destination.mipLevel,
-        .origin = destination.origin,
-        .aspect = destination.aspect,
-        .colorSpace = convertToWebGPU(destination.colorSpace),
-        .premultipliedAlpha = destination.premultipliedAlpha,
-    }, copySize);
-}
-
-RefPtr<WebCore::NativeImage> WebGPUIntegrationImpl::nativeImage(WebGPU::Queue&, WebCore::VideoFrame&)
-{
-    // Only RemoteGPUProxy resolves a video frame to an image, through its video frame object heap.
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-RefPtr<WebGPU::ExternalTexture> WebGPUIntegrationImpl::importExternalTexture(WebGPU::Device& device, const WebGPUExternalTextureDescriptor& descriptor)
-{
-    auto* pixelBuffer = std::get_if<RetainPtr<CVPixelBufferRef>>(&descriptor.videoBacking);
-    return device.importExternalTexture({
-        .label = descriptor.label,
-        .pixelBuffer = pixelBuffer ? *pixelBuffer : nullptr,
-        .colorSpace = convertToWebGPU(descriptor.colorSpace),
-        .visibleSize = {
-            .width = static_cast<uint32_t>(std::max(0, descriptor.visibleSize.width())),
-            .height = static_cast<uint32_t>(std::max(0, descriptor.visibleSize.height())),
-        },
-    });
-}
-
-#if PLATFORM(COCOA) && ENABLE(VIDEO)
-void WebGPUIntegrationImpl::updateExternalTexture(WebGPU::Device&, const WebGPU::ExternalTexture&, const WebCore::MediaPlayerIdentifier&)
-{
-    // Only RemoteGPUProxy names a media player; the GPU process resolves it to a pixel buffer.
-    RELEASE_ASSERT_NOT_REACHED();
-}
-#endif
-
-void WebGPUIntegrationImpl::paintToCanvas(WebCore::NativeImage& image, const WebCore::IntSize& canvasSize, WebCore::GraphicsContext& context)
+void GPUImpl::paintToCanvas(WebCore::NativeImage& image, const WebCore::IntSize& canvasSize, WebCore::GraphicsContext& context)
 {
     auto imageSize = image.size();
     FloatRect canvasRect(FloatPoint(), canvasSize);
@@ -247,141 +127,167 @@ void WebGPUIntegrationImpl::paintToCanvas(WebCore::NativeImage& image, const Web
     context.drawNativeImage(image, canvasRect, FloatRect(FloatPoint(), imageSize), { CompositeOperator::Copy });
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPUCompositorIntegration&) const
+bool GPUImpl::isValid(const CompositorIntegration&) const
 {
     return true;
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::Buffer& buffer) const
+bool GPUImpl::isValid(const Buffer& buffer) const
 {
-    return buffer.isValid();
+    WGPUBuffer wgpuBuffer = m_convertToBackingContext.get().convertToBacking(buffer);
+    return wgpuBufferIsValid(wgpuBuffer);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::Adapter& adapter) const
+bool GPUImpl::isValid(const Adapter& adapter) const
 {
-    return adapter.isValid();
+    WGPUAdapter wgpuAdapter = m_convertToBackingContext.get().convertToBacking(adapter);
+    return wgpuAdapterIsValid(wgpuAdapter);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::BindGroup& bindGroup) const
+bool GPUImpl::isValid(const BindGroup& bindGroup) const
 {
-    return bindGroup.isValid();
+    WGPUBindGroup wgpuBindGroup = m_convertToBackingContext.get().convertToBacking(bindGroup);
+    return wgpuBindGroupIsValid(wgpuBindGroup);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::BindGroupLayout& bindGroupLayout) const
+bool GPUImpl::isValid(const BindGroupLayout& bindGroupLayout) const
 {
-    return bindGroupLayout.isValid();
+    WGPUBindGroupLayout wgpuBindGroupLayout = m_convertToBackingContext.get().convertToBacking(bindGroupLayout);
+    return wgpuBindGroupLayoutIsValid(wgpuBindGroupLayout);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::CommandBuffer& commandBuffer) const
+bool GPUImpl::isValid(const CommandBuffer& commandBuffer) const
 {
-    return commandBuffer.isValid();
+    WGPUCommandBuffer wgpuCommandBuffer = m_convertToBackingContext.get().convertToBacking(commandBuffer);
+    return wgpuCommandBufferIsValid(wgpuCommandBuffer);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::CommandEncoder& commandEncoder) const
+bool GPUImpl::isValid(const CommandEncoder& commandEncoder) const
 {
-    return commandEncoder.isValid();
+    WGPUCommandEncoder wgpuCommandEncoder = m_convertToBackingContext.get().convertToBacking(commandEncoder);
+    return wgpuCommandEncoderIsValid(wgpuCommandEncoder);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::ComputePassEncoder& computePassEncoder) const
+bool GPUImpl::isValid(const ComputePassEncoder& computePassEncoder) const
 {
-    return computePassEncoder.isValid();
+    WGPUComputePassEncoder wgpuComputePassEncoder = m_convertToBackingContext.get().convertToBacking(computePassEncoder);
+    return wgpuComputePassEncoderIsValid(wgpuComputePassEncoder);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::ComputePipeline& computePipeline) const
+bool GPUImpl::isValid(const ComputePipeline& computePipeline) const
 {
-    return computePipeline.isValid();
+    WGPUComputePipeline wgpuComputePipeline = m_convertToBackingContext.get().convertToBacking(computePipeline);
+    return wgpuComputePipelineIsValid(wgpuComputePipeline);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::Device& device) const
+bool GPUImpl::isValid(const Device& device) const
 {
-    return device.isValid();
+    WGPUDevice wgpuDevice = m_convertToBackingContext.get().convertToBacking(device);
+    return wgpuDeviceIsValid(wgpuDevice);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::ExternalTexture& externalTexture) const
+bool GPUImpl::isValid(const ExternalTexture& externalTexture) const
 {
-    return externalTexture.isValid();
+    WGPUExternalTexture wgpuExternalTexture = m_convertToBackingContext.get().convertToBacking(externalTexture);
+    return wgpuExternalTextureIsValid(wgpuExternalTexture);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::PipelineLayout& pipelineLayout) const
+bool GPUImpl::isValid(const PipelineLayout& pipelineLayout) const
 {
-    return pipelineLayout.isValid();
+    WGPUPipelineLayout wgpuPipelineLayout = m_convertToBackingContext.get().convertToBacking(pipelineLayout);
+    return wgpuPipelineLayoutIsValid(wgpuPipelineLayout);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::PresentationContext& presentationContext) const
+bool GPUImpl::isValid(const PresentationContext& presentationContext) const
 {
-    return presentationContext.isValid();
+    WGPUSurface wgpuPresentationContext = m_convertToBackingContext.get().convertToBacking(presentationContext);
+    return wgpuPresentationContextIsValid(wgpuPresentationContext);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::QuerySet& querySet) const
+bool GPUImpl::isValid(const QuerySet& querySet) const
 {
-    return querySet.isValid();
+    WGPUQuerySet wgpuQuerySet = m_convertToBackingContext.get().convertToBacking(querySet);
+    return wgpuQuerySetIsValid(wgpuQuerySet);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::Queue& queue) const
+bool GPUImpl::isValid(const Queue& queue) const
 {
-    return queue.isValid();
+    WGPUQueue wgpuQueue = m_convertToBackingContext.get().convertToBacking(queue);
+    return wgpuQueueIsValid(wgpuQueue);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::RenderBundleEncoder& renderBundleEncoder) const
+bool GPUImpl::isValid(const RenderBundleEncoder& renderBundleEncoder) const
 {
-    return renderBundleEncoder.isValid();
+    WGPURenderBundleEncoder wgpuRenderBundleEncoder = m_convertToBackingContext.get().convertToBacking(renderBundleEncoder);
+    return wgpuRenderBundleEncoderIsValid(wgpuRenderBundleEncoder);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::RenderBundle& renderBundle) const
+bool GPUImpl::isValid(const RenderBundle& renderBundle) const
 {
-    return renderBundle.isValid();
+    WGPURenderBundle wgpuRenderBundle = m_convertToBackingContext.get().convertToBacking(renderBundle);
+    return wgpuRenderBundleIsValid(wgpuRenderBundle);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::RenderPassEncoder& renderPassEncoder) const
+bool GPUImpl::isValid(const RenderPassEncoder& renderPassEncoder) const
 {
-    return renderPassEncoder.isValid();
+    WGPURenderPassEncoder wgpuRenderPassEncoder = m_convertToBackingContext.get().convertToBacking(renderPassEncoder);
+    return wgpuRenderPassEncoderIsValid(wgpuRenderPassEncoder);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::RenderPipeline& renderPipeline) const
+bool GPUImpl::isValid(const RenderPipeline& renderPipeline) const
 {
-    return renderPipeline.isValid();
+    WGPURenderPipeline wgpuRenderPipeline = m_convertToBackingContext.get().convertToBacking(renderPipeline);
+    return wgpuRenderPipelineIsValid(wgpuRenderPipeline);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::Sampler& sampler) const
+bool GPUImpl::isValid(const Sampler& sampler) const
 {
-    return sampler.isValid();
+    WGPUSampler wgpuSampler = m_convertToBackingContext.get().convertToBacking(sampler);
+    return wgpuSamplerIsValid(wgpuSampler);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::ShaderModule& shaderModule) const
+bool GPUImpl::isValid(const ShaderModule& shaderModule) const
 {
-    return shaderModule.isValid();
+    WGPUShaderModule wgpuShaderModule = m_convertToBackingContext.get().convertToBacking(shaderModule);
+    return wgpuShaderModuleIsValid(wgpuShaderModule);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::Texture& texture) const
+bool GPUImpl::isValid(const Texture& texture) const
 {
-    return texture.isValid();
+    WGPUTexture wgpuTexture = m_convertToBackingContext.get().convertToBacking(texture);
+    return wgpuTextureIsValid(wgpuTexture);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::TextureView& textureView) const
+bool GPUImpl::isValid(const TextureView& textureView) const
 {
-    return textureView.isValid();
+    WGPUTextureView wgpuTextureView = m_convertToBackingContext.get().convertToBacking(textureView);
+    return wgpuTextureViewIsValid(wgpuTextureView);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::XRBinding& binding) const
+bool GPUImpl::isValid(const XRBinding& binding) const
 {
-    return binding.isValid();
+    WGPUXRBinding wgpuBinding = m_convertToBackingContext.get().convertToBacking(binding);
+    return wgpuXRBindingIsValid(wgpuBinding);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::XRSubImage& subImage) const
+bool GPUImpl::isValid(const XRSubImage& subImage) const
 {
-    return subImage.isValid();
+    WGPUXRSubImage wgpuSubImage = m_convertToBackingContext.get().convertToBacking(subImage);
+    return wgpuXRSubImageIsValid(wgpuSubImage);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::XRProjectionLayer& layer) const
+bool GPUImpl::isValid(const XRProjectionLayer& layer) const
 {
-    return layer.isValid();
+    WGPUXRProjectionLayer wgpuLayer = m_convertToBackingContext.get().convertToBacking(layer);
+    return wgpuXRProjectionLayerIsValid(wgpuLayer);
 }
 
-bool WebGPUIntegrationImpl::isValid(const WebGPU::XRView& view) const
+bool GPUImpl::isValid(const XRView& view) const
 {
-    return view.isValid();
+    WGPUXRView wgpuView = m_convertToBackingContext.get().convertToBacking(view);
+    return wgpuXRViewIsValid(wgpuView);
 }
 
-} // namespace WebCore
+} // namespace WebCore::WebGPU
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

@@ -30,11 +30,14 @@
 #include "RemoteGPU.h"
 #include "StreamMessageReceiver.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore::WebGPU {
+class ExternalTexture;
+}
 
 namespace IPC {
 class StreamServerConnection;
@@ -49,7 +52,7 @@ class ObjectHeap;
 class RemoteExternalTexture final : public IPC::StreamMessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteExternalTexture);
 public:
-    static Ref<RemoteExternalTexture> create(::WebGPU::ExternalTexture& externalTexture, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, RemoteGPU& gpu, WebGPUIdentifier identifier)
+    static Ref<RemoteExternalTexture> create(WebCore::WebGPU::ExternalTexture& externalTexture, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, RemoteGPU& gpu, WebGPUIdentifier identifier)
     {
         return adoptRef(*new RemoteExternalTexture(externalTexture, objectHeap, WTF::move(streamConnection), gpu, identifier));
     }
@@ -63,14 +66,14 @@ public:
 private:
     friend class WebGPU::ObjectHeap;
 
-    RemoteExternalTexture(::WebGPU::ExternalTexture&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, RemoteGPU&, WebGPUIdentifier);
+    RemoteExternalTexture(WebCore::WebGPU::ExternalTexture&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, RemoteGPU&, WebGPUIdentifier);
 
     RemoteExternalTexture(const RemoteExternalTexture&) = delete;
     RemoteExternalTexture(RemoteExternalTexture&&) = delete;
     RemoteExternalTexture& operator=(const RemoteExternalTexture&) = delete;
     RemoteExternalTexture& operator=(RemoteExternalTexture&&) = delete;
 
-    ::WebGPU::ExternalTexture& backing() { return m_backing; }
+    WebCore::WebGPU::ExternalTexture& backing() { return m_backing; }
 
     void didReceiveStreamMessage(IPC::StreamServerConnection&, IPC::Decoder&) final;
 
@@ -79,7 +82,7 @@ private:
     void undestroy();
     void destruct();
 
-    const Ref<::WebGPU::ExternalTexture> m_backing;
+    const Ref<WebCore::WebGPU::ExternalTexture> m_backing;
     WeakRef<WebGPU::ObjectHeap> m_objectHeap;
     const Ref<IPC::StreamServerConnection> m_streamConnection;
     WeakRef<RemoteGPU> m_gpu;

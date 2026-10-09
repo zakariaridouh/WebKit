@@ -26,7 +26,7 @@
 #pragma once
 
 #include "GPUIntegralTypes.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUMapMode.h"
 #include <cstdint>
 #include <wtf/RefCounted.h>
 
@@ -40,13 +40,13 @@ public:
     static constexpr GPUFlagsConstant WRITE = 0x0002;
 };
 
-inline OptionSet<::WebGPU::MapMode> convertMapModeFlagsToBacking(GPUMapModeFlags mapModeFlags)
+inline WebGPU::MapModeFlags convertMapModeFlagsToBacking(GPUMapModeFlags mapModeFlags)
 {
-    OptionSet<::WebGPU::MapMode> result;
+    WebGPU::MapModeFlags result;
     if (mapModeFlags & GPUMapMode::READ)
-        result.add(::WebGPU::MapMode::Read);
+        result.add(WebGPU::MapMode::Read);
     if (mapModeFlags & GPUMapMode::WRITE)
-        result.add(::WebGPU::MapMode::Write);
+        result.add(WebGPU::MapMode::Write);
     return result;
 }
 

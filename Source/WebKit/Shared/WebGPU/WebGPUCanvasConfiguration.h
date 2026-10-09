@@ -28,8 +28,11 @@
 #if ENABLE(GPU_PROCESS)
 
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUCanvasAlphaMode.h>
+#include <WebCore/WebGPUCanvasToneMappingMode.h>
 #include <WebCore/WebGPUPredefinedColorSpace.h>
+#include <WebCore/WebGPUTextureFormat.h>
+#include <WebCore/WebGPUTextureUsage.h>
 #include <optional>
 #include <wtf/Ref.h>
 
@@ -39,15 +42,13 @@ class Device;
 
 struct CanvasConfiguration {
     WebGPUIdentifier device;
-    ::WebGPU::TextureFormat format { ::WebGPU::TextureFormat::R8unorm };
-    OptionSet<::WebGPU::TextureUsage> usage { ::WebGPU::TextureUsage::RenderAttachment };
-    Vector<::WebGPU::TextureFormat> viewFormats;
-    WebCore::PredefinedColorSpace colorSpace { WebCore::PredefinedColorSpace::SRGB };
-    ::WebGPU::CanvasToneMappingMode toneMappingMode { ::WebGPU::CanvasToneMappingMode::Standard };
-    ::WebGPU::CanvasAlphaMode compositingAlphaMode { ::WebGPU::CanvasAlphaMode::Opaque };
+    WebCore::WebGPU::TextureFormat format { WebCore::WebGPU::TextureFormat::R8unorm };
+    WebCore::WebGPU::TextureUsageFlags usage { WebCore::WebGPU::TextureUsage::RenderAttachment };
+    Vector<WebCore::WebGPU::TextureFormat> viewFormats;
+    WebCore::WebGPU::PredefinedColorSpace colorSpace { WebCore::WebGPU::PredefinedColorSpace::SRGB };
+    WebCore::WebGPU::CanvasToneMappingMode toneMappingMode { WebCore::WebGPU::CanvasToneMappingMode::Standard };
+    WebCore::WebGPU::CanvasAlphaMode compositingAlphaMode { WebCore::WebGPU::CanvasAlphaMode::Opaque };
     bool reportValidationErrors { true };
-    uint32_t width { 0 };
-    uint32_t height { 0 };
 };
 
 } // namespace WebKit::WebGPU

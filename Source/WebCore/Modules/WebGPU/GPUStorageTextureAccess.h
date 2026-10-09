@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUStorageTextureAccess.h"
 #include <cstdint>
 
 namespace WebCore {
@@ -36,15 +36,15 @@ enum class GPUStorageTextureAccess : uint8_t {
     ReadWrite
 };
 
-inline ::WebGPU::StorageTextureAccess convertToBacking(GPUStorageTextureAccess storageTextureAccess)
+inline WebGPU::StorageTextureAccess convertToBacking(GPUStorageTextureAccess storageTextureAccess)
 {
     switch (storageTextureAccess) {
     case GPUStorageTextureAccess::WriteOnly:
-        return ::WebGPU::StorageTextureAccess::WriteOnly;
+        return WebGPU::StorageTextureAccess::WriteOnly;
     case GPUStorageTextureAccess::ReadOnly:
-        return ::WebGPU::StorageTextureAccess::ReadOnly;
+        return WebGPU::StorageTextureAccess::ReadOnly;
     case GPUStorageTextureAccess::ReadWrite:
-        return ::WebGPU::StorageTextureAccess::ReadWrite;
+        return WebGPU::StorageTextureAccess::ReadWrite;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }

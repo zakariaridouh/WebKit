@@ -29,14 +29,14 @@
 
 #include "RemoteDeviceProxy.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUExternalTexture.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebKit::WebGPU {
 
 class ConvertToBackingContext;
 
-class RemoteExternalTextureProxy final : public ::WebGPU::ExternalTexture {
+class RemoteExternalTextureProxy final : public WebCore::WebGPU::ExternalTexture {
     WTF_MAKE_TZONE_ALLOCATED(RemoteExternalTextureProxy);
 public:
     static Ref<RemoteExternalTextureProxy> create(RemoteDeviceProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier)
@@ -49,14 +49,6 @@ public:
     RemoteDeviceProxy& parent() const { return m_parent; }
     RemoteGPUProxy& root() { return m_parent->root(); }
 
-    void destroy() final;
-    void undestroy() final;
-#if PLATFORM(COCOA)
-    void updateExternalTexture(CVPixelBufferRef) final;
-#endif
-    void setLabel(String&&) final;
-    bool isValid() const final;
-
 private:
     friend class DowncastConvertToBackingContext;
 
@@ -67,6 +59,8 @@ private:
     RemoteExternalTextureProxy& operator=(const RemoteExternalTextureProxy&) = delete;
     RemoteExternalTextureProxy& operator=(RemoteExternalTextureProxy&&) = delete;
 
+    bool isRemoteExternalTextureProxy() const final { return true; }
+
     WebGPUIdentifier backing() const { return m_backing; }
     
     template<typename T>
@@ -74,6 +68,13 @@ private:
     {
         return protect(root().streamClientConnection())->send(std::forward<T>(message), backing());
     }
+
+    void setLabelInternal(const String&) final;
+    void destroy() final;
+    void undestroy() final;
+#if PLATFORM(COCOA)
+    void updateExternalTexture(CVPixelBufferRef) final;
+#endif
 
     WebGPUIdentifier m_backing;
     const Ref<ConvertToBackingContext> m_convertToBackingContext;
@@ -83,8 +84,7 @@ private:
 } // namespace WebKit::WebGPU
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebGPU::RemoteExternalTextureProxy)
-    // In the Web Process, every WebGPU::ExternalTexture is a RemoteExternalTextureProxy.
-    static bool isType(const ::WebGPU::ExternalTexture&) { return true; }
+    static bool isType(const WebCore::WebGPU::ExternalTexture& texture) { return texture.isRemoteExternalTextureProxy(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GPU_PROCESS)

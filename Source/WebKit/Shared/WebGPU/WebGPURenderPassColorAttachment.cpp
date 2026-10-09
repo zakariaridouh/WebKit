@@ -30,55 +30,77 @@
 
 #include "WebGPUConvertFromBackingContext.h"
 #include "WebGPUConvertToBackingContext.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPURenderPassColorAttachment.h>
+#include <WebCore/WebGPUTextureView.h>
 
 namespace WebKit::WebGPU {
 
-static WebGPUIdentifier colorAttachmentViewIdentifier(ConvertToBackingContext& convertToBacking, const ::WebGPU::RenderPassAttachmentView& view)
+static WebGPUIdentifier getIdentifier(ConvertToBackingContext& convertToBacking, const WebCore::WebGPU::RenderPassColorAttachment& renderPassColorAttachment)
 {
-    // RenderPassAttachmentView is a std::variant, see WebGPUCpp.h.
-    if (auto* textureView = std::get_if<Ref<::WebGPU::TextureView>>(&view))
-        return convertToBacking.convertToBacking(textureView->get());
-    return convertToBacking.convertToBacking(std::get_if<Ref<::WebGPU::Texture>>(&view)->get());
+    if (RefPtr view = renderPassColorAttachment.textureView())
+        return convertToBacking.convertToBacking(*view);
+
+    return convertToBacking.convertToBacking(*protect(renderPassColorAttachment.texture()));
 }
-std::optional<RenderPassColorAttachment> ConvertToBackingContext::convertToBacking(const ::WebGPU::RenderPassColorAttachment& renderPassColorAttachment)
+std::optional<RenderPassColorAttachment> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::RenderPassColorAttachment& renderPassColorAttachment)
 {
-    auto identifier = colorAttachmentViewIdentifier(*this, renderPassColorAttachment.view);
+    auto identifier = getIdentifier(*this, renderPassColorAttachment);
 
     std::optional<WebGPUIdentifier> resolveTarget;
-    if (renderPassColorAttachment.resolveTarget)
-        resolveTarget = colorAttachmentViewIdentifier(*this, *renderPassColorAttachment.resolveTarget);
+    if (renderPassColorAttachment.resolveTarget) {
+        RefPtr textureView = renderPassColorAttachment.resolveTextureView();
+        if (textureView)
+            resolveTarget = convertToBacking(*textureView);
+        else
+            resolveTarget = convertToBacking(*protect(renderPassColorAttachment.resolveTexture()));
+        if (!resolveTarget)
+            return std::nullopt;
+    }
 
-    return { { identifier, renderPassColorAttachment.depthSlice, resolveTarget, renderPassColorAttachment.clearValue, renderPassColorAttachment.loadOp, renderPassColorAttachment.storeOp } };
+    std::optional<Color> clearValue;
+    if (renderPassColorAttachment.clearValue) {
+        clearValue = convertToBacking(*renderPassColorAttachment.clearValue);
+        if (!clearValue)
+            return std::nullopt;
+    }
+
+    return { { identifier, renderPassColorAttachment.depthSlice, resolveTarget, WTF::move(clearValue), renderPassColorAttachment.loadOp, renderPassColorAttachment.storeOp } };
 }
 
-std::optional<::WebGPU::RenderPassColorAttachment> ConvertFromBackingContext::convertFromBacking(const RenderPassColorAttachment& renderPassColorAttachment)
+std::optional<WebCore::WebGPU::RenderPassColorAttachment> ConvertFromBackingContext::convertFromBacking(const RenderPassColorAttachment& renderPassColorAttachment)
 {
-    RefPtr view = convertTextureViewFromBacking(renderPassColorAttachment.view);
-    RefPtr texture = !view ? convertTextureFromBacking(renderPassColorAttachment.view) : nullptr;
+    WeakPtr view = convertTextureViewFromBacking(renderPassColorAttachment.view);
+    WeakPtr texture = !view ? convertTextureFromBacking(renderPassColorAttachment.view) : nullptr;
     if (!view && !texture)
         return std::nullopt;
 
-    std::optional<::WebGPU::RenderPassAttachmentView> resolveTarget;
+    std::optional<WebCore::WebGPU::RenderPassResolveAttachmentView> resolveTarget;
     if (renderPassColorAttachment.resolveTarget) {
-        RefPtr view = convertTextureViewFromBacking(renderPassColorAttachment.resolveTarget.value());
+        WeakPtr view = convertTextureViewFromBacking(renderPassColorAttachment.resolveTarget.value());
         if (!view) {
-            RefPtr texture = convertTextureFromBacking(renderPassColorAttachment.resolveTarget.value());
+            WeakPtr texture = convertTextureFromBacking(renderPassColorAttachment.resolveTarget.value());
             if (!texture)
                 return std::nullopt;
 
-            resolveTarget = ::WebGPU::RenderPassAttachmentView { texture.releaseNonNull() };
+            resolveTarget = texture;
         } else
-            resolveTarget = ::WebGPU::RenderPassAttachmentView { view.releaseNonNull() };
+            resolveTarget = view;
     }
 
-    ::WebGPU::RenderPassAttachmentView viewTextureVariant = [&] -> ::WebGPU::RenderPassAttachmentView {
-        if (view)
-            return view.releaseNonNull();
-        return texture.releaseNonNull();
-    }();
+    std::optional<WebCore::WebGPU::Color> clearValue;
+    if (renderPassColorAttachment.clearValue) {
+        clearValue = convertFromBacking(*renderPassColorAttachment.clearValue);
+        if (!clearValue)
+            return std::nullopt;
+    }
 
-    return { { WTF::move(viewTextureVariant), renderPassColorAttachment.depthSlice, WTF::move(resolveTarget), renderPassColorAttachment.clearValue.value_or(::WebGPU::Color { }), renderPassColorAttachment.loadOp, renderPassColorAttachment.storeOp } };
+    WebCore::WebGPU::RenderPassColorAttachmentView viewTextureVariant = [&] -> WebCore::WebGPU::RenderPassColorAttachmentView {
+        if (view)
+            return *view;
+
+        return *texture;
+    }();
+    return { { viewTextureVariant, renderPassColorAttachment.depthSlice, resolveTarget, WTF::move(clearValue), renderPassColorAttachment.loadOp, renderPassColorAttachment.storeOp } };
 }
 
 } // namespace WebKit

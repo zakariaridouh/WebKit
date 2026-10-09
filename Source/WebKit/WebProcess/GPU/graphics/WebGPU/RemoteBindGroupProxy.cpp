@@ -49,19 +49,13 @@ RemoteBindGroupProxy::~RemoteBindGroupProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteBindGroupProxy::setLabel(String&& label)
+void RemoteBindGroupProxy::setLabelInternal(const String& label)
 {
-    auto sendResult = send(Messages::RemoteBindGroup::SetLabel(WTF::move(label)));
+    auto sendResult = send(Messages::RemoteBindGroup::SetLabel(label));
     UNUSED_VARIABLE(sendResult);
 }
 
-bool RemoteBindGroupProxy::isValid() const
-{
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-bool RemoteBindGroupProxy::updateExternalTextures(::WebGPU::ExternalTexture& externalTexture)
+bool RemoteBindGroupProxy::updateExternalTextures(WebCore::WebGPU::ExternalTexture& externalTexture)
 {
     auto convertedDescriptor = protect(m_convertToBackingContext)->convertToBacking(externalTexture);
     auto sendResult = sendSync(Messages::RemoteBindGroup::UpdateExternalTextures(WTF::move(convertedDescriptor)));

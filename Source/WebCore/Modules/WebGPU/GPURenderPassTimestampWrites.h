@@ -27,7 +27,7 @@
 
 #include "GPUIntegralTypes.h"
 #include "GPUQuerySet.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPURenderPassTimestampWrites.h"
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
@@ -35,12 +35,12 @@
 namespace WebCore {
 
 struct GPURenderPassTimestampWrites {
-    ::WebGPU::PassTimestampWrites convertToBacking() const
+    WebGPU::RenderPassTimestampWrites convertToBacking() const
     {
         return {
-            .querySet = querySet->backing(),
-            .beginningOfPassWriteIndex = beginningOfPassWriteIndex,
-            .endOfPassWriteIndex = endOfPassWriteIndex,
+            &querySet->backing(),
+            beginningOfPassWriteIndex.value_or(WebGPU::kQuerySetIndexUndefined),
+            endOfPassWriteIndex.value_or(WebGPU::kQuerySetIndexUndefined),
         };
     }
 

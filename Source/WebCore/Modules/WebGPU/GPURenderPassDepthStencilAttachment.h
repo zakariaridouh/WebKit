@@ -30,7 +30,7 @@
 #include "GPUStoreOp.h"
 #include "GPUTexture.h"
 #include "GPUTextureView.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPURenderPassDepthStencilAttachment.h"
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
 
@@ -39,25 +39,25 @@ namespace WebCore {
 using GPURenderPassDepthAttachmentView = Variant<Ref<GPUTexture>, Ref<GPUTextureView>>;
 
 struct GPURenderPassDepthStencilAttachment {
-    ::WebGPU::RenderPassDepthStencilAttachment convertToBacking() const
+    WebGPU::RenderPassDepthStencilAttachment convertToBacking() const
     {
         return {
-            .view = WTF::switchOn(view,
-                [](const Ref<GPUTexture>& texture) -> ::WebGPU::RenderPassAttachmentView {
+            WTF::switchOn(view,
+                [](const Ref<GPUTexture>& texture) -> WebGPU::RenderPassDepthAttachmentView {
                     return texture->backing();
                 },
-                [](const Ref<GPUTextureView>& view) -> ::WebGPU::RenderPassAttachmentView {
+                [](const Ref<GPUTextureView>& view) -> WebGPU::RenderPassDepthAttachmentView {
                     return view->backing();
                 }
             ),
-            .depthClearValue = depthClearValue.value_or(-1.f),
-            .depthLoadOp = depthLoadOp ? std::optional { WebCore::convertToBacking(*depthLoadOp) } : std::nullopt,
-            .depthStoreOp = depthStoreOp ? std::optional { WebCore::convertToBacking(*depthStoreOp) } : std::nullopt,
-            .depthReadOnly = depthReadOnly,
-            .stencilClearValue = stencilClearValue,
-            .stencilLoadOp = stencilLoadOp ? std::optional { WebCore::convertToBacking(*stencilLoadOp) } : std::nullopt,
-            .stencilStoreOp = stencilStoreOp ? std::optional { WebCore::convertToBacking(*stencilStoreOp) } : std::nullopt,
-            .stencilReadOnly = stencilReadOnly,
+            depthClearValue.value_or(-1.f),
+            depthLoadOp ? std::optional { WebCore::convertToBacking(*depthLoadOp) } : std::nullopt,
+            depthStoreOp ? std::optional { WebCore::convertToBacking(*depthStoreOp) } : std::nullopt,
+            depthReadOnly,
+            stencilClearValue,
+            stencilLoadOp ? std::optional { WebCore::convertToBacking(*stencilLoadOp) } : std::nullopt,
+            stencilStoreOp ? std::optional { WebCore::convertToBacking(*stencilStoreOp) } : std::nullopt,
+            stencilReadOnly,
         };
     }
 

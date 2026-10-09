@@ -36,7 +36,7 @@
 namespace WebCore {
 
 struct GPUDepthStencilState {
-    WebGPUDepthStencilState convertToBacking() const
+    WebGPU::DepthStencilState convertToBacking() const
     {
         return {
             .format = WebCore::convertToBacking(format),

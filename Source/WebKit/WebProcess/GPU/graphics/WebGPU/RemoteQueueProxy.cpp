@@ -61,7 +61,7 @@ RemoteQueueProxy::~RemoteQueueProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteQueueProxy::submit(Vector<Ref<::WebGPU::CommandBuffer>>&& commandBuffers)
+void RemoteQueueProxy::submit(Vector<Ref<WebCore::WebGPU::CommandBuffer>>&& commandBuffers)
 {
     auto convertedCommandBuffers = WTF::compactMap(commandBuffers, [&](auto& commandBuffer) -> std::optional<WebGPUIdentifier> {
         auto convertedCommandBuffer = m_convertToBackingContext->convertToBacking(commandBuffer);
@@ -80,54 +80,76 @@ void RemoteQueueProxy::onSubmittedWorkDone(CompletionHandler<void()>&& callback)
     UNUSED_PARAM(sendResult);
 }
 
-void RemoteQueueProxy::writeBuffer(const ::WebGPU::Buffer& buffer, uint64_t bufferOffset, std::span<const uint8_t> data)
+void RemoteQueueProxy::writeBuffer(
+    const WebCore::WebGPU::Buffer& buffer,
+    WebCore::WebGPU::Size64 bufferOffset,
+    std::span<const uint8_t> source,
+    WebCore::WebGPU::Size64 dataOffset,
+    std::optional<WebCore::WebGPU::Size64> size)
 {
     auto convertedBuffer = m_convertToBackingContext->convertToBacking(buffer);
 
-    if (data.size() > maxCrossProcessResourceCopySize) {
-        auto handle = WebCore::SharedMemoryHandle::createCopy(data, WebCore::SharedMemoryProtection::ReadOnly);
+    size_t actualSourceSize = static_cast<size_t>(size.value_or(source.size() - dataOffset));
+    if (actualSourceSize > maxCrossProcessResourceCopySize) {
+        auto handle = WebCore::SharedMemoryHandle::createCopy(source.subspan(dataOffset, actualSourceSize), WebCore::SharedMemoryProtection::ReadOnly);
         auto sendResult = sendWithAsyncReply(Messages::RemoteQueue::WriteBuffer(convertedBuffer, bufferOffset, WTF::move(handle)), [](auto) mutable {
         });
         UNUSED_VARIABLE(sendResult);
     } else {
-        auto sendResult = send(Messages::RemoteQueue::WriteBufferWithCopy(convertedBuffer, bufferOffset, data));
+        auto sendResult = send(Messages::RemoteQueue::WriteBufferWithCopy(convertedBuffer, bufferOffset, source.subspan(dataOffset, actualSourceSize)));
         UNUSED_VARIABLE(sendResult);
     }
 }
 
-void RemoteQueueProxy::writeTexture(const ::WebGPU::TexelCopyTextureInfo& destination, std::span<const uint8_t> data, const ::WebGPU::TexelCopyBufferLayout& dataLayout, const ::WebGPU::Extent3D& writeSize)
+void RemoteQueueProxy::writeTexture(
+    const WebCore::WebGPU::ImageCopyTexture& destination,
+    std::span<const uint8_t> source,
+    const WebCore::WebGPU::ImageDataLayout& dataLayout,
+    const WebCore::WebGPU::Extent3D& size)
 {
     auto convertedDestination = m_convertToBackingContext->convertToBacking(destination);
     ASSERT(convertedDestination);
     auto convertedDataLayout = m_convertToBackingContext->convertToBacking(dataLayout);
     ASSERT(convertedDataLayout);
-    if (!convertedDestination || !convertedDataLayout)
+    auto convertedSize = m_convertToBackingContext->convertToBacking(size);
+    ASSERT(convertedSize);
+    if (!convertedDestination || !convertedDataLayout || !convertedSize)
         return;
 
-    if (data.size() > maxCrossProcessResourceCopySize) {
-        auto handle = WebCore::SharedMemoryHandle::createCopy(data, WebCore::SharedMemoryProtection::ReadOnly);
-        auto sendResult = sendWithAsyncReply(Messages::RemoteQueue::WriteTexture(*convertedDestination, WTF::move(handle), *convertedDataLayout, writeSize), [](auto) mutable {
+    if (source.size() > maxCrossProcessResourceCopySize) {
+        auto handle = WebCore::SharedMemoryHandle::createCopy(source, WebCore::SharedMemoryProtection::ReadOnly);
+        auto sendResult = sendWithAsyncReply(Messages::RemoteQueue::WriteTexture(*convertedDestination, WTF::move(handle), *convertedDataLayout, *convertedSize), [](auto) mutable {
         });
         UNUSED_VARIABLE(sendResult);
     } else {
-        auto sendResult = send(Messages::RemoteQueue::WriteTextureWithCopy(*convertedDestination, Vector(data), *convertedDataLayout, writeSize));
+        auto sendResult = send(Messages::RemoteQueue::WriteTextureWithCopy(*convertedDestination, Vector(source), *convertedDataLayout, *convertedSize));
         UNUSED_VARIABLE(sendResult);
     }
 }
 
-#if PLATFORM(COCOA)
-void RemoteQueueProxy::copyExternalImageToTexture(const ::WebGPU::ImageCopyExternalImage&, const ::WebGPU::ImageCopyTextureTagged&, const ::WebGPU::Extent3D&)
+void RemoteQueueProxy::writeBufferNoCopy(
+    const WebCore::WebGPU::Buffer&,
+    WebCore::WebGPU::Size64,
+    std::span<uint8_t>,
+    WebCore::WebGPU::Size64,
+    std::optional<WebCore::WebGPU::Size64>)
 {
-    // The Web Process cannot name an IOSurface or a pixel buffer to the GPU process. RemoteGPUProxy
-    // sends the WebCore source instead, through the overload that takes it.
     RELEASE_ASSERT_NOT_REACHED();
 }
-#endif
+
+void RemoteQueueProxy::writeTexture(
+    const WebCore::WebGPU::ImageCopyTexture&,
+    std::span<uint8_t>,
+    const WebCore::WebGPU::ImageDataLayout&,
+    const WebCore::WebGPU::Extent3D&)
+{
+    RELEASE_ASSERT_NOT_REACHED();
+}
 
 void RemoteQueueProxy::copyExternalImageToTexture(
-    const WebCore::WebGPUExternalImageSource& source,
-    const WebCore::WebGPUImageCopyTextureTagged& destination,
-    const ::WebGPU::Extent3D& copySize)
+    const WebCore::WebGPU::ImageCopyExternalImage& source,
+    const WebCore::WebGPU::ImageCopyTextureTagged& destination,
+    const WebCore::WebGPU::Extent3D& copySize)
 {
 #if PLATFORM(COCOA) && ENABLE(VIDEO)
     if (source.videoSource) {
@@ -148,22 +170,24 @@ void RemoteQueueProxy::copyExternalImageToTexture(
     ASSERT(convertedSource);
     auto convertedDestination = convertToBackingContext->convertToBacking(destination);
     ASSERT(convertedDestination);
-    if (!convertedSource || !convertedDestination)
+    auto convertedCopySize = convertToBackingContext->convertToBacking(copySize);
+    ASSERT(convertedCopySize);
+    if (!convertedSource || !convertedDestination || !convertedCopySize)
         return;
 
     // Sent synchronously, because the source is identified rather than referenced: releasing it, or
     // drawing into it again, travels on the RemoteRenderingBackend's stream, which is not ordered
     // against this one. Blocking until the GPU process has resolved the identifier and encoded the
     // copy is what keeps `sourceImageBuffer` from being released, or overwritten, too early.
-    auto sendResult = sendSync(Messages::RemoteQueue::CopyExternalImageToTexture(*convertedSource, *convertedDestination, copySize));
+    auto sendResult = sendSync(Messages::RemoteQueue::CopyExternalImageToTexture(*convertedSource, *convertedDestination, *convertedCopySize));
     UNUSED_VARIABLE(sendResult);
 }
 
 #if PLATFORM(COCOA) && ENABLE(VIDEO)
 void RemoteQueueProxy::copyExternalImageFromVideoFrameToTexture(
-    const WebCore::WebGPUExternalImageSource& source,
-    const WebCore::WebGPUImageCopyTextureTagged& destination,
-    const ::WebGPU::Extent3D& copySize)
+    const WebCore::WebGPU::ImageCopyExternalImage& source,
+    const WebCore::WebGPU::ImageCopyTextureTagged& destination,
+    const WebCore::WebGPU::Extent3D& copySize)
 {
     Ref convertToBackingContext = m_convertToBackingContext;
 
@@ -171,7 +195,9 @@ void RemoteQueueProxy::copyExternalImageFromVideoFrameToTexture(
     ASSERT(convertedSource);
     auto convertedDestination = convertToBackingContext->convertToBacking(destination);
     ASSERT(convertedDestination);
-    if (!convertedSource || !convertedDestination)
+    auto convertedCopySize = convertToBackingContext->convertToBacking(copySize);
+    ASSERT(convertedCopySize);
+    if (!convertedSource || !convertedDestination || !convertedCopySize)
         return;
 
     // A frame with no media player behind it - every WebCodecs frame, and a media element whose
@@ -196,21 +222,15 @@ void RemoteQueueProxy::copyExternalImageFromVideoFrameToTexture(
     // Sent asynchronously, unlike the ImageBuffer copy above: the frame either travels with the
     // message or is named by a media player the GPU process resolves for itself, so there is no
     // identifier on another stream whose lifetime this call has to hold open.
-    auto sendResult = send(Messages::RemoteQueue::CopyExternalImageFromVideoFrameToTexture(WTF::move(*convertedSource), *convertedDestination, copySize));
+    auto sendResult = send(Messages::RemoteQueue::CopyExternalImageFromVideoFrameToTexture(WTF::move(*convertedSource), *convertedDestination, *convertedCopySize));
     UNUSED_VARIABLE(sendResult);
 }
 #endif
 
-void RemoteQueueProxy::setLabel(String&& label)
+void RemoteQueueProxy::setLabelInternal(const String& label)
 {
-    auto sendResult = send(Messages::RemoteQueue::SetLabel(WTF::move(label)));
+    auto sendResult = send(Messages::RemoteQueue::SetLabel(label));
     UNUSED_VARIABLE(sendResult);
-}
-
-bool RemoteQueueProxy::isValid() const
-{
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 RefPtr<WebCore::NativeImage> RemoteQueueProxy::getNativeImage(WebCore::VideoFrame& videoFrame)

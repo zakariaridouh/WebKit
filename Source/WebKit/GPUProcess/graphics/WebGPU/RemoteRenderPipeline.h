@@ -30,11 +30,14 @@
 #include "RemoteGPU.h"
 #include "StreamMessageReceiver.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore::WebGPU {
+class RenderPipeline;
+}
 
 namespace IPC {
 class StreamServerConnection;
@@ -49,7 +52,7 @@ class ObjectHeap;
 class RemoteRenderPipeline final : public IPC::StreamMessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteRenderPipeline);
 public:
-    static Ref<RemoteRenderPipeline> create(::WebGPU::RenderPipeline& renderPipeline, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, RemoteGPU& gpu, WebGPUIdentifier identifier)
+    static Ref<RemoteRenderPipeline> create(WebCore::WebGPU::RenderPipeline& renderPipeline, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, RemoteGPU& gpu, WebGPUIdentifier identifier)
     {
         return adoptRef(*new RemoteRenderPipeline(renderPipeline, objectHeap, WTF::move(streamConnection), gpu, identifier));
     }
@@ -63,14 +66,14 @@ public:
 private:
     friend class WebGPU::ObjectHeap;
 
-    RemoteRenderPipeline(::WebGPU::RenderPipeline&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, RemoteGPU&, WebGPUIdentifier);
+    RemoteRenderPipeline(WebCore::WebGPU::RenderPipeline&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, RemoteGPU&, WebGPUIdentifier);
 
     RemoteRenderPipeline(const RemoteRenderPipeline&) = delete;
     RemoteRenderPipeline(RemoteRenderPipeline&&) = delete;
     RemoteRenderPipeline& operator=(const RemoteRenderPipeline&) = delete;
     RemoteRenderPipeline& operator=(RemoteRenderPipeline&&) = delete;
 
-    ::WebGPU::RenderPipeline& backing() { return m_backing; }
+    WebCore::WebGPU::RenderPipeline& backing() { return m_backing; }
 
     void didReceiveStreamMessage(IPC::StreamServerConnection&, IPC::Decoder&) final;
 
@@ -79,7 +82,7 @@ private:
     void setLabel(String&&);
     void destruct();
 
-    const Ref<::WebGPU::RenderPipeline> m_backing;
+    const Ref<WebCore::WebGPU::RenderPipeline> m_backing;
     WeakRef<WebGPU::ObjectHeap> m_objectHeap;
     const Ref<IPC::StreamServerConnection> m_streamConnection;
     WeakRef<RemoteGPU> m_gpu;

@@ -26,13 +26,13 @@
 #pragma once
 
 #include "GPUBlendComponent.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUBlendState.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 struct GPUBlendState {
-    ::WebGPU::BlendState convertToBacking() const
+    WebGPU::BlendState convertToBacking() const
     {
         return {
             color.convertToBacking(),

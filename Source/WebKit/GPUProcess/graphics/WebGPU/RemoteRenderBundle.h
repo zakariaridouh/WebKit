@@ -30,11 +30,14 @@
 #include "RemoteGPU.h"
 #include "StreamMessageReceiver.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore::WebGPU {
+class RenderBundle;
+}
 
 namespace IPC {
 class StreamServerConnection;
@@ -49,7 +52,7 @@ class ObjectHeap;
 class RemoteRenderBundle final : public IPC::StreamMessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteRenderBundle);
 public:
-    static Ref<RemoteRenderBundle> create(::WebGPU::RenderBundle& renderBundle, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, RemoteGPU& gpu, WebGPUIdentifier identifier)
+    static Ref<RemoteRenderBundle> create(WebCore::WebGPU::RenderBundle& renderBundle, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, RemoteGPU& gpu, WebGPUIdentifier identifier)
     {
         return adoptRef(*new RemoteRenderBundle(renderBundle, objectHeap, WTF::move(streamConnection), gpu, identifier));
     }
@@ -63,21 +66,21 @@ public:
 private:
     friend class WebGPU::ObjectHeap;
 
-    RemoteRenderBundle(::WebGPU::RenderBundle&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, RemoteGPU&, WebGPUIdentifier);
+    RemoteRenderBundle(WebCore::WebGPU::RenderBundle&, WebGPU::ObjectHeap&, Ref<IPC::StreamServerConnection>&&, RemoteGPU&, WebGPUIdentifier);
 
     RemoteRenderBundle(const RemoteRenderBundle&) = delete;
     RemoteRenderBundle(RemoteRenderBundle&&) = delete;
     RemoteRenderBundle& operator=(const RemoteRenderBundle&) = delete;
     RemoteRenderBundle& operator=(RemoteRenderBundle&&) = delete;
 
-    ::WebGPU::RenderBundle& backing() { return m_backing; }
+    WebCore::WebGPU::RenderBundle& backing() { return m_backing; }
 
     void didReceiveStreamMessage(IPC::StreamServerConnection&, IPC::Decoder&) final;
 
     void setLabel(String&&);
     void destruct();
 
-    const Ref<::WebGPU::RenderBundle> m_backing;
+    const Ref<WebCore::WebGPU::RenderBundle> m_backing;
     WeakRef<WebGPU::ObjectHeap> m_objectHeap;
     const Ref<IPC::StreamServerConnection> m_streamConnection;
     WeakRef<RemoteGPU> m_gpu;

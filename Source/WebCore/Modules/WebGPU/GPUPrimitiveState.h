@@ -30,14 +30,14 @@
 #include "GPUIndexFormat.h"
 #include "GPUIntegralTypes.h"
 #include "GPUPrimitiveTopology.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUPrimitiveState.h"
 #include <optional>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 struct GPUPrimitiveState {
-    ::WebGPU::PrimitiveState convertToBacking() const
+    WebGPU::PrimitiveState convertToBacking() const
     {
         return {
             WebCore::convertToBacking(topology),

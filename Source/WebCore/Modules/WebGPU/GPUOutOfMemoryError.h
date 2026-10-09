@@ -40,7 +40,7 @@ public:
         return adoptRef(*new GPUOutOfMemoryError(WTF::move(message)));
     }
 
-    static Ref<GPUOutOfMemoryError> create(Ref<WebGPUOutOfMemoryError>&& backing)
+    static Ref<GPUOutOfMemoryError> create(Ref<WebGPU::OutOfMemoryError>&& backing)
     {
         return adoptRef(*new GPUOutOfMemoryError(WTF::move(backing)));
     }
@@ -48,8 +48,8 @@ public:
     Type type() const final { return Type::OutOfMemory; }
     const String& message() const LIFETIME_BOUND final { return m_message; }
 
-    WebGPUOutOfMemoryError* backing() { return m_backing.get(); }
-    const WebGPUOutOfMemoryError* backing() const { return m_backing.get(); }
+    WebGPU::OutOfMemoryError* backing() { return m_backing.get(); }
+    const WebGPU::OutOfMemoryError* backing() const { return m_backing.get(); }
 
 private:
     GPUOutOfMemoryError(String&& message)
@@ -57,13 +57,13 @@ private:
     {
     }
 
-    GPUOutOfMemoryError(Ref<WebGPUOutOfMemoryError>&& backing)
+    GPUOutOfMemoryError(Ref<WebGPU::OutOfMemoryError>&& backing)
         : m_backing(WTF::move(backing))
     {
     }
 
     String m_message;
-    const RefPtr<WebGPUOutOfMemoryError> m_backing;
+    const RefPtr<WebGPU::OutOfMemoryError> m_backing;
 };
 
 }

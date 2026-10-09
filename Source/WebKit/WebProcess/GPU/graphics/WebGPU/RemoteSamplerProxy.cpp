@@ -49,16 +49,10 @@ RemoteSamplerProxy::~RemoteSamplerProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteSamplerProxy::setLabel(String&& label)
+void RemoteSamplerProxy::setLabelInternal(const String& label)
 {
-    auto sendResult = send(Messages::RemoteSampler::SetLabel(WTF::move(label)));
+    auto sendResult = send(Messages::RemoteSampler::SetLabel(label));
     UNUSED_VARIABLE(sendResult);
-}
-
-bool RemoteSamplerProxy::isValid() const
-{
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebKit::WebGPU

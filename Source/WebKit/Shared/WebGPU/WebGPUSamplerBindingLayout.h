@@ -27,13 +27,13 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUSamplerBindingType.h>
 #include <optional>
 
 namespace WebKit::WebGPU {
 
 struct SamplerBindingLayout {
-    ::WebGPU::SamplerBindingType type { ::WebGPU::SamplerBindingType::Filtering };
+    WebCore::WebGPU::SamplerBindingType type { WebCore::WebGPU::SamplerBindingType::Filtering };
 };
 
 } // namespace WebKit::WebGPU

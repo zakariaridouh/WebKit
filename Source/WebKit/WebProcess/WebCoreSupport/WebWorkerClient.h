@@ -33,7 +33,10 @@
 
 namespace WebCore {
 class Page;
-class WebGPUIntegration;
+}
+
+namespace WebCore::WebGPU {
+class GPU;
 }
 
 namespace WebKit {
@@ -63,7 +66,7 @@ public:
 #endif
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
-    RefPtr<WebCore::WebGPUIntegration> createGPUForWebGPU() const override;
+    RefPtr<WebCore::WebGPU::GPU> createGPUForWebGPU() const override;
 #endif
 
 protected:

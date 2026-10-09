@@ -26,44 +26,46 @@
 #pragma once
 
 #include "GPUCommandEncoder.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUCommandBuffer.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+namespace WebGPU {
+class CommandEncoder;
+}
+
 class GPUDevice;
 
 class GPUCommandBuffer : public RefCountedAndCanMakeWeakPtr<GPUCommandBuffer> {
 public:
-    static Ref<GPUCommandBuffer> create(Ref<::WebGPU::CommandBuffer>&& backing, String&& label, GPUCommandEncoder& encoder)
+    static Ref<GPUCommandBuffer> create(Ref<WebGPU::CommandBuffer>&& backing, GPUCommandEncoder& encoder)
     {
-        return adoptRef(*new GPUCommandBuffer(WTF::move(backing), WTF::move(label), encoder));
+        return adoptRef(*new GPUCommandBuffer(WTF::move(backing), encoder));
     }
 
     String NODELETE label() const;
     void setLabel(String&&);
     void setOverrideLabel(String&&);
 
-    ::WebGPU::CommandBuffer& backing() { return m_backing; }
-    const ::WebGPU::CommandBuffer& backing() const { return m_backing; }
-    void setBacking(::WebGPU::CommandEncoder&, ::WebGPU::CommandBuffer&);
+    WebGPU::CommandBuffer& backing() { return m_backing; }
+    const WebGPU::CommandBuffer& backing() const { return m_backing; }
+    void setBacking(WebGPU::CommandEncoder&, WebGPU::CommandBuffer&);
 
     GPUDevice* device() const;
 
     bool hasActiveInspectorCanvasCallTracer() const;
 
 private:
-    GPUCommandBuffer(Ref<::WebGPU::CommandBuffer>&& backing, String&& label, GPUCommandEncoder& encoder)
+    GPUCommandBuffer(Ref<WebGPU::CommandBuffer>&& backing, GPUCommandEncoder& encoder)
         : m_backing(WTF::move(backing))
-        , m_label(WTF::move(label))
         , m_encoder(encoder)
     {
     }
 
-    Ref<::WebGPU::CommandBuffer> m_backing;
-    String m_label;
+    Ref<WebGPU::CommandBuffer> m_backing;
     const Ref<GPUCommandEncoder> m_encoder;
     std::optional<String> m_overrideLabel;
 };

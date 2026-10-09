@@ -34,21 +34,22 @@
 
 namespace WebKit::WebGPU {
 
-std::optional<RenderBundleEncoderDescriptor> ConvertToBackingContext::convertToBacking(const ::WebGPU::RenderBundleEncoderDescriptor& renderBundleEncoderDescriptor)
+std::optional<RenderBundleEncoderDescriptor> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::RenderBundleEncoderDescriptor& renderBundleEncoderDescriptor)
 {
-    return { { { { renderBundleEncoderDescriptor.label }, Vector<std::optional<::WebGPU::TextureFormat>> { renderBundleEncoderDescriptor.colorFormats }, renderBundleEncoderDescriptor.depthStencilFormat, renderBundleEncoderDescriptor.sampleCount }, renderBundleEncoderDescriptor.depthReadOnly, renderBundleEncoderDescriptor.stencilReadOnly } };
+    auto base = convertToBacking(static_cast<const WebCore::WebGPU::RenderPassLayout&>(renderBundleEncoderDescriptor));
+    if (!base)
+        return std::nullopt;
+
+    return { { WTF::move(*base), renderBundleEncoderDescriptor.depthReadOnly, renderBundleEncoderDescriptor.stencilReadOnly } };
 }
 
-std::optional<::WebGPU::RenderBundleEncoderDescriptor> ConvertFromBackingContext::convertFromBacking(const RenderBundleEncoderDescriptor& renderBundleEncoderDescriptor)
+std::optional<WebCore::WebGPU::RenderBundleEncoderDescriptor> ConvertFromBackingContext::convertFromBacking(const RenderBundleEncoderDescriptor& renderBundleEncoderDescriptor)
 {
-    return { {
-        .label = renderBundleEncoderDescriptor.label,
-        .colorFormats = renderBundleEncoderDescriptor.colorFormats.span(),
-        .depthStencilFormat = renderBundleEncoderDescriptor.depthStencilFormat,
-        .sampleCount = renderBundleEncoderDescriptor.sampleCount,
-        .depthReadOnly = renderBundleEncoderDescriptor.depthReadOnly,
-        .stencilReadOnly = renderBundleEncoderDescriptor.stencilReadOnly,
-    } };
+    auto base = convertFromBacking(static_cast<const RenderPassLayout&>(renderBundleEncoderDescriptor));
+    if (!base)
+        return std::nullopt;
+
+    return { { WTF::move(*base), renderBundleEncoderDescriptor.depthReadOnly, renderBundleEncoderDescriptor.stencilReadOnly } };
 }
 
 } // namespace WebKit

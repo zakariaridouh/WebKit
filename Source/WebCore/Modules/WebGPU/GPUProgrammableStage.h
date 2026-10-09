@@ -37,7 +37,7 @@ namespace WebCore {
 using GPUPipelineConstantValue = double; // May represent WGSL’s bool, f32, i32, u32.
 
 struct GPUProgrammableStage {
-    WebGPUProgrammableStage convertToBacking() const
+    WebGPU::ProgrammableStage convertToBacking() const
     {
         return {
             module->backing(),

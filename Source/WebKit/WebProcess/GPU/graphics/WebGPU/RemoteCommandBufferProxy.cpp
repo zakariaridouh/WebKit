@@ -49,16 +49,10 @@ RemoteCommandBufferProxy::~RemoteCommandBufferProxy()
     UNUSED_VARIABLE(sendResult);
 }
 
-void RemoteCommandBufferProxy::setLabel(String&& label)
+void RemoteCommandBufferProxy::setLabelInternal(const String& label)
 {
-    auto sendResult = send(Messages::RemoteCommandBuffer::SetLabel(WTF::move(label)));
+    auto sendResult = send(Messages::RemoteCommandBuffer::SetLabel(label));
     UNUSED_VARIABLE(sendResult);
-}
-
-bool RemoteCommandBufferProxy::isValid() const
-{
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebKit::WebGPU

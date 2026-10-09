@@ -27,7 +27,6 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include <WebCore/WebGPUCppAPI.h>
 #include <cstdint>
 #include <optional>
 
@@ -70,9 +69,6 @@ struct SupportedLimits {
     uint32_t maxStorageBuffersInVertexStage { 0 };
     uint32_t maxStorageTexturesInVertexStage { 0 };
 };
-
-SupportedLimits convertToBacking(const ::WebGPU::Limits&);
-::WebGPU::Limits convertFromBacking(const SupportedLimits&);
 
 } // namespace WebKit::WebGPU
 

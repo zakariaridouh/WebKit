@@ -21,11 +21,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if ENABLE(GPU_PROCESS)
-header: <WebGPU/WebGPUCpp.h>
-[AdditionalEncoder=StreamConnectionEncoder, CustomHeader] struct ::WebGPU::RenderBundleDescriptor {
-    String label;
+[AdditionalEncoder=StreamConnectionEncoder] struct WebKit::WebGPU::RenderBundleDescriptor : WebKit::WebGPU::ObjectDescriptorBase {
 };
-
-header: "WebGPURenderBundleDescriptor.h"
-using WebKit::WebGPU::RenderBundleDescriptor = ::WebGPU::RenderBundleDescriptor;
 #endif

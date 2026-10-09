@@ -33,8 +33,7 @@
 #include "GPUImageCopyTextureTagged.h"
 #include "GPUImageDataLayout.h"
 #include "GPUIntegralTypes.h"
-#include "WebGPU.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUQueue.h"
 #include <optional>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -53,9 +52,9 @@ struct GPUDrawElementImageSource;
 
 class GPUQueue : public RefCountedAndCanMakeWeakPtr<GPUQueue> {
 public:
-    static Ref<GPUQueue> create(Ref<::WebGPU::Queue>&& backing, Ref<WebGPUIntegration>&& gpu, GPUDevice& device)
+    static Ref<GPUQueue> create(Ref<WebGPU::Queue>&& backing, GPUDevice& device)
     {
-        return adoptRef(*new GPUQueue(WTF::move(backing), WTF::move(gpu), device));
+        return adoptRef(*new GPUQueue(WTF::move(backing), device));
     }
 
     String NODELETE label() const;
@@ -89,20 +88,17 @@ public:
         const GPUDrawElementImageSource&,
         const GPUDrawElementImageDestination&);
 
-    ::WebGPU::Queue& backing() { return m_backing; }
-    const ::WebGPU::Queue& backing() const { return m_backing; }
+    WebGPU::Queue& backing() { return m_backing; }
+    const WebGPU::Queue& backing() const { return m_backing; }
 
     GPUDevice* device() const;
 
     bool hasActiveInspectorCanvasCallTracer() const;
 
 private:
-    GPUQueue(Ref<::WebGPU::Queue>&&, Ref<WebGPUIntegration>&&, GPUDevice&);
+    GPUQueue(Ref<WebGPU::Queue>&&, GPUDevice&);
 
-    const Ref<::WebGPU::Queue> m_backing;
-    // The root, which has the commands that take WebCore sources.
-    const Ref<WebGPUIntegration> m_gpu;
-    String m_label;
+    const Ref<WebGPU::Queue> m_backing;
     WeakPtr<GPUDevice, WeakPtrImplWithEventTargetData> m_device;
 };
 

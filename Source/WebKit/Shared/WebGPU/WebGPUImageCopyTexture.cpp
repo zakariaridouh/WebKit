@@ -30,24 +30,39 @@
 
 #include "WebGPUConvertFromBackingContext.h"
 #include "WebGPUConvertToBackingContext.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUImageCopyTexture.h>
+#include <WebCore/WebGPUTexture.h>
 
 namespace WebKit::WebGPU {
 
-std::optional<ImageCopyTexture> ConvertToBackingContext::convertToBacking(const ::WebGPU::TexelCopyTextureInfo& imageCopyTexture)
+std::optional<ImageCopyTexture> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::ImageCopyTexture& imageCopyTexture)
 {
     auto texture = convertToBacking(protect(imageCopyTexture.texture).get());
 
-    return { { texture, imageCopyTexture.mipLevel, imageCopyTexture.origin, imageCopyTexture.aspect } };
+    std::optional<Origin3D> origin;
+    if (imageCopyTexture.origin) {
+        origin = convertToBacking(*imageCopyTexture.origin);
+        if (!origin)
+            return std::nullopt;
+    }
+
+    return { { texture, imageCopyTexture.mipLevel, WTF::move(origin), imageCopyTexture.aspect } };
 }
 
-std::optional<::WebGPU::TexelCopyTextureInfo> ConvertFromBackingContext::convertFromBacking(const ImageCopyTexture& imageCopyTexture)
+std::optional<WebCore::WebGPU::ImageCopyTexture> ConvertFromBackingContext::convertFromBacking(const ImageCopyTexture& imageCopyTexture)
 {
-    RefPtr texture = convertTextureFromBacking(imageCopyTexture.texture);
+    WeakPtr texture = convertTextureFromBacking(imageCopyTexture.texture);
     if (!texture)
         return std::nullopt;
 
-    return { { *texture, imageCopyTexture.mipLevel, imageCopyTexture.origin.value_or(::WebGPU::Origin3D { }), imageCopyTexture.aspect } };
+    std::optional<WebCore::WebGPU::Origin3D> origin;
+    if (imageCopyTexture.origin) {
+        origin = convertFromBacking(*imageCopyTexture.origin);
+        if (!origin)
+            return std::nullopt;
+    }
+
+    return { { *texture, imageCopyTexture.mipLevel, WTF::move(origin), imageCopyTexture.aspect } };
 }
 
 } // namespace WebKit

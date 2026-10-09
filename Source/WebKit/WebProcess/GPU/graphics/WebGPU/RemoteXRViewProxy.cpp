@@ -32,7 +32,7 @@
 #include "RemoteXRViewMessages.h"
 #include "WebGPUConvertToBackingContext.h"
 #include <WebCore/ImageBuffer.h>
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUTextureFormat.h>
 
 namespace WebKit::WebGPU {
 
@@ -49,12 +49,6 @@ RemoteXRViewProxy::~RemoteXRViewProxy()
 {
     auto sendResult = send(Messages::RemoteXRView::Destruct());
     UNUSED_VARIABLE(sendResult);
-}
-
-bool RemoteXRViewProxy::isValid() const
-{
-    // The Web Process cannot know. RemoteGPU::isValid() answers it for tests.
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebKit::WebGPU

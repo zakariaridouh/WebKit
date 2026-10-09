@@ -34,9 +34,8 @@
 #include "StreamServerConnection.h"
 #include "WebGPUObjectHeap.h"
 #include <WebCore/SharedMemory.h>
-#include <WebCore/WebGPUCppAPI.h>
-#include <WebCore/WebGPUImageCopyExternalImage.h>
-#include <WebCore/WebGPUImageCopyTextureTagged.h>
+#include <WebCore/WebGPUBuffer.h>
+#include <WebCore/WebGPUQueue.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(COCOA) && ENABLE(VIDEO)
@@ -46,21 +45,32 @@
 #include <WebCore/VideoFrame.h>
 #endif
 
+#if HAVE(WEBGPU_IMPLEMENTATION)
+#include <WebGPU/WebGPU.h>
+#include <WebGPU/WebGPUExt.h>
+#endif
+
 namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteQueue);
 
-// Transfers of at least WebGPU::largeBufferSize bytes may alias `data`'s mapping; keep it alive until the GPU has consumed the bytes. Smaller transfers are copied, so `data` can be released as soon as we return.
-static void keepAliveUntilSubmittedWorkDone(::WebGPU::Queue& backing, RefPtr<WebCore::SharedMemory>&& data)
+// For transfers at or above WGPU_LARGE_BUFFER_SIZE the backend uses newBufferWithBytesNoCopy and aliases `data`'s mapping; keep it alive until the GPU has consumed the bytes. Smaller transfers are copied into a Metal buffer synchronously, so `data` can be released as soon as we return.
+static void keepAliveUntilSubmittedWorkDone(WebCore::WebGPU::Queue& backing, RefPtr<WebCore::SharedMemory>&& data)
 {
-    if (!data || data->size() < ::WebGPU::largeBufferSize)
+#if HAVE(WEBGPU_IMPLEMENTATION)
+    if (!data || data->size() < WGPU_LARGE_BUFFER_SIZE)
         return;
     backing.onSubmittedWorkDone([data = WTF::move(data)]() mutable {
         data = nullptr;
     });
+#else
+    // Only the Metal backend aliases the caller's storage, and it is the only WebGPU implementation.
+    UNUSED_PARAM(backing);
+    UNUSED_PARAM(data);
+#endif
 }
 
-RemoteQueue::RemoteQueue([[maybe_unused]] GPUConnectionToWebProcess& gpuConnectionToWebProcess, ::WebGPU::Queue& queue, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, RemoteGPU& gpu, WebGPUIdentifier identifier)
+RemoteQueue::RemoteQueue([[maybe_unused]] GPUConnectionToWebProcess& gpuConnectionToWebProcess, WebCore::WebGPU::Queue& queue, WebGPU::ObjectHeap& objectHeap, Ref<IPC::StreamServerConnection>&& streamConnection, RemoteGPU& gpu, WebGPUIdentifier identifier)
     : m_backing(queue)
     , m_objectHeap(objectHeap)
     , m_streamConnection(WTF::move(streamConnection))
@@ -91,7 +101,7 @@ void RemoteQueue::stopListeningForIPC()
 
 void RemoteQueue::submit(Vector<WebGPUIdentifier>&& commandBuffers)
 {
-    Vector<Ref<::WebGPU::CommandBuffer>> convertedCommandBuffers;
+    Vector<Ref<WebCore::WebGPU::CommandBuffer>> convertedCommandBuffers;
     convertedCommandBuffers.reserveInitialCapacity(commandBuffers.size());
     for (WebGPUIdentifier identifier : commandBuffers) {
         auto convertedCommandBuffer = protect(m_objectHeap)->convertCommandBufferFromBacking(identifier);
@@ -112,7 +122,7 @@ void RemoteQueue::onSubmittedWorkDone(CompletionHandler<void()>&& callback)
 
 void RemoteQueue::writeBuffer(
     WebGPUIdentifier buffer,
-    uint64_t bufferOffset,
+    WebCore::WebGPU::Size64 bufferOffset,
     std::optional<WebCore::SharedMemoryHandle>&& dataHandle,
     CompletionHandler<void(bool)>&& completionHandler)
 {
@@ -125,14 +135,14 @@ void RemoteQueue::writeBuffer(
     }
 
     Ref backing = protect(m_backing);
-    backing->writeBuffer(protect(*convertedBuffer), bufferOffset, data->span());
+    backing->writeBufferNoCopy(protect(*convertedBuffer), bufferOffset, data->mutableSpan(), 0, std::nullopt);
     keepAliveUntilSubmittedWorkDone(backing, WTF::move(data));
     completionHandler(true);
 }
 
 void RemoteQueue::writeBufferWithCopy(
     WebGPUIdentifier buffer,
-    uint64_t bufferOffset,
+    WebCore::WebGPU::Size64 bufferOffset,
     Vector<uint8_t>&& data)
 {
     Ref objectHeap = m_objectHeap.get();
@@ -141,7 +151,7 @@ void RemoteQueue::writeBufferWithCopy(
     if (!convertedBuffer)
         return;
 
-    protect(m_backing)->writeBuffer(protect(*convertedBuffer), bufferOffset, data.span());
+    protect(m_backing)->writeBufferNoCopy(protect(*convertedBuffer), bufferOffset, data.mutableSpan(), 0, std::nullopt);
 }
 
 void RemoteQueue::writeTexture(
@@ -157,13 +167,15 @@ void RemoteQueue::writeTexture(
     ASSERT(convertedDestination);
     auto convertedDataLayout = objectHeap->convertFromBacking(dataLayout);
     ASSERT(convertedDataLayout);
-    if (!convertedDestination || !convertedDataLayout || !data || data->size() <= WebGPU::maxCrossProcessResourceCopySize) {
+    auto convertedSize = objectHeap->convertFromBacking(size);
+    ASSERT(convertedSize);
+    if (!convertedDestination || !convertedDataLayout || !convertedSize || !data || data->size() <= WebGPU::maxCrossProcessResourceCopySize) {
         completionHandler(false);
         return;
     }
 
     Ref backing = protect(m_backing);
-    backing->writeTexture(*convertedDestination, data->span(), *convertedDataLayout, size);
+    backing->writeTexture(*convertedDestination, data->mutableSpan(), *convertedDataLayout, *convertedSize);
     keepAliveUntilSubmittedWorkDone(backing, WTF::move(data));
     completionHandler(true);
 }
@@ -178,11 +190,13 @@ void RemoteQueue::writeTextureWithCopy(
     auto convertedDestination = objectHeap->convertFromBacking(destination);
     ASSERT(convertedDestination);
     auto convertedDataLayout = objectHeap->convertFromBacking(dataLayout);
-    ASSERT(convertedDataLayout);
-    if (!convertedDestination || !convertedDataLayout)
+    ASSERT(convertedDestination);
+    auto convertedSize = objectHeap->convertFromBacking(size);
+    ASSERT(convertedSize);
+    if (!convertedDestination || !convertedDestination || !convertedSize)
         return;
 
-    protect(m_backing)->writeTexture(*convertedDestination, data.span(), *convertedDataLayout, size);
+    protect(m_backing)->writeTexture(*convertedDestination, data.mutableSpan(), *convertedDataLayout, *convertedSize);
 }
 
 void RemoteQueue::copyExternalImageToTexture(
@@ -203,7 +217,9 @@ void RemoteQueue::copyExternalImageToTexture(
     ASSERT(convertedSource);
     auto convertedDestination = objectHeap->convertFromBacking(destination);
     ASSERT(convertedDestination);
-    if (!convertedSource || !convertedDestination)
+    auto convertedCopySize = objectHeap->convertFromBacking(copySize);
+    ASSERT(convertedCopySize);
+    if (!convertedSource || !convertedDestination || !convertedCopySize)
         return;
 
     // ConvertFromBackingContext cannot resolve the source, because only RemoteGPU can reach the
@@ -215,8 +231,7 @@ void RemoteQueue::copyExternalImageToTexture(
         convertedSource->imageBuffer = WTF::move(sourceImageBuffer);
     }
 
-    if (RefPtr gpu = protect(m_gpu)->backing())
-        gpu->copyExternalImageToTexture(protect(m_backing), *convertedSource, *convertedDestination, copySize);
+    protect(m_backing)->copyExternalImageToTexture(*convertedSource, *convertedDestination, *convertedCopySize);
 }
 
 #if PLATFORM(COCOA) && ENABLE(VIDEO)
@@ -271,11 +286,12 @@ void RemoteQueue::copyExternalImageFromVideoFrameToTexture(
     ASSERT(convertedSource);
     auto convertedDestination = objectHeap->convertFromBacking(destination);
     ASSERT(convertedDestination);
-    if (!convertedSource || !convertedDestination)
+    auto convertedCopySize = objectHeap->convertFromBacking(copySize);
+    ASSERT(convertedCopySize);
+    if (!convertedSource || !convertedDestination || !convertedCopySize)
         return;
 
-    if (RefPtr gpu = protect(m_gpu)->backing())
-        gpu->copyExternalImageToTexture(protect(m_backing), *convertedSource, *convertedDestination, copySize);
+    protect(m_backing)->copyExternalImageToTexture(*convertedSource, *convertedDestination, *convertedCopySize);
 }
 #endif
 

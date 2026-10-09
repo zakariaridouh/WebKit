@@ -30,11 +30,11 @@
 
 #include "WebGPUConvertFromBackingContext.h"
 #include "WebGPUConvertToBackingContext.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUBlendState.h>
 
 namespace WebKit::WebGPU {
 
-std::optional<BlendState> ConvertToBackingContext::convertToBacking(const ::WebGPU::BlendState& blendState)
+std::optional<BlendState> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::BlendState& blendState)
 {
     auto color = convertToBacking(blendState.color);
     if (!color)
@@ -47,7 +47,7 @@ std::optional<BlendState> ConvertToBackingContext::convertToBacking(const ::WebG
     return { { WTF::move(*color), WTF::move(*alpha) } };
 }
 
-std::optional<::WebGPU::BlendState> ConvertFromBackingContext::convertFromBacking(const BlendState& blendState)
+std::optional<WebCore::WebGPU::BlendState> ConvertFromBackingContext::convertFromBacking(const BlendState& blendState)
 {
     auto color = convertFromBacking(blendState.color);
     if (!color)

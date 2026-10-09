@@ -27,7 +27,7 @@
 
 #include <WebCore/GPUTextureFormat.h>
 #include <WebCore/GPUTextureUsage.h>
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUXRProjectionLayer.h>
 #include <WebCore/XRCanvasConfiguration.h>
 
 #if ENABLE(WEBXR_LAYERS) && ENABLE(WEBGPU)
@@ -36,12 +36,12 @@ namespace WebCore {
 
 // https://immersive-web.github.io/layers/#xrprojectionlayerinittype
 struct XRGPUProjectionLayerInit {
-    ::WebGPU::XRProjectionLayerDescriptor convertToBacking()
+    WebGPU::XRProjectionLayerInit convertToBacking()
     {
-        std::optional<::WebGPU::TextureFormat> optionalDepthStencilFormat;
+        std::optional<WebGPU::TextureFormat> optionalDepthStencilFormat;
         if (depthStencilFormat)
             optionalDepthStencilFormat = WebCore::convertToBacking(*depthStencilFormat);
-        return ::WebGPU::XRProjectionLayerDescriptor {
+        return WebGPU::XRProjectionLayerInit {
             .colorFormat = WebCore::convertToBacking(colorFormat),
             .depthStencilFormat = optionalDepthStencilFormat,
             .textureUsage = WebCore::convertTextureUsageFlagsToBacking(textureUsage),

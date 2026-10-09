@@ -29,7 +29,8 @@
 
 #include "WebGPUIdentifier.h"
 #include "WebGPUOrigin3D.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPUTextureAspect.h>
 #include <optional>
 #include <wtf/Ref.h>
 
@@ -37,9 +38,9 @@ namespace WebKit::WebGPU {
 
 struct ImageCopyTexture {
     WebGPUIdentifier texture;
-    uint32_t mipLevel { 0 };
+    WebCore::WebGPU::IntegerCoordinate mipLevel { 0 };
     std::optional<Origin3D> origin;
-    ::WebGPU::TextureAspect aspect { ::WebGPU::TextureAspect::All };
+    WebCore::WebGPU::TextureAspect aspect { WebCore::WebGPU::TextureAspect::All };
 };
 
 } // namespace WebKit::WebGPU

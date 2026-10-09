@@ -45,7 +45,7 @@ XRBinding::XRBinding(Device& device)
 
 XRBinding::~XRBinding() = default;
 
-RefPtr<WebGPU::XRBinding> Device::createXRBinding()
+Ref<XRBinding> Device::createXRBinding()
 {
     if (!isValid())
         return XRBinding::createInvalid(*this);
@@ -85,7 +85,7 @@ WGPUXRProjectionLayer wgpuBindingCreateXRProjectionLayer(WGPUXRBinding binding, 
     // An invalid format or usage makes an invalid layer.
     if (!apiColorFormat || (optionalDepthStencilFormat && !apiDepthStencilFormat) || !textureUsage)
         return WebGPU::Metal::releaseToAPI(WebGPU::Metal::XRProjectionLayer::createInvalid(protectedBinding->device()));
-    return WebGPU::Metal::releaseToAPIAs<WebGPU::Metal::XRProjectionLayer>(protectedBinding->createProjectionLayer({
+    return WebGPU::Metal::releaseToAPI(protectedBinding->createProjectionLayer({
         .colorFormat = *apiColorFormat,
         .depthStencilFormat = apiDepthStencilFormat,
         .textureUsage = *textureUsage,

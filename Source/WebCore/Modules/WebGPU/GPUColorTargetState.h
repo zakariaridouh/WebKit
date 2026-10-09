@@ -35,7 +35,7 @@
 namespace WebCore {
 
 struct GPUColorTargetState {
-    WebGPUColorTargetState convertToBacking() const
+    WebGPU::ColorTargetState convertToBacking() const
     {
         return {
             WebCore::convertToBacking(format),

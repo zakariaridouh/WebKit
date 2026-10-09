@@ -34,7 +34,7 @@
 
 namespace WebKit::WebGPU {
 
-std::optional<VertexBufferLayout> ConvertToBackingContext::convertToBacking(const ::WebGPU::VertexBufferLayout& vertexBufferLayout)
+std::optional<VertexBufferLayout> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::VertexBufferLayout& vertexBufferLayout)
 {
     Vector<VertexAttribute> attributes;
     attributes.reserveInitialCapacity(vertexBufferLayout.attributes.size());
@@ -48,17 +48,18 @@ std::optional<VertexBufferLayout> ConvertToBackingContext::convertToBacking(cons
     return { { vertexBufferLayout.arrayStride, vertexBufferLayout.stepMode, WTF::move(attributes) } };
 }
 
-std::optional<::WebGPU::VertexBufferLayout> ConvertFromBackingContext::convertFromBacking(const VertexBufferLayout& vertexBufferLayout, Vector<::WebGPU::VertexAttribute>& attributesStorage)
+std::optional<WebCore::WebGPU::VertexBufferLayout> ConvertFromBackingContext::convertFromBacking(const VertexBufferLayout& vertexBufferLayout)
 {
-    attributesStorage.reserveInitialCapacity(vertexBufferLayout.attributes.size());
+    Vector<WebCore::WebGPU::VertexAttribute> attributes;
+    attributes.reserveInitialCapacity(vertexBufferLayout.attributes.size());
     for (const auto& backingAttribute : vertexBufferLayout.attributes) {
         auto attribute = convertFromBacking(backingAttribute);
         if (!attribute)
             return std::nullopt;
-        attributesStorage.append(WTF::move(*attribute));
+        attributes.append(WTF::move(*attribute));
     }
 
-    return { { vertexBufferLayout.arrayStride, vertexBufferLayout.stepMode, attributesStorage.span() } };
+    return { { vertexBufferLayout.arrayStride, vertexBufferLayout.stepMode, WTF::move(attributes) } };
 }
 
 } // namespace WebKit

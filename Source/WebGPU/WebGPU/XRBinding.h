@@ -59,9 +59,8 @@ public:
     void NODELETE setLabel(String&&) final;
 
     bool NODELETE isValid() const final;
-    RefPtr<WebGPU::XRProjectionLayer> createProjectionLayer(const WebGPU::XRProjectionLayerDescriptor&) final;
+    Ref<XRProjectionLayer> createProjectionLayer(const WebGPU::XRProjectionLayerDescriptor&);
     RefPtr<XRSubImage> getViewSubImage(XRProjectionLayer&);
-    RefPtr<WebGPU::XRSubImage> getViewSubImage(WebGPU::XRProjectionLayer&) final;
     Device& device() { return m_device; }
 
 private:

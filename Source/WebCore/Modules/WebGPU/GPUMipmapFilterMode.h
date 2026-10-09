@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUFilterMode.h"
 #include <cstdint>
 
 namespace WebCore {
@@ -35,13 +35,13 @@ enum class GPUMipmapFilterMode : uint8_t {
     Linear,
 };
 
-inline ::WebGPU::MipmapFilterMode convertToBacking(GPUMipmapFilterMode filterMode)
+inline WebGPU::MipmapFilterMode convertToBacking(GPUMipmapFilterMode filterMode)
 {
     switch (filterMode) {
     case GPUMipmapFilterMode::Nearest:
-        return ::WebGPU::MipmapFilterMode::Nearest;
+        return WebGPU::MipmapFilterMode::Nearest;
     case GPUMipmapFilterMode::Linear:
-        return ::WebGPU::MipmapFilterMode::Linear;
+        return WebGPU::MipmapFilterMode::Linear;
     }
     RELEASE_ASSERT_NOT_REACHED();
 }

@@ -29,14 +29,14 @@
 
 #include "RemoteDeviceProxy.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUPipelineLayout.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebKit::WebGPU {
 
 class ConvertToBackingContext;
 
-class RemotePipelineLayoutProxy final : public ::WebGPU::PipelineLayout {
+class RemotePipelineLayoutProxy final : public WebCore::WebGPU::PipelineLayout {
     WTF_MAKE_TZONE_ALLOCATED(RemotePipelineLayoutProxy);
 public:
     static Ref<RemotePipelineLayoutProxy> create(RemoteDeviceProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier)
@@ -49,9 +49,6 @@ public:
     RemoteDeviceProxy& parent() const { return m_parent; }
     RemoteGPUProxy& root() { return m_parent->root(); }
 
-    void setLabel(String&&) final;
-    bool isValid() const final;
-
 private:
     friend class DowncastConvertToBackingContext;
 
@@ -62,6 +59,8 @@ private:
     RemotePipelineLayoutProxy& operator=(const RemotePipelineLayoutProxy&) = delete;
     RemotePipelineLayoutProxy& operator=(RemotePipelineLayoutProxy&&) = delete;
 
+    bool isRemotePipelineLayoutProxy() const final { return true; }
+
     WebGPUIdentifier backing() const { return m_backing; }
     
     template<typename T>
@@ -69,6 +68,8 @@ private:
     {
         return protect(root().streamClientConnection())->send(std::forward<T>(message), backing());
     }
+
+    void setLabelInternal(const String&) final;
 
     WebGPUIdentifier m_backing;
     const Ref<ConvertToBackingContext> m_convertToBackingContext;
@@ -78,8 +79,7 @@ private:
 } // namespace WebKit::WebGPU
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebGPU::RemotePipelineLayoutProxy)
-    // In the Web Process, every WebGPU::PipelineLayout is a RemotePipelineLayoutProxy.
-    static bool isType(const ::WebGPU::PipelineLayout&) { return true; }
+    static bool isType(const WebCore::WebGPU::PipelineLayout& layout) { return layout.isRemotePipelineLayoutProxy(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GPU_PROCESS)

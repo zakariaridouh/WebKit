@@ -31,9 +31,8 @@
 
 namespace WebCore {
 
-GPURenderBundle::GPURenderBundle(Ref<WebGPU::RenderBundle>&& backing, String&& label, GPURenderBundleEncoder& renderBundleEncoder)
+GPURenderBundle::GPURenderBundle(Ref<WebGPU::RenderBundle>&& backing, GPURenderBundleEncoder& renderBundleEncoder)
     : m_backing(WTF::move(backing))
-    , m_label(WTF::move(label))
     , m_device(renderBundleEncoder.device())
 {
 }
@@ -51,12 +50,11 @@ GPUDevice* GPURenderBundle::device() const
 
 String GPURenderBundle::label() const
 {
-    return m_label;
+    return m_backing->label();
 }
 
 void GPURenderBundle::setLabel(String&& label)
 {
-    m_label = label;
     m_backing->setLabel(WTF::move(label));
 }
 

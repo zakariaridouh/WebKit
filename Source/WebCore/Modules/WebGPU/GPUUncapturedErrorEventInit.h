@@ -27,7 +27,7 @@
 
 #include "EventInit.h"
 #include "GPUError.h"
-#include "WebGPUError.h"
+#include "WebGPUUncapturedErrorEventInit.h"
 #include <wtf/Ref.h>
 
 namespace WebCore {

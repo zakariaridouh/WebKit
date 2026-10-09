@@ -37,7 +37,7 @@
 namespace WebCore {
 
 struct GPUCanvasConfiguration {
-    WebGPUCanvasConfiguration convertToBacking(bool reportValidationErrors) const
+    WebGPU::CanvasConfiguration convertToBacking(bool reportValidationErrors) const
     {
         return {
             device->backing(),

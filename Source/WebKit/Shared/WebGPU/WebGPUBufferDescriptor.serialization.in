@@ -21,14 +21,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if ENABLE(GPU_PROCESS)
-header: <WebGPU/WebGPUCpp.h>
-[AdditionalEncoder=StreamConnectionEncoder, CustomHeader] struct ::WebGPU::BufferDescriptor {
-    String label;
-    OptionSet<::WebGPU::BufferUsage> usage;
-    uint64_t size;
+[AdditionalEncoder=StreamConnectionEncoder] struct WebKit::WebGPU::BufferDescriptor : WebKit::WebGPU::ObjectDescriptorBase {
+    WebCore::WebGPU::Size64 size;
+    WebCore::WebGPU::BufferUsageFlags usage;
     bool mappedAtCreation;
 };
-
-header: "WebGPUBufferDescriptor.h"
-using WebKit::WebGPU::BufferDescriptor = ::WebGPU::BufferDescriptor;
 #endif

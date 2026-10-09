@@ -35,30 +35,21 @@
 
 namespace WebKit::WebGPU {
 
-std::optional<CanvasConfiguration> ConvertToBackingContext::convertToBacking(const ::WebGPU::CanvasConfiguration& canvasConfiguration)
+std::optional<CanvasConfiguration> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::CanvasConfiguration& canvasConfiguration)
 {
-    auto device = convertToBacking(canvasConfiguration.device.get());
-    return { { device, canvasConfiguration.format, canvasConfiguration.usage, Vector<::WebGPU::TextureFormat> { canvasConfiguration.viewFormats }, WebCore::convertFromWebGPU(canvasConfiguration.colorSpace), canvasConfiguration.toneMappingMode, canvasConfiguration.compositingAlphaMode, canvasConfiguration.reportValidationErrors, canvasConfiguration.width, canvasConfiguration.height } };
+    Ref protectedDevice = canvasConfiguration.device.get();
+    auto device = convertToBacking(protectedDevice.get());
+
+    return { { device, canvasConfiguration.format, canvasConfiguration.usage, canvasConfiguration.viewFormats, canvasConfiguration.colorSpace, canvasConfiguration.toneMappingMode, canvasConfiguration.compositingAlphaMode, canvasConfiguration.reportValidationErrors } };
 }
 
-std::optional<::WebGPU::CanvasConfiguration> ConvertFromBackingContext::convertFromBacking(const CanvasConfiguration& canvasConfiguration)
+std::optional<WebCore::WebGPU::CanvasConfiguration> ConvertFromBackingContext::convertFromBacking(const CanvasConfiguration& canvasConfiguration)
 {
-    RefPtr device = convertDeviceFromBacking(canvasConfiguration.device);
+    WeakPtr device = convertDeviceFromBacking(canvasConfiguration.device);
     if (!device)
         return std::nullopt;
 
-    return { {
-        .device = device.releaseNonNull(),
-        .format = canvasConfiguration.format,
-        .usage = canvasConfiguration.usage,
-        .viewFormats = canvasConfiguration.viewFormats.span(),
-        .colorSpace = WebCore::convertToWebGPU(canvasConfiguration.colorSpace),
-        .toneMappingMode = canvasConfiguration.toneMappingMode,
-        .compositingAlphaMode = canvasConfiguration.compositingAlphaMode,
-        .reportValidationErrors = canvasConfiguration.reportValidationErrors,
-        .width = canvasConfiguration.width,
-        .height = canvasConfiguration.height,
-    } };
+    return { { *device, canvasConfiguration.format, canvasConfiguration.usage, canvasConfiguration.viewFormats, canvasConfiguration.colorSpace, canvasConfiguration.toneMappingMode, canvasConfiguration.compositingAlphaMode, canvasConfiguration.reportValidationErrors } };
 }
 
 } // namespace WebKit

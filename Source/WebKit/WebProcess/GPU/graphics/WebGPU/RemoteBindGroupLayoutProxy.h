@@ -29,14 +29,14 @@
 
 #include "RemoteDeviceProxy.h"
 #include "WebGPUIdentifier.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUBindGroupLayout.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebKit::WebGPU {
 
 class ConvertToBackingContext;
 
-class RemoteBindGroupLayoutProxy final : public ::WebGPU::BindGroupLayout {
+class RemoteBindGroupLayoutProxy final : public WebCore::WebGPU::BindGroupLayout {
     WTF_MAKE_TZONE_ALLOCATED(RemoteBindGroupLayoutProxy);
 public:
     static Ref<RemoteBindGroupLayoutProxy> create(RemoteGPUProxy& parent, ConvertToBackingContext& convertToBackingContext, WebGPUIdentifier identifier)
@@ -49,9 +49,6 @@ public:
     RemoteGPUProxy& parent() const { return m_parent; }
     RemoteGPUProxy& root() const { return m_parent; }
 
-    void setLabel(String&&) final;
-    bool isValid() const final;
-
 private:
     friend class DowncastConvertToBackingContext;
 
@@ -62,6 +59,8 @@ private:
     RemoteBindGroupLayoutProxy& operator=(const RemoteBindGroupLayoutProxy&) = delete;
     RemoteBindGroupLayoutProxy& operator=(RemoteBindGroupLayoutProxy&&) = delete;
 
+    bool isRemoteBindGroupLayoutProxy() const final { return true; }
+
     WebGPUIdentifier backing() const { return m_backing; }
     
     template<typename T>
@@ -69,6 +68,8 @@ private:
     {
         return protect(root().streamClientConnection())->send(std::forward<T>(message), backing());
     }
+
+    void setLabelInternal(const String&) final;
 
     WebGPUIdentifier m_backing;
     const Ref<ConvertToBackingContext> m_convertToBackingContext;
@@ -78,8 +79,7 @@ private:
 } // namespace WebKit::WebGPU
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebGPU::RemoteBindGroupLayoutProxy)
-    // In the Web Process, every WebGPU::BindGroupLayout is a RemoteBindGroupLayoutProxy.
-    static bool isType(const ::WebGPU::BindGroupLayout&) { return true; }
+    static bool isType(const WebCore::WebGPU::BindGroupLayout& layout) { return layout.isRemoteBindGroupLayoutProxy(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GPU_PROCESS)

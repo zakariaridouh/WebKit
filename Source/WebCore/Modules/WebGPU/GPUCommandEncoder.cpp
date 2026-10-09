@@ -57,9 +57,8 @@ static uint8_t canvasColorAttachmentMaskForDescriptor(const GPURenderPassDescrip
     return result;
 }
 
-GPUCommandEncoder::GPUCommandEncoder(Ref<WebGPU::CommandEncoder>&& backing, String&& label, GPUDevice& device)
+GPUCommandEncoder::GPUCommandEncoder(Ref<WebGPU::CommandEncoder>&& backing, GPUDevice& device)
     : m_backing(WTF::move(backing))
-    , m_label(WTF::move(label))
     , m_device(device)
 {
 }
@@ -77,23 +76,21 @@ GPUDevice* GPUCommandEncoder::device() const
 
 String GPUCommandEncoder::label() const
 {
-    return m_overrideLabel ? *m_overrideLabel : m_label;
+    return m_overrideLabel ? *m_overrideLabel : m_backing->label();
 }
 
 void GPUCommandEncoder::setLabel(String&& label)
 {
-    m_label = label;
     protect(backing())->setLabel(WTF::move(label));
 }
 
 ExceptionOr<Ref<GPURenderPassEncoder>> GPUCommandEncoder::beginRenderPass(const GPURenderPassDescriptor& renderPassDescriptor)
 {
     auto canvasColorAttachmentMask = canvasColorAttachmentMaskForDescriptor(renderPassDescriptor);
-    Vector<std::optional<WebGPU::RenderPassColorAttachment>> colorAttachments;
-    RefPtr encoder = protect(backing())->beginRenderPass(renderPassDescriptor.convertToBacking(colorAttachments));
+    RefPtr encoder = protect(backing())->beginRenderPass(renderPassDescriptor.convertToBacking());
     if (!encoder)
         return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.beginRenderPass: Unable to begin render pass."_s };
-    return GPURenderPassEncoder::create(encoder.releaseNonNull(), String { renderPassDescriptor.label }, *this, canvasColorAttachmentMask);
+    return GPURenderPassEncoder::create(encoder.releaseNonNull(), *this, canvasColorAttachmentMask);
 }
 
 ExceptionOr<Ref<GPUComputePassEncoder>> GPUCommandEncoder::beginComputePass(const std::optional<GPUComputePassDescriptor>& computePassDescriptor)
@@ -101,7 +98,7 @@ ExceptionOr<Ref<GPUComputePassEncoder>> GPUCommandEncoder::beginComputePass(cons
     RefPtr computePass = protect(backing())->beginComputePass(computePassDescriptor ? std::optional { computePassDescriptor->convertToBacking() } : std::nullopt);
     if (!computePass)
         return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.beginComputePass: Unable to begin compute pass."_s };
-    return GPUComputePassEncoder::create(computePass.releaseNonNull(), computePassDescriptor ? String { computePassDescriptor->label } : String { }, *this);
+    return GPUComputePassEncoder::create(computePass.releaseNonNull(), *this);
 }
 
 void GPUCommandEncoder::copyBufferToBuffer(
@@ -195,14 +192,13 @@ static WebGPU::CommandBufferDescriptor NODELETE convertToBacking(const std::opti
 
 ExceptionOr<Ref<GPUCommandBuffer>> GPUCommandEncoder::finish(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
 {
-    auto backingDescriptor = convertToBacking(commandBufferDescriptor);
-    RefPtr buffer = protect(backing())->finish(backingDescriptor);
+    RefPtr buffer = protect(backing())->finish(convertToBacking(commandBufferDescriptor));
     if (!buffer)
         return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.finish: Unable to finish."_s };
-    auto result = GPUCommandBuffer::create(buffer.releaseNonNull(), WTF::move(backingDescriptor.label), *this);
+    auto result = GPUCommandBuffer::create(buffer.releaseNonNull(), *this);
     if (RefPtr device = m_device) {
         m_overrideLabel = label();
-        m_backing = device->invalidCommandEncoder();
+        m_backing = device->backing().invalidCommandEncoder();
     }
     return result;
 }

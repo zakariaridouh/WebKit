@@ -34,30 +34,30 @@
 
 namespace WebKit::WebGPU {
 
-std::optional<ComputePipelineDescriptor> ConvertToBackingContext::convertToBacking(const ::WebGPU::ComputePipelineDescriptor& computePipelineDescriptor)
+std::optional<ComputePipelineDescriptor> ConvertToBackingContext::convertToBacking(const WebCore::WebGPU::ComputePipelineDescriptor& computePipelineDescriptor)
 {
-    std::optional<WebGPUIdentifier> layout;
-    if (computePipelineDescriptor.layout)
-        layout = convertToBacking(*protect(computePipelineDescriptor.layout));
+    auto base = convertToBacking(static_cast<const WebCore::WebGPU::PipelineDescriptorBase&>(computePipelineDescriptor));
+    if (!base)
+        return std::nullopt;
 
     auto compute = convertToBacking(computePipelineDescriptor.compute);
     if (!compute)
         return std::nullopt;
 
-    return { { { { computePipelineDescriptor.label }, layout }, WTF::move(*compute) } };
+    return { { WTF::move(*base), WTF::move(*compute) } };
 }
 
-std::optional<::WebGPU::ComputePipelineDescriptor> ConvertFromBackingContext::convertFromBacking(const ComputePipelineDescriptor& computePipelineDescriptor, Vector<::WebGPU::ConstantEntry>& constantsStorage, bool allowMissingPipelineLayout)
+std::optional<WebCore::WebGPU::ComputePipelineDescriptor> ConvertFromBackingContext::convertFromBacking(const ComputePipelineDescriptor& computePipelineDescriptor, bool allowMissingPipelineLayout)
 {
-    auto layout = convertLayoutFromBacking(computePipelineDescriptor, allowMissingPipelineLayout);
-    if (!layout)
+    auto base = convertFromBacking(static_cast<const PipelineDescriptorBase&>(computePipelineDescriptor), allowMissingPipelineLayout);
+    if (!base)
         return std::nullopt;
 
-    auto compute = convertFromBacking(computePipelineDescriptor.compute, constantsStorage);
+    auto compute = convertFromBacking(computePipelineDescriptor.compute);
     if (!compute)
         return std::nullopt;
 
-    return { { computePipelineDescriptor.label, WTF::move(*layout), WTF::move(*compute) } };
+    return { { WTF::move(*base), WTF::move(*compute) } };
 }
 
 } // namespace WebKit

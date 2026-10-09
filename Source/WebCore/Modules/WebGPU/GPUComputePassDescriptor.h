@@ -27,16 +27,16 @@
 
 #include "GPUComputePassTimestampWrites.h"
 #include "GPUObjectDescriptorBase.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUComputePassDescriptor.h"
 
 namespace WebCore {
 
 struct GPUComputePassDescriptor : public GPUObjectDescriptorBase {
-    ::WebGPU::ComputePassDescriptor convertToBacking() const
+    WebGPU::ComputePassDescriptor convertToBacking() const
     {
         return {
-            .label = label,
-            .timestampWrites = timestampWrites ? std::optional { timestampWrites->convertToBacking() } : std::nullopt,
+            { label },
+            timestampWrites ? std::optional { timestampWrites->convertToBacking() } : std::nullopt,
         };
     }
 

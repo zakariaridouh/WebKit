@@ -478,8 +478,8 @@ void AudioBufferSourceNode::acquireBufferContent()
     ASSERT(isMainThread());
 
     // FIXME: We should implement https://www.w3.org/TR/webaudio/#acquire-the-content.
-    if (RefPtr buffer = m_buffer)
-        buffer->markBuffersAsNonDetachable();
+    if (m_buffer)
+        m_buffer->markBuffersAsNonDetachable();
 }
 
 ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer>&& buffer)

@@ -109,7 +109,7 @@ void XRSubImage::update(const XRProjectionLayer& projectionLayer)
     std::optional<WGPUTextureFormat> targetDepthStencilFormat = projectionLayer.optionalDepthStencilFormat();
 
     m_currentTextureIndex = currentTextureIndex;
-    RefPtr texture = this->currentColorTexture();
+    RefPtr texture = this->colorTexture();
     if (!texture || texture->texture() != colorTexture) {
         auto colorFormat = Texture::textureFormat(colorTexture.pixelFormat);
         if (colorFormat != targetColorFormat)
@@ -133,19 +133,9 @@ void XRSubImage::update(const XRProjectionLayer& projectionLayer)
     }
 }
 
-Texture* XRSubImage::currentColorTexture()
+Texture* XRSubImage::colorTexture()
 {
     return m_colorTextures.get(m_currentTextureIndex);
-}
-
-RefPtr<WebGPU::Texture> XRSubImage::colorTexture()
-{
-    return currentColorTexture();
-}
-
-RefPtr<WebGPU::Texture> XRSubImage::depthStencilTexture()
-{
-    return depthTexture();
 }
 
 Texture* XRSubImage::depthTexture()
@@ -156,11 +146,6 @@ Texture* XRSubImage::depthTexture()
 RefPtr<XRSubImage> XRBinding::getViewSubImage(XRProjectionLayer& projectionLayer)
 {
     return device().getXRViewSubImage(projectionLayer);
-}
-
-RefPtr<WebGPU::XRSubImage> XRBinding::getViewSubImage(WebGPU::XRProjectionLayer& projectionLayer)
-{
-    return getViewSubImage(downcast<XRProjectionLayer>(projectionLayer));
 }
 
 } // namespace WebGPU::Metal
@@ -179,7 +164,7 @@ void wgpuXRSubImageRelease(WGPUXRSubImage subImage)
 
 WGPUTexture wgpuXRSubImageGetColorTexture(WGPUXRSubImage subImage)
 {
-    return protect(WebGPU::Metal::fromAPI(subImage))->currentColorTexture();
+    return protect(WebGPU::Metal::fromAPI(subImage))->colorTexture();
 }
 
 WGPUTexture wgpuXRSubImageGetDepthStencilTexture(WGPUXRSubImage subImage)

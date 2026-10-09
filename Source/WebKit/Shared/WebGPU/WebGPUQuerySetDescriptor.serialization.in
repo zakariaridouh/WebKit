@@ -21,13 +21,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if ENABLE(GPU_PROCESS)
-header: <WebGPU/WebGPUCpp.h>
-[AdditionalEncoder=StreamConnectionEncoder, CustomHeader] struct ::WebGPU::QuerySetDescriptor {
-    String label;
-    ::WebGPU::QueryType type;
-    uint32_t count;
+[AdditionalEncoder=StreamConnectionEncoder] struct WebKit::WebGPU::QuerySetDescriptor : WebKit::WebGPU::ObjectDescriptorBase {
+    WebCore::WebGPU::QueryType type;
+    WebCore::WebGPU::Size32 count;
 };
-
-header: "WebGPUQuerySetDescriptor.h"
-using WebKit::WebGPU::QuerySetDescriptor = ::WebGPU::QuerySetDescriptor;
 #endif

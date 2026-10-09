@@ -26,14 +26,14 @@
 #pragma once
 
 #include "GPUIntegralTypes.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUImageDataLayout.h"
 #include <optional>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 struct GPUImageDataLayout {
-    ::WebGPU::TexelCopyBufferLayout convertToBacking() const
+    WebGPU::ImageDataLayout convertToBacking() const
     {
         return {
             offset,

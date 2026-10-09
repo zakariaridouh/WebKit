@@ -26,7 +26,7 @@
 #pragma once
 
 #include "EventTarget.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPURenderBundle.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
@@ -39,26 +39,25 @@ class GPURenderBundleEncoder;
 
 class GPURenderBundle : public RefCountedAndCanMakeWeakPtr<GPURenderBundle> {
 public:
-    static Ref<GPURenderBundle> create(Ref<::WebGPU::RenderBundle>&& backing, String&& label, GPURenderBundleEncoder& renderBundleEncoder)
+    static Ref<GPURenderBundle> create(Ref<WebGPU::RenderBundle>&& backing, GPURenderBundleEncoder& renderBundleEncoder)
     {
-        return adoptRef(*new GPURenderBundle(WTF::move(backing), WTF::move(label), renderBundleEncoder));
+        return adoptRef(*new GPURenderBundle(WTF::move(backing), renderBundleEncoder));
     }
 
     String NODELETE label() const;
     void setLabel(String&&);
 
-    ::WebGPU::RenderBundle& backing() { return m_backing; }
-    const ::WebGPU::RenderBundle& backing() const { return m_backing; }
+    WebGPU::RenderBundle& backing() { return m_backing; }
+    const WebGPU::RenderBundle& backing() const { return m_backing; }
 
     GPUDevice* device() const;
 
     bool hasActiveInspectorCanvasCallTracer() const;
 
 private:
-    GPURenderBundle(Ref<::WebGPU::RenderBundle>&&, String&& label, GPURenderBundleEncoder&);
+    GPURenderBundle(Ref<WebGPU::RenderBundle>&&, GPURenderBundleEncoder&);
 
-    const Ref<::WebGPU::RenderBundle> m_backing;
-    String m_label;
+    const Ref<WebGPU::RenderBundle> m_backing;
     WeakPtr<GPUDevice, WeakPtrImplWithEventTargetData> m_device;
 };
 

@@ -181,7 +181,7 @@ static Ref<ShaderModule> handleShaderSuccessOrFailure(WebGPU::Metal::Device &obj
     return ShaderModule::createInvalid(object, failedCheck);
 }
 
-RefPtr<WebGPU::ShaderModule> Device::createShaderModule(const WebGPU::ShaderModuleDescriptor& descriptor)
+Ref<ShaderModule> Device::createShaderModule(const WebGPU::ShaderModuleDescriptor& descriptor)
 {
     if (!isValid())
         return ShaderModule::createInvalid(*this);
@@ -765,7 +765,7 @@ static void appendMessages(Vector<WebGPU::CompilationMessage>& result, const Mes
             .message = compilationMessage.message(),
             .type = messages.type,
             .lineNum = compilationMessage.lineNumber(),
-            .linePos = compilationMessage.lineOffset() + 1,
+            .linePos = compilationMessage.lineOffset(),
             .offset = compilationMessage.offset(),
             .length = compilationMessage.length(),
         });

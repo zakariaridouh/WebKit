@@ -28,22 +28,20 @@
 #include "GPUBindGroupEntry.h"
 #include "GPUBindGroupLayout.h"
 #include "GPUObjectDescriptorBase.h"
-#include <WebCore/WebGPUCppAPI.h>
+#include "WebGPUBindGroupDescriptor.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 struct GPUBindGroupDescriptor : public GPUObjectDescriptorBase {
-    // The descriptor borrows the entries from entriesStorage.
-    ::WebGPU::BindGroupDescriptor convertToBacking(Vector<::WebGPU::BindGroupEntry>& entriesStorage) const
+    WebGPU::BindGroupDescriptor convertToBacking() const
     {
-        entriesStorage = entries.map([](auto& bindGroupEntry) {
-            return bindGroupEntry.convertToBacking();
-        });
         return {
-            .label = label,
-            .layout = layout->backing(),
-            .entries = entriesStorage.span(),
+            { label },
+            layout->backing(),
+            entries.map([](auto& bindGroupEntry) {
+                return bindGroupEntry.convertToBacking();
+            }),
         };
     }
 

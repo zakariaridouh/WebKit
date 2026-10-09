@@ -25,9 +25,9 @@
 
 #pragma once
 
-#import "WebGPUCppBridge.h"
 #import <WebGPU/WebGPU.h>
 #import <WebGPU/WebGPUCpp.h>
+#import <WebGPU/WebGPUCppBridge.h>
 #import <WebGPU/WebGPUExt.h>
 #import <optional>
 #import <type_traits>
@@ -2240,7 +2240,6 @@ inline std::optional<WebGPU::ShaderModuleDescriptor> fromAPI(const WGPUShaderMod
     };
 }
 
-// The C API line positions stay zero-based, as they were.
 inline Vector<WGPUCompilationMessage> toAPI(const WebGPU::CompilationInfo& compilationInfo)
 {
     return compilationInfo.messages.map([](auto& message) {
@@ -2248,10 +2247,10 @@ inline Vector<WGPUCompilationMessage> toAPI(const WebGPU::CompilationInfo& compi
             .message = message.message,
             .type = toAPI(message.type),
             .lineNum = message.lineNum,
-            .linePos = message.linePos - 1,
+            .linePos = message.linePos,
             .offset = message.offset,
             .length = message.length,
-            .utf16LinePos = message.linePos - 1,
+            .utf16LinePos = message.linePos,
             .utf16Offset = message.offset,
             .utf16Length = message.length,
         };

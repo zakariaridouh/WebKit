@@ -27,11 +27,18 @@
 
 #if ENABLE(GPU_PROCESS)
 
-#include <WebCore/WebGPUCppAPI.h>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <optional>
+#include <wtf/Vector.h>
 
 namespace WebKit::WebGPU {
 
-using Origin2D = ::WebGPU::Origin2D;
+struct Origin2DDict {
+    WebCore::WebGPU::IntegerCoordinate x { 0 };
+    WebCore::WebGPU::IntegerCoordinate y { 0 };
+};
+
+using Origin2D = Variant<Vector<WebCore::WebGPU::IntegerCoordinate>, Origin2DDict>;
 
 } // namespace WebKit::WebGPU
 
