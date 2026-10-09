@@ -2627,8 +2627,11 @@ set(WebCoreTestSupport_IDL_FILES
     testing/MockMediaDeviceRouteURLCallback.idl
     testing/MockPageOverlay.idl
     testing/MockWebAuthenticationConfiguration.idl
+    testing/RequestedGPU.idl
     testing/ServiceWorkerInternals.idl
+    testing/SimulatedWebGLContextEvent.idl
     testing/TypeConversions.idl
+    testing/WorkerInternals.idl
 )
 
 list(APPEND WebCoreTestSupport_SOURCES
@@ -2647,6 +2650,7 @@ list(APPEND WebCoreTestSupport_SOURCES
     testing/MockPageOverlayClient.cpp
     testing/ServiceWorkerInternals.cpp
     testing/TestPage.cpp
+    testing/WorkerInternals.cpp
     testing/js/WebCoreTestSupport.cpp
 )
 

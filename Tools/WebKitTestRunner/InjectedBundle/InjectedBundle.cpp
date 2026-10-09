@@ -105,6 +105,7 @@ void InjectedBundle::initialize(WKBundleRef bundle, WKTypeRef initializationUser
     };
     WKBundleSetClient(m_bundle.get(), &client.base);
     WKBundleSetServiceWorkerProxyCreationCallback(m_bundle.get(), WebCoreTestSupport::setupNewlyCreatedServiceWorker);
+    WebCoreTestSupport::setupWorkerInternals();
     platformInitialize(initializationUserData);
     WebCoreTestSupport::populateJITOperations();
 

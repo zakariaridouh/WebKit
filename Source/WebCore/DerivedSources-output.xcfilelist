@@ -2689,6 +2689,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRequestAnimationFrameCallback.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRequestAnimationFrameCallback.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRequestPriority.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRequestPriority.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRequestedGPU.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSRequestedGPU.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSResidentKeyRequirement.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSResidentKeyRequirement.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSResizeObserver.cpp
@@ -3023,6 +3025,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSharedWorker.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSharedWorker.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSharedWorkerGlobalScope.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSharedWorkerGlobalScope.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSimulatedWebGLContextEvent.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSimulatedWebGLContextEvent.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSlotAssignmentMode.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSlotAssignmentMode.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSSlotable.cpp
@@ -3631,6 +3635,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorker.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorker.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorkerGlobalScope.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorkerGlobalScope.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorkerInternals.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorkerInternals.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorkerLocation.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorkerLocation.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSWorkerNavigator+MediaCapabilities.cpp

@@ -8,8 +8,9 @@
 // Requires js-test.js and webgl-test-utils.js.
 
 // The errors that the GPU process reports are printed asynchronously, which would make the output
-// depend on timing. The tests check the errors with getError().
-if (self.internals)
+// depend on timing. The tests check the errors with getError(). Workers do not have internals.settings,
+// so the page disables the errors before starting the worker.
+if (self.internals && internals.settings)
     internals.settings.setWebGLErrorsToConsoleEnabled(false);
 
 var wtu = WebGLTestUtils;
@@ -41,10 +42,11 @@ function drawingBufferLimits()
     var maxViewportDims = gl.getParameter(gl.MAX_VIEWPORT_DIMS);
     var glLimit = [Math.min(maxTextureSize, maxRenderbufferSize, maxViewportDims[0]), Math.min(maxTextureSize, maxRenderbufferSize, maxViewportDims[1])];
     var limit = glLimit.slice();
-    if (self.internals && internals.webglMaxDrawingBufferSize) {
-        var compositorLimit = internals.webglMaxDrawingBufferSize(gl);
+    var compositorLimit = null;
+    if (self.internals && internals.webglMaxDrawingBufferSize)
+        compositorLimit = internals.webglMaxDrawingBufferSize(gl);
+    if (compositorLimit)
         limit = [Math.min(limit[0], compositorLimit[0]), Math.min(limit[1], compositorLimit[1])];
-    }
     return { glLimit: glLimit, limit: limit };
 }
 

@@ -2194,11 +2194,14 @@ $(PROJECT_DIR)/testing/MockPaymentCoordinator.idl
 $(PROJECT_DIR)/testing/MockPaymentError.idl
 $(PROJECT_DIR)/testing/MockRTCRtpTransform.idl
 $(PROJECT_DIR)/testing/MockWebAuthenticationConfiguration.idl
+$(PROJECT_DIR)/testing/RequestedGPU.idl
 $(PROJECT_DIR)/testing/ServiceWorkerInternals.idl
+$(PROJECT_DIR)/testing/SimulatedWebGLContextEvent.idl
 $(PROJECT_DIR)/testing/TypeConversions.idl
 $(PROJECT_DIR)/testing/WebFakeXRDevice.idl
 $(PROJECT_DIR)/testing/WebFakeXRInputController.idl
 $(PROJECT_DIR)/testing/WebXRTest.idl
+$(PROJECT_DIR)/testing/WorkerInternals.idl
 $(PROJECT_DIR)/testing/XRSimulateUserActivationFunction.idl
 $(PROJECT_DIR)/workers/AbstractWorker.idl
 $(PROJECT_DIR)/workers/DedicatedWorkerGlobalScope.idl

@@ -156,6 +156,8 @@ struct VideoConfiguration;
 
 enum class DocumentMarkerType : uint32_t;
 enum class IPAddressSpace : uint8_t;
+enum class RequestedGPU : uint8_t;
+enum class SimulatedWebGLContextEvent : uint8_t;
 
 #if ENABLE(ENCRYPTED_MEDIA)
 class MediaKeys;
@@ -1098,22 +1100,11 @@ public:
     void setAsRunningUserScripts(Document&);
 
 #if ENABLE(WEBGL)
-    enum class SimulatedWebGLContextEvent {
-        GPUStatusFailure,
-        Timeout,
-        DisplayBufferAllocationFailure,
-        RenderbufferAllocationFailure
-    };
-    void simulateEventForWebGLContext(SimulatedWebGLContextEvent, WebGLRenderingContextBase&);
-
-    enum class RequestedGPU {
-        Default,
-        LowPower,
-        HighPerformance
-    };
-    RequestedGPU NODELETE requestedGPU(WebGLRenderingContextBase&);
+    // The WebGL functions are static so that WorkerInternals can use them.
+    static void simulateEventForWebGLContext(SimulatedWebGLContextEvent, WebGLRenderingContextBase&);
+    static RequestedGPU NODELETE requestedGPU(WebGLRenderingContextBase&);
     // The largest drawing buffer width and height, including the limits of the compositor buffers.
-    Vector<int> webglMaxDrawingBufferSize(WebGLRenderingContextBase&);
+    static Vector<int> webglMaxDrawingBufferSize(WebGLRenderingContextBase&);
 #endif
 
     void setPageVisibility(bool isVisible);

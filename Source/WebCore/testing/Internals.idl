@@ -101,13 +101,6 @@ enum TreeType {
     "ComposedTreeIncludingPseudoElements"
 };
 
-[Conditional=WEBGL] enum SimulatedWebGLContextEvent {
-    "GPUStatusFailure",
-    "Timeout",
-    "DisplayBufferAllocationFailure",
-    "RenderbufferAllocationFailure"
-};
-
 enum AudioSessionCategory {
     "None",
     "AmbientSound",
@@ -136,12 +129,6 @@ enum AutoplayPolicy {
     "Allow",
     "AllowWithoutSound",
     "Deny"
-};
-
-[Conditional=WEBGL] enum RequestedGPU {
-    "default",
-    "low-power",
-    "high-performance"
 };
 
 [

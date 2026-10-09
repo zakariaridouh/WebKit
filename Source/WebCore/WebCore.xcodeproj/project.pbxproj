@@ -60,7 +60,10 @@
 /* Begin PBXBuildFile section */
 		4C1117D4C483A9BC36554D2F /* SVGImageElementSizing.h in Headers */ = {isa = PBXBuildFile; fileRef = 775ED9913673971DA280FD1E /* SVGImageElementSizing.h */; };
 		281A941CB72C48E5886C9BC1 /* ImageInputTypeSizing.h in Headers */ = {isa = PBXBuildFile; fileRef = 67E6257C27C4E92D1FA4CBD1 /* ImageInputTypeSizing.h */; };
+		6BC5F8454809457D9FAA6BE0 /* JSSimulatedWebGLContextEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A60F92AA328DB579A254028 /* JSSimulatedWebGLContextEvent.cpp */; };
 		7062FCE22554E977B1F0B135 /* HTMLImageDensityCorrectedSizing.h in Headers */ = {isa = PBXBuildFile; fileRef = 73AFE9029ADA26681AC9083A /* HTMLImageDensityCorrectedSizing.h */; };
+		9178B94013138BFA254F89DD /* WorkerInternals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6327BA18D22FB8A4195DCD14 /* WorkerInternals.cpp */; };
+		9DAE6B91E7F40B76A6883FF1 /* JSRequestedGPU.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CFE80DDA749005FD4E3712C /* JSRequestedGPU.cpp */; };
 		D93A5C8E2B10F46A7C05E8D3 /* ReplacedElementIntrinsicSizing.h in Headers */ = {isa = PBXBuildFile; fileRef = E4B7A2C10F63D5948A1E2B70 /* ReplacedElementIntrinsicSizing.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0D90A26CC06154520622388D /* StyleBackgroundImageSizing.h in Headers */ = {isa = PBXBuildFile; fileRef = EE25250FA9F1E8ED3329837C /* StyleBackgroundImageSizing.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		349BF87E63040DFC90F188F6 /* StyleBorderImageSizing.h in Headers */ = {isa = PBXBuildFile; fileRef = A3BB42F262C9B6E31293B37C /* StyleBorderImageSizing.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -7261,6 +7264,7 @@
 		EE454B792F19C70200DD0C8D /* RemoteFrameLayoutInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = EE454B782F19C6D400DD0C8D /* RemoteFrameLayoutInfo.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		EE62BD9D2DE12C1B006C9A05 /* ResolvedScopedName.h in Headers */ = {isa = PBXBuildFile; fileRef = EE62BD9B2DE12BD4006C9A05 /* ResolvedScopedName.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		EE6C530F2F8831FF00C7B706 /* RenderTreeOrder.h in Headers */ = {isa = PBXBuildFile; fileRef = EE6C530D2F8830BD00C7B706 /* RenderTreeOrder.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		EE763D575FC8AD52D7724E90 /* JSWorkerInternals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0CC942725BC2AC733B0941DC /* JSWorkerInternals.cpp */; };
 		EEE349082DE0061C00A7D4BB /* StyleScopeIdentifier.h in Headers */ = {isa = PBXBuildFile; fileRef = EEE349072DE005FC00A7D4BB /* StyleScopeIdentifier.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		EEFD8C093057F92800800C98 /* StyleCurrentAccentColor.h in Headers */ = {isa = PBXBuildFile; fileRef = EEFD8C073057F8FA00800C98 /* StyleCurrentAccentColor.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		EFCC6C8F20FE914400A2321B /* CanvasActivityRecord.h in Headers */ = {isa = PBXBuildFile; fileRef = EFCC6C8D20FE914000A2321B /* CanvasActivityRecord.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -7857,10 +7861,22 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		02C7A954E7356C44F0D32986 /* WorkerInternals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WorkerInternals.h; sourceTree = "<group>"; };
+		0CC942725BC2AC733B0941DC /* JSWorkerInternals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSWorkerInternals.cpp; sourceTree = "<group>"; };
+		2A60F92AA328DB579A254028 /* JSSimulatedWebGLContextEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSSimulatedWebGLContextEvent.cpp; sourceTree = "<group>"; };
+		3B1A231820CE601D37648D82 /* SimulatedWebGLContextEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimulatedWebGLContextEvent.h; sourceTree = "<group>"; };
+		3CFE80DDA749005FD4E3712C /* JSRequestedGPU.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSRequestedGPU.cpp; sourceTree = "<group>"; };
+		3D34E4E09146C29D88ED6EB5 /* JSRequestedGPU.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSRequestedGPU.h; sourceTree = "<group>"; };
+		48F8C5F4D6B01624D5759ABD /* SimulatedWebGLContextEvent.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SimulatedWebGLContextEvent.idl; sourceTree = "<group>"; };
+		6327BA18D22FB8A4195DCD14 /* WorkerInternals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WorkerInternals.cpp; sourceTree = "<group>"; };
 		775ED9913673971DA280FD1E /* SVGImageElementSizing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SVGImageElementSizing.h; sourceTree = "<group>"; };
 		1401B330E419558F99500E10 /* StyleImage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StyleImage.cpp; sourceTree = "<group>"; };
 		67E6257C27C4E92D1FA4CBD1 /* ImageInputTypeSizing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImageInputTypeSizing.h; sourceTree = "<group>"; };
 		73AFE9029ADA26681AC9083A /* HTMLImageDensityCorrectedSizing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HTMLImageDensityCorrectedSizing.h; sourceTree = "<group>"; };
+		AB7389AEF5F167553DB95801 /* RequestedGPU.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = RequestedGPU.idl; sourceTree = "<group>"; };
+		D0A0F32FE69879582D4B079E /* JSSimulatedWebGLContextEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSSimulatedWebGLContextEvent.h; sourceTree = "<group>"; };
+		E096CAD4B82ABA7405F84633 /* WorkerInternals.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = WorkerInternals.idl; sourceTree = "<group>"; };
+		E1A913390A05F72D5FF13A0B /* JSWorkerInternals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSWorkerInternals.h; sourceTree = "<group>"; };
 		E4B7A2C10F63D5948A1E2B70 /* ReplacedElementIntrinsicSizing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReplacedElementIntrinsicSizing.h; sourceTree = "<group>"; };
 		5771A5E7578EF81664D18C61 /* StyleBackgroundImageSizing.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StyleBackgroundImageSizing.cpp; sourceTree = "<group>"; };
 		EE25250FA9F1E8ED3329837C /* StyleBackgroundImageSizing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StyleBackgroundImageSizing.h; sourceTree = "<group>"; };
@@ -24349,6 +24365,7 @@
 		FED13D500CEA949700D89466 /* RenderThemeIOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderThemeIOS.h; sourceTree = "<group>"; };
 		FEE1811116C319E800084849 /* SQLTransactionBackend.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SQLTransactionBackend.cpp; sourceTree = "<group>"; };
 		FEE1811216C319E800084849 /* SQLTransactionBackend.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SQLTransactionBackend.h; sourceTree = "<group>"; };
+		FF5FCAE3D54D8D9C1F6CF715 /* RequestedGPU.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RequestedGPU.h; sourceTree = "<group>"; };
 		FF945EC9161F7F3600971BC8 /* PseudoElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PseudoElement.cpp; sourceTree = "<group>"; };
 		FF945ECA161F7F3600971BC8 /* PseudoElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PseudoElement.h; sourceTree = "<group>"; };
 		FFAC30FC184FB145008C4F1E /* TrailingObjects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TrailingObjects.h; sourceTree = "<group>"; };
@@ -27945,10 +27962,14 @@
 				A140618A1E2ECA0A0032B34E /* MockPreviewLoaderClient.h */,
 				57156108234C1B31008FC7AB /* MockWebAuthenticationConfiguration.h */,
 				5715610D234C7481008FC7AB /* MockWebAuthenticationConfiguration.idl */,
+				FF5FCAE3D54D8D9C1F6CF715 /* RequestedGPU.h */,
+				AB7389AEF5F167553DB95801 /* RequestedGPU.idl */,
 				417F0D801FFEE14F008EF303 /* ServiceWorkerInternals.cpp */,
 				417F0D7E1FFEE14E008EF303 /* ServiceWorkerInternals.h */,
 				417F0D811FFEE150008EF303 /* ServiceWorkerInternals.idl */,
 				41D41C652256859200697942 /* ServiceWorkerInternals.mm */,
+				3B1A231820CE601D37648D82 /* SimulatedWebGLContextEvent.h */,
+				48F8C5F4D6B01624D5759ABD /* SimulatedWebGLContextEvent.idl */,
 				0A11FACE2F6A00A2009B51B0 /* TestPage.cpp */,
 				0A11FACE2F6A00A1009B51B0 /* TestPage.h */,
 				EB081CD81696084400553730 /* TypeConversions.h */,
@@ -27962,6 +27983,9 @@
 				E18D83E0243F71CE009247D6 /* WebXRTest.cpp */,
 				E18D83E8243F71D2009247D6 /* WebXRTest.h */,
 				E18D83EB243F71D5009247D6 /* WebXRTest.idl */,
+				6327BA18D22FB8A4195DCD14 /* WorkerInternals.cpp */,
+				02C7A954E7356C44F0D32986 /* WorkerInternals.h */,
+				E096CAD4B82ABA7405F84633 /* WorkerInternals.idl */,
 				E18D83EC243F71D5009247D6 /* XRSimulateUserActivationFunction.h */,
 				E18D83F0243F71D8009247D6 /* XRSimulateUserActivationFunction.idl */,
 			);
@@ -28013,13 +28037,19 @@
 				A1BB85B52159B38A0067E07D /* JSMockPaymentError.h */,
 				57156111234C7FBC008FC7AB /* JSMockWebAuthenticationConfiguration.cpp */,
 				57156110234C7FBC008FC7AB /* JSMockWebAuthenticationConfiguration.h */,
+				3CFE80DDA749005FD4E3712C /* JSRequestedGPU.cpp */,
+				3D34E4E09146C29D88ED6EB5 /* JSRequestedGPU.h */,
 				427DA71B13735DFA007C57FB /* JSServiceWorkerInternals.cpp */,
 				427DA71C13735DFA007C57FB /* JSServiceWorkerInternals.h */,
+				2A60F92AA328DB579A254028 /* JSSimulatedWebGLContextEvent.cpp */,
+				D0A0F32FE69879582D4B079E /* JSSimulatedWebGLContextEvent.h */,
 				EBF5121A1696496C0056BD25 /* JSTypeConversions.cpp */,
 				EBF5121B1696496C0056BD25 /* JSTypeConversions.h */,
 				5273CC9E2563B37600850007 /* JSWebFakeXRDevice.cpp */,
 				5273CCA62563B5C900850007 /* JSWebFakeXRInputController.cpp */,
 				5273CC9A2563B21200850007 /* JSWebXRTest.cpp */,
+				0CC942725BC2AC733B0941DC /* JSWorkerInternals.cpp */,
+				E1A913390A05F72D5FF13A0B /* JSWorkerInternals.h */,
 				5273CCA22563B4F700850007 /* JSXRSimulateUserActivationFunction.cpp */,
 			);
 			name = Testing;
@@ -51637,11 +51667,14 @@
 				A146D31A1F99BCF800D29196 /* JSMockPaymentCoordinator.cpp in Sources */,
 				A1BB85B82159B3A40067E07D /* JSMockPaymentError.cpp in Sources */,
 				57156114234C7FD6008FC7AB /* JSMockWebAuthenticationConfiguration.cpp in Sources */,
+				9DAE6B91E7F40B76A6883FF1 /* JSRequestedGPU.cpp in Sources */,
 				427DA71D13735DFA007C57FB /* JSServiceWorkerInternals.cpp in Sources */,
+				6BC5F8454809457D9FAA6BE0 /* JSSimulatedWebGLContextEvent.cpp in Sources */,
 				EBF5121C1696496C0056BD25 /* JSTypeConversions.cpp in Sources */,
 				5273CCA02563B37700850007 /* JSWebFakeXRDevice.cpp in Sources */,
 				5273CCA82563B5CA00850007 /* JSWebFakeXRInputController.cpp in Sources */,
 				5273CC9C2563B25A00850007 /* JSWebXRTest.cpp in Sources */,
+				EE763D575FC8AD52D7724E90 /* JSWorkerInternals.cpp in Sources */,
 				5273CCA42563B4F800850007 /* JSXRSimulateUserActivationFunction.cpp in Sources */,
 				CDC26B40160A8CC60026757B /* LegacyMockCDM.cpp in Sources */,
 				A1E086632489D34E00E496D9 /* MockApplePaySetupFeature.cpp in Sources */,
@@ -51666,6 +51699,7 @@
 				5273CC9125637F7500850007 /* WebFakeXRInputController.cpp in Sources */,
 				A13AB0812EE7AF53003C1ED5 /* WebMockMediaDeviceRoute.mm in Sources */,
 				5273CC8E25637EB500850007 /* WebXRTest.cpp in Sources */,
+				9178B94013138BFA254F89DD /* WorkerInternals.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

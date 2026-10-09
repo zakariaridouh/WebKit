@@ -1816,8 +1816,11 @@ JS_BINDING_IDLS := \
     $(WebCore)/testing/MockPaymentCoordinator.idl \
     $(WebCore)/testing/MockPaymentError.idl \
     $(WebCore)/testing/MockWebAuthenticationConfiguration.idl \
+    $(WebCore)/testing/RequestedGPU.idl \
     $(WebCore)/testing/ServiceWorkerInternals.idl \
+    $(WebCore)/testing/SimulatedWebGLContextEvent.idl \
     $(WebCore)/testing/TypeConversions.idl \
+    $(WebCore)/testing/WorkerInternals.idl \
     $(WebCore)/testing/FakeXRBoundsPoint.idl \
     $(WebCore)/testing/FakeXRButtonStateInit.idl \
     $(WebCore)/testing/FakeXRInputSourceInit.idl \
