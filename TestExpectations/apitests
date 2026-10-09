@@ -388,7 +388,6 @@ rdar://135224110 [ ios ] TestWebKitAPI.WebKit.AppHighlightsInImageOverlays [ Ski
 webkit.org/b/318460 TestWebKitAPI.WebKit.BlockedUploadDirectory [ Failure ]
 webkit.org/b/253387 [ ios ] TestWebKitAPI.WebKit.CookieAccessFromPDFInAboutBlank [ Skip ]
 webkit.org/b/253387 [ visionos ] TestWebKitAPI.WebKit.CookieAccessFromPDFInAboutBlank [ Skip ]
-webkit.org/b/161967 [ ios ] TestWebKitAPI.WebKit.DataDetectionReferenceDate [ Skip ]
 webkit.org/b/176250 [ mac ] TestWebKitAPI.WebKit.DOMWindowExtensionBasic [ Skip ]
 webkit.org/b/176250 [ mac ] TestWebKitAPI.WebKit.DOMWindowExtensionNoCache [ Skip ]
 rdar://107850827 [ mac ] TestWebKitAPI.WebKit.FirstResponderScrollingPosition [ Skip ]
