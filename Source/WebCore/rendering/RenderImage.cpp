@@ -613,27 +613,23 @@ void RenderImage::paintMissingImageState(PaintInfo& paintInfo, const LayoutPoint
     LayoutSize usableSize = contentSize - LayoutSize(2 * missingImageBorderWidth, 2 * missingImageBorderWidth);
 
     RefPtr cachedImage = this->cachedImage();
-    RefPtr image = cachedImage ? cachedImage->image() : nullptr;
     auto& context = paintInfo.context();
 
-    if (shouldDisplayBrokenImageIcon() && image && image->hasSomethingToDraw() && usableSize.width() >= image->width() && usableSize.height() >= image->height()) {
-        // Call brokenImage() explicitly to ensure we get the broken image icon at the appropriate resolution.
-        auto brokenImageAndImageScaleFactor = CachedImage::brokenImage(deviceScaleFactor);
-        RefPtr brokenImage = brokenImageAndImageScaleFactor.first.get();
+    if (shouldDisplayBrokenImageIcon() && cachedImage && cachedImage->willPaintBrokenImage()) {
+        auto [weakBrokenImage, brokenImageScaleFactor] = CachedImage::brokenImage(deviceScaleFactor);
+        RefPtr brokenImage = weakBrokenImage.get();
         FloatSize imageSize = brokenImage->size();
-        imageSize.scale(1 / brokenImageAndImageScaleFactor.second);
+        imageSize.scale(1 / brokenImageScaleFactor);
 
-        // Center the error image, accounting for border and padding.
-        LayoutUnit centerX { (usableSize.width() - imageSize.width()) / 2 };
-        if (centerX < 0)
-            centerX = 0;
-        LayoutUnit centerY { (usableSize.height() - imageSize.height()) / 2 };
-        if (centerY < 0)
-            centerY = 0;
-        imageOffset = LayoutSize(borderWidths.left() + padding.left() + centerX + missingImageBorderWidth, borderWidths.top() + padding.top() + centerY + missingImageBorderWidth);
+        if (usableSize.width() >= imageSize.width() && usableSize.height() >= imageSize.height()) {
+            // Center the error image, accounting for border and padding.
+            LayoutUnit centerX { (usableSize.width() - imageSize.width()) / 2 };
+            LayoutUnit centerY { (usableSize.height() - imageSize.height()) / 2 };
+            imageOffset = LayoutSize(borderWidths.left() + padding.left() + centerX + missingImageBorderWidth, borderWidths.top() + padding.top() + centerY + missingImageBorderWidth);
 
-        context.drawBitmapImage(*brokenImage, snapRectToDevicePixels(LayoutRect(paintOffset + imageOffset, imageSize), deviceScaleFactor), { imageOrientation() });
-        errorPictureDrawn = true;
+            context.drawBitmapImage(*brokenImage, snapRectToDevicePixels(LayoutRect(paintOffset + imageOffset, imageSize), deviceScaleFactor), { imageOrientation() });
+            errorPictureDrawn = true;
+        }
     }
 
     if (m_altText.isEmpty())
