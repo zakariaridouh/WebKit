@@ -65,6 +65,8 @@ public:
     void startRepeating(Seconds repeatInterval) { start(repeatInterval, repeatInterval); }
     void startOneShot(Seconds delay) { start(delay, 0_s); }
 
+    WEBCORE_EXPORT void startOneShotBeforeDueTimers();
+
     inline void stop();
     inline bool isActive() const;
 
