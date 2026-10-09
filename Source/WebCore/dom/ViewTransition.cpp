@@ -203,11 +203,7 @@ void ViewTransition::skipViewTransition(ExceptionOr<JSC::JSValue>&& reason)
 
     Ref document = *this->document();
     if (m_phase < ViewTransitionPhase::UpdateCallbackCalled) {
-        protect(document->eventLoop())->queueTask(TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
-            RefPtr protectedThis = weakThis.get();
-            if (protectedThis && protect(protectedThis->document())->globalObject())
-                protectedThis->callUpdateCallback();
-        });
+        scheduleUpdateCallback();
 
         if (m_isCrossDocument)
             protect(m_updateCallbackDone.second)->resolve();
@@ -329,10 +325,36 @@ void ViewTransition::callUpdateCallback()
     });
 }
 
+// https://drafts.csswg.org/css-view-transitions/#schedule-the-update-callback
+void ViewTransition::scheduleUpdateCallback()
+{
+    Ref document = *this->document();
+    document->viewTransitionUpdateCallbackQueue().append(*this);
+    protect(document->eventLoop())->queueTask(TaskSource::DOMManipulation, [weakDocument = WeakPtr<Document, WeakPtrImplWithEventTargetData> { document.get() }] {
+        if (RefPtr document = weakDocument.get())
+            flushUpdateCallbackQueue(*document);
+    });
+}
+
+// https://drafts.csswg.org/css-view-transitions/#flush-the-update-callback-queue
+void ViewTransition::flushUpdateCallbackQueue(Document& document)
+{
+    auto queue = std::exchange(document.viewTransitionUpdateCallbackQueue(), { });
+    if (!document.globalObject())
+        return;
+    for (Ref transition : queue)
+        transition->callUpdateCallback();
+}
+
 // https://drafts.csswg.org/css-view-transitions/#setup-view-transition-algorithm
 void ViewTransition::setupViewTransition()
 {
     if (!document())
+        return;
+
+    flushUpdateCallbackQueue(*protect(document()));
+
+    if (m_phase == ViewTransitionPhase::Done)
         return;
 
     ASSERT(m_phase == ViewTransitionPhase::PendingCapture);
@@ -364,7 +386,12 @@ void ViewTransition::setupViewTransition()
         if (protectedThis->m_phase == ViewTransitionPhase::Done)
             return;
 
-        protectedThis->callUpdateCallback();
+        RefPtr document = protectedThis->document();
+        if (!document)
+            return;
+
+        document->viewTransitionUpdateCallbackQueue().append(*protectedThis);
+        flushUpdateCallbackQueue(*document);
     });
 }
 

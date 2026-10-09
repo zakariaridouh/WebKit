@@ -232,6 +232,8 @@ private:
     void setupDynamicStyleSheet(const AtomString&, const CapturedElement&);
 
     void callUpdateCallback();
+    void scheduleUpdateCallback();
+    static void flushUpdateCallbackQueue(Document&);
 
     ExceptionOr<void> updatePseudoElementStylesRead();
     void updatePseudoElementStylesWrite();

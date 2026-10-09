@@ -1839,6 +1839,8 @@ public:
     bool activeViewTransitionCapturedDocumentElement() const;
     void setActiveViewTransition(RefPtr<ViewTransition>&&);
 
+    Vector<Ref<ViewTransition>>& viewTransitionUpdateCallbackQueue() { return m_viewTransitionUpdateCallbackQueue; }
+
     bool hasViewTransitionPseudoElementTree() const { return m_hasViewTransitionPseudoElementTree; }
     void NODELETE setHasViewTransitionPseudoElementTree(bool);
 
@@ -2542,6 +2544,7 @@ private:
     Vector<WeakPtr<ResizeObserver>> m_resizeObservers;
 
     RefPtr<ViewTransition> m_activeViewTransition;
+    Vector<Ref<ViewTransition>> m_viewTransitionUpdateCallbackQueue;
 
     std::optional<std::pair<QualifiedName, WeakPtr<Element, WeakPtrImplWithEventTargetData>>> m_cachedFirstElementWithAttribute;
 
