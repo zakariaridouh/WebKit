@@ -2796,7 +2796,7 @@ AccessibilitySVGObject* AccessibilityRenderObject::remoteSVGRootElement(CreateIf
 
     RefPtr rootSVGObject = createIfNecessary == CreateIfNecessary::Yes ? cache->getOrCreate(*rendererRoot) : cache->get(rendererRoot.get());
     AX_ASSERT(createIfNecessary == CreateIfNecessary::No || rootSVGObject);
-    return dynamicDowncast<AccessibilitySVGObject>(rootSVGObject).unsafeGet();
+    return dynamicDowncast<AccessibilitySVGObject>(rootSVGObject.unsafeGet());
 }
 
 void AccessibilityRenderObject::addRemoteSVGChildren()
@@ -2924,7 +2924,7 @@ void AccessibilityRenderObject::updateAttachmentViewParents()
     // updateChildrenIfNeeded == false because this is called right after we've added children, so we know
     // they're clean and don't need updating.
     for (const auto& child : children(/* updateChildrenIfNeeded */ false))
-        downcast<AccessibilityObject>(child)->overrideAttachmentParent(this);
+        downcast<AccessibilityObject>(child).overrideAttachmentParent(this);
 }
 #endif // PLATFORM(MAC)
 

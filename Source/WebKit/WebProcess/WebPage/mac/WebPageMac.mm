@@ -849,7 +849,7 @@ void WebPage::performImmediateActionHitTestAtLocation(WebCore::FrameIdentifier f
 
     // The UI process will hit-test again in the remote frame's process, so this one must not act on the hit test.
     auto subframe = EventHandler::subframeForTargetNode(protect(hitTestResult.targetNode()).get());
-    if (RefPtr remoteFrame = dynamicDowncast<RemoteFrame>(subframe).get()) {
+    if (RefPtr remoteFrame = dynamicDowncast<RemoteFrame>(subframe)) {
         if (RefPtr remoteFrameView = remoteFrame->view()) {
             return completionHandler(RemoteUserInputEventData {
                 remoteFrame->frameID(),

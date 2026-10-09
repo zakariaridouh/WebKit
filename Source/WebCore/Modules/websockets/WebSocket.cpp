@@ -355,7 +355,7 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
     };
     if (is<Document>(context))
         reportRegistrableDomain(context.get());
-    else if (CheckedPtr workerLoaderProxy = downcast<WorkerGlobalScope>(context)->thread()->workerLoaderProxy())
+    else if (CheckedPtr workerLoaderProxy = downcast<WorkerGlobalScope>(context).thread()->workerLoaderProxy())
         workerLoaderProxy->postTaskToLoader(WTF::move(reportRegistrableDomain));
 
     if (!m_origin)

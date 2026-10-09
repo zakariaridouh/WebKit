@@ -2466,7 +2466,7 @@ HandleUserInputEventResult EventHandler::handleMouseMoveEvent(const PlatformMous
 
     bool swallowEvent = false;
     auto subframe = isCapturingMouseEventsElement() ? subframeForTargetNode(m_capturingMouseEventsElement.get()) : subframeForHitTestResult(mouseEvent);
-    if (auto remoteMouseEventData = userInputEventDataForRemoteFrame(dynamicDowncast<RemoteFrame>(subframe).get(), mouseEvent.hitTestResult().doublePointInInnerNodeFrame())) {
+    if (auto remoteMouseEventData = userInputEventDataForRemoteFrame(dynamicDowncast<RemoteFrame>(subframe), mouseEvent.hitTestResult().doublePointInInnerNodeFrame())) {
         updateMouseEventTargetNode(eventNames().mousemoveEvent, protect(mouseEvent.targetNode()).get(), platformMouseEvent, FireMouseOverOut::Yes);
         return *remoteMouseEventData;
     }
@@ -2680,7 +2680,7 @@ HandleUserInputEventResult EventHandler::handleMouseReleaseEvent(const PlatformM
     if (m_eventHandlerWillResetCapturingMouseEventsElement)
         resetCapturingMouseEventsElement();
 
-    if (auto remoteMouseEventData = userInputEventDataForRemoteFrame(dynamicDowncast<RemoteFrame>(subframe).get(), mouseEvent.hitTestResult().doublePointInInnerNodeFrame()))
+    if (auto remoteMouseEventData = userInputEventDataForRemoteFrame(dynamicDowncast<RemoteFrame>(subframe), mouseEvent.hitTestResult().doublePointInInnerNodeFrame()))
         return *remoteMouseEventData;
 
     if (RefPtr localSubframe = dynamicDowncast<LocalFrame>(subframe)) {

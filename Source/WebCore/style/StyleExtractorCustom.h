@@ -2805,8 +2805,8 @@ static Ref<CSSValueList> convertAnimationRange(ExtractorState& state, const Sing
 
     auto createRangeValue = [&](auto& edge) -> Ref<CSSValueList> {
         Ref value = createCSSValue(state.pool, state.style, edge);
-        if (auto list = dynamicDowncast<CSSValueList>(value))
-            return list.releaseNonNull();
+        if (auto* list = dynamicDowncast<CSSValueList>(value))
+            return *list;
         return CSSValueList::createSpaceSeparated(WTF::move(value));
     };
 

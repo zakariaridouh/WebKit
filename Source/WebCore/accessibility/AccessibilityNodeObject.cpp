@@ -1536,7 +1536,7 @@ Element* AccessibilityNodeObject::anchorElement() const
     // NOTE: this assumes that any non-image with an anchor is an HTMLAnchorElement
     for ( ; node; node = node->parentNode()) {
         if (is<HTMLAnchorElement>(*node) || (node->renderer() && cache->getOrCreate(*node)->isLink()))
-            return downcast<Element>(node).unsafeGet();
+            return downcast<Element>(node.unsafeGet());
     }
 
     return nullptr;
@@ -1661,7 +1661,7 @@ Element* AccessibilityNodeObject::actionElement() const
         return element.unsafeGet();
 
     if (AccessibilityObject::isARIAInput(ariaRoleAttribute()))
-        return downcast<Element>(node).unsafeGet();
+        return downcast<Element>(node.unsafeGet());
 
     switch (role()) {
     case AccessibilityRole::Button:
@@ -1675,7 +1675,7 @@ Element* AccessibilityNodeObject::actionElement() const
         // Check if the author is hiding the real control element inside the ARIA element.
         if (RefPtr nativeElement = nativeActionElement(node.get()))
             return nativeElement.unsafeGet();
-        return downcast<Element>(node).unsafeGet();
+        return downcast<Element>(node.unsafeGet());
     default:
         break;
     }
@@ -2582,7 +2582,7 @@ unsigned AccessibilityNodeObject::computeCellSlots()
             // that scaffolding.
             for (Ref row : childrenOfType<HTMLTableRowElement>(*tableSection)) {
                 if (RefPtr tableRow = cache->getOrCreate(row.get()); tableRow && tableRow->isTableRow())
-                    processRow(dynamicDowncast<AccessibilityRenderObject>(tableRow).get());
+                    processRow(dynamicDowncast<AccessibilityRenderObject>(tableRow));
             }
         } else if (RefPtr sectionAxObject = cache->getOrCreate(sectionElement)) {
             ASSERT_WITH_MESSAGE(is<HTMLTableSectionElement>(sectionElement) || hasRole(sectionElement, "rowgroup"_s), "processRowGroup should only be called with native table section elements, or role=rowgroup elements");
@@ -2916,7 +2916,7 @@ AccessibilityObject* AccessibilityNodeObject::disclosedByRow() const
 
     for (int k = index - 1; k >= 0; --k) {
         if (protect(allRows[k])->hierarchicalLevel() == level - 1)
-            return downcast<AccessibilityObject>(allRows[k]).unsafePtr();
+            return downcast<AccessibilityObject>(allRows[k].unsafePtr());
     }
     return nullptr;
 }

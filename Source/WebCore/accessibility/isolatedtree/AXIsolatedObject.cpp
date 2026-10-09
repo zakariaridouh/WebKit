@@ -1688,7 +1688,7 @@ FloatRect AXIsolatedObject::relativeFrame() const
         // our row(s) have cached geometry we can use. For tables, this will probably be more accurate
         // than the ancestor bounding-box fallback below.
         for (const auto& child : const_cast<AXIsolatedObject*>(this)->unignoredChildren()) {
-            if (std::optional cachedFrame = downcast<AXIsolatedObject>(child)->cachedRelativeFrame())
+            if (std::optional cachedFrame = downcast<AXIsolatedObject>(child).cachedRelativeFrame())
                 relativeFrame.unite(*cachedFrame);
         }
     }
@@ -1715,7 +1715,7 @@ FloatRect AXIsolatedObject::relativeFrame() const
             // Prefer ARIA labels first, fall back to native labels if none provide geometry.
             auto uniteLabelsIntoRect = [&rectFromLabels](const AccessibilityChildrenVector& labels) {
                 for (const auto& label : labels) {
-                    std::optional frame = downcast<AXIsolatedObject>(label)->cachedRelativeFrame();
+                    std::optional frame = downcast<AXIsolatedObject>(label).cachedRelativeFrame();
                     if (!frame)
                         continue;
                     if (!rectFromLabels)

@@ -265,7 +265,7 @@ void MediaSourcePrivateGStreamer::startPlaybackIfHasAllTracks()
     {
         Locker locker { m_lock };
         for (auto& privateSourceBuffer : m_sourceBuffers) {
-            auto sourceBuffer = downcast<SourceBufferPrivateGStreamer>(privateSourceBuffer);
+            auto* sourceBuffer = downcast<SourceBufferPrivateGStreamer>(privateSourceBuffer);
             for (auto& [_, track] : sourceBuffer->tracks())
                 tracks.append(track);
         }

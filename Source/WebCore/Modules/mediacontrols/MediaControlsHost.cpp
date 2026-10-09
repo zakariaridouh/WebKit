@@ -688,7 +688,7 @@ auto MediaControlsHost::mediaControlsContextMenuItems(String&& optionsJSONString
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     if (optionsJSONObject->getBoolean("includePictureInPicture"_s).value_or(false)) {
         ASSERT(is<HTMLVideoElement>(mediaElement));
-        ASSERT(downcast<HTMLVideoElement>(mediaElement)->webkitSupportsPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture));
+        ASSERT(downcast<HTMLVideoElement>(mediaElement).webkitSupportsPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture));
         items.append(createMenuItem(PictureInPictureTag::IncludePictureInPicture, WEB_UI_STRING_KEY("Picture in Picture", "Picture in Picture (Media Controls Menu)", "Picture in Picture media controls context menu title"), false, "pip.enter"_s));
     }
 #endif // ENABLE(VIDEO_PRESENTATION_MODE)
@@ -879,7 +879,7 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
 #if ENABLE(VIDEO_PRESENTATION_MODE)
             [&] (PictureInPictureTag) {
                 // Media controls are not shown when in PiP so we can assume that we're not in PiP.
-                downcast<HTMLVideoElement>(mediaElement)->webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture);
+                downcast<HTMLVideoElement>(mediaElement).webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture);
             },
 #endif // ENABLE(VIDEO_PRESENTATION_MODE)
             [&] (Ref<AudioTrack>& selectedAudioTrack) {

@@ -224,7 +224,7 @@ CSSCounterStyleDescriptors::SystemData extractSystemDataFromCSSValue(const CSSVa
             if (RefPtr secondValueIdent = dynamicDowncast<CSSKeywordValue>(secondValue))
                 result.first = nameStringForSerialization(secondValueIdent->valueID());
             else
-                result.first = downcast<CSSCustomIdentValue>(secondValue)->customIdent().value;
+                result.first = downcast<CSSCustomIdentValue>(secondValue).customIdent().value;
         } else if (system == CSSCounterStyleDescriptors::System::Fixed) {
             if (auto secondValueInteger = Style::deprecatedToStyleFromCSSValue<Style::Integer<>>(secondValue))
                 result.second = secondValueInteger->value;

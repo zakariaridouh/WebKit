@@ -231,7 +231,7 @@ Position nextVisuallyDistinctCandidate(const Position& position, SkipDisplayCont
         if (RefPtr node = nextPosition.containerNode()) {
             if (!node->renderer()) {
                 if (skipDisplayContents == SkipDisplayContents::No) {
-                    if (auto element = dynamicDowncast<Element>(node); element && element->hasDisplayContents())
+                    if (auto* element = dynamicDowncast<Element>(node); element && element->hasDisplayContents())
                         continue;
                 }
                 nextPosition = lastPositionInOrAfterNode(node.get());

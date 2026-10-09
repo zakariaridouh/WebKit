@@ -509,7 +509,7 @@ WebGLCanvas WebGLRenderingContextBase::canvas()
     if (RefPtr offscreenCanvas = dynamicDowncast<OffscreenCanvas>(base))
         return offscreenCanvas.releaseNonNull();
 #endif
-    return downcast<HTMLCanvasElement>(base);
+    return downcast<HTMLCanvasElement>(WTF::move(base));
 }
 
 #if ENABLE(OFFSCREEN_CANVAS)

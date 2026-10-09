@@ -400,7 +400,7 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
     StringBuilder sanitizedStyleSheetBuilder;
 
     for (const auto& rule : childRules) {
-        auto styleRule = dynamicDowncast<StyleRule>(rule);
+        RefPtr styleRule = dynamicDowncast<StyleRule>(rule);
         if (!styleRule)
             return true;
 

@@ -4320,7 +4320,7 @@ void WebPage::performHitTestForModifierFlagsChangeOnMouseEvent(FrameIdentifier f
     auto hitTestResult = localFrame->eventHandler().getHitTestResultForMouseEvent(platform(event));
 
     auto subframe = EventHandler::subframeForTargetNode(protect(hitTestResult.targetNode()).get());
-    if (RefPtr remoteFrame = dynamicDowncast<RemoteFrame>(subframe).get()) {
+    if (RefPtr remoteFrame = dynamicDowncast<RemoteFrame>(subframe)) {
         if (RefPtr remoteFrameView = remoteFrame->view()) {
             return completionHandler(RemoteUserInputEventData {
                 remoteFrame->frameID(),

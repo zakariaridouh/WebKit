@@ -2208,7 +2208,7 @@ AXTextMarker AXIsolatedTree::lastMarker()
 
     const auto& children = root->unignoredChildren();
     // Start the `findLast` traversal from the last child of the root to reduce the amount of traversal done.
-    RefPtr endObject = children.isEmpty() ? root : dynamicDowncast<AXIsolatedObject>(children[children.size() - 1]);
+    RefPtr endObject = children.isEmpty() ? root.get() : dynamicDowncast<AXIsolatedObject>(children[children.size() - 1]);
     return endObject ? AXTextMarker { *endObject, 0 }.findLast() : AXTextMarker();
 }
 

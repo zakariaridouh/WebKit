@@ -408,7 +408,7 @@ SecurityOrigin* OffscreenCanvas::securityOrigin() const
     if (RefPtr globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext.get()))
         return &globalScope->topOrigin();
 
-    return &downcast<Document>(scriptExecutionContext)->securityOrigin();
+    return &downcast<Document>(scriptExecutionContext).securityOrigin();
 }
 
 bool OffscreenCanvas::canDetach() const
