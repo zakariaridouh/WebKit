@@ -124,7 +124,7 @@ void ScriptElement::finishParsingChildren()
 
 void ScriptElement::handleSourceAttribute(const String& sourceURL)
 {
-    if (ignoresLoadRequest() || sourceURL.isEmpty())
+    if (ignoresLoadRequest() || sourceURL.isNull())
         return;
 
     prepareScript(); // FIXME: Provide a real starting line number here.
