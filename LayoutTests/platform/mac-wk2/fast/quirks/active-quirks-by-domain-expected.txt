@@ -120,6 +120,7 @@ https://docs.google.com/
     InputMethodMustUseCompositionEvents
     InputMethodUsesCorrectKeyEventOrder
     IsTouchBarUpdateSuppressedForHiddenContentEditableQuirk
+    NeedsGoogleDocsNavigationWidgetScrollQuirk
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk
 https://translate.google.com/
     ShouldBypassBackForwardCacheWhenElementMatchesQuirk

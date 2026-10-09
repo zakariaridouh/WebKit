@@ -202,6 +202,10 @@ NeedsFullscreenObjectFitQuirk:
 NeedsGMailOverflowScrollQuirk:
   available: iOSFamily
 
+# docs.google.com
+NeedsGoogleDocsNavigationWidgetScrollQuirk:
+  available: mac
+
 # google.com/maps/embed rdar://184166392
 NeedsGoogleMapsEmbedManipulationSurfaceQuirk:
   available: mac

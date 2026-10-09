@@ -482,6 +482,10 @@
                     "bugs": ["https://webkit.org/b/161984"]
                 },
                 {
+                    "id": "NeedsGoogleDocsNavigationWidgetScrollQuirk",
+                    "bugs": ["rdar://189433637"]
+                },
+                {
                     "id": "ShouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasQuirk",
                     "bugs": ["rdar://49864669"]
                 },

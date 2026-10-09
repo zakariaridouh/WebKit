@@ -466,6 +466,8 @@ static constexpr Quirk fullTable[] = {
             inputMethodMustUseCompositionEvents,
             // docs.google.com https://bugs.webkit.org/show_bug.cgi?id=161984
             isTouchBarUpdateSuppressedForHiddenContentEditableQuirk,
+            // docs.google.com
+            needsGoogleDocsNavigationWidgetScrollQuirk,
             // docs.google.com rdar://49864669
             shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasQuirk,
             // docs.google.com rdar://59402637
