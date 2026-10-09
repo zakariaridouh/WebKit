@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-class Heap;
+class Collector;
 
 // The JSC concurrent GC sometimes stops the world in order to stay ahead of it. These deliberate,
 // synthetic pauses ensure that the GC won't have to do one huge pause in order to catch up to the
@@ -43,7 +43,7 @@ class Heap;
 class StochasticSpaceTimeMutatorScheduler final : public MutatorScheduler {
     WTF_MAKE_TZONE_ALLOCATED(StochasticSpaceTimeMutatorScheduler);
 public:
-    StochasticSpaceTimeMutatorScheduler(Heap&);
+    StochasticSpaceTimeMutatorScheduler(Collector&);
     ~StochasticSpaceTimeMutatorScheduler() final;
     
     State state() const final;
@@ -74,7 +74,7 @@ private:
     double NODELETE headroomFullness(const Snapshot&);
     double NODELETE mutatorUtilization(const Snapshot&);
     
-    JSC::Heap& m_heap;
+    Collector& m_collector;
     State m_state { Normal };
     
     WeakRandom m_random;

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SpaceTimeMutatorScheduler.h"
 
+#include "Collector.h"
 #include "JSCInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -55,8 +56,8 @@ private:
     double m_bytesAllocatedThisCycle;
 };
 
-SpaceTimeMutatorScheduler::SpaceTimeMutatorScheduler(JSC::Heap& heap)
-    : m_heap(heap)
+SpaceTimeMutatorScheduler::SpaceTimeMutatorScheduler(Collector& collector)
+    : m_collector(collector)
     , m_period(Seconds::fromMilliseconds(Options::concurrentGCPeriodMS()))
 {
 }
@@ -77,7 +78,7 @@ void SpaceTimeMutatorScheduler::beginCollection()
     m_bytesAllocatedThisCycleAtTheBeginning = bytesAllocatedThisCycleImpl();
     m_bytesAllocatedThisCycleAtTheEnd = 
         Options::concurrentGCMaxHeadroom() *
-        std::max<double>(m_bytesAllocatedThisCycleAtTheBeginning, m_heap.m_maxEdenSize);
+        std::max<double>(m_bytesAllocatedThisCycleAtTheBeginning, m_collector.totalMaxEdenSize());
 }
 
 void SpaceTimeMutatorScheduler::didStop()
@@ -156,7 +157,7 @@ void SpaceTimeMutatorScheduler::endCollection()
 
 double SpaceTimeMutatorScheduler::bytesAllocatedThisCycleImpl()
 {
-    return m_heap.totalBytesAllocatedThisCycle();
+    return m_collector.totalBytesAllocatedThisCycle();
 }
 
 double SpaceTimeMutatorScheduler::bytesSinceBeginningOfCycle(const Snapshot& snapshot)

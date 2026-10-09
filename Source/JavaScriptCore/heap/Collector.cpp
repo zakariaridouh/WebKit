@@ -138,9 +138,9 @@ Collector::Collector(Heap& heap)
 
     if (Options::useConcurrentGC()) {
         if (Options::useStochasticMutatorScheduler())
-            m_scheduler = makeUnique<StochasticSpaceTimeMutatorScheduler>(heap);
+            m_scheduler = makeUnique<StochasticSpaceTimeMutatorScheduler>(*this);
         else
-            m_scheduler = makeUnique<SpaceTimeMutatorScheduler>(heap);
+            m_scheduler = makeUnique<SpaceTimeMutatorScheduler>(*this);
     } else {
         // We simulate turning off concurrent GC by making the scheduler say that the world
         // should always be stopped when the collector is running.
@@ -815,6 +815,26 @@ void Collector::dump(PrintStream& out) const
         out.print(RawPointer(m_heaps.first()));
     else
         out.print("all");
+}
+
+// FIXME: SUPPRESS_NODELETE shouldn't be necessary here and below. The lambdas destruct nothing; the checker just
+// cannot see through a lambda.
+SUPPRESS_NODELETE size_t Collector::totalBytesAllocatedThisCycle()
+{
+    size_t result = 0;
+    forEachHeap([&](Heap& heap) {
+        result += heap.totalBytesAllocatedThisCycle();
+    });
+    return result;
+}
+
+SUPPRESS_NODELETE size_t Collector::totalMaxEdenSize()
+{
+    size_t result = 0;
+    forEachHeap([&](Heap& heap) {
+        result += heap.m_maxEdenSize;
+    });
+    return result;
 }
 
 size_t Collector::bytesVisitedIn(Heap& heap)

@@ -651,8 +651,6 @@ private:
     friend class MarkedBlock;
     friend class RunningScope;
     friend class SlotVisitor;
-    friend class SpaceTimeMutatorScheduler;
-    friend class StochasticSpaceTimeMutatorScheduler;
     friend class SweepingScope;
     friend class IncrementalSweeper;
     friend class VM;

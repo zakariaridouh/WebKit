@@ -104,6 +104,10 @@ public:
     void addMarkingConstraint(ASCIICString abbreviatedName, ASCIICString name, MarkingConstraintExecutorPair&&,
         ConstraintVolatility, ConstraintConcurrency, ConstraintParallelism);
 
+    // Summed over the heaps, for the MutatorScheduler.
+    size_t NODELETE totalBytesAllocatedThisCycle();
+    size_t NODELETE totalMaxEdenSize();
+
     void dump(PrintStream&) const;
 
 private:
