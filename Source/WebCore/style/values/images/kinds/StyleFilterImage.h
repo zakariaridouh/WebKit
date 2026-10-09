@@ -33,6 +33,9 @@
 #include "StyleGeneratedImage.h"
 
 namespace WebCore {
+
+class BitmapImage;
+
 namespace Style {
 
 class FilterImage final : public GeneratedImage, private CachedImageClient {
@@ -77,7 +80,7 @@ private:
     // CachedImageClient.
     void imageChanged(WebCore::CachedImage*, const IntRect* = nullptr) final;
 
-    RefPtr<WebCore::Image> resolvedImage(const RenderElement&, const FloatSize&, const GraphicsContext& destinationContext, bool isForFirstLine) const;
+    RefPtr<BitmapImage> resolvedImage(const RenderElement&, const FloatSize&, const GraphicsContext& destinationContext, bool isForFirstLine) const;
 
     RefPtr<Image> m_image;
     Filter m_filter;

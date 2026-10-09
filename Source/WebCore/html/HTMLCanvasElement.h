@@ -46,6 +46,7 @@
 
 namespace WebCore {
 
+class BitmapImage;
 class BlobCallback;
 class CanvasRenderingContext;
 class CanvasRenderingContext2D;
@@ -139,7 +140,7 @@ public:
 
     std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
-    Image* copiedImage() const;
+    BitmapImage* copiedImage() const;
     RefPtr<ImageData> getImageData();
 
     SecurityOrigin* securityOrigin() const final;
@@ -203,7 +204,7 @@ private:
 
     std::unique_ptr<CanvasRenderingContext> m_context;
     PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
-    mutable RefPtr<Image> m_copiedImage; // For CSSCanvasValue.
+    mutable RefPtr<BitmapImage> m_copiedImage; // For CSSCanvasValue.
 };
 
 WebCoreOpaqueRoot root(HTMLCanvasElement*);

@@ -109,6 +109,8 @@ public:
         return unorientedNaturalDimensions().oriented(orientation);
     }
 
+    virtual bool usesConcreteObjectSizeAsViewport() const { return false; }
+
 public:
     WEBCORE_EXPORT EncodedDataStatus setData(RefPtr<FragmentedSharedBuffer>&& data, bool allDataReceived);
     virtual EncodedDataStatus dataChanged(bool /* allDataReceived */) { return EncodedDataStatus::Unknown; }

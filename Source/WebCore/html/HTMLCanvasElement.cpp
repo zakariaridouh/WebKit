@@ -901,7 +901,7 @@ SecurityOrigin* HTMLCanvasElement::securityOrigin() const
     return &protect(document())->securityOrigin();
 }
 
-Image* HTMLCanvasElement::copiedImage() const
+BitmapImage* HTMLCanvasElement::copiedImage() const
 {
     if (m_copiedImage)
         return m_copiedImage.get();

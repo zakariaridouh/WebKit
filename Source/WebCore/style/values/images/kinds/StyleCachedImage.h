@@ -106,6 +106,8 @@ private:
     CachedImage(URL&&, Ref<CSSImageValue>&&, float, OptionSet<SVGReferencingMode>);
 
     RefPtr<WebCore::Image> resolvedImage() const;
+    ConcreteObjectSize concreteSizeToDrawAt(const WebCore::Image&, const RenderElement&, ConcreteObjectSize) const;
+    NaturalDimensions tileNaturalDimensions(const WebCore::Image&) const;
     Vector<CSS::ParamFunction> urlLinkParameters(const CSSParserContext&, StringView fragment) const;
 
     struct ReferencedSVGResource {

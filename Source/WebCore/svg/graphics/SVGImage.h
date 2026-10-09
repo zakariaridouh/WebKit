@@ -85,6 +85,8 @@ private:
 
     NaturalDimensions unorientedNaturalDimensions() const final;
 
+    bool usesConcreteObjectSizeAsViewport() const final { return true; }
+
     void reportApproximateMemoryCost() const;
     EncodedDataStatus dataChanged(bool allDataReceived) final;
 

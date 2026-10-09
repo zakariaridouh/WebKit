@@ -128,7 +128,7 @@ void FilterImage::load(CachedResourceLoader& cachedResourceLoader, const Resourc
     m_inputImageIsReady = true;
 }
 
-RefPtr<WebCore::Image> FilterImage::resolvedImage(const RenderElement& renderElement, const FloatSize& size, const GraphicsContext& destinationContext, bool isForFirstLine) const
+RefPtr<BitmapImage> FilterImage::resolvedImage(const RenderElement& renderElement, const FloatSize& size, const GraphicsContext& destinationContext, bool isForFirstLine) const
 {
     CheckedRef renderer = renderElement;
 
@@ -175,7 +175,7 @@ ImageDrawResult FilterImage::draw(GraphicsContext& context, const RenderElement&
     if (!image)
         return ImageDrawResult::DidNothing;
 
-    return drawResolved(context, renderer, *image, concreteObjectSize, destination, source, options);
+    return drawResolved(context, renderer, *image, ConcreteObjectSize::fixed(image->size()), destination, mapSourceToSize(source, concreteObjectSize, image->size(options.orientation())), options);
 }
 
 ImageDrawResult FilterImage::drawAsPattern(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
@@ -184,16 +184,16 @@ ImageDrawResult FilterImage::drawAsPattern(GraphicsContext& context, const Rende
     if (!image || context.paintingDisabled())
         return ImageDrawResult::DidNothing;
 
-    return drawResolvedAsPattern(context, renderer, *image, concreteObjectSize, destination, tile, patternTransform, phase, spacing, options);
+    return drawResolvedAsPattern(context, renderer, *image, ConcreteObjectSize::fixed(image->size()), destination, tile, patternTransform, phase, spacing, options);
 }
 
-ImageDrawResult FilterImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
+ImageDrawResult FilterImage::drawTiled(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options, bool isForFirstLine) const
 {
     RefPtr image = resolvedImage(renderer, tileSize, context, isForFirstLine);
     if (!image || context.paintingDisabled())
         return ImageDrawResult::DidNothing;
 
-    return drawResolvedTiled(context, renderer, *image, concreteObjectSize, destination, phase, tileSize, spacing, options);
+    return drawResolvedTiled(context, renderer, *image, NaturalDimensions::fixed(image->size()), ConcreteObjectSize::fixed(image->size()), destination, phase, tileSize, spacing, options);
 }
 
 ImageDrawResult FilterImage::drawNinePiece(GraphicsContext& context, const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, const NinePieceGeometry& geometry, ImagePaintingOptions options) const
@@ -202,7 +202,7 @@ ImageDrawResult FilterImage::drawNinePiece(GraphicsContext& context, const Rende
     if (!image || context.paintingDisabled())
         return ImageDrawResult::DidNothing;
 
-    return drawResolvedNinePiece(context, renderer, *image, concreteObjectSize, geometry, options);
+    return drawResolvedNinePiece(context, renderer, *image, ConcreteObjectSize::fixed(image->size()), geometry, options);
 }
 
 bool FilterImage::knownToBeOpaque(const RenderElement&) const

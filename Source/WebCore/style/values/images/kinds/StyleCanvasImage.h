@@ -38,6 +38,7 @@
 
 namespace WebCore {
 
+class BitmapImage;
 class Document;
 
 namespace Style {
@@ -83,7 +84,7 @@ private:
     void canvasDestroyed(CanvasBase&) final;
 
     HTMLCanvasElement* element(Document&) const;
-    RefPtr<WebCore::Image> resolvedImage(const RenderElement&) const;
+    RefPtr<BitmapImage> resolvedImage(const RenderElement&) const;
 
     // The name of the canvas.
     CustomIdent m_name;
