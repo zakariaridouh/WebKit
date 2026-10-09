@@ -7,8 +7,10 @@
 
 #include "common.h"
 
+#include <cstdint>
 #include <map>       // for map
 #include <stdexcept> // for invalid_argument
+#include <vector>
 
 using namespace SFRAME_NAMESPACE;
 

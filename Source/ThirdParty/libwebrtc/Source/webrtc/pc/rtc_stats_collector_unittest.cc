@@ -2438,6 +2438,7 @@ TEST_P(RTCStatsCollectorTest, CollectRTCInboundRtpStreamStats_Audio_PlayoutId) {
     auto stats =
         report->Get("ITTransportName1A1")->cast_to<RTCInboundRtpStreamStats>();
     ASSERT_FALSE(stats.playout_id.has_value());
+    EXPECT_TRUE(report->GetStatsOfType<RTCAudioPlayoutStats>().empty());
   }
   {
     // We do expect a playout id when receiving.
@@ -2450,6 +2451,7 @@ TEST_P(RTCStatsCollectorTest, CollectRTCInboundRtpStreamStats_Audio_PlayoutId) {
         report->Get("ITTransportName1A1")->cast_to<RTCInboundRtpStreamStats>();
     ASSERT_TRUE(stats.playout_id.has_value());
     EXPECT_EQ(*stats.playout_id, "AP");
+    EXPECT_EQ(report->GetStatsOfType<RTCAudioPlayoutStats>().size(), 1u);
   }
 }
 
@@ -3991,7 +3993,7 @@ TEST_P(RTCStatsCollectorTest,
       fake_media_channel->AddSendStream(StreamParams::CreateLegacy(1234));
       sender->SetMediaChannel(fake_media_channel.get());
     });
-    worker_tasks.AddWithFinalizer(sender->SetSsrcTask(1234));
+    worker_tasks.AddWithFinalizer(sender->SetSsrcTask(1234, /*layer_count=*/1));
   }
   sender->SetTrack(track.get());
 

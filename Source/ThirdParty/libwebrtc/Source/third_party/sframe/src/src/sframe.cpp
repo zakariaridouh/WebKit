@@ -3,7 +3,9 @@
 #include "crypto.h"
 #include "header.h"
 
+#include <algorithm>
 #include <limits>
+#include <utility>
 
 namespace SFRAME_NAMESPACE {
 
@@ -130,8 +132,8 @@ Result<void>
 Context::require_key(KeyID key_id) const
 {
   if (!keys.contains(key_id)) {
-    return SFrameError(SFrameErrorType::invalid_parameter_error,
-                       "Unknown key ID");
+    return SFrameError(
+      SFrameErrorType::unknown_key_id_error, "Unknown key ID", key_id);
   }
   return Result<void>::ok();
 }
@@ -357,8 +359,10 @@ MLSContext::EpochKeys::base_key(CipherSuite ciphersuite,
   auto enc_sender_id = owned_bytes<8>();
   encode_uint(sender_id, enc_sender_id);
 
-  return hkdf_expand(
-    ciphersuite, sframe_epoch_secret, enc_sender_id, hash_size);
+  SFRAME_VALUE_OR_RETURN(
+    expanded,
+    hkdf_expand(ciphersuite, sframe_epoch_secret, enc_sender_id, hash_size));
+  return owned_bytes<max_secret_size>(expanded);
 }
 
 void
@@ -419,8 +423,8 @@ MLSContext::ensure_key(KeyID key_id, KeyUsage usage)
   const auto epoch_index = key_id & epoch_mask;
   auto& epoch = epoch_cache[epoch_index];
   if (!epoch) {
-    return SFrameError(SFrameErrorType::invalid_parameter_error,
-                       "Unknown epoch");
+    return SFrameError(
+      SFrameErrorType::unknown_key_id_error, "Unknown key ID", key_id);
   }
 
   if (keys.contains(key_id)) {

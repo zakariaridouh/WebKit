@@ -901,6 +901,7 @@ set(
   crypto/cipher/test/nist_cavp/tdes_ecb.txt
   crypto/cipher/test/xchacha20_poly1305_tests.txt
   crypto/curve25519/ed25519_tests.txt
+  crypto/curve25519/ed25519ph_tests.txt
   crypto/ecdh/ecdh_tests.txt
   crypto/evp/test/dh_tests.txt
   crypto/evp/test/ec_tests.txt
@@ -2261,6 +2262,7 @@ set(
   pki/testdata/ocsp_unittest/future_response.pem
   pki/testdata/ocsp_unittest/good_response.pem
   pki/testdata/ocsp_unittest/good_response_invalid_serial.pem
+  pki/testdata/ocsp_unittest/good_response_invalid_status.pem
   pki/testdata/ocsp_unittest/good_response_next_update.pem
   pki/testdata/ocsp_unittest/good_response_sha256.pem
   pki/testdata/ocsp_unittest/has_critical_ct_extension.pem
@@ -2288,9 +2290,11 @@ set(
   pki/testdata/ocsp_unittest/responder_id.pem
   pki/testdata/ocsp_unittest/responder_name.pem
   pki/testdata/ocsp_unittest/revoke_response.pem
+  pki/testdata/ocsp_unittest/revoke_response_invalid_status.pem
   pki/testdata/ocsp_unittest/revoke_response_reason.pem
   pki/testdata/ocsp_unittest/stale_response.pem
   pki/testdata/ocsp_unittest/unknown_response.pem
+  pki/testdata/ocsp_unittest/unknown_response_invalid_status.pem
   pki/testdata/parse_certificate_unittest/authority_key_identifier/empty_sequence.pem
   pki/testdata/parse_certificate_unittest/authority_key_identifier/extra_contents_after_extension_sequence.pem
   pki/testdata/parse_certificate_unittest/authority_key_identifier/extra_contents_after_issuer_and_serial.pem

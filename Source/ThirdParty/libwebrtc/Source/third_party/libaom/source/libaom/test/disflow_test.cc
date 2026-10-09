@@ -22,9 +22,10 @@
 
 namespace {
 
-using ComputeFlowAtPointFunc = void (*)(const uint8_t *src, const uint8_t *ref,
+using ComputeFlowAtPointFunc = void (*)(const uint8_t *src, int src_stride,
+                                        const uint8_t *ref, int ref_stride,
                                         int x, int y, int width, int height,
-                                        int stride, double *u, double *v);
+                                        double *u, double *v);
 
 class ComputeFlowTest
     : public ::testing::TestWithParam<ComputeFlowAtPointFunc> {
@@ -75,16 +76,17 @@ void ComputeFlowTest::RunCheckOutput(int run_times) {
 
   aom_usec_timer ref_timer, test_timer;
 
-  aom_compute_flow_at_point_c(src, ref, x, y, kWidth, kHeight, kWidth, &u_ref,
-                              &v_ref);
+  aom_compute_flow_at_point_c(src, kWidth, ref, kWidth, x, y, kWidth, kHeight,
+                              &u_ref, &v_ref);
 
-  target_func_(src, ref, x, y, kWidth, kHeight, kWidth, &u_test, &v_test);
+  target_func_(src, kWidth, ref, kWidth, x, y, kWidth, kHeight, &u_test,
+               &v_test);
 
   if (run_times > 1) {
     aom_usec_timer_start(&ref_timer);
     for (int i = 0; i < run_times; ++i) {
-      aom_compute_flow_at_point_c(src, ref, x, y, kWidth, kHeight, kWidth,
-                                  &u_ref, &v_ref);
+      aom_compute_flow_at_point_c(src, kWidth, ref, kWidth, x, y, kWidth,
+                                  kHeight, &u_ref, &v_ref);
     }
     aom_usec_timer_mark(&ref_timer);
     const double elapsed_time_c =
@@ -92,7 +94,8 @@ void ComputeFlowTest::RunCheckOutput(int run_times) {
 
     aom_usec_timer_start(&test_timer);
     for (int i = 0; i < run_times; ++i) {
-      target_func_(src, ref, x, y, kWidth, kHeight, kWidth, &u_test, &v_test);
+      target_func_(src, kWidth, ref, kWidth, x, y, kWidth, kHeight, &u_test,
+                   &v_test);
     }
     aom_usec_timer_mark(&test_timer);
     const double elapsed_time_simd =
@@ -169,36 +172,6 @@ TEST(DisflowTest, MismatchedDimensions) {
   MotionModel motion_models[1];
   bool mem_alloc_failed = false;
   bool ret = av1_compute_global_motion_disflow(
-      TRANSLATION, &src, &ref, 8, 0, motion_models, 1, &mem_alloc_failed);
-  EXPECT_FALSE(ret);
-  EXPECT_FALSE(mem_alloc_failed);
-
-  aom_free_frame_buffer(&src);
-  aom_free_frame_buffer(&ref);
-}
-
-TEST(DisflowTest, MismatchedStrides) {
-  YV12_BUFFER_CONFIG src = {};
-  YV12_BUFFER_CONFIG ref = {};
-
-  constexpr int kWidth = 165;
-  constexpr int kHeight = 513;
-  ASSERT_EQ(aom_alloc_frame_buffer(&src, kWidth, kHeight, 1, 1, 0,
-                                   AOM_BORDER_IN_PIXELS, 0, true, 0),
-            0);
-  ASSERT_EQ(
-      aom_alloc_frame_buffer(&ref, kWidth, kHeight, 1, 1, 0, 96, 0, true, 0),
-      0);
-  EXPECT_NE(src.y_stride, ref.y_stride);
-
-  MotionModel motion_models[1];
-  bool mem_alloc_failed = false;
-  bool ret = av1_compute_global_motion_disflow(
-      TRANSLATION, &src, &ref, 8, 0, motion_models, 1, &mem_alloc_failed);
-  EXPECT_FALSE(ret);
-  EXPECT_FALSE(mem_alloc_failed);
-
-  ret = av1_compute_global_motion_feature_match(
       TRANSLATION, &src, &ref, 8, 0, motion_models, 1, &mem_alloc_failed);
   EXPECT_FALSE(ret);
   EXPECT_FALSE(mem_alloc_failed);

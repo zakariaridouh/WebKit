@@ -2,6 +2,7 @@
 #include <sframe/result.h>
 #include <sframe/sframe.h>
 
+#include <cstdint>
 #include <string>
 #include <vector>
 

@@ -1,8 +1,14 @@
 #pragma once
 
+#include <cstddef>
+#include <utility>
+
 #ifdef NO_ALLOC
 
+#include <algorithm>
+#include <optional>
 #include <sframe/vector.h>
+#include <stdexcept>
 
 namespace SFRAME_NAMESPACE {
 

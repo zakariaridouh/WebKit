@@ -1,7 +1,9 @@
 #include "common.h"
 
+#include <cstdlib>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
 
 bytes
 from_hex(const std::string& hex)

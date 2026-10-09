@@ -414,8 +414,6 @@ list(APPEND webrtc_SOURCES
     Source/webrtc/common_audio/ring_buffer.c
     Source/webrtc/common_audio/signal_processing/auto_corr_to_refl_coef.c
     Source/webrtc/common_audio/signal_processing/auto_correlation.c
-    Source/webrtc/common_audio/signal_processing/complex_bit_reverse.c
-    Source/webrtc/common_audio/signal_processing/complex_fft.c
     Source/webrtc/common_audio/signal_processing/copy_set_operations.c
     Source/webrtc/common_audio/signal_processing/cross_correlation.c
     Source/webrtc/common_audio/signal_processing/division_operations.c
@@ -441,7 +439,6 @@ list(APPEND webrtc_SOURCES
     Source/webrtc/common_audio/signal_processing/spl_inl.c
     Source/webrtc/common_audio/signal_processing/spl_sqrt.c
     Source/webrtc/common_audio/signal_processing/splitting_filter.c
-    Source/webrtc/common_audio/signal_processing/sqrt_of_one_minus_x_squared.c
     Source/webrtc/common_audio/signal_processing/vector_operations.c
     Source/webrtc/common_audio/signal_processing/vector_scaling_operations.c
     Source/webrtc/common_audio/smoothing_filter.cc
@@ -795,7 +792,7 @@ list(APPEND webrtc_SOURCES
     Source/webrtc/modules/audio_processing/vad/vad_audio_proc.cc
     Source/webrtc/modules/audio_processing/vad/vad_circular_buffer.cc
     Source/webrtc/modules/audio_processing/vad/voice_activity_detector.cc
-    Source/webrtc/modules/congestion_controller/goog_cc_scream_network_controller/goog_cc_scream_network_controller.cc
+    Source/webrtc/modules/congestion_controller/ect1_policy.cc
     Source/webrtc/modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator.cc
     Source/webrtc/modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator_interface.cc
     Source/webrtc/modules/congestion_controller/goog_cc/alr_detector.cc
@@ -2270,8 +2267,6 @@ endif ()
 
 if (WTF_CPU_MIPS)
     list(APPEND webrtc_SOURCES
-        Source/webrtc/common_audio/signal_processing/complex_bit_reverse_mips.c
-        Source/webrtc/common_audio/signal_processing/complex_fft_mips.c
         Source/webrtc/common_audio/signal_processing/cross_correlation_mips.c
         Source/webrtc/common_audio/signal_processing/downsample_fast_mips.c
         Source/webrtc/common_audio/signal_processing/filter_ar_fast_q12_mips.c
@@ -2611,6 +2606,7 @@ target_compile_definitions(webrtc PRIVATE
   WEBRTC_USE_BUILTIN_ISAC_FIX=1
   WEBRTC_USE_BUILTIN_ISAC_FLOAT=0
   WEBRTC_USE_H265=1
+  WEBRTC_WITHOUT_RUST
   RTC_ENABLE_H265
   WTF_USE_DYNAMIC_ANNOTATIONS=1
   _GNU_SOURCE
@@ -2690,7 +2686,6 @@ set(webrtc_INCLUDE_DIRECTORIES PRIVATE
     Source/webrtc/common_audio/resampler/include
     Source/webrtc/common_audio/signal_processing/include
     Source/webrtc/common_audio/vad/include
-    Source/webrtc/modules/audio_coding/codecs/isac/main/include
     Source/webrtc/modules/video_coding/include
 )
 

@@ -887,8 +887,7 @@ static aom_codec_err_t validate_config(aom_codec_alg_priv_t *ctx,
 #endif
 
 #if !CONFIG_TUNE_VMAF
-  if (extra_cfg->tuning >= AOM_TUNE_VMAF_WITH_PREPROCESSING &&
-      extra_cfg->tuning <= AOM_TUNE_VMAF_NEG_MAX_GAIN) {
+  if (is_vmaf_tuning_mode(extra_cfg->tuning)) {
     ERROR(
         "This error may be related to the wrong configuration options: try to "
         "set -DCONFIG_TUNE_VMAF=1 at the time CMake is run.");
@@ -1673,21 +1672,32 @@ static aom_codec_err_t encoder_set_config(aom_codec_alg_priv_t *ctx,
     if (cfg->g_lag_in_frames > 1 || cfg->g_pass != AOM_RC_ONE_PASS)
       ERROR("Cannot change width or height after initialization");
     // Note: function encoder_set_config() is allowed to be called multiple
-    // times. However, when the original frame width or height is less than two
-    // times of the new frame width or height, a forced key frame should be
-    // used (for the case of single spatial layer, since otherwise a previous
+    // times. In single-pass realtime mode without lookahead (g_lag_in_frames ==
+    // 0), and with the maximum frame size declared up front via
+    // g_forced_max_frame_width/height, reference frame scaling allows upscaling
+    // up to 16x and downscaling by up to 2x without forcing a keyframe. The
+    // forced maximum frame size is required because the internal buffers are
+    // then allocated for that maximum; without it they are only sized for the
+    // current frame size and a larger frame would overflow them. Outside of
+    // this mode, or if reference frame scaling constraints are violated, a
+    // keyframe is forced (for single spatial layer, since otherwise a previous
     // encoded frame at a lower layer may be the desired reference). To make
-    // sure the correct detection of a forced key frame, we need
-    // to update the frame width and height only when the actual encoding is
-    // performed. cpi->last_coded_width and cpi->last_coded_height are used to
-    // track the actual coded frame size.
+    // sure the correct detection of a forced key frame, we need to update the
+    // frame width and height only when the actual encoding is performed.
+    // cpi->last_coded_width and cpi->last_coded_height are used to track the
+    // actual coded frame size.
+    const bool allow_ref_scaled_upscale =
+        cfg->g_forced_max_frame_width && cfg->g_forced_max_frame_height &&
+        ctx->oxcf.mode == REALTIME && cfg->g_pass == AOM_RC_ONE_PASS &&
+        cfg->g_lag_in_frames == 0;
     if (ctx->ppi->cpi->svc.number_spatial_layers == 1 &&
         ctx->ppi->cpi->last_coded_width && ctx->ppi->cpi->last_coded_height &&
         (!valid_ref_frame_size(ctx->ppi->cpi->last_coded_width,
                                ctx->ppi->cpi->last_coded_height, cfg->g_w,
                                cfg->g_h) ||
-         ((int)cfg->g_w > ctx->ppi->cpi->last_coded_width) ||
-         ((int)cfg->g_h > ctx->ppi->cpi->last_coded_height))) {
+         (!allow_ref_scaled_upscale &&
+          (((int)cfg->g_w > ctx->ppi->cpi->last_coded_width) ||
+           ((int)cfg->g_h > ctx->ppi->cpi->last_coded_height))))) {
       force_key = 1;
     }
   }
@@ -3408,8 +3418,7 @@ static aom_codec_err_t encoder_encode(aom_codec_alg_priv_t *ctx,
   }
 
 #if CONFIG_TUNE_VMAF
-  if (ctx->extra_cfg.tuning >= AOM_TUNE_VMAF_WITH_PREPROCESSING &&
-      ctx->extra_cfg.tuning <= AOM_TUNE_VMAF_NEG_MAX_GAIN) {
+  if (is_vmaf_tuning_mode(ctx->extra_cfg.tuning)) {
     aom_init_vmaf_model(&ppi->cpi->vmaf_info.vmaf_model,
                         ppi->cpi->oxcf.tune_cfg.vmaf_model_path);
   }
@@ -4901,6 +4910,9 @@ static aom_codec_err_t encoder_set_option(aom_codec_alg_priv_t *ctx,
   } else if (arg_match_helper(&arg, &g_av1_codec_arg_defs.force_max_q, argv,
                               err_string)) {
     extra_cfg.force_max_q = arg_parse_uint_helper(&arg, err_string);
+  } else if (arg_match_helper(&arg, &g_av1_codec_arg_defs.resize_mode, argv,
+                              err_string)) {
+    ctx->cfg.rc_resize_mode = arg_parse_uint_helper(&arg, err_string);
   } else {
     match = 0;
     snprintf(err_string, ARG_ERR_MSG_MAX_LEN, "Cannot find aom option %s",

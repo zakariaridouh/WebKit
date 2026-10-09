@@ -9,6 +9,15 @@
 
 #include "common.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
 using namespace SFRAME_NAMESPACE;
 using nlohmann::json;
 
@@ -19,15 +28,33 @@ struct HexBytes
   operator input_bytes() const { return data; }
 };
 
-// Seems redundant, but works
 static bool
-operator==(const HexBytes& hex, const input_bytes& other)
+equal_bytes(const HexBytes& hex, input_bytes other)
 {
-  return input_bytes(hex) == other;
+  return hex.data.size() == other.size() &&
+         std::equal(hex.data.begin(), hex.data.end(), other.begin());
 }
 
 static bool
-operator==(const input_bytes& other, const HexBytes& hex)
+operator==(const HexBytes& hex, input_bytes other)
+{
+  return equal_bytes(hex, other);
+}
+
+static bool
+operator==(input_bytes other, const HexBytes& hex)
+{
+  return hex == other;
+}
+
+static bool
+operator==(const HexBytes& hex, output_bytes other)
+{
+  return equal_bytes(hex, input_bytes(other.data(), other.size()));
+}
+
+static bool
+operator==(output_bytes other, const HexBytes& hex)
 {
   return hex == other;
 }

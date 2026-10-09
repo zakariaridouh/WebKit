@@ -1017,8 +1017,7 @@ void RtpTransceiver::ApplySframeEnabled(bool sframe_enabled) {
   sframe_enabled_ = sframe_enabled;
 
   if (sframe_enabled && channel_) {
-    // TODO(bugs.webrtc.org/479862368): Enable Sframe on the media send and
-    // receive channels when the encryption pipeline is implemented.
+    channel_->EnableSframe();
   }
 }
 
@@ -1578,6 +1577,11 @@ absl::string_view RtpTransceiver::channel_transport_name() const {
   RTC_DCHECK_RUN_ON(context()->network_thread());
   RTC_DCHECK(channel_);
   return channel_->transport_name();
+}
+
+absl::string_view RtpTransceiver::channel_mid() const {
+  RTC_DCHECK_RUN_ON(context()->network_thread());
+  return channel_ ? absl::string_view(channel_->mid()) : absl::string_view();
 }
 
 MediaSendChannelInterface* RtpTransceiver::media_send_channel() {

@@ -1,11 +1,12 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
-#include <gsl/gsl-lite.hpp>
 #include <optional>
 
 #include <sframe/map.h>
 #include <sframe/result.h>
+#include <sframe/span.h>
 #include <sframe/vector.h>
 
 #ifdef __cpp_exceptions
@@ -65,6 +66,12 @@ struct invalid_key_usage_error : std::runtime_error
   using parent = std::runtime_error;
   using parent::parent;
 };
+
+struct unknown_key_id_error : std::runtime_error
+{
+  using parent = std::runtime_error;
+  using parent::parent;
+};
 #endif
 
 enum class CipherSuite : uint16_t
@@ -74,10 +81,13 @@ enum class CipherSuite : uint16_t
   AES_128_CTR_HMAC_SHA256_32 = 3,
   AES_GCM_128_SHA256 = 4,
   AES_GCM_256_SHA512 = 5,
+  AES_256_CTR_HMAC_SHA512_80 = 6,
+  AES_256_CTR_HMAC_SHA512_64 = 7,
+  AES_256_CTR_HMAC_SHA512_32 = 8,
 };
 
-using input_bytes = gsl::span<const uint8_t>;
-using output_bytes = gsl::span<uint8_t>;
+using input_bytes = span<const uint8_t>;
+using output_bytes = span<uint8_t>;
 
 template<size_t N>
 using owned_bytes = vector<uint8_t, N>;
@@ -99,7 +109,8 @@ struct KeyRecord
                                          KeyUsage usage,
                                          input_bytes base_key);
 
-  static constexpr size_t max_key_size = 48;
+  // 32-byte AES-256 key + 64-byte HMAC-SHA512 key
+  static constexpr size_t max_key_size = 96;
   static constexpr size_t max_salt_size = 12;
 
   owned_bytes<max_key_size> key;

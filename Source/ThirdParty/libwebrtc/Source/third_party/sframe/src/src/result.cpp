@@ -32,6 +32,8 @@ throw_sframe_error(const SFrameError& error)
       throw authentication_error();
     case SFrameErrorType::invalid_key_usage_error:
       throw invalid_key_usage_error(error.message());
+    case SFrameErrorType::unknown_key_id_error:
+      throw unknown_key_id_error(error.message());
   }
 }
 #endif

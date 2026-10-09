@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 
 project(sframe
   VERSION 0.1
@@ -122,4 +122,12 @@ target_include_directories(${LIB_NAME}
 if(TESTING)
   enable_testing()
   add_subdirectory(test)
+endif()
+
+###
+### Fuzzers
+###
+option(FUZZING "Build fuzz targets" OFF)
+if(FUZZING)
+  add_subdirectory(fuzz)
 endif()
