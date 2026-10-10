@@ -16415,7 +16415,7 @@ IGNORE_CLANG_WARNINGS_END
         LValue hash = m_out.lShr(m_out.load32(stringImpl, m_heaps.StringImpl_hashAndFlags), m_out.constInt32(StringImpl::s_flagCount));
         ValueFromBlock nonEmptyStringHashResult = m_out.anchor(hash);
         m_out.branch(m_out.equal(hash, m_out.constInt32(0)),
-            unsure(slowCase), unsure(continuation));
+            rarely(slowCase), usually(continuation));
 
         m_out.appendTo(straightHash, slowCase);
         ValueFromBlock fastResult = m_out.anchor(rapidHashMix64(value));
@@ -16495,7 +16495,6 @@ IGNORE_CLANG_WARNINGS_END
         LBasicBlock notEmptyEntry = m_out.newBlock();
         LBasicBlock notPresentInTable = m_out.newBlock();
         LBasicBlock presentInTable = m_out.newBlock();
-        LBasicBlock notDeletedKey = m_out.newBlock();
         LBasicBlock done = m_out.newBlock();
 
         LValue map;
@@ -16532,16 +16531,13 @@ IGNORE_CLANG_WARNINGS_END
         m_out.branch(m_out.isZero64(entryKeyIndexValue), unsure(notPresentInTable), unsure(notEmptyEntry));
 
         // Get the entryKey JSValue.
-        m_out.appendTo(notEmptyEntry, notDeletedKey);
+        m_out.appendTo(notEmptyEntry, loopAround);
         LValue entryKeyIndex = m_out.castToInt32(entryKeyIndexValue);
         TypedPointer entryKeySlot = m_out.baseIndex(m_heaps.indexedContiguousProperties, mapStorageData, m_out.zeroExt(entryKeyIndex, Int64));
         LValue entryKey = m_out.load64(entryKeySlot);
 
-        // Check wether the current entryKey is a deleted one.
-        m_out.branch(m_out.equal(entryKey,  weakPointer(vm().orderedHashTableDeletedValue())), unsure(loopAround), unsure(notDeletedKey));
-
-        // Now the current entryKey is not a deleted value. Then check whether it matches the target key.
-        m_out.appendTo(notDeletedKey, loopAround);
+        // A deleted entry holds a VM-private symbol, which is never a key and is neither a string
+        // nor a BigInt, so every case below already sends it to loopAround.
         switch (m_node->child2().useKind()) {
         case BooleanUse:
 #if USE(BIGINT32)
@@ -16884,13 +16880,12 @@ IGNORE_CLANG_WARNINGS_END
         LBasicBlock continuation = m_out.newBlock();
 
         // The sentinel is returned as the new storage when the iterator is exhausted; the deleted
-        // value is the marker we skip over while scanning the data table. This node no longer writes
-        // the iterator's fields itself: the commit is done by the PutInternalField nodes the parser
-        // emits after the key/value loads.
+        // value is the marker we skip over while scanning the data table. The iterator's fields are
+        // written by the PutInternalField nodes the parser emits after the key/value loads.
         LValue sentinel = m_out.constIntPtr(std::bit_cast<void*>(vm().orderedHashTableSentinel()));
         LValue deletedValue = m_out.constIntPtr(std::bit_cast<void*>(vm().orderedHashTableDeletedValue()));
 
-        m_out.branch(m_out.isNull(storage), unsure(checkOwnerStorage), unsure(checkSentinel));
+        m_out.branch(m_out.isNull(storage), rarely(checkOwnerStorage), usually(checkSentinel));
 
         LBasicBlock lastNext = m_out.appendTo(checkOwnerStorage, setEmptySentinel);
         LValue ownerStorage = m_out.loadPtr(iteratedObject, isMapIterator ? m_heaps.JSMap_storage : m_heaps.JSSet_storage);
@@ -16903,9 +16898,7 @@ IGNORE_CLANG_WARNINGS_END
 
         // Check if storage is sentinel (iterator is already closed)
         m_out.appendTo(checkSentinel, checkObsolete);
-        ValueFromBlock sentinelStorageResult = m_out.anchor(sentinel);
-        ValueFromBlock sentinelEntryResult = m_out.anchor(m_out.int32Zero);
-        m_out.branch(m_out.equal(storage, sentinel), unsure(continuation), unsure(checkObsolete));
+        m_out.branch(m_out.equal(storage, sentinel), rarely(setEmptySentinel), usually(checkObsolete));
 
         // Check if storage is obsolete (first field is a Cell pointer, not an Int32 JSValue)
         m_out.appendTo(checkObsolete, fastPath);
@@ -16936,7 +16929,7 @@ IGNORE_CLANG_WARNINGS_END
         LValue entry = m_out.phi(Int32, initialEntry);
         LValue entryIndex = m_out.phi(pointerType(), initialEntryIndex);
         LValue key = m_out.load64(m_out.baseIndex(m_heaps.indexedContiguousProperties, butterfly, entryIndex));
-        m_out.branch(m_out.isZero64(key), unsure(setEmptySentinel), unsure(checkIfDeleted));
+        m_out.branch(m_out.isZero64(key), rarely(setEmptySentinel), usually(checkIfDeleted));
 
         // Check if key is deleted
         m_out.appendTo(checkIfDeleted, foundEntry);
@@ -16944,7 +16937,7 @@ IGNORE_CLANG_WARNINGS_END
         LValue nextEntryIndex = m_out.add(entryIndex, entrySize);
         m_out.addIncomingToPhi(entry, m_out.anchor(nextEntry));
         m_out.addIncomingToPhi(entryIndex, m_out.anchor(nextEntryIndex));
-        m_out.branch(m_out.equal(key, deletedValue), unsure(loop), unsure(foundEntry));
+        m_out.branch(m_out.equal(key, deletedValue), rarely(loop), usually(foundEntry));
 
         // Found a valid entry: storage is unchanged, entry advances to nextEntry.
         m_out.appendTo(foundEntry, slowPath);
@@ -16961,8 +16954,8 @@ IGNORE_CLANG_WARNINGS_END
         m_out.jump(continuation);
 
         m_out.appendTo(continuation, lastNext);
-        LValue newStorage = m_out.phi(pointerType(), emptyStorageResult, sentinelStorageResult, foundStorageResult, slowStorageResult);
-        LValue newEntry = m_out.phi(Int32, emptyEntryResult, sentinelEntryResult, foundEntryResult, slowEntryResult);
+        LValue newStorage = m_out.phi(pointerType(), emptyStorageResult, foundStorageResult, slowStorageResult);
+        LValue newEntry = m_out.phi(Int32, emptyEntryResult, foundEntryResult, slowEntryResult);
         setTuple(0, newStorage);
         setTuple(1, newEntry);
     }
