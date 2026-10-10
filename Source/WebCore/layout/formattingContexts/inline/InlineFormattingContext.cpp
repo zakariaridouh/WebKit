@@ -51,8 +51,10 @@
 #include "LayoutInlineTextBox.h"
 #include "LayoutIntegrationUtils.h"
 #include "LayoutState.h"
+#include "LineClampUpdater.h"
 #include "Logging.h"
 #include "RangeBasedLineBuilder.h"
+#include "RenderBox.h"
 #include "StyleComputedStyle+GettersInlines.h"
 #include "TextOnlySimpleLineBuilder.h"
 #include "TextUtil.h"
@@ -495,6 +497,11 @@ void InlineFormattingContext::resetBoxGeometriesForDiscardedContent(const Inline
     if (discardedRange.isEmpty() && suspendedFloats.isEmpty())
         return;
 
+    auto setIsForcedHidden = [](auto& floatBox) {
+        if (CheckedPtr renderer = dynamicDowncast<RenderBox>(floatBox.rendererForIntegration()))
+            LineClampUpdater::setIsForcedHidden(*renderer, true);
+    };
+
     auto& inlineItemList = inlineContentCache().inlineItems().content();
     for (auto index = discardedRange.startIndex(); index < discardedRange.endIndex(); ++index) {
         auto& inlineItem = inlineItemList[index];
@@ -502,10 +509,14 @@ void InlineFormattingContext::resetBoxGeometriesForDiscardedContent(const Inline
         if (!hasBoxGeometry)
             continue;
         geometryForBox(inlineItem.layoutBox()).reset();
+        if (inlineItem.isFloat())
+            setIsForcedHidden(inlineItem.layoutBox());
     }
 
-    for (CheckedPtr floatBox : suspendedFloats)
+    for (CheckedPtr floatBox : suspendedFloats) {
         geometryForBox(*floatBox).reset();
+        setIsForcedHidden(*floatBox);
+    }
 }
 
 bool InlineFormattingContext::createDisplayContentForLineFromCachedContent(const ConstraintsForInlineContent& constraints, InlineLayoutResult& layoutResult, bool mayUseSimplifiedDisplayContentBuild)

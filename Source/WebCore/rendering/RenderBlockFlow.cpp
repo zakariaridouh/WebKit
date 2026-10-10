@@ -1047,6 +1047,11 @@ void RenderBlockFlow::layoutBlockChildren(RelayoutChildren relayoutChildren, Lay
                         block->markAllDescendantsWithFloatsForLayout();
                 }
             };
+            LineClampUpdater::setIsForcedHidden(child, LineClampUpdater::isAfterClampPoint(child));
+            if (child.isForceHiddenByLineClamp()) {
+                LineClampUpdater::skipLayoutForForcedHidden(child);
+                continue;
+            }
             markSiblingsIfIntrudingForLayout();
             insertFloatingBoxAndMarkForLayout(child);
             adjustFloatingBlock(marginInfo);
@@ -4344,6 +4349,9 @@ RenderBlockFlow::InlineContentStatus RenderBlockFlow::markInlineContentDirtyForL
             renderer.setNeedsLayout(MarkingBehavior::MarkOnlyThis);
         if (childNeedsIntrinsicWidthComputation)
             renderer.invalidateContentLogicalWidths(MarkingBehavior::MarkOnlyThis);
+        // A float line-clamp hid was not laid out. Inline layout decides again whether it comes after the clamp point (see LineLayout::updateRenderTreePositions).
+        if (box && box->isFloating() && box->isForceHiddenByLineClamp())
+            LineClampUpdater::setIsForcedHidden(*box, false);
 
         if (renderer.isOutOfFlowPositioned()) {
             renderer.containingBlock()->addOutOfFlowBox(*box);

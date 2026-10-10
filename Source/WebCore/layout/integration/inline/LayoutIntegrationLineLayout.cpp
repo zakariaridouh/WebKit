@@ -48,6 +48,7 @@
 #include "LayoutIntegrationPagination.h"
 #include "LayoutIntegrationUtils.h"
 #include "LayoutTreeBuilder.h"
+#include "LineClampUpdater.h"
 #include "LocalFrameView.h"
 #include "LocalFrameViewLayoutContext.h"
 #include "PaintInfo.h"
@@ -766,7 +767,11 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
         auto& logicalGeometry = layoutState().geometryForBox(layoutBox);
 
         if (layoutBox->isFloatingPositioned()) {
-            // FIXME: Find out what to do with discarded (see line-clamp) floats in render tree.
+            // Inline layout hid the floats it discarded with the content after the clamp point.
+            if (renderer->isForceHiddenByLineClamp()) {
+                LineClampUpdater::skipLayoutForForcedHidden(renderer);
+                continue;
+            }
             auto isInitialLetter = layoutBox->style().pseudoElementType() == PseudoElementType::FirstLetter;
             auto& floatingObject = flow().insertFloatingBox(renderer);
             auto [marginBoxVisualRect, borderBoxVisualRect] = Layout::IntegrationUtils::toMarginAndBorderBoxVisualRect(logicalGeometry, m_inlineContentConstraints->formattingRootBorderBoxSize(), placedFloatsWritingMode);
