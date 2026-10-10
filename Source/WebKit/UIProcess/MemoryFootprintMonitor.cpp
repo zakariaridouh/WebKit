@@ -228,8 +228,8 @@ void MemoryFootprintMonitor::measurementTimerFired()
         }
 
         RunLoop::mainSingleton().dispatch([footprints = WTF::move(footprints), weakThis = WTF::move(weakThis)]() mutable {
-            if (weakThis)
-                weakThis->didCompleteMeasurement(WTF::move(footprints));
+            if (CheckedPtr checkedThis = weakThis.get())
+                checkedThis->didCompleteMeasurement(WTF::move(footprints));
         });
     });
 }

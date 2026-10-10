@@ -20089,7 +20089,7 @@ std::optional<IPC::AsyncReplyID> WebPageProxy::sendWithAsyncReplyToProcessContai
 {
     return sendToWebPage(frameID,
         [&message, &completionHandler, options] (auto& targetPage) {
-            return targetPage.siteIsolatedProcess().sendWithAsyncReply(std::forward<M>(message), std::forward<C>(completionHandler), targetPage.identifierInSiteIsolatedProcess(), options);
+            return protect(targetPage.siteIsolatedProcess())->sendWithAsyncReply(std::forward<M>(message), std::forward<C>(completionHandler), targetPage.identifierInSiteIsolatedProcess(), options);
         }
     );
 }
@@ -20098,7 +20098,7 @@ template<typename M, typename C> void WebPageProxy::sendWithAsyncReplyToProcessC
 {
     sendToWebPage(frameID,
         [&message, &completionHandler, options] (auto& targetPage) {
-        return targetPage.siteIsolatedProcess().sendWithAsyncReply(std::forward<M>(message), std::forward<C>(completionHandler), { }, options);
+        return protect(targetPage.siteIsolatedProcess())->sendWithAsyncReply(std::forward<M>(message), std::forward<C>(completionHandler), { }, options);
         }
     );
 }
@@ -20108,7 +20108,7 @@ void WebPageProxy::sendToProcessContainingFrame(std::optional<FrameIdentifier> f
 {
     sendToWebPage(frameID,
         [&message, options] (auto& targetPage) {
-            targetPage.siteIsolatedProcess().send(std::forward<M>(message), targetPage.identifierInSiteIsolatedProcess(), options);
+            protect(targetPage.siteIsolatedProcess())->send(std::forward<M>(message), targetPage.identifierInSiteIsolatedProcess(), options);
         }
     );
 }
@@ -20139,7 +20139,7 @@ IPC::ConnectionSendSyncResult<M> WebPageProxy::sendSyncToProcessContainingFrame(
 {
     return sendToWebPage(frameID,
         [&message, &timeout, options] (auto& targetPage) {
-            return targetPage.siteIsolatedProcess().sendSync(std::forward<M>(message), targetPage.identifierInSiteIsolatedProcess(), timeout, options);
+            return protect(targetPage.siteIsolatedProcess())->sendSync(std::forward<M>(message), targetPage.identifierInSiteIsolatedProcess(), timeout, options);
         }
     );
 }

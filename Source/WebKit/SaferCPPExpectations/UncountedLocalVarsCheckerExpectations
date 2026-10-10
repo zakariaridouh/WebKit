@@ -2,7 +2,6 @@
 [ macOS ] Shared/RemoteLayerTree/RemoteLayerTreePropertyApplier.mm
 [ macOS ] Shared/UserData.cpp
 [ macOS ] UIProcess/WebBackForwardCache.cpp
-[ macOS ] UIProcess/WebPermissionControllerProxy.cpp
 [ macOS ] UIProcess/WebProcessActivityState.cpp
 [ macOS ] WebProcess/Extensions/API/Cocoa/WebExtensionAPIDevToolsPanelsCocoa.mm
 [ macOS ] WebProcess/Extensions/API/Cocoa/WebExtensionAPIPermissionsCocoa.mm

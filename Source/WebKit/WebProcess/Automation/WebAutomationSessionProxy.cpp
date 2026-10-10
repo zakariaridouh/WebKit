@@ -1144,7 +1144,7 @@ void WebAutomationSessionProxy::setFilesForInputFileUpload(WebCore::PageIdentifi
             fileObjects.appendVector(files->files());
     }
     fileObjects.appendContainerWithMapping(filenames, [&](auto& path) {
-        return WebCore::File::create(&inputElement->document(), path);
+        return WebCore::File::create(protect(inputElement->document()).ptr(), path);
     });
     inputElement->setFiles(WebCore::FileList::create(WTF::move(fileObjects)));
 

@@ -348,7 +348,7 @@ void BrowsingContextGroup::addPage(WebPageProxy& page)
             return true;
         }
 
-        createRemotePageIfNeeded(process->process(), site);
+        createRemotePageIfNeeded(protect(process->process()), site);
         return false;
     });
 }

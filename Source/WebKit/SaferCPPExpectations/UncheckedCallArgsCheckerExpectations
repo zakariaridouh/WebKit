@@ -1,6 +1,0 @@
-[ macOS ] NetworkProcess/NetworkConnectionToWebProcess.cpp
-[ macOS ] Shared/API/Cocoa/RemoteObjectRegistry.mm
-[ macOS ] UIProcess/BrowsingContextGroup.cpp
-[ macOS ] UIProcess/MemoryFootprintMonitor.cpp
-[ macOS ] UIProcess/WebPageProxy.cpp
-[ macOS ] WebProcess/Automation/WebAutomationSessionProxy.cpp

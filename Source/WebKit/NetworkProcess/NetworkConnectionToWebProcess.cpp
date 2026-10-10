@@ -1348,8 +1348,11 @@ CompletionHandlerCallingScope NetworkConnectionToWebProcess::retainBlobURLsWhile
     if (retainedBlobURLs.isEmpty())
         return { };
 
-    return CompletionHandlerCallingScope { [networkProcess = WeakPtr { m_networkProcess.get() }, sessionID = m_sessionID, retainedBlobURLs = WTF::move(retainedBlobURLs)] {
-        CheckedPtr session = networkProcess ? networkProcess->networkSession(sessionID) : nullptr;
+    return CompletionHandlerCallingScope { [weakNetworkProcess = WeakPtr { m_networkProcess.get() }, sessionID = m_sessionID, retainedBlobURLs = WTF::move(retainedBlobURLs)] {
+        RefPtr protectedNetworkProcess = weakNetworkProcess.get();
+        if (!protectedNetworkProcess)
+            return;
+        CheckedPtr session = protectedNetworkProcess ? protectedNetworkProcess->networkSession(sessionID) : nullptr;
         if (!session)
             return;
         for (auto& url : retainedBlobURLs)
