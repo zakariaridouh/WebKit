@@ -615,7 +615,7 @@ void RenderBlockFlow::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit 
         layoutInFlowChildren(relayoutChildren, previousHeight, repaintLogicalTop, repaintLogicalBottom, maxFloatLogicalBottom);
         // Expand our intrinsic height to encompass floats.
         LayoutUnit toAdd = borderAndPaddingAfter() + scrollbarLogicalHeight();
-        if (lowestFloatLogicalBottom() > (logicalHeight() - toAdd) && createsNewFormattingContext())
+        if (lowestFloatLogicalBottom() > (logicalHeight() - toAdd) && createsNewFormattingContext() && !establishesLineClampContainer())
             setLogicalHeight(lowestFloatLogicalBottom() + toAdd);
         if (shouldBreakAtLineToAvoidWidow()) {
             setEverHadLayout();
@@ -863,6 +863,13 @@ LayoutUnit RenderBlockFlow::shiftForAlignContent(LayoutUnit intrinsicLogicalHeig
         repaintLogicalBottom += space;
 
     return space;
+}
+
+bool RenderBlockFlow::establishesLineClampContainer() const
+{
+    // "If the box is a multicol container, the behavior is the same as continue: auto."
+    // https://drafts.csswg.org/css-overflow-4/#continue
+    return style().overflowContinue() == OverflowContinue::Discard && !multiColumnFlow();
 }
 
 static bool contentFitsWithinMaximumLines(const RenderBlockFlow& lineClampContainer)
