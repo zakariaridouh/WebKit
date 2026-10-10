@@ -77,12 +77,8 @@ WI.DOMStorageObject = class DOMStorageObject extends WI.Object
             if (error)
                 return;
 
-            for (let [key, value] of entries) {
-                if (!key || !value)
-                    continue;
-
+            for (let [key, value] of entries)
                 this._entries.set(key, value);
-            }
 
             callback(error, entries);
         }
