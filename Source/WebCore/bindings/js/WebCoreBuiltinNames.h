@@ -48,11 +48,13 @@ namespace WebCore {
     macro(ByteLengthQueuingStrategy) \
     macro(CountQueuingStrategy) \
     macro(CustomEvent) \
+    macro(DOMException) \
     macro(ErrorEvent) \
     macro(Event) \
     macro(EventTarget) \
     macro(Performance) \
     macro(PromiseRejectionEvent) \
+    macro(QuotaExceededError) \
     macro(TextDecoder) \
     macro(TextEncoder) \
     macro(URL) \

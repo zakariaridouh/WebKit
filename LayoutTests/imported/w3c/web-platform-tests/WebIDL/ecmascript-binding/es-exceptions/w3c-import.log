@@ -14,6 +14,8 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/WebIDL/ecmascript-binding/es-exceptions/DOMException-audioworklet-processor.js
+/LayoutTests/imported/w3c/web-platform-tests/WebIDL/ecmascript-binding/es-exceptions/DOMException-audioworklet.https.html
 /LayoutTests/imported/w3c/web-platform-tests/WebIDL/ecmascript-binding/es-exceptions/DOMException-constants.any.js
 /LayoutTests/imported/w3c/web-platform-tests/WebIDL/ecmascript-binding/es-exceptions/DOMException-constructor-and-prototype.any.js
 /LayoutTests/imported/w3c/web-platform-tests/WebIDL/ecmascript-binding/es-exceptions/DOMException-constructor-behavior.any.js
