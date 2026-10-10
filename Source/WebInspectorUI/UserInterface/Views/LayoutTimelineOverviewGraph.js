@@ -70,7 +70,7 @@ WI.LayoutTimelineOverviewGraph = class LayoutTimelineOverviewGraph extends WI.Ti
             return;
 
         for (let {element, recordBars, records} of [this._timelinePaintRecordRow, this._timelineLayoutRecordRow])
-            this.layoutRecordBars(row.element, row.recordBars, row.records);
+            this.layoutRecordBars(element, recordBars, records);
     }
 
     updateSelectedRecord()
