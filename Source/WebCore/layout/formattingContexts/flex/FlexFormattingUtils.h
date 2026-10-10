@@ -130,7 +130,6 @@ public:
     static size_t minimumLineCount(const RenderFlexibleBox&);
     bool isLeftToRightFlow() const;
     static bool mainAxisIsFlexItemInlineAxis(const RenderBox& flexItem);
-    bool mainAxisIsFlexItemInlineAxis(const FlexLayoutItem&) const;
     static Style::FlexBasis flexBasisForFlexItem(const RenderBox& flexItem);
     Style::FlexBasis flexBasisForFlexItem(const FlexLayoutItem&) const;
     static ItemPosition alignmentForFlexItem(const RenderBox& flexItem);
@@ -141,15 +140,16 @@ public:
     static std::optional<TextDirection> leftRightAxisDirectionFromStyle(const Style::ComputedStyle&);
 
     static const StyleContentAlignmentData& contentAlignmentNormalBehavior();
-    static ContentPosition resolveLeftRightAlignment(ContentPosition, const StyleContentAlignmentData&, const Style::ComputedStyle&, bool isReversed);
+    static ContentPosition resolveLeftRightAlignment(const StyleContentAlignmentData&, const Style::ComputedStyle&, bool isReversed);
     static LayoutUnit initialJustifyContentOffset(const Style::ComputedStyle&, LayoutUnit availableFreeSpace, unsigned numberOfFlexItems, bool isReversed);
     static LayoutUnit justifyContentSpaceBetweenFlexItems(LayoutUnit availableFreeSpace, ContentDistribution, unsigned numberOfFlexItems);
     static LayoutUnit alignmentOffset(LayoutUnit availableFreeSpace, ItemPosition, std::optional<LayoutUnit> ascent, std::optional<LayoutUnit> maxAscent, bool isWrapReverse);
     static LayoutUnit contentAlignmentStartOverflow(LayoutUnit availableFreeSpace, ContentPosition, ContentDistribution, OverflowAlignment safety, bool isReverse);
-    static LayoutUnit initialAlignContentOffset(LayoutUnit availableFreeSpace, ContentPosition, ContentDistribution, OverflowAlignment safety, unsigned numberOfLines, bool isReversed);
+    static LayoutUnit initialContentAlignmentOffset(LayoutUnit availableFreeSpace, ContentPosition, ContentDistribution, OverflowAlignment safety, unsigned numberOfAlignmentSubjects, bool isReversed);
     static LayoutUnit alignContentSpaceBetweenFlexItems(LayoutUnit availableFreeSpace, ContentDistribution, unsigned numberOfLines);
 
 private:
+    static bool isStretchedFlexItem(const RenderBox& flexItem);
     static LayoutUnit crossAxisMarginExtentForFlexItem(const RenderBox& flexItem);
     LayoutUnit usedMainAxisMarginExtentForFlexItem(const RenderBox& flexItem) const;
     static const Style::PreferredSize& preferredMainSizeLengthForFlexItem(const RenderBox& flexItem LIFETIME_BOUND);

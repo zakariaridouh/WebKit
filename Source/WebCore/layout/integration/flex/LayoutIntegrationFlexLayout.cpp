@@ -262,28 +262,7 @@ std::optional<LayoutUnit> FlexLayout::firstLineBaseline() const
     CheckedPtr baselineFlexItem = flexItemForFirstBaseline();
     if (!baselineFlexItem)
         return { };
-
-    FlexFormattingUtils utils { flexBox() };
-    auto baseline = std::optional<LayoutUnit> { };
-    if (!FlexFormattingUtils::isColumnFlow(flexBox()) && !FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(*baselineFlexItem))
-        baseline = utils.crossAxisExtentForFlexItem(*baselineFlexItem);
-    else if (FlexFormattingUtils::isColumnFlow(flexBox()) && FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(*baselineFlexItem))
-        baseline = utils.mainAxisExtentForFlexItem(*baselineFlexItem);
-    else if (auto firstLineBaseline = baselineFlexItem->firstLineBaseline())
-        baseline = firstLineBaseline;
-    else {
-        // FIXME: We should pass |direction| into firstLineBoxBaseline and stop bailing out if we're a writing mode root.
-        // This would also fix some cases where the flexbox is orthogonal to its container.
-        auto direction = flexBox().isHorizontalWritingMode() ? BoxAxis::Horizontal : BoxAxis::Vertical;
-        auto flexboxWritingMode = flexBox().style().writingMode();
-        auto dominantBaseline = BaselineAlignment::dominantBaseline(flexboxWritingMode);
-        baseline = BaselineAlignment::synthesizedBaseline(*baselineFlexItem, dominantBaseline, flexboxWritingMode, direction, BaselineSynthesisEdge::BorderBox);
-    }
-    auto result = baselineFlexItem->logicalTop() + *baseline;
-    // CSS Align §9.1: if a scroll container's baseline is outside its border edge, clamp to the border edge.
-    if (FlexFormattingUtils::isHorizontalFlow(flexBox()) ? flexBox().isScrollContainerY() : flexBox().isScrollContainerX())
-        return std::max(0_lu, std::min(result, flexBox().logicalHeight()));
-    return result;
+    return baselineFromFlexItem(*baselineFlexItem, ItemPosition::Baseline);
 }
 
 std::optional<LayoutUnit> FlexLayout::lastLineBaseline() const
@@ -294,24 +273,29 @@ std::optional<LayoutUnit> FlexLayout::lastLineBaseline() const
     CheckedPtr baselineFlexItem = flexItemForLastBaseline();
     if (!baselineFlexItem)
         return { };
+    return baselineFromFlexItem(*baselineFlexItem, ItemPosition::LastBaseline);
+}
 
+// The container's first or last baseline, from the flex item flexItemForFirstBaseline or flexItemForLastBaseline picked.
+LayoutUnit FlexLayout::baselineFromFlexItem(const RenderBox& baselineFlexItem, ItemPosition baselinePreference) const
+{
     FlexFormattingUtils utils { flexBox() };
     auto baseline = std::optional<LayoutUnit> { };
-    if (!FlexFormattingUtils::isColumnFlow(flexBox()) && !FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(*baselineFlexItem))
-        baseline = utils.crossAxisExtentForFlexItem(*baselineFlexItem);
-    else if (FlexFormattingUtils::isColumnFlow(flexBox()) && FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(*baselineFlexItem))
-        baseline = utils.mainAxisExtentForFlexItem(*baselineFlexItem);
-    else if (auto lastLineBaseline = baselineFlexItem->lastLineBaseline())
-        baseline = lastLineBaseline;
+    if (!FlexFormattingUtils::isColumnFlow(flexBox()) && !FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(baselineFlexItem))
+        baseline = utils.crossAxisExtentForFlexItem(baselineFlexItem);
+    else if (FlexFormattingUtils::isColumnFlow(flexBox()) && FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(baselineFlexItem))
+        baseline = utils.mainAxisExtentForFlexItem(baselineFlexItem);
+    else if (auto flexItemBaseline = baselinePreference == ItemPosition::LastBaseline ? baselineFlexItem.lastLineBaseline() : baselineFlexItem.firstLineBaseline())
+        baseline = flexItemBaseline;
     else {
         // FIXME: We should pass |direction| into firstLineBoxBaseline and stop bailing out if we're a writing mode root.
         // This would also fix some cases where the flexbox is orthogonal to its container.
         auto direction = flexBox().isHorizontalWritingMode() ? BoxAxis::Horizontal : BoxAxis::Vertical;
         auto flexboxWritingMode = flexBox().style().writingMode();
         auto dominantBaseline = BaselineAlignment::dominantBaseline(flexboxWritingMode);
-        baseline = BaselineAlignment::synthesizedBaseline(*baselineFlexItem, dominantBaseline, flexboxWritingMode, direction, BaselineSynthesisEdge::BorderBox);
+        baseline = BaselineAlignment::synthesizedBaseline(baselineFlexItem, dominantBaseline, flexboxWritingMode, direction, BaselineSynthesisEdge::BorderBox);
     }
-    auto result = baselineFlexItem->logicalTop() + *baseline;
+    auto result = baselineFlexItem.logicalTop() + *baseline;
     // CSS Align §9.1: if a scroll container's baseline is outside its border edge, clamp to the border edge.
     if (FlexFormattingUtils::isHorizontalFlow(flexBox()) ? flexBox().isScrollContainerY() : flexBox().isScrollContainerX())
         return std::max(0_lu, std::min(result, flexBox().logicalHeight()));

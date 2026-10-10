@@ -322,6 +322,13 @@ bool FlexFormattingUtils::willStretchFlexItem(const RenderFlexibleBox& flexBox, 
     return isVerticalCrossAxis ? !itemStyle->marginTop().isAuto() && !itemStyle->marginBottom().isAuto() : !itemStyle->marginLeft().isAuto() && !itemStyle->marginRight().isAuto();
 }
 
+// A flex item with align-self: stretch is stretched when its cross size property computes to auto and neither of its
+// cross-axis margins are auto.
+bool FlexFormattingUtils::isStretchedFlexItem(const RenderBox& flexItem)
+{
+    return alignmentForFlexItem(flexItem) == ItemPosition::Stretch && !hasAutoMarginsInCrossAxis(flexItem) && preferredCrossSizeLengthForFlexItem(flexItem).isAuto();
+}
+
 // Whether any in-flow item is a stretched aspect-ratio item, i.e. one whose cross size the container supplies and
 // whose main size then follows from the ratio. Walks the children rather than the collected flex item list because
 // this runs from layout invalidation, before the container has necessarily laid out.
@@ -332,9 +339,7 @@ bool FlexFormattingUtils::hasStretchedFlexItemWithAspectRatio(const RenderFlexib
             continue;
         if (!flexItemHasAspectRatio(flexItem))
             continue;
-        if (alignmentForFlexItem(flexItem) == ItemPosition::Stretch
-            && !hasAutoMarginsInCrossAxis(flexItem)
-            && preferredCrossSizeLengthForFlexItem(flexItem).isAuto())
+        if (isStretchedFlexItem(flexItem))
             return true;
     }
     return false;
@@ -379,7 +384,7 @@ double FlexFormattingUtils::preferredAspectRatioForFlexItem(const FlexLayoutItem
         return flexItem->intrinsicLogicalWidth().toDouble() / flexItem->intrinsicLogicalHeight().toDouble();
     };
 
-    if (mainAxisIsFlexItemInlineAxis(flexItem))
+    if (flexLayoutItem.mainAxisIsInlineAxis)
         return flexItemAspectRatio();
     return 1 / flexItemAspectRatio();
 }
@@ -575,7 +580,7 @@ LayoutUnit FlexFormattingUtils::marginBoxAscentForFlexItem(const FlexLayoutItem&
     auto direction = isHorizontalFlow ? BoxAxis::Horizontal : BoxAxis::Vertical;
     auto flexboxWritingMode = flexBox().style().writingMode();
 
-    if (!mainAxisIsFlexItemInlineAxis(flexItem)) {
+    if (!flexLayoutItem.mainAxisIsInlineAxis) {
         auto alignmentContextAxis = flexBox().style().isRowFlexDirection() ? LogicalBoxAxis::Inline : LogicalBoxAxis::Block;
         auto writingModeForSynthesis = BaselineAlignment::usedWritingModeForBaselineAlignment(alignmentContextAxis, flexboxWritingMode, flexItem->writingMode());
         return BaselineAlignment::synthesizedBaseline(flexItem, BaselineAlignment::dominantBaseline(flexboxWritingMode),
@@ -684,7 +689,7 @@ bool FlexFormattingUtils::hasDefiniteCrossSizeForFlexItem(const RenderBox& flexI
     // 1. If a single-line flex container has a definite cross size, the automatic preferred outer cross size of any
     // stretched flex items is the flex container's inner cross size (clamped to the flex item's min and max cross size)
     // and is considered definite.
-    if (!isMultiline(flexBox) && alignmentForFlexItem(flexItem) == ItemPosition::Stretch && !hasAutoMarginsInCrossAxis(flexItem) && preferredCrossSizeLengthForFlexItem(flexItem).isAuto()) {
+    if (!isMultiline(flexBox) && isStretchedFlexItem(flexItem)) {
         if (isColumnFlow(flexBox))
             return true;
         // This must be kept in sync with computeMainSizeFromAspectRatioUsing().
@@ -711,8 +716,9 @@ const StyleContentAlignmentData& FlexFormattingUtils::contentAlignmentNormalBeha
     return normalBehavior;
 }
 
-ContentPosition FlexFormattingUtils::resolveLeftRightAlignment(ContentPosition position, const StyleContentAlignmentData& justifyContent, const Style::ComputedStyle& style, bool isReversed)
+ContentPosition FlexFormattingUtils::resolveLeftRightAlignment(const StyleContentAlignmentData& justifyContent, const Style::ComputedStyle& style, bool isReversed)
 {
+    auto position = justifyContent.position();
     if (position == ContentPosition::Left || position == ContentPosition::Right) {
         auto leftRightAxisDirection = FlexFormattingUtils::leftRightAxisDirectionFromStyle(style);
         position = (justifyContent.isEndward(leftRightAxisDirection, isReversed))
@@ -724,44 +730,11 @@ ContentPosition FlexFormattingUtils::resolveLeftRightAlignment(ContentPosition p
 LayoutUnit FlexFormattingUtils::initialJustifyContentOffset(const Style::ComputedStyle& style, LayoutUnit availableFreeSpace, unsigned numberOfFlexItems, bool isReversed)
 {
     auto resolvedJustifyContent = style.justifyContent().resolve(contentAlignmentNormalBehavior());
-    auto justifyContentPosition = resolvedJustifyContent.position();
-    auto justifyContentDistribution = resolvedJustifyContent.distribution();
-
-    if (availableFreeSpace < 0 && resolvedJustifyContent.overflow() == OverflowAlignment::Safe) {
-        ASSERT(justifyContentPosition != ContentPosition::Normal);
-        justifyContentPosition = ContentPosition::Start;
-    } else {
-        // First of all resolve Left and Right so we could convert it to their equivalent properties handled bellow.
-        // If the property's axis is not parallel with either left<->right axis, this value behaves as start. Currently,
-        // the only case where the property's axis is not parallel with either left<->right axis is in a column flexbox.
-        // https: //www.w3.org/TR/css-align-3/#valdef-justify-content-left
-        justifyContentPosition = resolveLeftRightAlignment(justifyContentPosition, resolvedJustifyContent, style, isReversed);
-    }
-
-    ASSERT(justifyContentPosition != ContentPosition::Left);
-    ASSERT(justifyContentPosition != ContentPosition::Right);
-
-    if (justifyContentPosition == ContentPosition::FlexEnd
-        || (justifyContentPosition == ContentPosition::End && !isReversed)
-        || (justifyContentPosition == ContentPosition::Start && isReversed))
-        return availableFreeSpace;
-    if (justifyContentPosition == ContentPosition::Center)
-        return availableFreeSpace / 2;
-    if (justifyContentDistribution == ContentDistribution::SpaceAround) {
-        if (!numberOfFlexItems)
-            return availableFreeSpace / 2;
-        if (availableFreeSpace > 0)
-            return availableFreeSpace / (2 * numberOfFlexItems);
-        return { };
-    }
-    if (justifyContentDistribution == ContentDistribution::SpaceEvenly) {
-        if (!numberOfFlexItems)
-            return availableFreeSpace / 2;
-        if (availableFreeSpace > 0)
-            return availableFreeSpace / (numberOfFlexItems + 1);
-        return { };
-    }
-    return { };
+    // Resolve left and right to start or end first. If the property's axis is not parallel with either left<->right axis,
+    // they behave as start. Currently, the only case where the property's axis is not parallel with either left<->right
+    // axis is in a column flexbox. https://www.w3.org/TR/css-align-3/#valdef-justify-content-left
+    auto position = resolveLeftRightAlignment(resolvedJustifyContent, style, isReversed);
+    return initialContentAlignmentOffset(availableFreeSpace, position, resolvedJustifyContent.distribution(), resolvedJustifyContent.overflow(), numberOfFlexItems, isReversed);
 }
 
 LayoutUnit FlexFormattingUtils::justifyContentSpaceBetweenFlexItems(LayoutUnit availableFreeSpace, ContentDistribution justifyContentDistribution, unsigned numberOfFlexItems)
@@ -847,28 +820,31 @@ LayoutUnit FlexFormattingUtils::contentAlignmentStartOverflow(LayoutUnit availab
     }
 }
 
-LayoutUnit FlexFormattingUtils::initialAlignContentOffset(LayoutUnit availableFreeSpace, ContentPosition alignContent, ContentDistribution alignContentDistribution, OverflowAlignment safety, unsigned numberOfLines, bool isReversed)
+LayoutUnit FlexFormattingUtils::initialContentAlignmentOffset(LayoutUnit availableFreeSpace, ContentPosition position, ContentDistribution distribution, OverflowAlignment safety, unsigned numberOfAlignmentSubjects, bool isReversed)
 {
     if (availableFreeSpace < 0 && safety == OverflowAlignment::Safe) {
-        ASSERT(alignContent != ContentPosition::Normal);
-        alignContent = ContentPosition::Start;
+        ASSERT(position != ContentPosition::Normal);
+        position = ContentPosition::Start;
     }
 
-    if (alignContent == ContentPosition::FlexEnd
-        || (alignContent == ContentPosition::End && !isReversed)
-        || (alignContent == ContentPosition::Start && isReversed))
+    if (position == ContentPosition::FlexEnd
+        || (position == ContentPosition::End && !isReversed)
+        || (position == ContentPosition::Start && isReversed))
         return availableFreeSpace;
-    if (alignContent == ContentPosition::Center)
+    if (position == ContentPosition::Center)
         return availableFreeSpace / 2;
-    if (alignContentDistribution == ContentDistribution::SpaceAround) {
-        if (availableFreeSpace > 0 && numberOfLines)
-            return availableFreeSpace / (2 * numberOfLines);
+    // With no alignment subjects (the static position of an out-of-flow flex item), space-around and space-evenly center.
+    if ((distribution == ContentDistribution::SpaceAround || distribution == ContentDistribution::SpaceEvenly) && !numberOfAlignmentSubjects)
+        return availableFreeSpace / 2;
+    if (distribution == ContentDistribution::SpaceAround) {
+        if (availableFreeSpace > 0)
+            return availableFreeSpace / (2 * numberOfAlignmentSubjects);
         if (availableFreeSpace < 0)
             return std::max(0_lu, availableFreeSpace / 2);
     }
-    if (alignContentDistribution == ContentDistribution::SpaceEvenly) {
+    if (distribution == ContentDistribution::SpaceEvenly) {
         if (availableFreeSpace > 0)
-            return availableFreeSpace / (numberOfLines + 1);
+            return availableFreeSpace / (numberOfAlignmentSubjects + 1);
         // Fallback to 'safe center'
         return std::max(0_lu, availableFreeSpace / 2);
     }
@@ -927,11 +903,6 @@ bool FlexFormattingUtils::useContentBasedMinimumSize(const FlexLayoutItem& flexL
 LayoutUnit FlexFormattingUtils::innerCrossSizeForFlexItem(const FlexLayoutItem& flexLayoutItem) const
 {
     return innerCrossSizeForFlexItem(flexLayoutItem.renderer.get());
-}
-
-bool FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(const FlexLayoutItem& flexLayoutItem) const
-{
-    return mainAxisIsFlexItemInlineAxis(flexLayoutItem.renderer.get());
 }
 
 Style::FlexBasis FlexFormattingUtils::flexBasisForFlexItem(const FlexLayoutItem& flexLayoutItem) const

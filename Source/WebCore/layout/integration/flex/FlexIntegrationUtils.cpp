@@ -113,7 +113,7 @@ void FlexIntegrationUtils::layoutFlexItemWithMainSize(FlexLayoutItem& flexLayout
 {
     CheckedRef flexItem = flexLayoutItem.renderer;
 
-    FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(flexItem) ? flexItem->setOverridingBorderBoxLogicalWidth(mainSize + flexItem->borderAndPaddingLogicalWidth())
+    flexLayoutItem.mainAxisIsInlineAxis ? flexItem->setOverridingBorderBoxLogicalWidth(mainSize + flexItem->borderAndPaddingLogicalWidth())
         : flexItem->setOverridingBorderBoxLogicalHeight(mainSize + flexItem->borderAndPaddingLogicalHeight());
     auto mainAxisContentExtentIncludingScrollbar = FlexFormattingUtils::isHorizontalFlow(flexBox()) ? flexItem->contentBoxWidth() + flexItem->verticalScrollbarWidth() : flexItem->contentBoxHeight() + flexItem->horizontalScrollbarHeight();
     auto mainSizeIsUnchanged = mainSize == mainAxisContentExtentIncludingScrollbar;

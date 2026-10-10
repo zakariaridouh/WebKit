@@ -45,8 +45,8 @@ class FlexLayoutItem {
 public:
     FlexLayoutItem(RenderBox&, bool flexContainerIsHorizontalFlow, bool everHadLayout, bool shouldInvalidateChildContent);
 
-    LayoutUnit NODELETE hypotheticalMainAxisMarginBoxSize(LayoutUnit hypotheticalMainContentSize) const;
-    LayoutUnit NODELETE flexedMarginBoxSize(LayoutUnit mainSize) const;
+    // The item's content-box main size plus its main-axis border, padding and margin.
+    LayoutUnit NODELETE outerMainSize(LayoutUnit mainSize) const;
     const Style::ComputedStyle& NODELETE style() const LIFETIME_BOUND;
 
     // The item's current, laid-out geometry.
@@ -151,8 +151,8 @@ private:
     SizeList computeMainSizeForFlexItems(FlexLayoutItems& flexItems, const FlexLines&, std::span<const FlexBaseAndHypotheticalMainSize> flexBaseAndHypotheticalMainSizeList);
     void resolveFlexibleLengthsForLineItems(std::span<FlexLayoutItem> lineItems, std::span<const FlexBaseAndHypotheticalMainSize> lineFlexBaseAndHypotheticalMainSizeList, std::span<LayoutUnit> flexItemsMainSizeList, LayoutUnit flexContainerInnerMainSize);
     void distributeMainAxisFreeSpaceForMultilineColumnIfNeeded(const FlexLines&, FlexLayoutItems&, std::span<const FlexBaseAndHypotheticalMainSize> flexBaseAndHypotheticalMainSizeList, SizeList& flexItemsMainSizeList, PositionList& flexItemsPositionList, const LinesCrossPositionList& flexLinesCrossPositionList, LayoutUnit containerMainBlockContentExtent);
-    LayoutUnit mainAxisAvailableSpaceForItemAlignment(LayoutUnit mainAxisAvailableSpace, size_t numberOfFlexItems) const;
-    LayoutUnit crossAxisAvailableSpaceForLineSizingAndAlignment(LayoutUnit crossAxisAvailableSpace, size_t numberOfFlexLines) const;
+    LayoutUnit availableSpaceExcludingGaps(LayoutUnit availableSpace, size_t numberOfItemsOrLines, FlexFormattingUtils::GapType) const;
+    LayoutUnit remainingFreeSpaceForLine(std::span<const FlexLayoutItem> lineItems, std::span<const LayoutUnit> lineFlexItemsMainSizeList, LayoutUnit containerMainInnerSize) const;
     void layoutFlexItems(FlexLayoutItems&, std::span<const LayoutUnit> flexItemsMainSizeList);
     void layoutFlexItemsWithMainSizes(std::span<FlexLayoutItem>, std::span<const LayoutUnit> flexItemsMainSizeList);
     SizeList hypotheticalCrossSizeForFlexItems(const FlexLayoutItems&);
