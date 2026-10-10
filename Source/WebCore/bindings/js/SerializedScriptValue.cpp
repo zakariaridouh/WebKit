@@ -45,7 +45,6 @@
 #include "HTMLCanvasElement.h"
 #include "IDBValue.h"
 #include "ImageBuffer.h"
-#include "JSAudioWorkletGlobalScope.h"
 #include "JSBlob.h"
 #include "JSCryptoKey.h"
 #include "JSDOMBinding.h"
@@ -164,16 +163,6 @@ WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(SerializedScriptValueInternals);
 using namespace JSC;
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SerializedScriptValue);
-
-static bool isAudioWorkletGlobalScope(JSC::JSGlobalObject& globalObject)
-{
-#if ENABLE(WEB_AUDIO)
-    return is<JSAudioWorkletGlobalScope>(globalObject);
-#else
-    UNUSED_PARAM(globalObject);
-    return false;
-#endif
-}
 
 template<typename JSWrapper>
 static bool isInterfaceExposedInGlobalObject(JSC::JSGlobalObject& globalObject)
@@ -301,10 +290,11 @@ static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, Seria
         return isInterfaceExposedInGlobalObject<JSRTCEncodedVideoFrame>(globalObject);
 #endif
     case ReadableStreamTag:
+        return isInterfaceExposedInGlobalObject<JSReadableStream>(globalObject);
     case WritableStreamTag:
+        return isInterfaceExposedInGlobalObject<JSWritableStream>(globalObject);
     case TransformStreamTag:
-        // FIXME: These are exposed everywhere, but transferring them to an AudioWorklet is untested.
-        return !isAudioWorkletGlobalScope(globalObject);
+        return isInterfaceExposedInGlobalObject<JSTransformStream>(globalObject);
     case FileSystemHandleTag:
         return isInterfaceExposedInGlobalObject<JSFileSystemHandle>(globalObject);
     }
