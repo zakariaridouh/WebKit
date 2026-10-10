@@ -1288,6 +1288,31 @@ struct TextExtractionTests {
     }
 
     @Test
+    func buttonInlinesLeadingTextChild() async throws {
+        try await webView.load(
+            html: """
+                <button id='expand-password'>
+                    <h3>Change password</h3>
+                    <img aria-label='collapsed section'>
+                    <p>Update the password for your account</p>
+                </button>
+                """
+        )
+
+        let configuration = extractionConfigurationWithFilteringDisabled()
+        configuration.outputFormat = .textTree
+
+        let lines = try await webView.debugText(configuration).split(separator: "\n")
+        let buttonLine = try #require(lines.first { $0.contains("button") && $0.contains("uid=") })
+
+        #expect(buttonLine.contains("'Change password'"))
+        #expect(buttonLine.contains("Update the password for your account") == false)
+        #expect(buttonLine.contains("collapsed section") == false)
+        #expect(lines.contains { $0.contains("Update the password for your account") })
+        #expect(lines.contains { $0.contains("collapsed section") })
+    }
+
+    @Test
     func extractFromDocumentWithoutBody() async throws {
         let url = try #require(URL(string: "data:application/xml,<root><item>hello%20world</item></root>"))
         try await webView.loadAndWait(URLRequest(url: url))

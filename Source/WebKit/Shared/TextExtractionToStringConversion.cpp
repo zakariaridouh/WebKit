@@ -2440,16 +2440,24 @@ static void addTextRepresentationRecursive(const TextExtraction::Item& item, std
             }
         }
 
-        if (textChildCount == 1) {
-            auto& textChild = item.children[firstTextChildIndex];
+        std::optional<size_t> candidateIndex;
+        if (item.children[0].hasData<TextExtraction::TextItemData>())
+            candidateIndex = 0;
+        else if (textChildCount == 1)
+            candidateIndex = firstTextChildIndex;
+
+        if (candidateIndex) {
+            auto& textChild = item.children[*candidateIndex];
             if (auto textData = textChild.dataAs<TextExtraction::TextItemData>()) {
                 auto trimmed = textData->content.trim(isASCIIWhitespace);
-                aggregator.collectTextMapping(trimmed, item.frameIdentifier, identifier, item.nodeIdentifier ? ExtractedNodeInfo::IsInteractive::Yes : ExtractedNodeInfo::IsInteractive::No);
-                if (childTextNodeIsRedundant(aggregator, item, trimmed))
-                    elidedTextChildIndex = firstTextChildIndex;
-                else {
-                    inlinedTextChildIndex = firstTextChildIndex;
-                    addPartsForItem(textChild, std::optional { identifier }, line, aggregator, includeRectForParentItem);
+                if (!trimmed.isEmpty()) {
+                    aggregator.collectTextMapping(trimmed, item.frameIdentifier, identifier, item.nodeIdentifier ? ExtractedNodeInfo::IsInteractive::Yes : ExtractedNodeInfo::IsInteractive::No);
+                    if (childTextNodeIsRedundant(aggregator, item, trimmed))
+                        elidedTextChildIndex = *candidateIndex;
+                    else {
+                        inlinedTextChildIndex = *candidateIndex;
+                        addPartsForItem(textChild, std::optional { identifier }, line, aggregator, includeRectForParentItem);
+                    }
                 }
             }
         }
