@@ -60,7 +60,7 @@ LineClampUpdater::LineClampUpdater(const RenderBlock& blockContainer)
         m_skippedLegacyLineClampToRestore = layoutState->legacyLineClamp();
         layoutState->setLegacyLineClamp({ });
         // The box may still clamp its own content.
-        if (!maximumLinesForBlockContainer)
+        if (!maximumLinesForBlockContainer && !isAutoLineClampRoot())
             return;
     }
 
@@ -71,6 +71,13 @@ LineClampUpdater::LineClampUpdater(const RenderBlock& blockContainer)
         // New, top level line clamp.
         m_isLineClampRoot = true;
         layoutState->setLineClamp(RenderLayoutState::LineClamp { static_cast<size_t>(maximumLinesForBlockContainer->value), m_blockContainer->style().overflowContinue() == OverflowContinue::Discard, { } });
+        return;
+    }
+
+    if (isAutoLineClampRoot()) {
+        // Until layout finds the auto clamp point (see autoClampPoint), content is laid out as before the clamp point of a line-clamp container.
+        m_isLineClampRoot = true;
+        layoutState->setLineClamp(RenderLayoutState::LineClamp { std::numeric_limits<size_t>::max(), true, { } });
         return;
     }
 
