@@ -1522,12 +1522,12 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         return frame;
     }
 
-    _createResource(payload, framePayload)
+    _createResource(payload, frame)
     {
         let resource = new WI.Resource(payload.url, {
             mimeType: payload.mimeType,
             type: payload.type,
-            loaderIdentifier: framePayload.loaderId,
+            loaderIdentifier: frame.loaderIdentifier,
             targetId: payload.targetId,
         });
 
@@ -1555,7 +1555,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             if (resourcePayload.type === "Document" && resourcePayload.url === payload.frame.url)
                 continue;
 
-            var resource = this._createResource(resourcePayload, payload);
+            var resource = this._createResource(resourcePayload, frame);
             if (resource.target === WI.pageTarget)
                 frame.addResource(resource);
             else if (resource.target)
@@ -1637,7 +1637,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             if (frame.resourceCollection.resourcesForURL(resourcePayload.url).size)
                 continue;
 
-            let resource = this._createResource(resourcePayload, payload);
+            let resource = this._createResource(resourcePayload, frame);
             if (resource.target === WI.pageTarget)
                 frame.addResource(resource);
             else if (resource.target)
