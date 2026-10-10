@@ -190,6 +190,9 @@ class DynamicContentScalingDisplayList;
 #endif
 class WeakPtrImplWithEventTargetData;
 class Exception;
+#if ENABLE(CONNECTED_VOLUMETRIC_SCENE)
+class FloatPoint3D;
+#endif
 class FontAttributeChanges;
 class FontChanges;
 class Frame;
@@ -217,6 +220,9 @@ class LocalFrameView;
 class MediaPlaybackTarget;
 class MediaSessionCoordinator;
 class MediaSessionManagerInterface;
+#if ENABLE(CONNECTED_VOLUMETRIC_SCENE)
+class ModelPlayer;
+#endif
 class Page;
 class PolicyDecision;
 class PrintContext;
@@ -1811,6 +1817,7 @@ public:
 
     void volumetricSceneDidClose(WebCore::NodeIdentifier);
     void updateVolumetricSceneSize(WebCore::NodeIdentifier, WebCore::FloatSize volumeSizeInMeters);
+    void updateVolumetricSceneHitSphere(WebCore::ModelPlayer&, const WebCore::FloatPoint3D& center, float radius);
 #endif
 
     WebURLSchemeHandlerProxy* urlSchemeHandlerForScheme(StringView);

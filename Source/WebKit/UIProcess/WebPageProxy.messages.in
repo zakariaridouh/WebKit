@@ -372,6 +372,7 @@ messages -> WebPageProxy {
     [EnabledBy=SpatialPortalEnabled] PresentVolumetricScene(WebCore::NodeIdentifier nodeID, struct WebKit::VolumetricSceneContentContext contentContext) -> (bool success)
     [EnabledBy=SpatialPortalEnabled] ReconnectVolumetricSceneToContentContext(WebCore::NodeIdentifier nodeID, struct WebKit::VolumetricSceneContentContext contentContext)
     [EnabledBy=SpatialPortalEnabled] DismissVolumetricScene(WebCore::NodeIdentifier nodeID)
+    [EnabledBy=SpatialPortalEnabled] UpdateVolumetricSceneHitSphere(WebCore::NodeIdentifier nodeID, WebCore::FloatPoint3D center, float radius)
 #endif
 
 #if PLATFORM(COCOA)

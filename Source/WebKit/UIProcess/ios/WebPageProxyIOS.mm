@@ -1846,6 +1846,12 @@ void WebPageProxy::dismissVolumetricScene(WebCore::NodeIdentifier nodeID)
         portalPresentationManager->hideVolumetricScene(nodeID);
 }
 
+void WebPageProxy::updateVolumetricSceneHitSphere(WebCore::NodeIdentifier nodeID, const WebCore::FloatPoint3D& center, float radius)
+{
+    if (RefPtr portalPresentationManager = portalPresentationManagerProxy())
+        portalPresentationManager->updateVolumetricSceneHitSphere(nodeID, center, radius);
+}
+
 void WebPageProxy::volumetricSceneDidClose(WebCore::NodeIdentifier nodeID)
 {
     protect(m_legacyMainFrameProcess)->send(Messages::WebPage::VolumetricSceneDidClose(nodeID), webPageIDInMainFrameProcess());

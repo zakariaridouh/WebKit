@@ -10063,6 +10063,21 @@ void WebPage::updateVolumetricSceneSize(WebCore::NodeIdentifier nodeID, WebCore:
         modelPlayer->updateVolumetricPresentationSize(volumeSizeInMeters);
 }
 
+void WebPage::updateVolumetricSceneHitSphere(WebCore::ModelPlayer& modelPlayer, const WebCore::FloatPoint3D& center, float radius)
+{
+    for (auto& [nodeID, request] : m_volumetricSceneElements) {
+        if (request.state != VolumetricSceneState::Presented)
+            continue;
+
+        RefPtr element = request.element.get();
+        if (!element || WebCore::ElementVolumetricScene::playerForElement(*element).get() != &modelPlayer)
+            continue;
+
+        send(Messages::WebPageProxy::UpdateVolumetricSceneHitSphere(nodeID, center, radius));
+        return;
+    }
+}
+
 #endif // ENABLE(CONNECTED_VOLUMETRIC_SCENE)
 
 void WebPage::textAutoSizingAdjustmentTimerFired()

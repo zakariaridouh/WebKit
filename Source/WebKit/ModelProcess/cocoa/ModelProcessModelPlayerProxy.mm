@@ -2209,6 +2209,14 @@ void ModelProcessModelPlayerProxy::applyVolumetricPresentationTransform()
     if (m_stageModeInteractionDriver)
         [m_stageModeInteractionDriver setContainerTransformInPortal];
 #endif
+
+    simd_float3 center = fitSRT->translation + simd_act(fitSRT->rotation, fitSRT->scale * bounds->center);
+    std::pair hitSphere { WebCore::FloatPoint3D { center.x, center.y, center.z }, fitSRT->scale.x * bounds->boundingRadius };
+    if (hitSphere == m_lastSentVolumetricHitSphere)
+        return;
+
+    m_lastSentVolumetricHitSphere = hitSphere;
+    send(Messages::ModelProcessModelPlayer::DidUpdateVolumetricHitSphere(hitSphere.first, hitSphere.second));
 }
 
 void ModelProcessModelPlayerProxy::setGroundingShadowsEnabled(bool enabled)
@@ -2246,6 +2254,7 @@ void ModelProcessModelPlayerProxy::exitVolumetricPresentation()
 {
     setGroundingShadowsEnabled(false);
     m_volumeSizeInMeters = { };
+    m_lastSentVolumetricHitSphere = std::nullopt;
 
     setPresentationMode(WebCore::ModelPresentationMode::Inline);
 }

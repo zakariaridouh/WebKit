@@ -154,6 +154,9 @@ class DocumentSyncData;
 class DragData;
 class Exception;
 class FloatPoint;
+#if ENABLE(CONNECTED_VOLUMETRIC_SCENE)
+class FloatPoint3D;
+#endif
 class FloatQuad;
 class FloatRect;
 class FloatSize;
@@ -3095,6 +3098,7 @@ public:
     void presentVolumetricScene(WebCore::NodeIdentifier, VolumetricSceneContentContext, CompletionHandler<void(bool)>&&);
     void reconnectVolumetricSceneToContentContext(WebCore::NodeIdentifier, VolumetricSceneContentContext);
     void dismissVolumetricScene(WebCore::NodeIdentifier);
+    void updateVolumetricSceneHitSphere(WebCore::NodeIdentifier, const WebCore::FloatPoint3D& center, float radius);
 
     // To the web process, from PortalPresentationManagerProxy.
     void volumetricSceneDidClose(WebCore::NodeIdentifier);
