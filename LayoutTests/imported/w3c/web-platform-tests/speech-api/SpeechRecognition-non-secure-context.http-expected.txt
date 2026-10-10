@@ -4,7 +4,7 @@ PASS SpeechRecognition is not exposed
 PASS SpeechRecognitionErrorEvent is not exposed
 PASS SpeechRecognitionAlternative is not exposed
 PASS SpeechRecognitionResult is not exposed
-FAIL SpeechRecognitionResultList is not exposed assert_false: expected false got true
+PASS SpeechRecognitionResultList is not exposed
 PASS SpeechRecognitionEvent is not exposed
 PASS SpeechRecognitionPhrase is not exposed
 

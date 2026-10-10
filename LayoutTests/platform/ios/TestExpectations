@@ -9505,8 +9505,6 @@ imported/w3c/web-platform-tests/dom/ranges/Range-mutations-dataChange.html [ Tim
 
 imported/w3c/web-platform-tests/speculation-rules/speculation-tags/prefetch-eagerness-pointer-hover.https.html [ Failure ] # rdar://178017789
 
-imported/w3c/web-platform-tests/speech-api/idlharness.window.html [ Failure ] # rdar://178017805
-
 imported/w3c/web-platform-tests/svg/types/scripted/SVGGeometryElement.isPointInStroke-02.svg [ Failure ] # rdar://178017831
 
 imported/w3c/web-platform-tests/webvtt/api/VTTRegion/non-visible-cue-with-region.html [ Failure ] # rdar://178018133
