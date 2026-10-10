@@ -1488,7 +1488,7 @@ WI.showSourceCode = function(sourceCode, options = {})
         representedObject = representedObject.resource || representedObject;
     }
 
-    let cookie = {};
+    let cookie = {forceUnformatted: options.forceUnformatted};
 
     let positionToReveal = options.positionToReveal;
     if (positionToReveal) {
