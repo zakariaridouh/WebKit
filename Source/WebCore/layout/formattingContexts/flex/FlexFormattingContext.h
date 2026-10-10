@@ -128,7 +128,6 @@ private:
     };
 
     using FlexBaseAndHypotheticalMainSizeList = Vector<FlexBaseAndHypotheticalMainSize, 4>;
-    struct FlexLines;
 
     using LineRanges = Vector<WTF::Range<size_t>>;
     using SizeList = Vector<LayoutUnit>;

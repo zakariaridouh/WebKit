@@ -603,7 +603,7 @@ LayoutUnit FlexFormattingUtils::marginBoxAscentForFlexItem(const FlexLayoutItem&
 
     if (isHorizontalFlow ? flexItem->isScrollContainerY() : flexItem->isScrollContainerX())
         return std::max(0_lu, std::min(*ascent, crossSize)) + flowAwareMarginBeforeForFlexItem(flexLayoutItem);
-    return *ascent + flowAwareMarginBeforeForFlexItem(flexLayoutItem);;
+    return *ascent + flowAwareMarginBeforeForFlexItem(flexLayoutItem);
 }
 
 bool FlexFormattingUtils::isHorizontalFlow(const RenderFlexibleBox& flexBox)

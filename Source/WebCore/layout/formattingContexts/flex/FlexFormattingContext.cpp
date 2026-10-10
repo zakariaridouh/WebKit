@@ -835,8 +835,8 @@ std::optional<LayoutUnit> FlexFormattingContext::ensureBlockAxisContentSizeForFl
             return false;
 
         auto flexBasis = flexFormattingUtils().flexBasisForFlexItem(flexLayoutItem);
-        auto minSize = flexFormattingUtils().minMainSizeLengthForFlexItem(flexLayoutItem);
-        auto maxSize = flexFormattingUtils().maxMainSizeLengthForFlexItem(flexLayoutItem);
+        auto& minSize = flexFormattingUtils().minMainSizeLengthForFlexItem(flexLayoutItem);
+        auto& maxSize = flexFormattingUtils().maxMainSizeLengthForFlexItem(flexLayoutItem);
         // FIXME: we must run flexItemMainSizeIsDefinite() because it might end up calling computePercentageLogicalHeight()
         // which has some side effects like calling addPercentHeightDescendant() for example so it is not possible to skip
         // the call for example by moving it to the end of the conditional expression. This is error-prone and we should
@@ -863,7 +863,7 @@ std::pair<LayoutUnit, LayoutUnit> FlexFormattingContext::minMaxMainSizesForFlexI
     // useContentBasedMinimumSize covers both auto-equivalent cases: min:auto with
     // non-scrollable overflow (§ 4.5) and block-axis intrinsic keywords (CSS Sizing
     // 3 § 5.2 makes those behave like auto, regardless of overflow).
-    auto minSize = flexFormattingUtils().minMainSizeLengthForFlexItem(flexLayoutItem);
+    auto& minSize = flexFormattingUtils().minMainSizeLengthForFlexItem(flexLayoutItem);
     if (flexFormattingUtils().useContentBasedMinimumSize(flexLayoutItem)) {
         auto contentBasedMinMainSize = computeContentBasedMinMainSize(flexLayoutItem, maxExtent);
         // The automatic minimum is what an auto basis on the minimum size stands for.
@@ -881,7 +881,7 @@ std::pair<LayoutUnit, LayoutUnit> FlexFormattingContext::minMaxMainSizesForFlexI
 
 std::optional<LayoutUnit> FlexFormattingContext::computeUsedMaxMainSize(const FlexLayoutItem& flexLayoutItem)
 {
-    auto max = flexFormattingUtils().maxMainSizeLengthForFlexItem(flexLayoutItem);
+    auto& max = flexFormattingUtils().maxMainSizeLengthForFlexItem(flexLayoutItem);
     if (max.isSpecified() || max.isIntrinsicOrStretch())
         return integrationUtils().computeMainAxisExtentForFlexItem(flexLayoutItem, max, m_constraints.mainAxisSizeForLengthResolution);
     return { };
@@ -932,7 +932,7 @@ LayoutUnit FlexFormattingContext::computeContentBasedMinMainSize(const FlexLayou
     contentSize = std::min(contentSize, maxExtent.value_or(contentSize));
 
     // Specified size suggestion: if the item's preferred main size is definite, cap the result by that size.
-    auto mainSize = flexFormattingUtils().preferredMainSizeLengthForFlexItem(flexLayoutItem);
+    auto& mainSize = flexFormattingUtils().preferredMainSizeLengthForFlexItem(flexLayoutItem);
     if (integrationUtils().flexItemMainSizeIsDefinite(flexLayoutItem, mainSize)) {
         auto resolvedMainSize = integrationUtils().computeMainAxisExtentForFlexItem(flexLayoutItem, mainSize, m_constraints.mainAxisSizeForLengthResolution).value_or(0);
         ASSERT(resolvedMainSize >= 0);
