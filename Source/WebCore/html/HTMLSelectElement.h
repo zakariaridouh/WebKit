@@ -222,6 +222,8 @@ public:
     SelectPopoverElement* NODELETE pickerPopoverElement() const;
     Element* NODELETE buttonElement() const;
     String buttonLabelText(StringView selectedContentText) const;
+    enum class ForAccessibility : bool { No, Yes };
+    String buttonText(ForAccessibility, HTMLOptionElement* selectedOption = nullptr, int optionIndex = -1) const;
     void openPickerForUserInteraction(std::optional<bool> focusVisible = std::nullopt);
     void hidePickerPopoverElement();
     void clearPickerOpeningMouseLocation() { m_pickerOpeningMouseLocation = { }; }

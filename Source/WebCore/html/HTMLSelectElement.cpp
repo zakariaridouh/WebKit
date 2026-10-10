@@ -571,6 +571,50 @@ String HTMLSelectElement::buttonLabelText(StringView selectedContentText) const
     return text.toString().trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
+static size_t selectedOptionCount(const HTMLSelectElement& selectElement)
+{
+    size_t count = 0;
+    for (auto& item : selectElement.listItems()) {
+        if (RefPtr option = dynamicDowncast<HTMLOptionElement>(item.get()); option && option->selected())
+            ++count;
+    }
+    return count;
+}
+
+String HTMLSelectElement::buttonText(ForAccessibility forAccessibility, HTMLOptionElement* selectedOption, int optionIndex) const
+{
+    if (buttonElement())
+        return buttonLabelText({ });
+
+    if (m_multiple) {
+        size_t count = selectedOptionCount(*this);
+        if (count != 1)
+            return htmlSelectMultipleItems(count);
+    }
+
+    if (optionIndex < 0)
+        optionIndex = selectedIndex();
+
+    RefPtr option = selectedOption;
+    if (!option) {
+        auto& listItems = this->listItems();
+        int i = optionToListIndex(optionIndex);
+        if (i >= 0 && static_cast<unsigned>(i) < listItems.size())
+            option = dynamicDowncast<HTMLOptionElement>(*listItems[i]);
+    }
+
+    if (!option)
+        return emptyString();
+
+    if (forAccessibility == ForAccessibility::Yes) {
+        // FIXME: Perhaps reconcile with the text the button shows, which ignores aria-label and uses displayLabel().
+        auto ariaLabel = option->attributeTrimmedWithDefaultARIA(aria_labelAttr);
+        return ariaLabel.isEmpty() ? option->label() : ariaLabel;
+    }
+
+    return option->textIndentedToRespectGroupLabel().trim(deprecatedIsSpaceOrNewline);
+}
+
 void HTMLSelectElement::buttonElementChildrenChanged()
 {
     setOptionsChangedOnRenderer();

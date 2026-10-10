@@ -575,16 +575,8 @@ String AccessibilityRenderObject::stringValue() const
         return text();
     }
 
-    // For menu list select elements, get the selected option's aria-label or label.
-    if (RefPtr selectElement = dynamicDowncast<HTMLSelectElement>(node()); selectElement && selectElement->usesMenuList()) {
-        if (RefPtr option = selectElement->selectedOption()) {
-            auto overriddenDescription = option->attributeTrimmedWithDefaultARIA(aria_labelAttr);
-            if (!overriddenDescription.isEmpty())
-                return overriddenDescription;
-            return option->label();
-        }
-        return String();
-    }
+    if (RefPtr selectElement = dynamicDowncast<HTMLSelectElement>(node()); selectElement && selectElement->isDropdownBox())
+        return selectElement->buttonText(HTMLSelectElement::ForAccessibility::Yes);
 
 #if PLATFORM(COCOA)
     if (is<RenderListItem>(m_renderer.get()))

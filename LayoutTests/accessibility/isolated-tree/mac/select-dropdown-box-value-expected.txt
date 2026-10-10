@@ -1,0 +1,25 @@
+This test ensures that the value of a dropdown box is the text its button shows.
+
+nativeMultiple:
+PASS: axSelect.stringValue === 'AXValue: 2 Items'
+PASS: axSelect.stringValue === 'AXValue: Cheese'
+PASS: axSelect.stringValue === 'AXValue: Ham'
+PASS: axSelect.stringValue === 'AXValue: 0 Items'
+baseMultiple:
+PASS: axSelect.stringValue === 'AXValue: 2 Items'
+PASS: axSelect.stringValue === 'AXValue: Cheese'
+PASS: axSelect.stringValue === 'AXValue: Ham'
+PASS: axSelect.stringValue === 'AXValue: 0 Items'
+nativeButton:
+PASS: axSelect.stringValue === 'AXValue: Fruit: Apple'
+PASS: axSelect.stringValue === 'AXValue: Fruit: Banana'
+PASS: axSelect.stringValue === 'AXValue: Pick: Banana'
+baseButton:
+PASS: axSelect.stringValue === 'AXValue: Fruit: Apple'
+PASS: axSelect.stringValue === 'AXValue: Fruit: Banana'
+PASS: axSelect.stringValue === 'AXValue: Pick: Banana'
+
+PASS successfullyParsed is true
+
+TEST COMPLETE
+
