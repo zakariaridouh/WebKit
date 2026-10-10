@@ -62,11 +62,9 @@ public:
     LayoutUnit flowAwareBorderStart() const;
     LayoutUnit flowAwareBorderEnd() const;
     LayoutUnit flowAwareBorderBefore() const;
-    LayoutUnit flowAwareBorderAfter() const;
     LayoutUnit flowAwarePaddingStart() const;
     LayoutUnit flowAwarePaddingEnd() const;
     LayoutUnit flowAwarePaddingBefore() const;
-    LayoutUnit flowAwarePaddingAfter() const;
 
     LayoutUnit flowAwareMarginStartForFlexItem(const FlexLayoutItem&) const;
     LayoutUnit flowAwareMarginEndForFlexItem(const FlexLayoutItem&) const;

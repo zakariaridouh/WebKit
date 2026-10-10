@@ -80,22 +80,6 @@ LayoutUnit FlexFormattingUtils::flowAwareBorderBefore() const
     return flexBox().borderTop();
 }
 
-LayoutUnit FlexFormattingUtils::flowAwareBorderAfter() const
-{
-    switch (transformedBlockFlowDirection()) {
-    case FlowDirection::TopToBottom:
-        return flexBox().borderBottom();
-    case FlowDirection::BottomToTop:
-        return flexBox().borderTop();
-    case FlowDirection::LeftToRight:
-        return flexBox().borderRight();
-    case FlowDirection::RightToLeft:
-        return flexBox().borderLeft();
-    }
-    ASSERT_NOT_REACHED();
-    return flexBox().borderTop();
-}
-
 LayoutUnit FlexFormattingUtils::flowAwarePaddingStart() const
 {
     if (isHorizontalFlow(flexBox()))
@@ -121,22 +105,6 @@ LayoutUnit FlexFormattingUtils::flowAwarePaddingBefore() const
         return flexBox().paddingLeft();
     case FlowDirection::RightToLeft:
         return flexBox().paddingRight();
-    }
-    ASSERT_NOT_REACHED();
-    return flexBox().paddingTop();
-}
-
-LayoutUnit FlexFormattingUtils::flowAwarePaddingAfter() const
-{
-    switch (transformedBlockFlowDirection()) {
-    case FlowDirection::TopToBottom:
-        return flexBox().paddingBottom();
-    case FlowDirection::BottomToTop:
-        return flexBox().paddingTop();
-    case FlowDirection::LeftToRight:
-        return flexBox().paddingRight();
-    case FlowDirection::RightToLeft:
-        return flexBox().paddingLeft();
     }
     ASSERT_NOT_REACHED();
     return flexBox().paddingTop();

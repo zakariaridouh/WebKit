@@ -139,8 +139,6 @@ private:
     const CheckedRef<RenderBox> m_flexItem;
     std::optional<LayoutUnit> m_previousOverridingBorderBoxLogicalWidth;
     std::optional<LayoutUnit> m_previousOverridingBorderBoxLogicalHeight;
-    bool m_shouldRestoreInlineSize { false };
-    bool m_shouldRestoreBlockSize { false };
 #if ASSERT_ENABLED
     bool m_didInvalidateContentLogicalWidths { false };
 #endif

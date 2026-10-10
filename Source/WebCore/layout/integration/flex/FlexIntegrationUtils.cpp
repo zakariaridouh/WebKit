@@ -710,32 +710,23 @@ static void setOrClearOverridingBorderBoxLogicalHeight(RenderBox& box, std::opti
 
 FlexItemDefiniteCrossSizeScope::FlexItemDefiniteCrossSizeScope(RenderBox& flexItem, InvalidateContentWidths invalidateContentWidths)
     : m_flexItem(flexItem)
+    , m_previousOverridingBorderBoxLogicalWidth(flexItem.overridingBorderBoxLogicalWidth())
+    , m_previousOverridingBorderBoxLogicalHeight(flexItem.overridingBorderBoxLogicalHeight())
 {
-    auto saveAndSetInlineSize = [&](std::optional<LayoutUnit> size) {
-        m_previousOverridingBorderBoxLogicalWidth = flexItem.overridingBorderBoxLogicalWidth();
-        m_shouldRestoreInlineSize = true;
-        setOrClearOverridingBorderBoxLogicalWidth(flexItem, size);
-    };
-    auto saveAndSetBlockSize = [&](std::optional<LayoutUnit> size) {
-        m_previousOverridingBorderBoxLogicalHeight = flexItem.overridingBorderBoxLogicalHeight();
-        m_shouldRestoreBlockSize = true;
-        setOrClearOverridingBorderBoxLogicalHeight(flexItem, size);
-    };
-
     if (!FlexFormattingUtils::hasDefiniteCrossSizeForFlexItem(flexItem)) {
         // No definite cross size to measure against, so make sure no stale overriding size is left in either axis.
-        saveAndSetInlineSize({ });
-        saveAndSetBlockSize({ });
+        flexItem.clearOverridingBorderBoxLogicalWidth();
+        flexItem.clearOverridingBorderBoxLogicalHeight();
         return;
     }
 
     auto crossSize = FlexFormattingUtils::innerCrossSizeForFlexItem(flexItem);
     if (FlexFormattingUtils::mainAxisIsFlexItemInlineAxis(flexItem)) {
-        saveAndSetInlineSize({ });
-        saveAndSetBlockSize(crossSize);
+        flexItem.clearOverridingBorderBoxLogicalWidth();
+        flexItem.setOverridingBorderBoxLogicalHeight(crossSize);
     } else {
-        saveAndSetInlineSize(crossSize);
-        saveAndSetBlockSize({ });
+        flexItem.setOverridingBorderBoxLogicalWidth(crossSize);
+        flexItem.clearOverridingBorderBoxLogicalHeight();
     }
 
     if (invalidateContentWidths == InvalidateContentWidths::Yes) {
@@ -752,10 +743,8 @@ FlexItemDefiniteCrossSizeScope::~FlexItemDefiniteCrossSizeScope()
     if (m_didInvalidateContentLogicalWidths)
         ASSERT(!m_flexItem->hasInvalidContentLogicalWidths());
 #endif
-    if (m_shouldRestoreInlineSize)
-        setOrClearOverridingBorderBoxLogicalWidth(m_flexItem.get(), m_previousOverridingBorderBoxLogicalWidth);
-    if (m_shouldRestoreBlockSize)
-        setOrClearOverridingBorderBoxLogicalHeight(m_flexItem.get(), m_previousOverridingBorderBoxLogicalHeight);
+    setOrClearOverridingBorderBoxLogicalWidth(m_flexItem.get(), m_previousOverridingBorderBoxLogicalWidth);
+    setOrClearOverridingBorderBoxLogicalHeight(m_flexItem.get(), m_previousOverridingBorderBoxLogicalHeight);
 }
 
 FlexItemIntrinsicWidthComputationScope::FlexItemIntrinsicWidthComputationScope(RenderBox& flexItem)

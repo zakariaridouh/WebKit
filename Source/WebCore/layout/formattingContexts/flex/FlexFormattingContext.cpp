@@ -88,7 +88,6 @@ FlexFormattingContext::Result FlexFormattingContext::layout(FlexLayoutItems& fle
     };
     performContentSizing();
 
-    LayoutUnit crossAxisStartEdge;
     LinesCrossPositionList flexLinesCrossPositionList;
     FlexContainerUsedExtents flexContainerUsedExtents;
     PositionList flexItemsPositionList;
@@ -110,12 +109,10 @@ FlexFormattingContext::Result FlexFormattingContext::layout(FlexLayoutItems& fle
         // Multi-line column flex only knows its main size now, so re-resolve the flexible lengths of any lines that were left short.
         distributeMainAxisFreeSpaceForMultilineColumnIfNeeded(flexLines, flexItems, flexBaseAndHypotheticalMainSizeList.span(), flexItemsMainSizeList, flexItemsPositionList, flexLinesCrossPositionList, flexContainerUsedExtents.blockContentBox);
         // Cross-Axis Alignment: with the container's cross size now final, run the remaining cross-axis steps
-        // (§9.4 #9 and #11, §9.6 #13, #14 and #16) here rather than in spec-number order. First record where the
-        // lines start on the cross axis, for the wrap-reverse flip in computeFlexItemRects.
-        crossAxisStartEdge = flexLinesCrossPositionList.isEmpty() ? 0_lu : flexLinesCrossPositionList[0];
+        // (§9.4 #9 and #11, §9.6 #13, #14 and #16) here rather than in spec-number order.
         // If we have a single line flexbox, the line height is all the available space. For flex-direction: row,
         // this means we need to use the height, so we do this after calling updateLogicalHeight.
-        if (!m_constraints.isMultiline && !flexLinesCrossSizeList.isEmpty())
+        if (!m_constraints.isMultiline)
             flexLinesCrossSizeList[0] = flexContainerUsedExtents.crossContentBox;
         // 9.4. (#9) Handle 'align-content: stretch' and 9.6. (#16) align all flex lines per align-content.
         handleCrossAxisAlignmentForFlexLines(flexLines, flexItemsPositionList, flexLinesCrossPositionList, flexLinesCrossSizeList, flexContainerUsedExtents.crossContentBox);
@@ -126,7 +123,7 @@ FlexFormattingContext::Result FlexFormattingContext::layout(FlexLayoutItems& fle
     };
     performContentAlignment();
 
-    computeFlexItemRects(flexLines, flexItems, flexItemsPositionList, flexLinesCrossPositionList, flexLinesCrossSizeList, flexItemsCrossSizeList, crossAxisStartEdge, flexContainerUsedExtents.crossContentBox, flexContainerUsedExtents.crossBorderBox, flexContainerUsedExtents.blockBorderBox);
+    computeFlexItemRects(flexLines, flexItems, flexItemsPositionList, flexLinesCrossPositionList, flexLinesCrossSizeList, flexItemsCrossSizeList, flexContainerUsedExtents.crossContentBox, flexContainerUsedExtents.crossBorderBox, flexContainerUsedExtents.blockBorderBox);
     return m_result;
 }
 
@@ -163,8 +160,6 @@ FlexFormattingContext::FlexLines FlexFormattingContext::computeFlexLines(const F
 
     // One past the last item of each line, so the last entry is flexItems.size().
     auto lineBreaks = [&] -> Vector<size_t> {
-        if (flexItems.isEmpty())
-            return { };
         if (!m_constraints.isMultiline)
             return { flexItems.size() };
         if (m_constraints.isBalance)
@@ -458,7 +453,7 @@ FlexFormattingContext::LinesCrossPositionList FlexFormattingContext::computeFlex
     // this into the container's logical height in updateFlexContainerLogicalHeight. Column flow's block axis is
     // its main axis, sized later while placing the items, so nothing is returned there.
     LinesCrossPositionList flexLinesCrossPositionList(flexLines.ranges.size());
-    auto contentStart = m_constraints.flowAwareBorderBlock.first + m_constraints.flowAwarePaddingBlock.first;
+    auto contentStart = m_constraints.flowAwareBorderBefore + m_constraints.flowAwarePaddingBefore;
     auto crossAxisOffset = contentStart;
     for (size_t lineIndex = 0; lineIndex < flexLines.ranges.size(); ++lineIndex) {
         flexLinesCrossPositionList[lineIndex] = crossAxisOffset;
@@ -521,7 +516,7 @@ void FlexFormattingContext::handleCrossAxisAlignmentForFlexLines(const FlexLines
 {
     // 9.6. (#16) Align the flex lines within the flex container per align-content, and (#9) grow the lines to fill
     // the container for align-content: stretch. A single-line container has nothing to align.
-    if (flexLines.ranges.isEmpty() || !m_constraints.isMultiline)
+    if (!m_constraints.isMultiline)
         return;
 
     auto alignedContent = m_constraints.style->alignContent().resolve(FlexFormattingUtils::contentAlignmentNormalBehavior());
@@ -667,7 +662,7 @@ void FlexFormattingContext::performBaselineAlignment(WTF::Range<size_t> lineRang
     }
 }
 
-void FlexFormattingContext::computeFlexItemRects(const FlexLines& flexLines, FlexLayoutItems& flexItems, const PositionList& flexItemsPositionList, const LinesCrossPositionList& flexLinesCrossPositionList, const LinesCrossSizeList& flexLinesCrossSizeList, const SizeList& flexItemsCrossSizeList, LayoutUnit crossAxisStartEdge, LayoutUnit crossContentExtent, LayoutUnit crossExtent, LayoutUnit mainBorderBoxExtent)
+void FlexFormattingContext::computeFlexItemRects(const FlexLines& flexLines, FlexLayoutItems& flexItems, const PositionList& flexItemsPositionList, const LinesCrossPositionList& flexLinesCrossPositionList, const LinesCrossSizeList& flexLinesCrossSizeList, const SizeList& flexItemsCrossSizeList, LayoutUnit crossContentExtent, LayoutUnit crossExtent, LayoutUnit mainBorderBoxExtent)
 {
     // 9.6. Turn each item's flow-relative position into its final physical location and write it to the renderer.
     // This is where reversed directions are resolved: the lines above are laid out forwards regardless, and the
@@ -684,6 +679,9 @@ void FlexFormattingContext::computeFlexItemRects(const FlexLines& flexLines, Fle
     auto columnReverseFlipEdge = mainBorderBoxExtent - m_constraints.mainAxisScrollbarExtent
         + (m_constraints.flowAwareBorderInline.first + m_constraints.flowAwarePaddingInline.first)
         - (m_constraints.flowAwareBorderInline.second + m_constraints.flowAwarePaddingInline.second);
+    // The wrap-reverse flip measures each line's offset from the content box's cross-start edge, where
+    // computeFlexLineCrossPositions starts stacking the lines.
+    auto crossAxisStartEdge = m_constraints.flowAwareBorderBefore + m_constraints.flowAwarePaddingBefore;
     for (size_t lineIndex = 0; lineIndex < flexLines.ranges.size(); ++lineIndex) {
         auto lineRange = flexLines.ranges[lineIndex];
         for (auto flexItemIndex = lineRange.begin(); flexItemIndex < lineRange.end(); ++flexItemIndex) {
@@ -776,9 +774,6 @@ LayoutUnit FlexFormattingContext::placeFlexItems(LayoutUnit crossAxisOffset, std
 
 void FlexFormattingContext::setFlexItemCountsForFirstAndLastLine(const FlexLines& flexLines)
 {
-    if (flexLines.ranges.isEmpty())
-        return;
-
     // Counted in the order the lines were collected, which is the order the flex item list is in: the caller indexes
     // that list by these counts, so they must not be flipped for wrap-reverse here. Mapping the visually-first and
     // -last line onto those slices is FlexLayout::flexItemForFirstBaseline's job.

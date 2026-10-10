@@ -82,9 +82,9 @@ FlexLayoutConstraints FlexLayout::flexLayoutConstraints() const
         .isLeftToRightFlow = utils.isLeftToRightFlow(),
         .crossAxisDirection = utils.crossAxisDirection(),
         .flowAwareBorderInline = { utils.flowAwareBorderStart(), utils.flowAwareBorderEnd() },
-        .flowAwareBorderBlock = { utils.flowAwareBorderBefore(), utils.flowAwareBorderAfter() },
+        .flowAwareBorderBefore = utils.flowAwareBorderBefore(),
         .flowAwarePaddingInline = { utils.flowAwarePaddingStart(), utils.flowAwarePaddingEnd() },
-        .flowAwarePaddingBlock = { utils.flowAwarePaddingBefore(), utils.flowAwarePaddingAfter() },
+        .flowAwarePaddingBefore = utils.flowAwarePaddingBefore(),
         .mainAxisAvailableSpace = mainAxisAvailableSpace(),
         .mainAxisSizeForLengthResolution = FlexFormattingUtils::isColumnFlow(flexBox()) ? flexBox().availableLogicalHeight(AvailableLogicalHeightType::ExcludeMarginBorderPadding) : flexBox().contentBoxLogicalWidth(),
         .mainAxisBorderBoxExtent = utils.mainAxisExtent(),
@@ -121,9 +121,8 @@ FlexLayoutItems FlexLayout::buildFlexLayoutItems(RelayoutChildren relayoutChildr
     FlexLayoutItems flexLayoutItems;
     flexLayoutItems.reserveInitialCapacity(m_flexItems.size());
     for (auto& renderer : m_flexItems) {
-        CheckedPtr flexItem = renderer.get();
-        if (!flexItem)
-            continue;
+        // buildFlexItemList has just collected these from the container's children, so none of them is gone.
+        CheckedRef flexItem = *renderer;
 
         // Before running the flex algorithm, 'auto' has a margin of 0.
         // Also, if we're not auto sizing, we don't do a layout that computes the start/end margins.
@@ -143,8 +142,8 @@ FlexLayoutItems FlexLayout::buildFlexLayoutItems(RelayoutChildren relayoutChildr
         auto everHadLayout = flexItem->everHadLayout();
         if (flexItem->shouldInvalidateContentWidths())
             flexItem->invalidateContentLogicalWidths(MarkingBehavior::MarkOnlyThis);
-        flexBox().updateBlockChildDirtyBitsBeforeLayout(relayoutChildren, *flexItem);
-        flexLayoutItems.append({ *flexItem, constraints.isHorizontalFlow, everHadLayout, relayoutChildren == RelayoutChildren::Yes });
+        flexBox().updateBlockChildDirtyBitsBeforeLayout(relayoutChildren, flexItem.get());
+        flexLayoutItems.append({ flexItem.get(), constraints.isHorizontalFlow, everHadLayout, relayoutChildren == RelayoutChildren::Yes });
     }
     return flexLayoutItems;
 }
@@ -320,10 +319,7 @@ std::optional<LayoutUnit> FlexLayout::lastLineBaseline() const
 
 CheckedPtr<const RenderBox> FlexLayout::flexItemForFirstBaseline() const
 {
-    if (!m_flexLayoutResult) {
-        ASSERT_NOT_REACHED();
-        return { };
-    }
+    ASSERT(m_flexLayoutResult);
 
     // The first baseline comes from the visually-first flex line, and within it the item nearest that line's visual
     // start. flex-wrap: wrap-reverse makes the visually-first line the logically-last line; a reversed main axis
@@ -337,10 +333,7 @@ CheckedPtr<const RenderBox> FlexLayout::flexItemForFirstBaseline() const
 
 CheckedPtr<const RenderBox> FlexLayout::flexItemForLastBaseline() const
 {
-    if (!m_flexLayoutResult) {
-        ASSERT_NOT_REACHED();
-        return { };
-    }
+    ASSERT(m_flexLayoutResult);
 
     // The last baseline comes from the visually-last flex line, and within it the item nearest that line's visual
     // end (the opposite end to flexItemForFirstBaseline, hence the negated reverse). wrap-reverse makes the

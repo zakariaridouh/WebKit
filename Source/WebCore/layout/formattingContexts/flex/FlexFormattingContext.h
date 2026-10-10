@@ -87,11 +87,11 @@ struct FlexLayoutConstraints {
     bool isColumnOrRowReverse { false };
     bool isLeftToRightFlow { false };
     FlowDirection crossAxisDirection { };
-    // Flow-relative border/padding, each as an inline {start, end} pair and a block {before, after} pair.
+    // Flow-relative border/padding, each as an inline {start, end} pair and its block-before edge.
     std::pair<LayoutUnit, LayoutUnit> flowAwareBorderInline;
-    std::pair<LayoutUnit, LayoutUnit> flowAwareBorderBlock;
+    LayoutUnit flowAwareBorderBefore;
     std::pair<LayoutUnit, LayoutUnit> flowAwarePaddingInline;
-    std::pair<LayoutUnit, LayoutUnit> flowAwarePaddingBlock;
+    LayoutUnit flowAwarePaddingBefore;
     LayoutUnit mainAxisAvailableSpace;
     LayoutUnit mainAxisSizeForLengthResolution;
     LayoutUnit mainAxisBorderBoxExtent;
@@ -163,7 +163,7 @@ private:
     void handleCrossAxisAlignmentForFlexLines(const FlexLines&, PositionList& flexItemsPositionList, LinesCrossPositionList& flexLinesCrossPositionList, LinesCrossSizeList& flexLinesCrossSizeList, LayoutUnit crossContentExtent);
     void handleCrossAxisAlignmentForFlexItems(const FlexLines&, FlexLayoutItems&, const SizeList& flexItemsCrossSizeList, const LinesCrossSizeList& flexLinesCrossSizeList, PositionList& flexItemsPositionList);
     void performBaselineAlignment(WTF::Range<size_t> lineRange, FlexLayoutItems&, Vector<LayoutUnit>& flexItemsCrossOffsetList, const SizeList& flexItemsCrossSizeList, LayoutUnit lineCrossAxisExtent);
-    void computeFlexItemRects(const FlexLines&, FlexLayoutItems&, const PositionList& flexItemsPositionList, const LinesCrossPositionList& flexLinesCrossPositionList, const LinesCrossSizeList& flexLinesCrossSizeList, const SizeList& flexItemsCrossSizeList, LayoutUnit crossAxisStartEdge, LayoutUnit crossContentExtent, LayoutUnit crossExtent, LayoutUnit mainBorderBoxExtent);
+    void computeFlexItemRects(const FlexLines&, FlexLayoutItems&, const PositionList& flexItemsPositionList, const LinesCrossPositionList& flexLinesCrossPositionList, const LinesCrossSizeList& flexLinesCrossSizeList, const SizeList& flexItemsCrossSizeList, LayoutUnit crossContentExtent, LayoutUnit crossExtent, LayoutUnit mainBorderBoxExtent);
 
     LayoutUnit placeFlexItems(LayoutUnit crossAxisOffset, std::span<FlexLayoutItem>, std::span<LayoutPoint> positions, LayoutUnit availableFreeSpace);
     LayoutUnit mainAxisFlippedOffsetForRow(const FlexLayoutItem&, LayoutUnit flowRelativeOffset) const;
