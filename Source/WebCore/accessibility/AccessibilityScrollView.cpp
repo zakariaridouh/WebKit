@@ -382,6 +382,8 @@ void AccessibilityScrollView::addRemoteFrameChild()
         m_remoteFrame = downcast<AXRemoteFrame>(cache->create(AccessibilityRole::RemoteFrame));
         remoteFrame = m_remoteFrame;
         remoteFrame->setParent(this);
+        // Add the child before binding. Binding calls into AppKit, which can re-enter updateChildrenIfNecessary().
+        addChild(*remoteFrame);
 
 #if PLATFORM(COCOA)
         // Generate a new token and pass it back to the other remote frame so it can bind these objects together.
@@ -413,10 +415,10 @@ void AccessibilityScrollView::addRemoteFrameChild()
 #endif
         });
 #endif // PLATFORM(COCOA)
-    } else
+    } else {
         remoteFrame->setParent(this);
-
-    addChild(*remoteFrame);
+        addChild(*remoteFrame);
+    }
 }
 
 void AccessibilityScrollView::addChildren()
