@@ -48,6 +48,16 @@ webkit.org/b/278719 fast/events/touch/touch-target.html [ Timeout ]
 fast/html/transient-activation.html [ Skip ] # Timeout
 fast/html/history-action-user-activation.html [ Skip ] # Timeout
 
+# The libwpe click count is not reset between tests, so clicks are merged with the previous test's.
+fast/html/details-add-summary-6-and-click.html [ Failure Pass ]
+fast/html/details-add-summary-7-and-click.html [ Failure Pass ]
+fast/html/details-add-summary-8-and-click.html [ Failure Pass ]
+fast/html/details-add-summary-9-and-click.html [ Failure Pass ]
+fast/html/details-add-summary-10-and-click.html [ Failure Pass ]
+fast/html/details-remove-summary-4-and-click.html [ Failure Pass ]
+fast/html/details-remove-summary-5-and-click.html [ Failure Pass ]
+fast/html/details-remove-summary-6-and-click.html [ Failure Pass ]
+
 webkit.org/b/296369 editing/deleting/paste-with-transparent-background-color-live-range.html [ Failure ]
 webkit.org/b/296369 editing/deleting/paste-with-transparent-background-color.html [ Failure ]
 webkit.org/b/296369 editing/deleting/smart-delete-004.html [ Failure ]
