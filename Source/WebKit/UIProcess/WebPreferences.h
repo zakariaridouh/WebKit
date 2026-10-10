@@ -37,7 +37,7 @@
 #define DECLARE_PREFERENCE_GETTER_AND_SETTERS(KeyUpper, KeyLower, TypeName, Type, DefaultValue, HumanReadableName, HumanReadableDescription) \
     void set##KeyUpper(const Type& value); \
     void delete##KeyUpper(); \
-    Type KeyLower() const;
+    Type NODELETE KeyLower() const;
 
 #define DECLARE_INSPECTOR_OVERRIDE_SETTERS(KeyUpper, KeyLower, Type) \
     void set##KeyUpper##InspectorOverride(std::optional<Type> inspectorOverride);
