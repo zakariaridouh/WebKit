@@ -277,6 +277,7 @@ WI.QuickConsole = class QuickConsole extends WI.View
         let automaticContext = this._resolveDesiredActiveExecutionContext();
         let automaticContextDisplayName = activeCallFrame ? this._displayNameForCallFrame(activeCallFrame, maxLength) : this._displayNameForExecutionContext(automaticContext, maxLength);
         contextMenu.appendCheckboxItem(WI.UIString("Auto \u2014 %s").format(automaticContextDisplayName), () => {
+            this._restoreSelectedExecutionContextForFrame = null;
             this._automaticallyPickExecutionContext = true;
             this._setActiveExecutionContext(automaticContext);
         }, this._automaticallyPickExecutionContext);
@@ -291,6 +292,7 @@ WI.QuickConsole = class QuickConsole extends WI.View
 
             // Mimic macOS `-[NSMenuItem setIndentationLevel]`.
             contextMenu.appendCheckboxItem("   ".repeat(indent + additionalIndent) + this._displayNameForExecutionContext(context, maxLength), () => {
+                this._restoreSelectedExecutionContextForFrame = null;
                 this._automaticallyPickExecutionContext = false;
                 this._setActiveExecutionContext(context);
             }, activeExecutionContext === context && (!activeCallFrame || !WI.runtimeManager.useActiveCallFrame));
