@@ -569,12 +569,18 @@ std::expected<void, MediaPlaybackDenialExplanation> MediaElementSession::playbac
 
 static bool autoplayPermittedWhileInvisible(const HTMLMediaElement& element)
 {
+#if ENABLE(MEDIA_STREAM)
+    bool isTryingToPlayLiveAudioWhileCapturing = element.hasAudio() && element.hasMediaStreamSrcObject() && protect(element.document())->isCapturing();
+#else
+    bool isTryingToPlayLiveAudioWhileCapturing = false;
+#endif
+
     // If the media element is already playing audibly, allow it to continue even when not visible as
     // pausing it would be observable by the user. Also allow elements that were previously playing
     // audibly and got interrupted by becoming invisible to resume (e.g. after unmuting), since the
     // interruption is what made them paused. However, elements that have not yet started playing
-    // should not autoplay while invisible.
-    if (element.paused() && !element.wasInterruptedForInvisibleAutoplay())
+    // should not autoplay while invisible, if not playing live stream while capturing.
+    if (!isTryingToPlayLiveAudioWhileCapturing && element.paused() && !element.wasInterruptedForInvisibleAutoplay())
         return false;
     if (element.isVideo() && !element.hasAudio())
         return false;

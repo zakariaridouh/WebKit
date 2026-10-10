@@ -2928,6 +2928,9 @@ http/wpt/mediastream/webrtc-vp9-colorspace.html [ Failure ]
 
 webkit.org/b/314659 webrtc/getDisplayMedia-pc-resolution.html [ Pass Crash Failure Timeout ]
 
+# Autoplay related restrictions
+webrtc/audio-autoplay-no-renderer.html [ Skip ]
+
 # Regressions introduced by https://commits.webkit.org/263750@main
 fast/mediastream/apply-constraints-advanced.html [ Failure ]
 fast/mediastream/apply-constraints-video.html [ Failure ]
