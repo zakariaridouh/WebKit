@@ -39,6 +39,7 @@
 #include "FrameDOMStorageAgent.h"
 #include "FrameDebugger.h"
 #include "FrameDebuggerAgent.h"
+#include "FrameIndexedDBAgent.h"
 #include "FrameInlines.h"
 #include "FrameRuntimeAgent.h"
 #include "FrameWorkerAgent.h"
@@ -199,6 +200,7 @@ void FrameInspectorController::createLazyAgents()
     m_agents.append(WTF::move(domAgent));
 
     m_agents.append(makeUniqueRef<FrameDOMStorageAgent>(context));
+    m_agents.append(makeUniqueRef<FrameIndexedDBAgent>(context));
     m_agents.append(makeUniqueRef<FrameRuntimeAgent>(context));
     m_agents.append(makeUniqueRef<FrameCSSAgent>(context));
     m_agents.append(makeUniqueRef<FrameCanvasAgent>(context));

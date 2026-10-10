@@ -7611,6 +7611,8 @@
 		86721D4F7D1D46A6B80B9F9A /* DebuggerSuspensionController.h in Headers */ = {isa = PBXBuildFile; fileRef = E1DEC3457E95468589B6727B /* DebuggerSuspensionController.h */; };
 		EFC21B040B76E5E705ECE268 /* ProofOfPossessionProviderInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 3880493C91656A8729182D70 /* ProofOfPossessionProviderInfo.h */; };
 		4A3A479BAB413F796EF38438 /* ProofOfPossessionCredential.h in Headers */ = {isa = PBXBuildFile; fileRef = F6EF1185B9BFEAED5D815C1E /* ProofOfPossessionCredential.h */; };
+		A4C507AADDFB428EA96A5E75 /* FrameIndexedDBAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = D4D9D4D70C1F40D88DBFCA80 /* FrameIndexedDBAgent.h */; };
+		B1EA5351EAA94AFA936F8771 /* PageIndexedDBAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = E3F630DF69544CEA9A7BE1E2 /* PageIndexedDBAgent.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -24359,6 +24361,10 @@
 		542FC0C1FBF0776D292FF8D6 /* ProofOfPossessionProviderInfo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ProofOfPossessionProviderInfo.cpp; sourceTree = "<group>"; };
 		3880493C91656A8729182D70 /* ProofOfPossessionProviderInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProofOfPossessionProviderInfo.h; sourceTree = "<group>"; };
 		F6EF1185B9BFEAED5D815C1E /* ProofOfPossessionCredential.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProofOfPossessionCredential.h; sourceTree = "<group>"; };
+		D4D9D4D70C1F40D88DBFCA80 /* FrameIndexedDBAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FrameIndexedDBAgent.h; sourceTree = "<group>"; };
+		0970201322E546E9A5B1334A /* FrameIndexedDBAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FrameIndexedDBAgent.cpp; sourceTree = "<group>"; };
+		E3F630DF69544CEA9A7BE1E2 /* PageIndexedDBAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PageIndexedDBAgent.h; sourceTree = "<group>"; };
+		9E05DE2045A04C30A1A879F9 /* PageIndexedDBAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PageIndexedDBAgent.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -35154,6 +35160,8 @@
 				91E0DDBF230B41E50019E1E3 /* PageDOMDebuggerAgent.h */,
 				A5B81CBA1FAA44B70037D1E6 /* PageHeapAgent.cpp */,
 				A5B81CBC1FAA44B70037D1E6 /* PageHeapAgent.h */,
+				9E05DE2045A04C30A1A879F9 /* PageIndexedDBAgent.cpp */,
+				E3F630DF69544CEA9A7BE1E2 /* PageIndexedDBAgent.h */,
 				A5CB051F1FB51F1600089B97 /* PageNetworkAgent.cpp */,
 				A5CB05211FB51F1700089B97 /* PageNetworkAgent.h */,
 				A5B81CC11FAA44B70037D1E6 /* PageRuntimeAgent.cpp */,
@@ -42241,6 +42249,8 @@
 				5E3DD8082F903C9A00250DF5 /* FrameDOMAgentStubs.cpp */,
 				5E3DD80B2F903C9A00250DF5 /* FrameDOMStorageAgent.cpp */,
 				5E3DD80A2F903C9A00250DF5 /* FrameDOMStorageAgent.h */,
+				0970201322E546E9A5B1334A /* FrameIndexedDBAgent.cpp */,
+				D4D9D4D70C1F40D88DBFCA80 /* FrameIndexedDBAgent.h */,
 				5EAA0A2B2F47C803009CAB0D /* FrameRuntimeAgent.cpp */,
 				5EAA0A2A2F47C803009CAB0D /* FrameRuntimeAgent.h */,
 				5EAA1A372F4FC900009CAB0D /* FrameWorkerAgent.cpp */,
@@ -46299,6 +46309,7 @@
 				5E3DD80C2F903C9A00250DF5 /* FrameDOMStorageAgent.h in Headers */,
 				81ED7B1F003A5A7768139C21 /* FrameGeometrySyncData.h in Headers */,
 				0F11781822E3C47F008BD570 /* FrameIdentifier.h in Headers */,
+				A4C507AADDFB428EA96A5E75 /* FrameIndexedDBAgent.h in Headers */,
 				9B46C04B2DC4A867002E22C4 /* FrameInlines.h in Headers */,
 				F30EE46B2E721BA800935B60 /* FrameInspectorController.h in Headers */,
 				656D373C0ADBA5DE00A4554D /* FrameLoader.h in Headers */,
@@ -48395,6 +48406,7 @@
 				7A674BDC0F9EBF4E006CF099 /* PageGroupLoadDeferrer.h in Headers */,
 				A5B81CC41FAA44BC0037D1E6 /* PageHeapAgent.h in Headers */,
 				4192BB1327CF638600F29A46 /* PageIdentifier.h in Headers */,
+				B1EA5351EAA94AFA936F8771 /* PageIndexedDBAgent.h in Headers */,
 				CDEFDA0E271229BA005559A7 /* PageInlines.h in Headers */,
 				1C81B95A0E97330800266E07 /* PageInspectorController.h in Headers */,
 				A5CB05241FB51F3300089B97 /* PageNetworkAgent.h in Headers */,

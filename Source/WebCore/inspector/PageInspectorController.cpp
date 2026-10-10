@@ -46,7 +46,6 @@
 #include "InspectorDOMStorageAgent.h"
 #include "InspectorFrontendClient.h"
 #include "InspectorIdentifierRegistry.h"
-#include "InspectorIndexedDBAgent.h"
 #include "InspectorInstrumentation.h"
 #include "InspectorLayerTreeAgent.h"
 #include "InspectorMemoryAgent.h"
@@ -65,6 +64,7 @@
 #include "PageDebugger.h"
 #include "PageDebuggerAgent.h"
 #include "PageHeapAgent.h"
+#include "PageIndexedDBAgent.h"
 #include "PageNetworkAgent.h"
 #include "PageRuntimeAgent.h"
 #include "PageTimelineAgent.h"
@@ -182,7 +182,7 @@ void PageInspectorController::createLazyAgents()
     m_agents.append(makeUniqueRef<InspectorLayerTreeAgent>(pageContext));
     m_agents.append(makeUniqueRef<PageWorkerAgent>(pageContext));
     m_agents.append(makeUniqueRef<InspectorDOMStorageAgent>(pageContext));
-    m_agents.append(makeUniqueRef<InspectorIndexedDBAgent>(pageContext));
+    m_agents.append(makeUniqueRef<PageIndexedDBAgent>(pageContext));
 
     auto scriptProfilerAgent = makeUniqueRef<InspectorScriptProfilerAgent>(pageContext);
     m_instrumentingAgents->setPersistentScriptProfilerAgent(protect(scriptProfilerAgent).ptr());

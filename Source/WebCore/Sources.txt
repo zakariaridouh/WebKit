@@ -2057,6 +2057,7 @@ inspector/agents/frame/FrameDOMAgent.cpp
 inspector/agents/frame/FrameDOMAgentStubs.cpp
 inspector/agents/frame/FrameDOMStorageAgent.cpp
 inspector/agents/frame/FrameDebuggerAgent.cpp
+inspector/agents/frame/FrameIndexedDBAgent.cpp
 inspector/agents/frame/FrameWorkerAgent.cpp
 inspector/agents/page/PageAuditAgent.cpp
 inspector/agents/page/PageCanvasAgent.cpp
@@ -2064,6 +2065,7 @@ inspector/agents/page/PageConsoleAgent.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
 inspector/agents/page/PageDebuggerAgent.cpp
 inspector/agents/page/PageHeapAgent.cpp
+inspector/agents/page/PageIndexedDBAgent.cpp
 inspector/agents/page/PageNetworkAgent.cpp
 inspector/agents/page/PageRuntimeAgent.cpp
 inspector/agents/page/PageTimelineAgent.cpp @header:RenderStyleGetters
