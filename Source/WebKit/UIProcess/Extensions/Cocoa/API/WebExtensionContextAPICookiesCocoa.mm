@@ -176,7 +176,7 @@ void WebExtensionContext::cookiesSet(std::optional<PAL::SessionID> sessionID, co
             return;
         }
 
-        dataStore->cookieStore().setCookies({ cookieParameters.cookie }, [completionHandler = WTF::move(completionHandler), sessionID = dataStore->sessionID(), cookie = cookieParameters.cookie]() mutable {
+        protect(dataStore->cookieStore())->setCookies({ cookieParameters.cookie }, [completionHandler = WTF::move(completionHandler), sessionID = dataStore->sessionID(), cookie = cookieParameters.cookie]() mutable {
             completionHandler({ WebExtensionCookieParameters { WTF::move(sessionID), WTF::move(cookie) } });
         });
     });
@@ -214,7 +214,7 @@ void WebExtensionContext::cookiesRemove(std::optional<PAL::SessionID> sessionID,
             ASSERT(cookies.size() == 1);
             auto& cookieParameters = cookies[0];
 
-            dataStore->cookieStore().deleteCookie(cookieParameters.cookie, [completionHandler = WTF::move(completionHandler), cookieParameters]() mutable {
+            protect(dataStore->cookieStore())->deleteCookie(cookieParameters.cookie, [completionHandler = WTF::move(completionHandler), cookieParameters]() mutable {
                 completionHandler({ WTF::move(cookieParameters) });
             });
         });

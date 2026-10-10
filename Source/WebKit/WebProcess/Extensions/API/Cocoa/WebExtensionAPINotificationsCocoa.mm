@@ -230,7 +230,7 @@ void WebExtensionContextProxy::dispatchNotificationsClickedEvent(const String& i
     enumerateFramesAndNamespaceObjects([&](auto& frame, auto& namespaceObject) {
         RefPtr coreFrame = frame.coreLocalFrame();
         WebCore::UserGestureIndicator gestureIndicator(WebCore::IsProcessingUserGesture::Yes, protect(coreFrame ? coreFrame->document() : nullptr));
-        namespaceObject.notifications().onClicked().invokeListenersWithArgument(nsIdentifier.get());
+        protect(protect(namespaceObject.notifications())->onClicked())->invokeListenersWithArgument(nsIdentifier.get());
     });
 }
 
@@ -242,7 +242,7 @@ void WebExtensionContextProxy::dispatchNotificationsButtonClickedEvent(const Str
     enumerateFramesAndNamespaceObjects([&](auto& frame, auto& namespaceObject) {
         RefPtr coreFrame = frame.coreLocalFrame();
         WebCore::UserGestureIndicator gestureIndicator(WebCore::IsProcessingUserGesture::Yes, protect(coreFrame ? coreFrame->document() : nullptr));
-        namespaceObject.notifications().onButtonClicked().invokeListenersWithArgument(nsIdentifier.get(), @(buttonIndex));
+        protect(protect(namespaceObject.notifications())->onButtonClicked())->invokeListenersWithArgument(nsIdentifier.get(), @(buttonIndex));
     });
 }
 
@@ -252,7 +252,7 @@ void WebExtensionContextProxy::dispatchNotificationsClosedEvent(const String& id
 
     RetainPtr nsIdentifier = identifier.createNSString();
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        namespaceObject.notifications().onClosed().invokeListenersWithArgument(nsIdentifier.get(), @(byUser));
+        protect(protect(namespaceObject.notifications())->onClosed())->invokeListenersWithArgument(nsIdentifier.get(), @(byUser));
     });
 }
 

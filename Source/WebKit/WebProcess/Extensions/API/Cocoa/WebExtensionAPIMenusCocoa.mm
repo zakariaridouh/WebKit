@@ -473,7 +473,7 @@ void WebExtensionContextProxy::dispatchMenusClickedEvent(const WebExtensionMenuI
         if (RefPtr clickHandler = namespaceObject.menus().clickHandlers().get(menuItemParameters.identifier))
             clickHandler->call(toJSValueRef(clickHandler->globalContext(), info), toJSValueRef(clickHandler->globalContext(), tab));
 
-        namespaceObject.menus().onClicked().invokeListenersWithArgument(info, tab);
+        protect(protect(namespaceObject.menus())->onClicked())->invokeListenersWithArgument(info, tab);
     });
 }
 

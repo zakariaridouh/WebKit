@@ -376,7 +376,7 @@ void WebExtensionContextProxy::dispatchCookiesChangedEvent()
     // FIXME: <https://webkit.org/b/267514> Add support for changeInfo.
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        namespaceObject.cookies().onChanged().invokeListeners();
+        protect(protect(namespaceObject.cookies())->onChanged())->invokeListeners();
     });
 }
 

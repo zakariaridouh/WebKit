@@ -401,7 +401,7 @@ void WebExtensionContextProxy::dispatchTestMessageEvent(const String& message, c
     }
 
     enumerateFramesAndNamespaceObjects([&](auto&, auto& namespaceObject) {
-        namespaceObject.test().onMessage().invokeListenersWithJSONArgument(message, argumentJSON);
+        protect(protect(namespaceObject.test())->onMessage())->invokeListenersWithJSONArgument(message, argumentJSON);
     }, toDOMWrapperWorld(contentWorldType));
 }
 
@@ -416,7 +416,7 @@ void WebExtensionContextProxy::dispatchTestStartedEvent(const String& argumentJS
     }
 
     enumerateFramesAndNamespaceObjects([&](auto&, auto& namespaceObject) {
-        namespaceObject.test().onTestStarted().invokeListenersWithJSONArgument(argumentJSON);
+        protect(protect(namespaceObject.test())->onTestStarted())->invokeListenersWithJSONArgument(argumentJSON);
     }, toDOMWrapperWorld(contentWorldType));
 }
 
@@ -431,7 +431,7 @@ void WebExtensionContextProxy::dispatchTestFinishedEvent(const String& argumentJ
     }
 
     enumerateFramesAndNamespaceObjects([&](auto&, auto& namespaceObject) {
-        namespaceObject.test().onTestFinished().invokeListenersWithJSONArgument(argumentJSON);
+        protect(protect(namespaceObject.test())->onTestFinished())->invokeListenersWithJSONArgument(argumentJSON);
     }, toDOMWrapperWorld(contentWorldType));
 }
 

@@ -2309,7 +2309,7 @@ void WebsiteDataStore::setCacheModelSynchronouslyForTesting(CacheModel cacheMode
 Vector<WebsiteDataStoreParameters> WebsiteDataStore::parametersFromEachWebsiteDataStore()
 {
     return WTF::map(allDataStores(), [](auto& entry) {
-        return entry.value->parameters();
+        return protect(entry.value)->parameters();
     });
 }
 

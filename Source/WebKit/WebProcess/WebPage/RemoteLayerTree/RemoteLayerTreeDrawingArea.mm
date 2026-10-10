@@ -76,15 +76,15 @@ RemoteLayerTreeDrawingArea::RemoteLayerTreeDrawingArea(WebPage& webPage, const W
     : DrawingArea(parameters.drawingAreaIdentifier, webPage)
     , m_remoteLayerTreeContext(RemoteLayerTreeContext::create(webPage))
     , m_updateRenderingTimer(*this, &RemoteLayerTreeDrawingArea::updateRendering)
-    , m_postRenderingUpdateRunLoopObserver(makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [this] {
-        didCompleteRenderingFrame();
-        m_postRenderingUpdateRunLoopObserver->invalidate();
-    }))
     , m_commitQueue(WorkQueue::create("com.apple.WebKit.WebContent.RemoteLayerTreeDrawingArea.CommitQueue"_s, WorkQueue::QOS::UserInteractive))
     , m_backingStoreFlusher(BackingStoreFlusher::create(*WebProcess::singleton().parentProcessConnection()))
     , m_scheduleRenderingTimer(*this, &RemoteLayerTreeDrawingArea::scheduleRenderingUpdateTimerFired)
     , m_preferredFramesPerSecond(DefaultPreferredFramesPerSecond)
 {
+    lazyInitialize(m_postRenderingUpdateRunLoopObserver, makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [this] {
+        this->postRenderingUpdateRunLoopCallback();
+    }));
+
     if (auto viewExposedRect = parameters.viewExposedRect)
         setViewExposedRect(viewExposedRect);
 }
@@ -476,6 +476,12 @@ void RemoteLayerTreeDrawingArea::updateRendering()
 
     if (!m_postRenderingUpdateRunLoopObserver->isScheduled())
         m_postRenderingUpdateRunLoopObserver->schedule();
+}
+
+void RemoteLayerTreeDrawingArea::postRenderingUpdateRunLoopCallback()
+{
+    didCompleteRenderingFrame();
+    m_postRenderingUpdateRunLoopObserver->invalidate();
 }
 
 void RemoteLayerTreeDrawingArea::didCompleteRenderingUpdateDisplayFlush(bool flushSucceeded)

@@ -547,25 +547,25 @@ void WebExtensionContextProxy::dispatchWindowsEvent(WebExtensionEventListenerTyp
     auto filter = windowParameters ? toWindowTypeFilter(windowParameters.value().type.value()) : allWebExtensionWindowTypeFilters();
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {
-        auto& windowsObject = namespaceObject.windows();
+        Ref windowsObject = namespaceObject.windows();
 
         switch (type) {
         case WebExtensionEventListenerType::WindowsOnCreated:
             // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/windows/onCreated
             ASSERT(windowParameters);
-            windowsObject.onCreated().invokeListenersWithArgument(toWebAPI(windowParameters), filter);
+            protect(windowsObject->onCreated())->invokeListenersWithArgument(toWebAPI(windowParameters), filter);
             break;
 
         case WebExtensionEventListenerType::WindowsOnFocusChanged:
             // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/windows/onFocusChanged
             ASSERT(!windowParameters || windowParameters.value().identifier);
-            windowsObject.onFocusChanged().invokeListenersWithArgument(@(toWebAPI(windowParameters ? windowParameters.value().identifier.value() : WebExtensionWindowConstants::NoneIdentifier)), filter);
+            protect(windowsObject->onFocusChanged())->invokeListenersWithArgument(@(toWebAPI(windowParameters ? windowParameters.value().identifier.value() : WebExtensionWindowConstants::NoneIdentifier)), filter);
             break;
 
         case WebExtensionEventListenerType::WindowsOnRemoved:
             // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/windows/onRemoved
             ASSERT(windowParameters && windowParameters.value().identifier);
-            windowsObject.onRemoved().invokeListenersWithArgument(@(toWebAPI(windowParameters.value().identifier.value())), filter);
+            protect(windowsObject->onRemoved())->invokeListenersWithArgument(@(toWebAPI(windowParameters.value().identifier.value())), filter);
             break;
 
         default:

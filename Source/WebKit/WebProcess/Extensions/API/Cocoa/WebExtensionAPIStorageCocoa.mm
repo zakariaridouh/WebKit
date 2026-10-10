@@ -119,8 +119,8 @@ void WebExtensionContextProxy::dispatchStorageChangedEvent(const Vector<String>&
     RetainPtr areaName = toAPIString(dataType).createNSString();
 
     enumerateFramesAndNamespaceObjects([&](WebFrame&, auto& namespaceObject) {
-        namespaceObject.storage().onChanged().invokeListenersWithArgument(changes, areaName.get());
-        namespaceObject.storage().storageAreaForType(dataType).onChanged().invokeListenersWithArgument(changes, areaName.get());
+        protect(protect(namespaceObject.storage())->onChanged())->invokeListenersWithArgument(changes, areaName.get());
+        protect(protect(protect(namespaceObject.storage())->storageAreaForType(dataType))->onChanged())->invokeListenersWithArgument(changes, areaName.get());
     }, toDOMWrapperWorld(contentWorldType));
 }
 

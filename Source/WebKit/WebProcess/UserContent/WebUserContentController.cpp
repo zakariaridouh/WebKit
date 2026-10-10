@@ -183,7 +183,7 @@ void WebUserContentController::addContentWorldIfNecessary(const ContentWorldData
                 continue;
             if (!localFrame->hasUserContentProvider(*this))
                 continue;
-            localFrame->loader().client().dispatchGlobalObjectAvailable(scriptWorld->coreWorld());
+            localFrame->loader().client().dispatchGlobalObjectAvailable(protect(scriptWorld->coreWorld()));
         }
     });
 }
@@ -516,7 +516,7 @@ void WebUserContentController::addUserScriptInternal(InjectedBundleScriptWorld& 
         Page::forEachPage([&] (auto& page) {
             if (userScript.injectedFrames() == UserContentInjectedFrames::InjectInTopFrameOnly) {
                 if (RefPtr localMainFrame = page.localMainFrame(); localMainFrame && localMainFrame->hasUserContentProvider(*this))
-                    localMainFrame->injectUserScriptImmediately(world.coreWorld(), userScript);
+                    localMainFrame->injectUserScriptImmediately(protect(world.coreWorld()), userScript);
                 return;
             }
             Ref mainFrame { page.mainFrame() };

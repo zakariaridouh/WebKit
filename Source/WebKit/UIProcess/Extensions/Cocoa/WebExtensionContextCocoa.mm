@@ -656,7 +656,7 @@ void WebExtensionContext::permissionsDidChange(PermissionNotification notificati
             bool granted = hasPermission(WebExtensionPermission::clipboardWrite());
 
             enumerateExtensionPages([&](auto& page, bool&) {
-                page.preferences().setJavaScriptCanAccessClipboard(granted);
+                protect(page.preferences())->setJavaScriptCanAccessClipboard(granted);
             });
         }
 
@@ -1290,11 +1290,12 @@ WebExtensionContext::WindowVector WebExtensionContext::openWindows(IgnoreExtensi
 WebExtensionContext::TabVector WebExtensionContext::openTabs(IgnoreExtensionAccess ignoreExtensionAccess) const
 {
     return WTF::compactMap(m_tabMap, [&](auto& entry) -> std::optional<Ref<WebExtensionTab>> {
-        if (!entry.value->isOpen())
+        Ref tab = entry.value;
+        if (!tab->isOpen())
             return std::nullopt;
-        if (ignoreExtensionAccess == IgnoreExtensionAccess::No && !entry.value->extensionHasAccess())
+        if (ignoreExtensionAccess == IgnoreExtensionAccess::No && !tab->extensionHasAccess())
             return std::nullopt;
-        return entry.value;
+        return tab;
     });
 }
 

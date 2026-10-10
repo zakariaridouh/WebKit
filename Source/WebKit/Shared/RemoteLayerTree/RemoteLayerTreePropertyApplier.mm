@@ -692,7 +692,8 @@ void RemoteLayerTreePropertyApplier::applyHierarchyUpdates(RemoteLayerTreeNode& 
 #endif
 
     [layer setSublayers:createNSArray(properties.children, [&] (auto& child) -> CALayer * {
-        auto* childNode = relatedLayers.get(child);
+        // FIXME: Static analysis false positive. This context is NODELETE.
+        SUPPRESS_UNRETAINED_LOCAL auto* childNode = relatedLayers.get(child);
         ASSERT(childNode);
         if (!childNode)
             return nil;

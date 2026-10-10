@@ -167,7 +167,7 @@ UserContentControllerParameters WebUserContentControllerProxy::parametersForProc
     }
 
     auto messageHandlers = WTF::map(m_scriptMessageHandlers, [&](auto entry) {
-        return WebScriptMessageHandlerData { entry.value->identifier(), entry.value->world().worldDataForProcess(process), entry.value->name() };
+        return WebScriptMessageHandlerData { entry.value->identifier(), protect(entry.value->world())->worldDataForProcess(process), entry.value->name() };
     });
 
     return {

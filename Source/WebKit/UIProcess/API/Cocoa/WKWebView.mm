@@ -6822,8 +6822,8 @@ static inline OptionSet<WebKit::FindOptions> NODELETE toFindOptions(_WKFindOptio
 {
     THROW_IF_SUSPENDED;
 #if ENABLE(DATA_DETECTION)
-    _page->removeDataDetectedLinks([completion = makeBlockPtr(completion), page = WeakPtr { _page.get() }] (auto&& result) {
-        if (page)
+    _page->removeDataDetectedLinks([completion = makeBlockPtr(completion), weakPage = WeakPtr { _page.get() }] (auto&& result) {
+        if (RefPtr page = weakPage.get())
             page->setDataDetectionResult(WTF::move(result));
         if (completion)
             completion();

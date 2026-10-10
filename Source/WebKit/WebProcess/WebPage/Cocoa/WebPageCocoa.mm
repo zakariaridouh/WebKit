@@ -4112,7 +4112,7 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
         }();
 
         auto setCorePageScaleFactor = [this, protectedThis = Ref { *this }](float scale, const auto& origin, bool inStableState) {
-            m_page->setPageScaleFactor(scale, origin, inStableState);
+            protect(m_page)->setPageScaleFactor(scale, origin, inStableState);
 #if ENABLE(PDF_PLUGIN)
             if (RefPtr pluginView = mainFramePlugIn())
                 pluginView->mainFramePageScaleFactorDidChange();

@@ -1098,7 +1098,7 @@ bool WebProcessProxy::shouldDropNearSuspendedAssertionAfterDelay() const
         // The setting come from pages but this process has no page, we thus use the default setting value.
         return defaultShouldDropNearSuspendedAssertionAfterDelay();
     }
-    return std::ranges::any_of(m_pageMap.values(), [](auto& page) { return page->preferences().shouldDropNearSuspendedAssertionAfterDelay(); });
+    return std::ranges::any_of(m_pageMap.values(), [](auto& page) { return protect(page->preferences())->shouldDropNearSuspendedAssertionAfterDelay(); });
 }
 
 void WebProcessProxy::addExistingWebPage(WebPageProxy& webPage, BeginsUsingDataStore beginsUsingDataStore)
@@ -1860,7 +1860,7 @@ void WebProcessProxy::processDidTerminateOrFailedToLaunch(ProcessTerminationReas
 
     // There is a nested transaction in WebPageProxy::resetStateAfterProcessExited() that we don't want to commit before the client call below (dispatchProcessDidTerminate).
     auto pageLoadStateTransactions = WTF::map(pages, [&](auto& page) {
-        auto transaction = page->pageLoadState().transaction();
+        auto transaction = protect(page->pageLoadState())->transaction();
         page->resetStateAfterProcessTermination(reason);
         return transaction;
     });

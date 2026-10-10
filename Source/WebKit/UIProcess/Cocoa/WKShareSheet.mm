@@ -267,7 +267,7 @@ static void appendFilesAsShareableURLs(RetainPtr<NSMutableArray>&& shareDataArra
         RetainPtr<NSData> fileData;
     };
     auto fileWriteTasks = files.map([](auto& file) {
-        return FileWriteTask { file.fileName.isolatedCopy(), file.fileData->createNSData() };
+        return FileWriteTask { file.fileName.isolatedCopy(), protect(file.fileData)->createNSData() };
     });
 
     auto queue = WorkQueue::create("com.apple.WebKit.WKShareSheet.ShareableFileWriter"_s);
