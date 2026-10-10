@@ -141,8 +141,15 @@ private:
     };
 
     struct BaselineSharingGroup {
+        // A member of the group, with what aligning it needs.
+        struct Item {
+            size_t index { 0 };
+            ItemPosition alignment { };
+            LayoutUnit marginBoxAscent;
+            bool shouldAdjustTowardsCrossAxisEnd { false };
+        };
         LayoutUnit maxAscent;
-        Vector<size_t> items;
+        Vector<Item> items;
     };
     // A line almost always has a single baseline-sharing group (at most 3 can exist), so keep one inline.
     using BaselineSharingGroups = Vector<BaselineSharingGroup, 1>;

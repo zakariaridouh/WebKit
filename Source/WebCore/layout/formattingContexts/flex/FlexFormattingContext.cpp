@@ -553,10 +553,12 @@ void FlexFormattingContext::handleCrossAxisAlignmentForFlexItems(const FlexLines
 
             auto safety = flexFormattingUtils().overflowAlignmentForFlexItem(flexLayoutItem);
             auto position = flexFormattingUtils().alignmentForFlexItem(flexLayoutItem);
-            if (integrationUtils().updateAutoMarginsInCrossAxis(flexLayoutItem, flexItemsCrossOffsetList[flexItemIndex], std::max(0_lu, flexFormattingUtils().availableAlignmentSpaceForFlexItem(lineCrossAxisExtent, flexLayoutItem, flexItemsCrossSizeList[flexItemIndex]))) || position == ItemPosition::Baseline || position == ItemPosition::LastBaseline)
+            // updateAutoMarginsInCrossAxis only changes the item's margins when it returns true, so this space still
+            // holds for the self-alignment below.
+            auto availableSpace = flexFormattingUtils().availableAlignmentSpaceForFlexItem(lineCrossAxisExtent, flexLayoutItem, flexItemsCrossSizeList[flexItemIndex]);
+            if (integrationUtils().updateAutoMarginsInCrossAxis(flexLayoutItem, flexItemsCrossOffsetList[flexItemIndex], std::max(0_lu, availableSpace)) || position == ItemPosition::Baseline || position == ItemPosition::LastBaseline)
                 continue;
 
-            LayoutUnit availableSpace = flexFormattingUtils().availableAlignmentSpaceForFlexItem(lineCrossAxisExtent, flexLayoutItem, flexItemsCrossSizeList[flexItemIndex]);
             if (availableSpace < 0 && safety == OverflowAlignment::Safe)
                 position = ItemPosition::FlexStart; // See Start == FlexStart assumption in flexFormattingUtils().alignmentForFlexItem().
             LayoutUnit offset = FlexFormattingUtils::alignmentOffset(availableSpace, position, { }, { }, m_constraints.isWrapReverse);
@@ -573,12 +575,12 @@ void FlexFormattingContext::performBaselineAlignment(WTF::Range<size_t> lineRang
     // 9.6. (#14) Align each baseline-aligned item (align-self: baseline / last baseline) so its baseline sits on
     // its baseline-sharing group's shared baseline within the flex line.
     bool containerHasWrapReverse = m_constraints.isWrapReverse;
+    auto alignmentContextAxis = m_constraints.style->isRowFlexDirection() ? LogicalBoxAxis::Inline : LogicalBoxAxis::Block;
 
     auto flexItemWritingModeForBaselineAlignment = [&](const FlexLayoutItem& flexLayoutItem) {
         if (flexLayoutItem.mainAxisIsInlineAxis)
             return flexLayoutItem.style().writingMode();
 
-        auto alignmentContextAxis = m_constraints.style->isRowFlexDirection() ? LogicalBoxAxis::Inline : LogicalBoxAxis::Block;
         return BaselineAlignment::usedWritingModeForBaselineAlignment(alignmentContextAxis, m_constraints.style->writingMode(), flexLayoutItem.style().writingMode());
     };
 
@@ -609,39 +611,35 @@ void FlexFormattingContext::performBaselineAlignment(WTF::Range<size_t> lineRang
         auto alignment = flexFormattingUtils().alignmentForFlexItem(flexLayoutItem);
         if ((alignment != ItemPosition::Baseline && alignment != ItemPosition::LastBaseline) || flexFormattingUtils().hasAutoMarginsInCrossAxis(flexLayoutItem))
             continue;
-        if (!baselineAlignmentState) {
-            auto alignmentContextAxis = m_constraints.style->isRowFlexDirection() ? LogicalBoxAxis::Inline : LogicalBoxAxis::Block;
+        if (!baselineAlignmentState)
             baselineAlignmentState = BaselineAlignmentState { alignmentContextAxis, m_constraints.style->writingMode() };
-        }
         auto baselineSharingGroupIndex = baselineAlignmentState->sharedGroupIndex(flexLayoutItem.style().writingMode(), alignment);
         if (baselineSharingGroupIndex == baselineSharingGroups.size())
             baselineSharingGroups.append({ });
         auto& group = baselineSharingGroups[baselineSharingGroupIndex];
-        group.maxAscent = std::max(group.maxAscent, flexFormattingUtils().marginBoxAscentForFlexItem(flexLayoutItem, flexItemsCrossSizeList[itemIndex]));
-        group.items.append(itemIndex);
+        auto marginBoxAscent = flexFormattingUtils().marginBoxAscentForFlexItem(flexLayoutItem, flexItemsCrossSizeList[itemIndex]);
+        group.maxAscent = std::max(group.maxAscent, marginBoxAscent);
+        group.items.append({ itemIndex, alignment, marginBoxAscent, shouldAdjustItemTowardsCrossAxisEnd(flexItemWritingModeForBaselineAlignment(flexLayoutItem).blockDirection(), alignment) });
     }
 
     for (auto& baselineSharingGroup : baselineSharingGroups) {
         LayoutUnit minMarginAfterBaseline = LayoutUnit::max();
-        for (auto itemIndex : baselineSharingGroup.items) {
-            auto& flexLayoutItem = flexItems[itemIndex];
-            auto position = flexFormattingUtils().alignmentForFlexItem(flexLayoutItem);
-            ASSERT(position == ItemPosition::Baseline || position == ItemPosition::LastBaseline);
-            auto offset = FlexFormattingUtils::alignmentOffset(flexFormattingUtils().availableAlignmentSpaceForFlexItem(lineCrossAxisExtent, flexLayoutItem, flexItemsCrossSizeList[itemIndex]), position, flexFormattingUtils().marginBoxAscentForFlexItem(flexLayoutItem, flexItemsCrossSizeList[itemIndex]), baselineSharingGroup.maxAscent, containerHasWrapReverse);
-            flexItemsCrossOffsetList[itemIndex] += offset;
+        for (auto& item : baselineSharingGroup.items) {
+            auto availableSpace = flexFormattingUtils().availableAlignmentSpaceForFlexItem(lineCrossAxisExtent, flexItems[item.index], flexItemsCrossSizeList[item.index]);
+            auto offset = FlexFormattingUtils::alignmentOffset(availableSpace, item.alignment, item.marginBoxAscent, baselineSharingGroup.maxAscent, containerHasWrapReverse);
+            flexItemsCrossOffsetList[item.index] += offset;
 
-            if (shouldAdjustItemTowardsCrossAxisEnd(flexItemWritingModeForBaselineAlignment(flexLayoutItem).blockDirection(), position))
-                minMarginAfterBaseline = std::min(minMarginAfterBaseline, flexFormattingUtils().availableAlignmentSpaceForFlexItem(lineCrossAxisExtent, flexLayoutItem, flexItemsCrossSizeList[itemIndex]) - offset);
+            if (item.shouldAdjustTowardsCrossAxisEnd)
+                minMarginAfterBaseline = std::min(minMarginAfterBaseline, availableSpace - offset);
         }
         // css-align-3 9.3 part 3:
         // Position the aligned baseline-sharing group within the alignment container according to its
         // fallback alignment. The fallback alignment of a baseline-sharing group is the fallback alignment
         // of its items as resolved to physical directions.
         if (minMarginAfterBaseline) {
-            for (auto itemIndex : baselineSharingGroup.items) {
-                auto& flexLayoutItem = flexItems[itemIndex];
-                if (shouldAdjustItemTowardsCrossAxisEnd(flexItemWritingModeForBaselineAlignment(flexLayoutItem).blockDirection(), flexFormattingUtils().alignmentForFlexItem(flexLayoutItem)) && !flexFormattingUtils().hasAutoMarginsInCrossAxis(flexLayoutItem))
-                    flexItemsCrossOffsetList[itemIndex] += minMarginAfterBaseline;
+            for (auto& item : baselineSharingGroup.items) {
+                if (item.shouldAdjustTowardsCrossAxisEnd)
+                    flexItemsCrossOffsetList[item.index] += minMarginAfterBaseline;
             }
         }
     }
