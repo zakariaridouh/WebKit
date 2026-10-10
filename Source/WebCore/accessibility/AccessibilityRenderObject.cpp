@@ -2537,11 +2537,8 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
     if (m_renderer->isRenderTextControlMultiLine())
         return AccessibilityRole::TextArea;
     // Element-based check for HTMLSelectElement with any renderer.
-    if (RefPtr selectElement = dynamicDowncast<HTMLSelectElement>(node)) {
-        if (selectElement->usesMenuList())
-            return selectElement->multiple() ? AccessibilityRole::ListBox : AccessibilityRole::PopUpButton;
-        return AccessibilityRole::ListBox;
-    }
+    if (RefPtr selectElement = dynamicDowncast<HTMLSelectElement>(node))
+        return selectElement->isDropdownBox() ? AccessibilityRole::PopUpButton : AccessibilityRole::ListBox;
 
     // Options inside base-appearance selects are menu items.
     if (RefPtr option = dynamicDowncast<HTMLOptionElement>(node)) {
