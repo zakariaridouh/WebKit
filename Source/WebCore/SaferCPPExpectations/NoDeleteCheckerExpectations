@@ -14,7 +14,7 @@
 [ macOS ] css/parser/CSSPropertyParserConsumer+Anchor.cpp
 [ macOS ] css/parser/CSSPropertyParserConsumer+Display.cpp
 [ macOS ] css/values/CSSValueTypes.cpp
-[ iOS ] dom/Document.cpp
+dom/Document.cpp
 [ macOS ] page/Page.cpp
 [ macOS ] platform/graphics/FontCascadeFonts.cpp
 [ macOS ] platform/graphics/ShadowBlur.cpp

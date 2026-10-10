@@ -89,6 +89,7 @@ style/computed/StyleComputedStyleProperties+SettersCustomInlines.h
 [ macOS ] style/computed/data/StyleCustomPropertyData.cpp
 [ macOS ] style/values/anchor-position/StylePositionTryFallback.cpp
 [ macOS ] style/values/backgrounds/StyleFillLayers.h
+[ macOS ] style/values/images/StyleImageWrapper.cpp
 [ iOS ] style/values/primitives/StyleLengthResolution.cpp
 [ macOS ] style/values/scroll-animations/StyleScrollFunction.cpp
 [ macOS ] style/values/will-change/StyleWillChange.cpp

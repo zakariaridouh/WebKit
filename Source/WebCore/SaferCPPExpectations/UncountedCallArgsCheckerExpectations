@@ -183,7 +183,6 @@ dom/ViewTransition.cpp
 [ macOS ] inspector/agents/frame/FrameDOMAgent.cpp
 [ macOS ] inspector/agents/frame/FrameDebuggerAgent.cpp
 [ macOS ] inspector/agents/frame/FrameRuntimeAgent.cpp
-[ macOS ] inspector/agents/page/PageCanvasAgent.cpp
 [ macOS ] inspector/agents/page/PageDebuggerAgent.cpp
 [ macOS ] inspector/agents/page/PageRuntimeAgent.cpp
 [ macOS ] layout/formattingContexts/inline/text/TextUtil.cpp

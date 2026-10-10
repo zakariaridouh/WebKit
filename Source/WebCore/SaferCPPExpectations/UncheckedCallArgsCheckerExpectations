@@ -59,7 +59,6 @@ css/SelectorCheckerTestFunctions.h
 [ macOS ] css/parser/SizesAttributeParser.cpp
 [ macOS ] css/query/ContainerQueryFeatures.cpp
 [ macOS ] css/query/MediaQueryEvaluator.cpp
-[ macOS ] css/query/MediaQueryFeatures.cpp
 [ macOS ] css/typedom/ComputedStylePropertyMapReadOnly.cpp
 [ macOS ] css/typedom/InlineStylePropertyMap.cpp
 [ macOS ] dom/ActiveDOMObject.cpp

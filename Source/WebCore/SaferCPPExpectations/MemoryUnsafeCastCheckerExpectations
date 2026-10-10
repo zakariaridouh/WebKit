@@ -176,7 +176,6 @@
 [ macOS ] rendering/RenderBox.cpp
 [ macOS ] rendering/RenderBoxModelObject.cpp
 [ macOS ] rendering/RenderChildIterator.h
-[ macOS ] rendering/RenderCounter.cpp
 [ macOS ] rendering/RenderDescendantIterator.h
 [ macOS ] rendering/RenderElement.cpp
 [ macOS ] rendering/RenderFragmentedFlow.cpp
