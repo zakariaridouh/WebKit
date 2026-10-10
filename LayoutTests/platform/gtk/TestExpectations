@@ -1313,3 +1313,5 @@ webkit.org/b/326556 inspector/debugger/breakpoint-action-log.html [ Failure ]
 webkit.org/b/326559 [ Release ] inspector/dom-debugger/dom-breakpoint-subtree-modified-add.html [ Crash Pass ]
 webkit.org/b/326560 [ Debug ] imported/w3c/web-platform-tests/uievents/textInput/delete-selection.html [ Crash Pass ]
 webkit.org/b/326563 compositing/backface-visibility/backface-visibility-3d.html [ Pass Timeout ]
+
+webkit.org/b/325943 webgl/default-framebuffer-resize-applied-at-use.html [ Failure ]
