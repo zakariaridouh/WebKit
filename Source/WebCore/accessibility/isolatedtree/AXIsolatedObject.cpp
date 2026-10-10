@@ -37,6 +37,7 @@
 #include "AXTextRun.h"
 #include "AXUtilities.h"
 #include "AccessibilityNodeObject.h"
+#include "AccessibilityObjectInlines.h"
 #include "DateComponents.h"
 #include "Element.h"
 #include "HTMLNames.h"
@@ -469,13 +470,13 @@ void AXIsolatedObject::setSelectedChildren(const AccessibilityChildrenVector& se
     AX_ASSERT(selectedChildren.isEmpty() || selectedChildren[0]->isAXIsolatedObjectInstance());
 
     auto childrenIDs = axIDs(selectedChildren);
-    performFunctionOnMainThread([selectedChildrenIDs = WTF::move(childrenIDs), protectedThis = Ref { *this }] (auto* object) {
+    performFunctionOnMainThread([selectedChildrenIDs = WTF::move(childrenIDs)](auto* object) {
         if (selectedChildrenIDs.isEmpty()) {
             object->setSelectedChildren({ });
             return;
         }
 
-        CheckedPtr axObjectCache = protectedThis->axObjectCache();
+        CheckedPtr axObjectCache = object->axObjectCache();
         if (!axObjectCache)
             return;
 
@@ -686,13 +687,13 @@ void AXIsolatedObject::setSelected(bool value)
 void AXIsolatedObject::setSelectedRows(AccessibilityChildrenVector&& selectedRows)
 {
     auto rowIDs = axIDs(selectedRows);
-    performFunctionOnMainThread([selectedRowIDs = WTF::move(rowIDs), protectedThis = Ref { *this }] (auto* object) {
+    performFunctionOnMainThread([selectedRowIDs = WTF::move(rowIDs)](auto* object) {
         if (selectedRowIDs.isEmpty()) {
             object->setSelectedRows({ });
             return;
         }
 
-        CheckedPtr axObjectCache = protectedThis->axObjectCache();
+        CheckedPtr axObjectCache = object->axObjectCache();
         if (!axObjectCache)
             return;
 
