@@ -747,7 +747,7 @@ static VisiblePosition startPositionForLine(const VisiblePosition& c, LineEndpoi
     auto lineBox = RenderedPosition(c).lineBox();
     if (!lineBox) {
         // There are VisiblePositions at offset 0 in blocks without
-        // RootInlineBoxes, like empty editable blocks and bordered blocks.
+        // line boxes, like empty editable blocks and bordered blocks.
         Position p = c.deepEquivalent();
         if (p.deprecatedNode()->renderer() && p.deprecatedNode()->renderer()->isRenderBlock() && !p.deprecatedEditingOffset())
             return c;
@@ -821,7 +821,7 @@ static VisiblePosition endPositionForLine(const VisiblePosition& c, LineEndpoint
     auto lineBox = RenderedPosition(c).lineBox();
     if (!lineBox) {
         // There are VisiblePositions at offset 0 in blocks without
-        // RootInlineBoxes, like empty editable blocks and bordered blocks.
+        // line boxes, like empty editable blocks and bordered blocks.
         Position p = c.deepEquivalent();
         if (p.deprecatedNode()->renderer() && p.deprecatedNode()->renderer()->isRenderBlock() && !p.deprecatedEditingOffset())
             return c;

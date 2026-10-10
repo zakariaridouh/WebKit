@@ -26,7 +26,6 @@
 #include "RenderSVGBlock.h"
 #include "SVGBoundingBoxComputation.h"
 #include "SVGPaintServerCache.h"
-#include "SVGTextChunk.h"
 #include "SVGTextLayoutAttributesBuilder.h"
 
 namespace WebCore {

@@ -41,6 +41,7 @@
 #include "InlineFormattingContext.h"
 #include "InlineInvalidation.h"
 #include "InlineItemsBuilder.h"
+#include "InlineIteratorSVGTextBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutIntegrationCoverage.h"
 #include "LayoutIntegrationInlineContentBuilder.h"

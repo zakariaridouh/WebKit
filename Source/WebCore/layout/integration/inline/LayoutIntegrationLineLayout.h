@@ -32,7 +32,6 @@
 #include "InlineIteratorInlineBox.h"
 #include "LayoutIntegrationBoxGeometryUpdater.h"
 #include "LayoutIntegrationBoxTreeUpdater.h"
-#include "SVGTextChunk.h"
 #include <WebCore/FloatRect.h>
 #include <WebCore/InlineIteratorLineBox.h>
 #include <WebCore/InlineIteratorTextBox.h>

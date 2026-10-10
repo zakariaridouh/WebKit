@@ -20,14 +20,13 @@
 
 #pragma once
 
+#include "RenderSVGInlineText.h"
 #include "SVGTextChunk.h"
 #include "SVGTextFragment.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
-
-class RenderSVGInlineText;
 
 // The laid out fragments of one text box, in line order.
 struct SVGTextChunkBox {

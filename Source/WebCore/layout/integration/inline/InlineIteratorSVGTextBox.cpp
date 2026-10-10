@@ -139,11 +139,6 @@ SVGTextBoxIterator svgTextBoxFor(const LayoutIntegration::InlineContent& inlineC
     return { BoxModernPath { inlineContent, boxIndex } };
 }
 
-SVGTextBox::Key makeKey(const SVGTextBox& textBox)
-{
-    return { &textBox.renderer(), textBox.start() };
-}
-
 BoxRange<BoxIterator> boxesFor(const RenderSVGText& svgText)
 {
     if (CheckedPtr lineLayout = svgText.inlineLayout())

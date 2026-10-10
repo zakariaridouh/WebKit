@@ -20,10 +20,9 @@
 
 #pragma once
 
-#include "InlineIteratorSVGTextBox.h"
+#include "SVGTextFragment.h"
 #include <span>
 #include <wtf/CheckedPtr.h>
-#include <wtf/HashMap.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
 
@@ -32,8 +31,6 @@ namespace WebCore {
 class AffineTransform;
 class RenderSVGInlineText;
 class SVGTextContentElement;
-
-using SVGTextFragmentMap = HashMap<InlineIterator::SVGTextBox::Key, Vector<SVGTextFragment>>;
 
 // A SVGTextChunk describes a range of SVGTextFragments, see the SVG spec definition of a "text chunk".
 class SVGTextChunk {

@@ -45,8 +45,6 @@ public:
     const Vector<SVGTextFragment>& textFragments() const;
 
     const RenderSVGInlineText& renderer() const { return downcast<RenderSVGInlineText>(TextBox::renderer()); }
-
-    using Key = std::pair<const RenderSVGInlineText*, unsigned>;
 };
 
 class SVGTextBoxIterator : public TextBoxIterator {
@@ -70,8 +68,6 @@ SVGTextBoxIterator svgTextBoxFor(const LayoutIntegration::InlineContent&, size_t
 
 BoxRange<BoxIterator> boxesFor(const RenderSVGText&);
 BoxIterator lastBoxFor(const RenderSVGText&);
-
-SVGTextBox::Key makeKey(const SVGTextBox&);
 
 }
 }

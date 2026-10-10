@@ -58,7 +58,7 @@ struct SVGTextLayoutBox {
 
 class SVGTextLayoutEngine {
 public:
-    // Collects the fragments in a map keyed by (renderer, start).
+    // Keeps the fragments of each text box in engine-owned storage.
     SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>&);
     // Appends the fragments of each text box to fragmentsForBoxes[box.index]. The vector must not be resized while the engine exists.
     SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>&, Vector<Vector<SVGTextFragment>>& fragmentsForBoxes);
@@ -80,7 +80,7 @@ private:
     void NODELETE updateRelativePositionAdjustmentsIfNeeded(float dx, float dy);
 
     void recordTextFragment(const SVGTextLayoutBox&, const Vector<SVGTextMetrics>&);
-    std::span<SVGTextFragment> recordedFragments(const SVGTextLayoutBox&);
+    Vector<SVGTextFragment>& fragmentsForBox(const SVGTextLayoutBox&);
     bool parentDefinesTextLength(RenderObject*) const;
 
     float computeTextPathStartOffset(const RenderSVGTextPath&) const;
@@ -99,9 +99,9 @@ private:
 
     Vector<SVGTextChunkBox> m_lineLayoutBoxes;
 
-    // Output. Fragments go to m_fragmentsForBoxes if set, to m_fragmentMap otherwise.
+    // Output. Fragments go to m_fragmentsForBoxes if set. Otherwise each laid out box appends its own entry to m_ownedFragments.
     Vector<Vector<SVGTextFragment>>* m_fragmentsForBoxes { nullptr };
-    SVGTextFragmentMap m_fragmentMap;
+    Vector<Vector<SVGTextFragment>> m_ownedFragments;
 
     SVGTextChunkBuilder m_chunkLayoutBuilder;
     Vector<unsigned> m_lineLayoutChunkStarts;

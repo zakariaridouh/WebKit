@@ -135,26 +135,15 @@ void SVGTextLayoutEngine::recordTextFragment(const SVGTextLayoutBox& textBox, co
         }
     }
 
-    auto& fragments = [&] -> Vector<SVGTextFragment>& {
-        if (m_fragmentsForBoxes)
-            return (*m_fragmentsForBoxes)[textBox.index];
-        return m_fragmentMap.ensure({ textBox.text.ptr(), textBox.start }, [&] {
-            return Vector<SVGTextFragment> { };
-        }).iterator->value;
-    }();
-
-    fragments.append(m_currentTextFragment);
+    fragmentsForBox(textBox).append(m_currentTextFragment);
     m_currentTextFragment = SVGTextFragment();
 }
 
-std::span<SVGTextFragment> SVGTextLayoutEngine::recordedFragments(const SVGTextLayoutBox& textBox)
+Vector<SVGTextFragment>& SVGTextLayoutEngine::fragmentsForBox(const SVGTextLayoutBox& textBox)
 {
     if (m_fragmentsForBoxes)
-        return (*m_fragmentsForBoxes)[textBox.index].mutableSpan();
-    auto iterator = m_fragmentMap.find({ textBox.text.ptr(), textBox.start });
-    if (iterator == m_fragmentMap.end())
-        return { };
-    return iterator->value.mutableSpan();
+        return (*m_fragmentsForBoxes)[textBox.index];
+    return m_ownedFragments.last();
 }
 
 bool SVGTextLayoutEngine::parentDefinesTextLength(RenderObject* parent) const
@@ -270,6 +259,9 @@ void SVGTextLayoutEngine::layoutInlineTextBox(const SVGTextLayoutBox& textBox)
     ASSERT(text.parent()->element()->isSVGElement());
     ASSERT(!m_fragmentsForBoxes || (*m_fragmentsForBoxes)[textBox.index].isEmpty());
 
+    if (!m_fragmentsForBoxes)
+        m_ownedFragments.constructAndAppend();
+
     const Style::ComputedStyle& style = text.style();
 
     m_isVerticalText = style.writingMode().isVertical();
@@ -280,7 +272,7 @@ void SVGTextLayoutEngine::layoutInlineTextBox(const SVGTextLayoutBox& textBox)
         return;
 
     // Fragments of a box are final once it is laid out, so the span stays valid as long as the storage.
-    m_lineLayoutBoxes.append({ text, recordedFragments(textBox), static_cast<unsigned>(m_lineLayoutChunkStarts.size() - chunkStartCount) });
+    m_lineLayoutBoxes.append({ text, fragmentsForBox(textBox).mutableSpan(), static_cast<unsigned>(m_lineLayoutChunkStarts.size() - chunkStartCount) });
 }
 
 #if DUMP_SVG_TEXT_LAYOUT_FRAGMENTS > 0

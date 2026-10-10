@@ -48,7 +48,6 @@
 #include "RenderLineBreak.h"
 #include "RenderListOutsideMarker.h"
 #include "RenderObjectInlines.h"
-#include "RenderSVGInline.h"
 #include "RenderTable.h"
 #include "RenderTheme.h"
 #include "RenderTreeBuilder.h"
