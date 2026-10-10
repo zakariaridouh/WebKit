@@ -185,6 +185,8 @@ WI.SearchSidebarPanel = class SearchSidebarPanel extends WI.NavigationSidebarPan
 
         function forEachMatch(lineContent, callback)
         {
+            searchRegex.lastIndex = 0;
+
             var lineMatch;
             while ((searchRegex.lastIndex < lineContent.length) && (lineMatch = searchRegex.exec(lineContent))) {
                 if (lineMatch.index === searchRegex.lastIndex) {
