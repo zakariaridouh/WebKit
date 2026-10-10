@@ -678,6 +678,19 @@ public:
         m_usedVariables.resize(size);
         m_lastAddedUsedVariable = nullptr;
     }
+    void mergeIntoPreviousUsedVariables(size_t size)
+    {
+        ASSERT(size);
+        if (m_usedVariables.size() <= size)
+            return;
+        UniquedStringImplPtrSet& destinationSet = m_usedVariables[size - 1];
+        for (size_t index = size; index < m_usedVariables.size(); ++index) {
+            for (UniquedStringImpl* impl : m_usedVariables[index])
+                destinationSet.add(impl);
+        }
+        m_usedVariables.shrink(size);
+        m_lastAddedUsedVariable = nullptr;
+    }
 
     void setNeedsFullActivation() { m_needsFullActivation = true; }
     bool needsFullActivation() const { return m_needsFullActivation; }
