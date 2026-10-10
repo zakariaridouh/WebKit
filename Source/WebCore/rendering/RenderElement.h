@@ -39,6 +39,7 @@ class BlendingKeyframes;
 class GraphicsLayerAnimation;
 class ReferencedSVGResources;
 class RenderBlock;
+class RenderHTMLCanvas;
 class RenderTreeBuilder;
 class SVGElement;
 class UsedStyle;
@@ -110,10 +111,12 @@ public:
     const Layout::ElementBox* NODELETE layoutBox() const;
 
     // Note that even if these 2 "canContain" functions return true for a particular renderer, it does not necessarily mean the renderer is the containing block (see containingBlockForAbsolute(Fixed)Position).
+    inline bool isCanvasDrawable() const; // Defined in RenderElementStyleInlines.h.
     inline bool canContainFixedPositionObjects(const Style::ComputedStyle* styleToUse = nullptr) const; // Defined in RenderElementStyleInlines.h.
     inline bool canContainAbsolutelyPositionedObjects(const Style::ComputedStyle* styleToUse = nullptr) const; // Defined in RenderElementStyleInlines.h.
     bool canEstablishContainingBlockWithTransform() const;
     RenderBlock* nearestNonAnonymousContainingBlockIncludingSelf() const;
+    RenderHTMLCanvas* drawableCanvas() const;
 
     inline bool shouldApplyLayoutContainment() const; // Defined in RenderElementStyleInlines.h
     inline bool shouldApplySizeContainment() const; // Defined in RenderElementStyleInlines.h

@@ -970,6 +970,18 @@ bool Element::isFocusable() const
     return hasFocusableStyle();
 }
 
+bool Element::isCanvasDrawable() const
+{
+    if (!isDrawable())
+        return false;
+
+    RefPtr canvasElement = ancestorsOfType<HTMLCanvasElement>(*this).first();
+    if (!canvasElement)
+        return false;
+
+    return canvasElement->hasDrawableContent();
+}
+
 bool Element::isUserActionElementInActiveChain() const
 {
     ASSERT(isUserActionElement());

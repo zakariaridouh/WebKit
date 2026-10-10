@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderObjectInlines.h"
@@ -83,12 +84,12 @@ bool RenderHTMLCanvas::requiresLayer() const
 
 bool RenderHTMLCanvas::canHaveChildren() const
 {
-    return settings().htmlInCanvasEnabled() && (protect(canvasElement())->canvasContent() == CanvasContent::Drawable || firstChild());
+    return hasDrawableContent() || firstChild();
 }
 
 bool RenderHTMLCanvas::hasDrawableContent() const
 {
-    return settings().htmlInCanvasEnabled() && protect(canvasElement())->canvasContent() == CanvasContent::Drawable;
+    return protect(canvasElement())->hasDrawableContent();
 }
 
 void RenderHTMLCanvas::layout()
@@ -99,7 +100,7 @@ void RenderHTMLCanvas::layout()
     if (CheckedPtr innerRenderer = this->innerRenderer())
         innerRenderer->layoutIfNeeded();
 
-    m_drawableRendererSnapshotRecorderMap.clear();
+    m_canvasDrawableRecorderMap.clear();
 }
 
 void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -140,34 +141,34 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
     canvasEl->setIsSnapshotting(paintInfo.paintBehavior.contains(PaintBehavior::Snapshotting));
     canvasEl->paint(context, paintRect);
     canvasEl->setIsSnapshotting(false);
-
-    CheckedPtr innerRenderer = this->innerRenderer();
-    if (!innerRenderer)
-        return;
-
-    for (CheckedRef child : childrenOfType<RenderElement>(*innerRenderer)) {
-        PaintInfo childPaintInfo(paintInfo);
-        auto& context = paintInfo.context();
-
-        auto addResult = m_drawableRendererSnapshotRecorderMap.ensure(child.get(), [&] {
-            auto initialState = context.state().clone(GraphicsContextState::Purpose::Initial);
-            auto boundingRect = child->absoluteBoundingBoxRect();
-            auto initialTransform = context.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale);
-            Ref snapshotRecorder = DisplayList::RecorderImpl::create(initialState, boundingRect, initialTransform, context.colorSpace());
-            snapshotRecorder->translate(-boundingRect.x(), -boundingRect.y());
-            return snapshotRecorder;
-        });
-
-        Ref snapshotRecorder = addResult.iterator->value;
-        childPaintInfo.setContext(snapshotRecorder);
-        child->paint(childPaintInfo, paintOffset);
-    }
 }
 
-std::optional<CanvasElementSnapshot> RenderHTMLCanvas::drawableRendererSnapshot(RenderElement& drawableRenderer) const
+DisplayList::RecorderImpl* RenderHTMLCanvas::canvasDrawableRecorder(RenderElement& element, GraphicsContext& context) const
 {
-    if (RefPtr snapshotRecorder = m_drawableRendererSnapshotRecorderMap.get(drawableRenderer))
+    if (!element.isCanvasDrawable())
+        return nullptr;
+
+    auto addResult = m_canvasDrawableRecorderMap.ensure(element, [&] {
+        auto initialState = context.state().clone(GraphicsContextState::Purpose::Initial);
+        auto absoluteBoundingRect = element.absoluteBoundingBoxRect();
+        auto initialCTM = context.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale);
+        auto boundingRect = initialCTM.inverse().value_or(AffineTransform()).mapRect(absoluteBoundingRect);
+        Ref snapshotRecorder = DisplayList::RecorderImpl::create(initialState, boundingRect, initialCTM, context.colorSpace());
+        snapshotRecorder->translate(-boundingRect.x(), -boundingRect.y());
+        return snapshotRecorder;
+    });
+
+    return addResult.iterator->value.ptr();
+}
+
+std::optional<CanvasElementSnapshot> RenderHTMLCanvas::canvasDrawableSnapshot(RenderElement& element) const
+{
+    if (!element.isCanvasDrawable())
+        return std::nullopt;
+
+    if (RefPtr snapshotRecorder = m_canvasDrawableRecorderMap.get(element))
         return { { snapshotRecorder->copyDisplayList(), snapshotRecorder->initialClip().size() } };
+
     return std::nullopt;
 }
 

@@ -605,6 +605,7 @@ void Adjuster::adjust(Style::ComputedStyle& style) const
     // object wedged in between them. Auto z-index also becomes 0 for objects that specify transforms/masks/reflections.
     if (hasAutoSpecifiedZIndex) {
         if ((m_element && m_document->documentElement() == m_element.get())
+            || (m_element && m_element->isCanvasDrawable())
             || hasTransformRelatedProperty(style, m_element.get(), m_parentStyle)
             || shouldTreatAutoZIndexAsZero(style)
             || isInTopLayerOrBackdrop(style, m_element.get()))

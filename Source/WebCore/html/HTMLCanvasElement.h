@@ -83,12 +83,13 @@ public:
 
     const AtomString& canvasContentForBindings() const;
     CanvasContent canvasContent() const;
+    bool hasDrawableContent() const;
 
     void requestPaint();
     void dispatchPaintEvent();
 
     ExceptionOr<Ref<CanvasElementImage>> captureElementImage(Element&);
-    std::optional<CanvasElementSnapshot> drawableElementSnapshot(Element&) const;
+    std::optional<CanvasElementSnapshot> canvasDrawableSnapshot(Element&) const;
 
     ExceptionOr<void> updateElementGeometry(const CanvasElementImageSource&, std::optional<UpdateElementGeometryOptions>);
     ExceptionOr<void> clearElementGeometry(const CanvasElementImageSource&);

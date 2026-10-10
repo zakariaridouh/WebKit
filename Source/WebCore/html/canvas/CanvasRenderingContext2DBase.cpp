@@ -2134,7 +2134,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawElementImage(CanvasElementIm
     return WTF::switchOn(source,
         [&](Ref<Element>& element) -> ExceptionOr<void> {
             if (RefPtr canvasElement = dynamicDowncast<HTMLCanvasElement>(canvasBase())) {
-                if (auto snapshot = canvasElement->drawableElementSnapshot(element))
+                if (auto snapshot = canvasElement->canvasDrawableSnapshot(element))
                     return drawSnapshot(*snapshot, srcRect, dstRect, options);
             }
             return Exception { ExceptionCode::InvalidStateError, "CanvasRenderingContext2DBase failed to get a snapshot for a drawableElement."_s };

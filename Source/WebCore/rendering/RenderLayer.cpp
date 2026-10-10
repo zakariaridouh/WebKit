@@ -57,6 +57,7 @@
 #include "ClipPathPaintScope.h"
 #include "ContainerNodeInlines.h"
 #include "DebugPageOverlays.h"
+#include "DisplayListRecorderImpl.h"
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
@@ -3364,6 +3365,18 @@ static inline bool NODELETE paintForFixedRootBackground(const RenderLayer* layer
     return layer->renderer().isDocumentElementRenderer() && (paintFlags & RenderLayer::PaintLayerFlag::PaintingRootBackgroundOnly);
 }
 
+static inline DisplayList::RecorderImpl* canvasDrawableRecorder(const RenderLayer& layer, GraphicsContext& context)
+{
+    if (!layer.renderer().isCanvasDrawable())
+        return nullptr;
+
+    CheckedPtr canvasRenderer = layer.renderer().drawableCanvas();
+    if (!canvasRenderer)
+        return nullptr;
+
+    return canvasRenderer->canvasDrawableRecorder(layer.renderer(), context);
+}
+
 void RenderLayer::paintLayer(GraphicsContext& context, const LayerPaintingInfo& paintingInfo, OptionSet<PaintLayerFlag> paintFlags)
 {
     auto shouldContinuePaint = [&] () {
@@ -3394,6 +3407,11 @@ void RenderLayer::paintLayer(GraphicsContext& context, const LayerPaintingInfo& 
         // Don't paint out-of-view viewport constrained layers (when doing prepainting) because they will never be visible
         // unless their position or viewport size is changed.
         ASSERT(renderer().isFixedPositioned());
+        return;
+    }
+
+    if (auto* recorder = canvasDrawableRecorder(*this, context)) {
+        paintLayerWithEffects(*recorder, paintingInfo, paintFlags);
         return;
     }
 

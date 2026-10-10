@@ -232,6 +232,11 @@ CanvasContent HTMLCanvasElement::canvasContent() const
     return toValidCanvasContent(canvasContentForBindings());
 }
 
+bool HTMLCanvasElement::hasDrawableContent() const
+{
+    return document().settings().htmlInCanvasEnabled() && canvasContent() == CanvasContent::Drawable;
+}
+
 void HTMLCanvasElement::requestPaint()
 {
     protect(document())->requestCanvasPaintEvent(*this);
@@ -243,22 +248,22 @@ void HTMLCanvasElement::dispatchPaintEvent()
     dispatchEvent(CanvasPaintEvent::create(eventNames().paintEvent, { }, Event::IsTrusted::Yes));
 }
 
-std::optional<CanvasElementSnapshot> HTMLCanvasElement::drawableElementSnapshot(Element& drawableElement) const
+std::optional<CanvasElementSnapshot> HTMLCanvasElement::canvasDrawableSnapshot(Element& element) const
 {
-    CheckedPtr drawableRenderer = drawableElement.renderer();
-    if (!drawableRenderer)
+    CheckedPtr elementRenderer = element.renderer();
+    if (!elementRenderer)
         return std::nullopt;
 
     CheckedPtr canvasRenderer = dynamicDowncast<RenderHTMLCanvas>(renderer());
     if (!canvasRenderer)
         return std::nullopt;
 
-    return canvasRenderer->drawableRendererSnapshot(*drawableRenderer);
+    return canvasRenderer->canvasDrawableSnapshot(*elementRenderer);
 }
 
-ExceptionOr<Ref<CanvasElementImage>> HTMLCanvasElement::captureElementImage(Element& drawableElement)
+ExceptionOr<Ref<CanvasElementImage>> HTMLCanvasElement::captureElementImage(Element& element)
 {
-    if (auto snapshot = drawableElementSnapshot(drawableElement))
+    if (auto snapshot = canvasDrawableSnapshot(element))
         return CanvasElementImage::create(WTF::move(*snapshot));
 
     return Exception { ExceptionCode::InvalidStateError };

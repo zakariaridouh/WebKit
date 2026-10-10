@@ -58,6 +58,7 @@
 #include "Page.h"
 #include "PathUtilities.h"
 #include "ReferencedSVGResources.h"
+#include "RenderAncestorIterator.h"
 #include "RenderBlock.h"
 #include "RenderBlockFlowInlines.h"
 #include "RenderBoxModelObjectInlines.h"
@@ -72,6 +73,7 @@
 #include "RenderFragmentedFlow.h"
 #include "RenderGeometryMap.h"
 #include "RenderGrid.h"
+#include "RenderHTMLCanvas.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "RenderIterator.h"
@@ -902,7 +904,7 @@ bool RenderElement::layerCreationAllowedForSubtree() const
             return false;
         parentRenderer = parentRenderer->parent();
     }
-    
+
     return true;
 }
 
@@ -2925,6 +2927,12 @@ void RenderElement::layoutIfNeeded()
     layout();
     if (Style::AnchorPositionEvaluator::isAnchorPositioned(style()))
         Style::AnchorPositionEvaluator::captureScrollSnapshots(downcast<RenderBox>(*this));
+}
+
+RenderHTMLCanvas* RenderElement::drawableCanvas() const
+{
+    auto* canvasRenderer = ancestorsOfType<RenderHTMLCanvas>(*this).first();
+    return canvasRenderer && canvasRenderer->hasDrawableContent() ? const_cast<RenderHTMLCanvas*>(canvasRenderer) : nullptr;
 }
 
 }
