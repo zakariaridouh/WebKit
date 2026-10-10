@@ -170,8 +170,10 @@ void EventRegionContext::uniteInteractionRegions(const RenderObject& renderer, c
             return;
 
         bool defaultContentHint = interactionRegion->contentHint == InteractionRegion::ContentHint::Default;
-        if (defaultContentHint && shouldConsolidateInteractionRegion(renderer, rectForTracking, interactionRegion->nodeIdentifier))
+        if (defaultContentHint && shouldConsolidateInteractionRegion(renderer, rectForTracking, interactionRegion->nodeIdentifier)) {
+            m_consolidatedElements.add(interactionRegion->nodeIdentifier);
             return;
+        }
 
         // This region might be a container we can remove later.
         bool hasNoVisualBorders = !renderer.hasVisibleBoxDecorations();
@@ -264,22 +266,27 @@ bool EventRegionContext::shouldConsolidateInteractionRegion(const RenderObject& 
     return false;
 }
 
-void EventRegionContext::convertGuardContainersToInteractionIfNeeded(float minimumCornerRadius)
+void EventRegionContext::resolveGuardContainers(float minimumCornerRadius)
 {
-    for (auto& region : m_interactionRegions) {
+    m_interactionRegions.removeAllMatching([&](auto& region) {
         if (region.type != InteractionRegion::Type::Guard)
-            continue;
+            return false;
 
-        if (!m_discoveredRegionsByElement.contains(region.nodeIdentifier)) {
-            auto rectForTracking = enclosingIntRect(region.rectInLayerCoordinates);
-            auto result = m_interactionRectsAndContentHints.add(rectForTracking, region.contentHint);
-            if (result.isNewEntry) {
-                region.type = InteractionRegion::Type::Interaction;
-                region.cornerRadius = minimumCornerRadius;
-                m_discoveredRegionsByElement.add(region.nodeIdentifier, Vector<InteractionRegion>({ region }));
-            }
+        if (m_discoveredRegionsByElement.contains(region.nodeIdentifier))
+            return false;
+
+        if (m_consolidatedElements.contains(region.nodeIdentifier))
+            return true;
+
+        auto rectForTracking = enclosingIntRect(region.rectInLayerCoordinates);
+        auto result = m_interactionRectsAndContentHints.add(rectForTracking, region.contentHint);
+        if (result.isNewEntry) {
+            region.type = InteractionRegion::Type::Interaction;
+            region.cornerRadius = minimumCornerRadius;
+            m_discoveredRegionsByElement.add(region.nodeIdentifier, Vector<InteractionRegion>({ region }));
         }
-    }
+        return false;
+    });
 }
 
 void EventRegionContext::shrinkWrapInteractionRegions()
@@ -433,7 +440,7 @@ void EventRegionContext::removeSuperfluousInteractionRegions()
 
 void EventRegionContext::copyInteractionRegionsToEventRegion(float minimumCornerRadius)
 {
-    convertGuardContainersToInteractionIfNeeded(minimumCornerRadius);
+    resolveGuardContainers(minimumCornerRadius);
     removeSuperfluousInteractionRegions();
     shrinkWrapInteractionRegions();
     m_eventRegion.appendInteractionRegions(m_interactionRegions);
