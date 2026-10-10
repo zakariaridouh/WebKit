@@ -168,14 +168,14 @@ void RenderImage::collectSelectionGeometries(Vector<SelectionGeometry>& geometri
 
 using namespace HTMLNames;
 
-RenderImage::RenderImage(Type type, Element& element, Style::ComputedStyle&& style, OptionSet<ReplacedFlag> flags, Style::Image* styleImage, const float imageDevicePixelRatio)
+RenderImage::RenderImage(Type type, Element& element, Style::ComputedStyle&& style, OptionSet<ReplacedFlag> flags, Style::Image* styleImage, float currentPixelDensity)
     : RenderReplaced(type, element, WTF::move(style), IntSize(), flags | ReplacedFlag::IsImage)
     , m_imageResource(makeUnique<RenderImageResource>(styleImage))
     , m_hasImageOverlay([&] {
         auto* htmlElement = dynamicDowncast<HTMLElement>(element);
         return htmlElement && ImageOverlay::hasOverlay(*htmlElement);
     }())
-    , m_imageDevicePixelRatio(imageDevicePixelRatio)
+    , m_currentPixelDensity(currentPixelDensity)
 {
     updateAltText();
 #if ENABLE(SERVICE_CONTROLS)
@@ -188,8 +188,8 @@ RenderImage::RenderImage(Type type, Element& element, Style::ComputedStyle&& sty
 #endif
 }
 
-RenderImage::RenderImage(Type type, Element& element, Style::ComputedStyle&& style, Style::Image* styleImage, const float imageDevicePixelRatio)
-    : RenderImage(type, element, WTF::move(style), ReplacedFlag::IsImage, styleImage, imageDevicePixelRatio)
+RenderImage::RenderImage(Type type, Element& element, Style::ComputedStyle&& style, Style::Image* styleImage, float currentPixelDensity)
+    : RenderImage(type, element, WTF::move(style), ReplacedFlag::IsImage, styleImage, currentPixelDensity)
 {
 }
 
@@ -499,12 +499,12 @@ void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetr
     RenderReplaced::notifyFinished(newImage, metrics, loadWillContinueInAnotherProcess);
 }
 
-void RenderImage::setImageDevicePixelRatio(float factor)
+void RenderImage::setCurrentPixelDensity(float density)
 {
-    if (m_imageDevicePixelRatio == factor)
+    if (m_currentPixelDensity == density)
         return;
 
-    m_imageDevicePixelRatio = factor;
+    m_currentPixelDensity = density;
     intrinsicSizeChanged();
 }
 

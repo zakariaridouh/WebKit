@@ -97,7 +97,7 @@ HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document& docum
     : HTMLElement(tagName, document, { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument })
     , ActiveDOMObject(document)
     , m_imageLoader(makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this))
-    , m_imageDevicePixelRatio(1.0f)
+    , m_currentPixelDensity(1.0f)
 {
     ASSERT(hasTagName(imgTag));
 }
@@ -263,9 +263,9 @@ void HTMLImageElement::setBestFitURLAndDPRFromImageCandidate(const ImageCandidat
 
     m_currentSrc = { };
     if (candidate.density >= 0)
-        m_imageDevicePixelRatio = 1 / candidate.density;
+        m_currentPixelDensity = candidate.density;
     if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(renderer()))
-        renderImage->setImageDevicePixelRatio(m_imageDevicePixelRatio);
+        renderImage->setCurrentPixelDensity(m_currentPixelDensity);
 }
 
 static String extractMIMETypeFromTypeAttributeForLookup(const String& typeAttribute)
@@ -556,7 +556,7 @@ RenderPtr<RenderElement> HTMLImageElement::createElementRenderer(Style::Computed
     if (style.content().isData())
         return RenderElement::createFor(*this, WTF::move(style));
 
-    return createRenderer<RenderImage>(RenderObject::Type::Image, *this, WTF::move(style), nullptr, m_imageDevicePixelRatio);
+    return createRenderer<RenderImage>(RenderObject::Type::Image, *this, WTF::move(style), nullptr, m_currentPixelDensity);
 }
 
 bool HTMLImageElement::isReplaced(const Style::ComputedStyle* style) const
@@ -691,7 +691,7 @@ LayoutSize HTMLImageElement::densityCorrectedNaturalSize() const
         return { };
 
     auto naturalDimensions = image->naturalDimensions(ImageOrientation::Orientation::FromImage);
-    return LayoutSize(HTMLImageDensityCorrectedSizing { m_imageDevicePixelRatio }.resolve(naturalDimensions).size());
+    return LayoutSize(HTMLImageDensityCorrectedSizing { m_currentPixelDensity }.resolve(naturalDimensions).size());
 }
 
 unsigned HTMLImageElement::width()

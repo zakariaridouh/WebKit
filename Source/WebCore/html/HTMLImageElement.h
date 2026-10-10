@@ -94,9 +94,10 @@ public:
     // https://html.spec.whatwg.org/multipage/images.html#img-req-state
     ImageRequestState currentRequestState() const;
 
-    ImageOrientation orientationForSourceImage();
+    // https://html.spec.whatwg.org/multipage/images.html#current-pixel-density
+    float currentPixelDensity() const { return m_currentPixelDensity; }
 
-    float sourceImageDevicePixelRatio() const { return m_imageDevicePixelRatio; }
+    ImageOrientation orientationForSourceImage();
 
     RefPtr<Image> sourceImage() const;
 
@@ -278,7 +279,7 @@ private:
     URL m_currentURL;
     AtomString m_currentSrc;
     AtomString m_parsedUsemap;
-    float m_imageDevicePixelRatio;
+    float m_currentPixelDensity;
 #if ENABLE(SERVICE_CONTROLS)
     bool m_isImageMenuEnabled { false };
 #endif

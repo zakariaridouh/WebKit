@@ -156,7 +156,7 @@ ExceptionOr<Ref<WebCodecsVideoFrame>> WebCodecsVideoFrame::createFromImageElemen
     //    resource.
     // 6. Let defaultDisplayWidth and defaultDisplayHeight be the natural width and natural
     //    height of image.
-    auto defaultDisplaySize = VideoFrameImageSizing { image.sourceImageDevicePixelRatio() }.resolve(naturalDimensions).size();
+    auto defaultDisplaySize = VideoFrameImageSizing { image.currentPixelDensity() }.resolve(naturalDimensions).size();
 
     // 7. Run the Initialize Frame With Resource algorithm with init, frame, resource,
     //    codedWidth, codedHeight, baseRotation, baseFlip, defaultDisplayWidth, and

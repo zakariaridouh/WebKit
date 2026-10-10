@@ -513,7 +513,7 @@ static FloatSize computeIntrinsicSizeForRenderer(const RenderReplaced& replacedR
 
         intrinsicSize.scale(replacedRenderer.style().usedZoom());
         if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(replacedRenderer))
-            intrinsicSize.scale(renderImage->imageDevicePixelRatio());
+            intrinsicSize = intrinsicSize / renderImage->currentPixelDensity();
         if (!replacedRenderer.isHorizontalWritingMode())
             intrinsicSize = intrinsicSize.transposedSize();
         return intrinsicSize;

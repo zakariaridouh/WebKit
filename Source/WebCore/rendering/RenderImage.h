@@ -54,7 +54,7 @@ class RenderImage : public RenderReplaced {
     WTF_MAKE_TZONE_ALLOCATED(RenderImage);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderImage);
 public:
-    RenderImage(Type, Element&, Style::ComputedStyle&&, Style::Image* = nullptr, const float imageDevicePixelRatio = 1.0f);
+    RenderImage(Type, Element&, Style::ComputedStyle&&, Style::Image* = nullptr, float currentPixelDensity = 1);
     RenderImage(Type, Document&, Style::ComputedStyle&&, Style::Image* = nullptr);
     virtual ~RenderImage();
 
@@ -78,8 +78,9 @@ public:
     const String& altText() const LIFETIME_BOUND { return m_altText; }
     void setAltText(const String& altText) { m_altText = altText; }
 
-    void setImageDevicePixelRatio(float factor);
-    float imageDevicePixelRatio() const { return m_imageDevicePixelRatio; }
+    // https://html.spec.whatwg.org/multipage/images.html#current-pixel-density
+    float currentPixelDensity() const { return m_currentPixelDensity; }
+    void setCurrentPixelDensity(float);
 
     void setHasShadowControls(bool hasShadowControls) { m_hasShadowControls = hasShadowControls; }
     void setHasImageOverlay() { m_hasImageOverlay = true; }
@@ -104,7 +105,7 @@ public:
     FloatSize preferredAspectRatioAsSize() const final;
 
 protected:
-    RenderImage(Type, Element&, Style::ComputedStyle&&, OptionSet<ReplacedFlag>, Style::Image* = nullptr, const float imageDevicePixelRatio = 1.0f);
+    RenderImage(Type, Element&, Style::ComputedStyle&&, OptionSet<ReplacedFlag>, Style::Image* = nullptr, float currentPixelDensity = 1);
     void willBeDestroyed() override;
 
 #if ENABLE(SMART_IMAGE_RESIZER)
@@ -168,7 +169,7 @@ private:
     bool m_isGeneratedContent { false };
     bool m_hasShadowControls { false };
     bool m_hasImageOverlay { false };
-    float m_imageDevicePixelRatio { 1 };
+    float m_currentPixelDensity { 1 };
 
     friend class RenderImageScaleObserver;
 };
