@@ -86,7 +86,7 @@ ContentHeightAndMargin BlockFormattingGeometry::inFlowNonReplacedContentHeightAn
         }
 
         // 2. the bottom edge of the bottom (possibly collapsed) margin of its last in-flow child, if the child's bottom margin...
-        auto marginCollapse = BlockMarginCollapse { layoutState(), formattingContext().formattingState() };
+        auto marginCollapse = BlockMarginCollapse { protect(layoutState()), formattingContext().formattingState() };
         CheckedRef lastInFlowChild = downcast<ElementBox>(*layoutBox.lastInFlowChild());
         if (!marginCollapse.marginAfterCollapsesWithParentMarginAfter(lastInFlowChild)) {
             auto& lastInFlowBoxGeometry = formattingContext().geometryForBox(lastInFlowChild);
