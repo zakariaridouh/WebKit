@@ -730,11 +730,16 @@ ContentPosition FlexFormattingUtils::resolveLeftRightAlignment(const StyleConten
 LayoutUnit FlexFormattingUtils::initialJustifyContentOffset(const Style::ComputedStyle& style, LayoutUnit availableFreeSpace, unsigned numberOfFlexItems, bool isReversed)
 {
     auto resolvedJustifyContent = style.justifyContent().resolve(contentAlignmentNormalBehavior());
+    auto distribution = resolvedJustifyContent.distribution();
+    // The static position of an out-of-flow flex item is computed with no flex items, and space-around and space-evenly center it.
+    // FIXME: css-flexbox positions the child as if it were the sole flex item, so these would fall back to safe center when it overflows.
+    if (!numberOfFlexItems && (distribution == ContentDistribution::SpaceAround || distribution == ContentDistribution::SpaceEvenly))
+        return availableFreeSpace / 2;
     // Resolve left and right to start or end first. If the property's axis is not parallel with either left<->right axis,
     // they behave as start. Currently, the only case where the property's axis is not parallel with either left<->right
     // axis is in a column flexbox. https://www.w3.org/TR/css-align-3/#valdef-justify-content-left
     auto position = resolveLeftRightAlignment(resolvedJustifyContent, style, isReversed);
-    return initialContentAlignmentOffset(availableFreeSpace, position, resolvedJustifyContent.distribution(), resolvedJustifyContent.overflow(), numberOfFlexItems, isReversed);
+    return initialContentAlignmentOffset(availableFreeSpace, position, distribution, resolvedJustifyContent.overflow(), numberOfFlexItems, isReversed);
 }
 
 LayoutUnit FlexFormattingUtils::justifyContentSpaceBetweenFlexItems(LayoutUnit availableFreeSpace, ContentDistribution justifyContentDistribution, unsigned numberOfFlexItems)
@@ -833,11 +838,8 @@ LayoutUnit FlexFormattingUtils::initialContentAlignmentOffset(LayoutUnit availab
         return availableFreeSpace;
     if (position == ContentPosition::Center)
         return availableFreeSpace / 2;
-    // With no alignment subjects (the static position of an out-of-flow flex item), space-around and space-evenly center.
-    if ((distribution == ContentDistribution::SpaceAround || distribution == ContentDistribution::SpaceEvenly) && !numberOfAlignmentSubjects)
-        return availableFreeSpace / 2;
     if (distribution == ContentDistribution::SpaceAround) {
-        if (availableFreeSpace > 0)
+        if (availableFreeSpace > 0 && numberOfAlignmentSubjects)
             return availableFreeSpace / (2 * numberOfAlignmentSubjects);
         if (availableFreeSpace < 0)
             return std::max(0_lu, availableFreeSpace / 2);

@@ -140,7 +140,8 @@ private:
     };
 
     struct BaselineSharingGroup {
-        // A member of the group, with what aligning it needs.
+        // A member of the group. shouldAdjustTowardsCrossAxisEnd is filled in while the group's baselines are aligned,
+        // for positioning the group per its fallback alignment.
         struct Item {
             size_t index { 0 };
             ItemPosition alignment { };

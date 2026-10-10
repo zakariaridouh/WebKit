@@ -619,7 +619,7 @@ void FlexFormattingContext::performBaselineAlignment(WTF::Range<size_t> lineRang
         auto& group = baselineSharingGroups[baselineSharingGroupIndex];
         auto marginBoxAscent = flexFormattingUtils().marginBoxAscentForFlexItem(flexLayoutItem, flexItemsCrossSizeList[itemIndex]);
         group.maxAscent = std::max(group.maxAscent, marginBoxAscent);
-        group.items.append({ itemIndex, alignment, marginBoxAscent, shouldAdjustItemTowardsCrossAxisEnd(flexItemWritingModeForBaselineAlignment(flexLayoutItem).blockDirection(), alignment) });
+        group.items.append({ itemIndex, alignment, marginBoxAscent });
     }
 
     for (auto& baselineSharingGroup : baselineSharingGroups) {
@@ -629,6 +629,7 @@ void FlexFormattingContext::performBaselineAlignment(WTF::Range<size_t> lineRang
             auto offset = FlexFormattingUtils::alignmentOffset(availableSpace, item.alignment, item.marginBoxAscent, baselineSharingGroup.maxAscent, containerHasWrapReverse);
             flexItemsCrossOffsetList[item.index] += offset;
 
+            item.shouldAdjustTowardsCrossAxisEnd = shouldAdjustItemTowardsCrossAxisEnd(flexItemWritingModeForBaselineAlignment(flexItems[item.index]).blockDirection(), item.alignment);
             if (item.shouldAdjustTowardsCrossAxisEnd)
                 minMarginAfterBaseline = std::min(minMarginAfterBaseline, availableSpace - offset);
         }
