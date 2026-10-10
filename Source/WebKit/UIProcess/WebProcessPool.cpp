@@ -628,8 +628,6 @@ void WebProcessPool::modelProcessExited(ProcessID identifier, ProcessTermination
         } else if (!m_resetModelProcessCrashCountTimer.isActive())
             m_resetModelProcessCrashCountTimer.startOneShot(resetModelProcessCrashCountDelay);
     }
-
-    m_processesWithModelPlayers.clear();
 }
 
 void WebProcessPool::createModelProcessConnection(WebProcessProxy& webProcessProxy, IPC::Connection::Handle&& connectionIdentifier, WebKit::ModelProcessConnectionParameters&& parameters)
