@@ -252,8 +252,8 @@ public:
     void setScrollAnchoringSuppressionStyleChanged(bool b) { m_scrollAnchoringSuppressionStyleChanged = b; }
 
     // An invisible box of a line-clamp container (css-overflow-4). Its used visibility is hidden.
-    bool isHiddenByLineClamp() const { return m_isHiddenByLineClamp; }
-    void setIsHiddenByLineClamp(bool isHidden) { m_isHiddenByLineClamp = isHidden; }
+    bool isForceHiddenByLineClamp() const { return m_isForceHiddenByLineClamp; }
+    void setIsForceHiddenByLineClamp(bool isHidden) { m_isForceHiddenByLineClamp = isHidden; }
 
     bool allowsAnimation() const final;
     bool repaintForPausedImageAnimationsIfNeeded(const IntRect& visibleRect, CachedImage&);
@@ -491,7 +491,7 @@ private:
     unsigned m_scrollAnchoringSuppressionStyleChanged : 1 { false };
     unsigned m_isInPendingSVGTransformAttributeUpdates : 1 { false };
     unsigned m_mayHaveNonScalingStrokeInSubtree : 1 { false };
-    unsigned m_isHiddenByLineClamp : 1 { false };
+    unsigned m_isForceHiddenByLineClamp : 1 { false };
     // 9 bits free.
 
     Style::ComputedStyle m_style;

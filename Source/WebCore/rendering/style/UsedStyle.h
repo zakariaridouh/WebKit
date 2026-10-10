@@ -62,7 +62,7 @@ public:
 
 inline UsedVisibility UsedStyle::visibility() const
 {
-    if (m_renderer->isHiddenByLineClamp() || computedStyle().isForceHidden()) [[unlikely]]
+    if (m_renderer->isForceHiddenByLineClamp() || computedStyle().isForceHidden()) [[unlikely]]
         return UsedVisibility::Hidden;
     return computedStyle().visibility() == Visibility::Visible ? UsedVisibility::Visible : UsedVisibility::Hidden;
 }

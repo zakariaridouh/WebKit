@@ -233,18 +233,46 @@ std::optional<LineClampUpdater::AutoClampPoint> LineClampUpdater::autoClampPoint
     return { };
 }
 
-static void setIsHiddenByLineClamp(RenderElement& renderer, const RenderBox& invisibleBox, bool isHidden)
+// "Any absolutely positioned box which has an invisible box within its containing block chain, and all of its descendants."
+static bool isInsideInvisibleBox(const RenderObject& renderer, const RenderBox& invisibleBox)
 {
-    renderer.setIsHiddenByLineClamp(isHidden);
+    if (!renderer.isOutOfFlowPositioned())
+        return true;
+    CheckedPtr containingBlock = renderer.containingBlock();
+    return containingBlock && (containingBlock == &invisibleBox || containingBlock->isDescendantOf(&invisibleBox));
+}
+
+static void setIsForceHiddenByLineClamp(RenderElement& renderer, const RenderBox& invisibleBox, bool isHidden)
+{
+    renderer.setIsForceHiddenByLineClamp(isHidden);
+    // Invisible boxes are not laid out (see skipLayoutForForcedHidden), so a box that becomes visible again needs layout.
+    if (!isHidden)
+        renderer.setNeedsLayout(MarkingBehavior::MarkOnlyThis);
     for (CheckedRef child : childrenOfType<RenderElement>(renderer)) {
-        // "Any absolutely positioned box which has an invisible box within its containing block chain, and all of its descendants."
-        if (child->isOutOfFlowPositioned()) {
-            CheckedPtr containingBlock = child->containingBlock();
-            if (!containingBlock || (containingBlock != &invisibleBox && !containingBlock->isDescendantOf(&invisibleBox)))
-                continue;
-        }
-        setIsHiddenByLineClamp(child, invisibleBox, isHidden);
+        if (isInsideInvisibleBox(child, invisibleBox))
+            setIsForceHiddenByLineClamp(child, invisibleBox, isHidden);
     }
+}
+
+static void clearNeedsLayout(RenderObject& renderer, const RenderBox& invisibleBox)
+{
+    // Descendants first: a block expects the out-of-flow boxes it is the containing block for to be clean by the time it is.
+    if (CheckedPtr element = dynamicDowncast<RenderElement>(renderer)) {
+        for (CheckedRef child : childrenOfType<RenderObject>(*element)) {
+            if (isInsideInvisibleBox(child, invisibleBox))
+                clearNeedsLayout(child, invisibleBox);
+        }
+    }
+    renderer.clearNeedsLayout();
+}
+
+void LineClampUpdater::skipLayoutForForcedHidden(RenderBox& renderer)
+{
+    // Like inline content after the clamp point (see InlineFormattingContext::resetBoxGeometriesForDiscardedContent), invisible boxes are not laid out,
+    // and "its automatic block size will not take into account any invisible boxes".
+    // https://drafts.csswg.org/css-overflow-4/#line-clamp-containers
+    renderer.setBorderBoxInContainer({ });
+    clearNeedsLayout(renderer, renderer);
 }
 
 bool LineClampUpdater::isAfterClampPoint(const RenderObject& renderer)
@@ -258,9 +286,9 @@ bool LineClampUpdater::isAfterClampPoint(const RenderObject& renderer)
 
 void LineClampUpdater::setIsForcedHidden(RenderBox& renderer, bool isHidden)
 {
-    if (renderer.isHiddenByLineClamp() == isHidden)
+    if (renderer.isForceHiddenByLineClamp() == isHidden)
         return;
-    setIsHiddenByLineClamp(renderer, renderer, isHidden);
+    setIsForceHiddenByLineClamp(renderer, renderer, isHidden);
 }
 
 } // namespace WebCore

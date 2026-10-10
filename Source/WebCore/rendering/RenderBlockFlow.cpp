@@ -1199,6 +1199,8 @@ void RenderBlockFlow::layoutBlockChild(RenderBox& child, MarginInfo& marginInfo,
 {
     // This happens before the child's own layout, so its descendants are already up to date by the time it lays them out.
     LineClampUpdater::setIsForcedHidden(child, LineClampUpdater::isAfterClampPoint(child));
+    if (child.isForceHiddenByLineClamp())
+        return LineClampUpdater::skipLayoutForForcedHidden(child);
 
     LayoutUnit oldPosMarginBefore = maxPositiveMarginBefore();
     LayoutUnit oldNegMarginBefore = maxNegativeMarginBefore();

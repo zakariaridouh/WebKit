@@ -4820,7 +4820,7 @@ LayoutRect RenderBox::applyVisualEffectOverflow(const LayoutRect& borderBox, Enu
 void RenderBox::addOverflowFromInFlowChildren(OptionSet<ComputeOverflowOptions> options)
 {
     for (auto& child : childrenOfType<RenderBox>(*this)) {
-        if (child.isExcludedMarker())
+        if (child.isExcludedMarker() || child.isForceHiddenByLineClamp())
             continue;
         if (!child.isFloatingOrOutOfFlowPositioned())
             addOverflowFromContainedBox(child, options);
