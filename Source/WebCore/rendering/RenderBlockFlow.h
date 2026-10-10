@@ -128,6 +128,8 @@ public:
         
     void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
 
+    bool establishesLineClampContainer() const;
+
 protected:
     void willBeDestroyed() override;
 
@@ -142,7 +144,6 @@ protected:
     // RenderBlockFlow always contains either lines or paragraphs. When the children are all blocks (e.g. paragraphs), we call layoutBlockChildren.
     // When the children are all inline (e.g., lines), we call layoutInlineChildren.
     void layoutInFlowChildren(RelayoutChildren, LayoutUnit previousHeight, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom, LayoutUnit& maxFloatLogicalBottom);
-    bool establishesLineClampContainer() const;
     void layoutBlockChildren(RelayoutChildren, LayoutUnit& maxFloatLogicalBottom);
     void layoutInlineChildren(RelayoutChildren, LayoutUnit previousHeight, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom);
 

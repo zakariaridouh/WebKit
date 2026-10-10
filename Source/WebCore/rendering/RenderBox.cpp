@@ -4837,7 +4837,9 @@ void RenderBox::addOverflowFromFloatBox(const FloatingObject& floatBox)
 {
     if (!floatBox.renderer())
         return;
-    addOverflowWithRendererOffset(*floatBox.renderer(), floatBox.locationOffsetOfBorderBox());
+    CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(*this);
+    auto options = blockFlow && blockFlow->establishesLineClampContainer() ? OptionSet { ComputeOverflowOptions::DoesNotContributeToScrollableOverflow } : OptionSet<ComputeOverflowOptions> { };
+    addOverflowWithRendererOffset(*floatBox.renderer(), floatBox.locationOffsetOfBorderBox(), options);
 }
 
 // 'offsetFromThis' is normally the renderer's position (RenderBox::location()).
@@ -4856,16 +4858,16 @@ void RenderBox::addOverflowWithRendererOffset(const RenderBox& renderer, LayoutS
     if (fragmentedFlow)
         fragmentedFlow->addFragmentsOverflowFromChild(*this, renderer, offsetFromThis);
 
-    // Only propagate layout overflow from the child if the child isn't clipping its overflow.  If it is, then
-    // its overflow is internal to it, and we don't care about it. layoutOverflowRectForPropagation takes care of this
-    // and just propagates the border box rect instead.
-    auto childLayoutOverflowRect = renderer.layoutOverflowRectForPropagation(writingMode());
-    childLayoutOverflowRect.move(offsetFromThis);
-    addLayoutOverflow(childLayoutOverflowRect);
+    if (!options.contains(ComputeOverflowOptions::DoesNotContributeToScrollableOverflow)) {
+        // Only propagate layout overflow from the child if the child isn't clipping its overflow. If it is, then
+        // its overflow is internal to it, and we don't care about it. layoutOverflowRectForPropagation takes care of this
+        // and just propagates the border box rect instead.
+        auto childLayoutOverflowRect = renderer.layoutOverflowRectForPropagation(writingMode());
+        childLayoutOverflowRect.move(offsetFromThis);
+        addLayoutOverflow(childLayoutOverflowRect);
 
-    if ((hasPotentiallyScrollableOverflow() || isRenderView())
-        && options.containsAny({ ComputeOverflowOptions::MarginsExtendLayoutOverflow, ComputeOverflowOptions::MarginsExtendContentAreaX, ComputeOverflowOptions::MarginsExtendContentAreaY })) {
-        addMarginBoxOverflow(renderer, offsetFromThis, options);
+        if ((hasPotentiallyScrollableOverflow() || isRenderView()) && options.containsAny({ ComputeOverflowOptions::MarginsExtendLayoutOverflow, ComputeOverflowOptions::MarginsExtendContentAreaX, ComputeOverflowOptions::MarginsExtendContentAreaY }))
+            addMarginBoxOverflow(renderer, offsetFromThis, options);
     }
 
     if (paintContainmentApplies())

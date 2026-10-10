@@ -198,6 +198,7 @@ public:
         MarginsExtendContentAreaY = 1 << 2,
         MarginsExtendContentArea = MarginsExtendContentAreaX | MarginsExtendContentAreaY,
         MarginsExtendLayoutOverflow = 1 << 3,
+        DoesNotContributeToScrollableOverflow = 1 << 4,
     };
 
     // Overflow rects are in the coordinate space of the box. This means that they aren't purely physical directions.
