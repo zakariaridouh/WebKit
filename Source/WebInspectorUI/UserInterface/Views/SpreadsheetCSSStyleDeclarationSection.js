@@ -756,8 +756,8 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
     {
         let node = this._style.node;
 
-        // Inline styles and nested declarations rules have no selector of their own to match other nodes with.
-        let selectorText = this._style.ownerRule ? this._selectorElement.textContent.trim() : "";
+        // Inline styles, nested declarations rules, and keyframes have no selector of their own to match other nodes with.
+        let selectorText = this._style.ownerRule?.selectors.length ? this._selectorElement.textContent.trim() : "";
         if (!selectorText) {
             node.highlight();
             return;
