@@ -98,7 +98,7 @@ struct WidthFeatureSchema : public SizeFeatureSchema {
 
     EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
     {
-        auto width = Style::unapplyingZoom<int>(renderer.contentBoxWidth(), renderer);
+        auto width = Style::unapplyingZoom<LayoutUnit>(renderer.contentBoxWidth(), renderer);
         return evaluateLengthFeature(feature, width, conversionData);
     }
 };
@@ -113,7 +113,7 @@ struct HeightFeatureSchema : public SizeFeatureSchema {
 
     EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
     {
-        auto height = Style::unapplyingZoom<int>(renderer.contentBoxHeight(), renderer);
+        auto height = Style::unapplyingZoom<LayoutUnit>(renderer.contentBoxHeight(), renderer);
         return evaluateLengthFeature(feature, height, conversionData);
     }
 };
@@ -128,7 +128,7 @@ struct InlineSizeFeatureSchema : public SizeFeatureSchema {
 
     EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
     {
-        auto logicalWidth = Style::unapplyingZoom<int>(renderer.contentBoxLogicalWidth(), renderer);
+        auto logicalWidth = Style::unapplyingZoom<LayoutUnit>(renderer.contentBoxLogicalWidth(), renderer);
         return evaluateLengthFeature(feature, logicalWidth, conversionData);
     }
 };
@@ -143,7 +143,7 @@ struct BlockSizeFeatureSchema : public SizeFeatureSchema {
 
     EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
     {
-        auto logicalHeight = Style::unapplyingZoom<int>(renderer.contentBoxLogicalHeight(), renderer);
+        auto logicalHeight = Style::unapplyingZoom<LayoutUnit>(renderer.contentBoxLogicalHeight(), renderer);
         return evaluateLengthFeature(feature, logicalHeight, conversionData);
     }
 };
