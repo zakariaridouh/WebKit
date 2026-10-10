@@ -19628,6 +19628,10 @@ EnhancedSecurity WebPageProxy::currentEnhancedSecurityState(const API::WebsitePo
     } else if (m_configuration->isEnhancedSecurityEnabled())
         return EnhancedSecurity::EnabledPolicy;
 
+    bool isLockdownModeActive = websitePolicies ? websitePolicies->lockdownModeEnabled() : m_configuration->lockdownModeEnabled();
+    if (m_configuration->isEnhancedSecurityEnabledByDefault(isLockdownModeActive))
+        return EnhancedSecurity::EnabledPolicy;
+
     bool lockdownExplicitlyDisabled = (websitePolicies && websitePolicies->isLockdownModeExplicitlySet() && !websitePolicies->lockdownModeEnabled())
         || (m_configuration->isLockdownModeExplicitlySet() && !m_configuration->lockdownModeEnabled());
     if (lockdownExplicitlyDisabled && lockdownModeEnabledBySystem())

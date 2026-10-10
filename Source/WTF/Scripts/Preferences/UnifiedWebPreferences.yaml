@@ -2102,6 +2102,17 @@ EncryptedMediaAPIEnabled:
   sharedPreferenceForWebProcess: true
   mediaPlaybackRelated: true
 
+EnhancedSecurityEnabledByDefault:
+  type: bool
+  status: internal
+  category: security
+  defaultsOverridable: true
+  humanReadableName: "Enhanced Security enabled by default"
+  humanReadableDescription: "Enables Enhanced Security by default for WebViews that do not explicitly set it"
+  webKitLegacyExposed: false
+  excludeFrom: [ WebCore ]
+  defaultValue: false
+
 EnhancedSecurityForceDisabled:
   type: bool
   status: internal

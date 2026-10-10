@@ -449,6 +449,7 @@ public:
     bool lockdownModeEnabled() const;
     
     bool isEnhancedSecurityEnabled() const;
+    bool isEnhancedSecurityEnabledByDefault(bool isLockdownModeActive) const;
 
     void setAllowTestOnlyIPC(bool enabled) { m_data.allowTestOnlyIPC = enabled; }
     bool allowTestOnlyIPC() const { return m_data.allowTestOnlyIPC; }
