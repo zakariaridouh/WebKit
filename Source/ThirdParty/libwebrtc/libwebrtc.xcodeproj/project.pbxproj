@@ -3767,6 +3767,8 @@
 		44E7517D2AC73B2000828AC4 /* integration_test_helpers.h in Headers */ = {isa = PBXBuildFile; fileRef = 44E751742AC73B2000828AC4 /* integration_test_helpers.h */; };
 		44E7517E2AC73B2000828AC4 /* integration_test_helpers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 44E7517C2AC73B2000828AC4 /* integration_test_helpers.cc */; };
 		44E7519D2AC73E0400828AC4 /* virtual_socket_server.cc in Sources */ = {isa = PBXBuildFile; fileRef = 44E751952AC73E0400828AC4 /* virtual_socket_server.cc */; };
+		4426B0012F7A00010012ABCD /* fake_video_renderer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 416B09D52A3C7D450017367B /* fake_video_renderer.cc */; };
+		4426B0022F7A00010012ABCD /* fake_video_renderer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 416B09D52A3C7D450017367B /* fake_video_renderer.cc */; };
 		44E751B82AC7421D00828AC4 /* fake_video_renderer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 416B09D52A3C7D450017367B /* fake_video_renderer.cc */; };
 		44E751C02AC7424000828AC4 /* fake_video_renderer.h in Headers */ = {isa = PBXBuildFile; fileRef = DDF309F727C599E9006A526F /* fake_video_renderer.h */; };
 		44FD16742AEA1F37003636CB /* json.h in Headers */ = {isa = PBXBuildFile; fileRef = 44FD16732AEA1F36003636CB /* json.h */; };
@@ -26257,6 +26259,7 @@
 				41FC9D652FE98A00008EED6A /* create_test_field_trials.cc in Sources */,
 				444A6EF62AEADFC9005FE121 /* encoder_settings.cc in Sources */,
 				444A6EF72AEADFC9005FE121 /* fake_decoder.cc in Sources */,
+				4426B0012F7A00010012ABCD /* fake_video_renderer.cc in Sources */,
 				41FC9D702FE9920C008EED6A /* flag.cc in Sources */,
 				444A6EFF2AEADFC9005FE121 /* gl_renderer.cc in Sources */,
 				41FC9D682FE98BC8008EED6A /* marshalling.cc in Sources */,
@@ -26328,6 +26331,7 @@
 				41FC9D662FE98B0A008EED6A /* create_test_field_trials.cc in Sources */,
 				446359D12AEA12E400551EEE /* encoder_settings.cc in Sources */,
 				446359D42AEA12FF00551EEE /* fake_decoder.cc in Sources */,
+				4426B0022F7A00010012ABCD /* fake_video_renderer.cc in Sources */,
 				41FC9D6F2FE9920C008EED6A /* flag.cc in Sources */,
 				44FD16842AEA3770003636CB /* gl_renderer.cc in Sources */,
 				41FC9D672FE98BC8008EED6A /* marshalling.cc in Sources */,
