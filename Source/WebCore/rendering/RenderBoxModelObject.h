@@ -105,14 +105,14 @@ public:
     LayoutRect rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const override;
 
     // These return the CSS computed padding values.
-    inline LayoutUnit computedCSSPaddingTop() const;
-    inline LayoutUnit computedCSSPaddingBottom() const;
-    inline LayoutUnit computedCSSPaddingLeft() const;
-    inline LayoutUnit computedCSSPaddingRight() const;
-    inline LayoutUnit computedCSSPaddingBefore() const;
-    inline LayoutUnit computedCSSPaddingAfter() const;
-    inline LayoutUnit computedCSSPaddingStart() const;
-    inline LayoutUnit computedCSSPaddingEnd() const;
+    LayoutUnit computedCSSPaddingTop() const;
+    LayoutUnit computedCSSPaddingBottom() const;
+    LayoutUnit computedCSSPaddingLeft() const;
+    LayoutUnit computedCSSPaddingRight() const;
+    LayoutUnit computedCSSPaddingBefore() const;
+    LayoutUnit computedCSSPaddingAfter() const;
+    LayoutUnit computedCSSPaddingStart() const;
+    LayoutUnit computedCSSPaddingEnd() const;
 
     // These functions are used during layout. Table cells and the MathML
     // code override them to include some extra intrinsic padding.
@@ -232,8 +232,6 @@ protected:
     bool hasVisibleBoxDecorationStyle() const;
     bool borderObscuresBackgroundEdge(const FloatSize& contextScale) const;
     bool borderObscuresBackground() const;
-
-    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const auto&, const Style::ZoomFactor&) const;
 
 protected:
     const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;

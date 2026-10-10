@@ -33,6 +33,7 @@
 #include "RenderReplaced.h"
 #include "StyleComputedStyle+GettersInlines.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
+#include "StylePrimitiveNumericTypes+EvaluationMinimum.h"
 
 namespace WebCore {
 

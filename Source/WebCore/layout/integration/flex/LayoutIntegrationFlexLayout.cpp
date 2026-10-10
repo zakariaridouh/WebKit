@@ -37,6 +37,7 @@
 #include "RenderLayer.h"
 #include "RenderObjectInlines.h"
 #include "StyleComputedStyle+GettersInlines.h"
+#include "StylePrimitiveNumericTypes+EvaluationMinimum.h"
 
 namespace WebCore {
 namespace LayoutIntegration {

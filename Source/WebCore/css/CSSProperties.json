@@ -8126,6 +8126,7 @@
                 "computed-style-storage-container": "physical-group",
                 "computed-style-storage-kind": "reference",
                 "computed-style-type": "Style::PaddingEdge",
+                "used-style": "evaluate-zoomed",
                 "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
@@ -8202,6 +8203,7 @@
                 "computed-style-storage-container": "physical-group",
                 "computed-style-storage-kind": "reference",
                 "computed-style-type": "Style::PaddingEdge",
+                "used-style": "evaluate-zoomed",
                 "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
@@ -8225,6 +8227,7 @@
                 "computed-style-storage-container": "physical-group",
                 "computed-style-storage-kind": "reference",
                 "computed-style-type": "Style::PaddingEdge",
+                "used-style": "evaluate-zoomed",
                 "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
@@ -8248,6 +8251,7 @@
                 "computed-style-storage-container": "physical-group",
                 "computed-style-storage-kind": "reference",
                 "computed-style-type": "Style::PaddingEdge",
+                "used-style": "evaluate-zoomed",
                 "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {

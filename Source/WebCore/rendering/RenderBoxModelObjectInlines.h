@@ -23,7 +23,7 @@
 
 #include <WebCore/RenderBoxModelObject.h>
 #include <WebCore/StyleComputedStyle+GettersInlines.h>
-#include <WebCore/StylePrimitiveNumericTypes+EvaluationMinimum.h>
+#include <WebCore/StylePrimitiveNumericTypes+Evaluation.h>
 
 namespace WebCore {
 
@@ -47,14 +47,6 @@ inline LayoutUnit RenderBoxModelObject::borderLogicalWidth() const { return bord
 inline LayoutUnit RenderBoxModelObject::borderRight() const { return Style::evaluate<LayoutUnit>(style().usedBorderRightWidth(), style().usedZoomForLength(), style().deviceScaleFactor()); }
 inline LayoutUnit RenderBoxModelObject::borderStart() const { return Style::evaluate<LayoutUnit>(style().usedBorderWidthStart(), style().usedZoomForLength(), style().deviceScaleFactor()); }
 inline LayoutUnit RenderBoxModelObject::borderTop() const { return Style::evaluate<LayoutUnit>(style().usedBorderTopWidth(), style().usedZoomForLength(), style().deviceScaleFactor()); }
-inline LayoutUnit RenderBoxModelObject::computedCSSPaddingAfter() const { return resolveLengthPercentageUsingContainerLogicalWidth(style().paddingAfter(), style().usedZoomForLength()); }
-inline LayoutUnit RenderBoxModelObject::computedCSSPaddingBefore() const { return resolveLengthPercentageUsingContainerLogicalWidth(style().paddingBefore(), style().usedZoomForLength()); }
-inline LayoutUnit RenderBoxModelObject::computedCSSPaddingBottom() const { return resolveLengthPercentageUsingContainerLogicalWidth(style().paddingBottom(), style().usedZoomForLength()); }
-inline LayoutUnit RenderBoxModelObject::computedCSSPaddingEnd() const { return resolveLengthPercentageUsingContainerLogicalWidth(style().paddingEnd(), style().usedZoomForLength()); }
-inline LayoutUnit RenderBoxModelObject::computedCSSPaddingLeft() const { return resolveLengthPercentageUsingContainerLogicalWidth(style().paddingLeft(), style().usedZoomForLength()); }
-inline LayoutUnit RenderBoxModelObject::computedCSSPaddingRight() const { return resolveLengthPercentageUsingContainerLogicalWidth(style().paddingRight(), style().usedZoomForLength()); }
-inline LayoutUnit RenderBoxModelObject::computedCSSPaddingStart() const { return resolveLengthPercentageUsingContainerLogicalWidth(style().paddingStart(), style().usedZoomForLength()); }
-inline LayoutUnit RenderBoxModelObject::computedCSSPaddingTop() const { return resolveLengthPercentageUsingContainerLogicalWidth(style().paddingTop(), style().usedZoomForLength()); }
 inline bool RenderBoxModelObject::hasInlineDirectionBordersOrPadding() const { return borderStart() || borderEnd() || paddingStart() || paddingEnd(); }
 inline bool RenderBoxModelObject::hasInlineDirectionBordersPaddingOrMargin() const { return hasInlineDirectionBordersOrPadding() || marginStart(writingMode()) || marginEnd(writingMode()); }
 inline LayoutUnit RenderBoxModelObject::horizontalBorderAndPaddingExtent() const { return borderLeft() + borderRight() + paddingLeft() + paddingRight(); }
@@ -99,14 +91,6 @@ RectEdges<LayoutUnit> RenderBoxModelObject::padding() const
         computedCSSPaddingBottom(),
         computedCSSPaddingLeft()
     };
-}
-
-inline LayoutUnit RenderBoxModelObject::resolveLengthPercentageUsingContainerLogicalWidth(const auto& value, const Style::ZoomFactor& zoomFactor) const
-{
-    LayoutUnit containerWidth;
-    if (value.isPercentOrCalculated())
-        containerWidth = containingBlockLogicalWidthForContent();
-    return Style::evaluateMinimum<LayoutUnit>(value, containerWidth, zoomFactor);
 }
 
 } // namespace WebCore

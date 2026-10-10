@@ -76,11 +76,6 @@
 namespace WebCore {
 namespace LayoutIntegration {
 
-static LayoutUnit usedValueOrZero(const Style::PaddingEdge& paddingEdge, std::optional<LayoutUnit> availableWidth, Style::ZoomFactor usedZoom)
-{
-    return Style::evaluateMinimum<LayoutUnit>(paddingEdge, availableWidth.value_or(0_lu), usedZoom);
-}
-
 static inline void adjustBorderForTable(const RenderBoxModelObject& renderer, RectEdges<LayoutUnit>& borderWidths)
 {
     if (auto* table = dynamicDowncast<RenderTable>(renderer); table && table->collapseBorders()) {
@@ -235,12 +230,13 @@ Layout::BoxGeometry::Edges BoxGeometryUpdater::logicalBorder(const RenderBoxMode
 
 Layout::BoxGeometry::Edges BoxGeometryUpdater::logicalPadding(const RenderBoxModelObject& renderer, std::optional<LayoutUnit> availableWidth, WritingMode writingMode)
 {
-    auto usedZoom = renderer.style().usedZoomForLength();
+    auto usedStyle = renderer.usedStyle();
+    auto reference = availableWidth.value_or(0_lu);
 
-    auto paddingLeft = usedValueOrZero(renderer.style().paddingLeft(), availableWidth, usedZoom);
-    auto paddingRight = usedValueOrZero(renderer.style().paddingRight(), availableWidth, usedZoom);
-    auto paddingTop = usedValueOrZero(renderer.style().paddingTop(), availableWidth, usedZoom);
-    auto paddingBottom = usedValueOrZero(renderer.style().paddingBottom(), availableWidth, usedZoom);
+    auto paddingLeft = usedStyle.paddingLeft(reference);
+    auto paddingRight = usedStyle.paddingRight(reference);
+    auto paddingTop = usedStyle.paddingTop(reference);
+    auto paddingBottom = usedStyle.paddingBottom(reference);
 
     if (writingMode.isHorizontal()) {
         auto paddingInlineStart = writingMode.isInlineLeftToRight() ? paddingLeft : paddingRight;

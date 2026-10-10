@@ -159,6 +159,7 @@
 #include "StyleAttributeMutationScope.h"
 #include "StyleComputedStyle+SettersInlines.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
+#include "StylePrimitiveNumericTypes+EvaluationMinimum.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
 #include "StyleScaleTransformFunction.h"

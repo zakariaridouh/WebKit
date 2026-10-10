@@ -81,6 +81,7 @@
 #include "Styleable.h"
 #include "TextBoxPainter.h"
 #include "TransformState.h"
+#include "UsedStyleReferenceSize.h"
 #include <wtf/NeverDestroyed.h>
 #if ASSERT_ENABLED
 #include <wtf/SetForScope.h>
@@ -226,6 +227,15 @@ bool RenderBoxModelObject::hasVisibleBoxDecorationStyle() const
         || style().hasUsedAppearance()
         || !style().boxShadow().isNone();
 }
+
+LayoutUnit RenderBoxModelObject::computedCSSPaddingTop() const { return usedStyle().paddingTop(ReferenceSize::ContainingBlockLogicalWidth); }
+LayoutUnit RenderBoxModelObject::computedCSSPaddingBottom() const { return usedStyle().paddingBottom(ReferenceSize::ContainingBlockLogicalWidth); }
+LayoutUnit RenderBoxModelObject::computedCSSPaddingLeft() const { return usedStyle().paddingLeft(ReferenceSize::ContainingBlockLogicalWidth); }
+LayoutUnit RenderBoxModelObject::computedCSSPaddingRight() const { return usedStyle().paddingRight(ReferenceSize::ContainingBlockLogicalWidth); }
+LayoutUnit RenderBoxModelObject::computedCSSPaddingBefore() const { return usedStyle().paddingBefore(ReferenceSize::ContainingBlockLogicalWidth); }
+LayoutUnit RenderBoxModelObject::computedCSSPaddingAfter() const { return usedStyle().paddingAfter(ReferenceSize::ContainingBlockLogicalWidth); }
+LayoutUnit RenderBoxModelObject::computedCSSPaddingStart() const { return usedStyle().paddingStart(ReferenceSize::ContainingBlockLogicalWidth); }
+LayoutUnit RenderBoxModelObject::computedCSSPaddingEnd() const { return usedStyle().paddingEnd(ReferenceSize::ContainingBlockLogicalWidth); }
 
 void RenderBoxModelObject::updateFromStyle()
 {
