@@ -41,6 +41,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <JavaScriptCore/WasmHandlerInfo.h>
 #include <JavaScriptCore/WasmIPIntGenerator.h>
 #include <JavaScriptCore/WasmIPIntTierUpCounter.h>
+#include <array>
+#include <limits>
 #include <wtf/HashMap.h>
 #include <wtf/RefCountedFixedVector.h>
 #include <wtf/TZoneMalloc.h>
@@ -93,6 +95,37 @@ public:
         m_callTargets[callProfileIndex] = target;
     }
 
+    static constexpr unsigned numTrackedHotLocals = 6;
+    using HotLocals = std::array<uint32_t, numTrackedHotLocals>;
+    static constexpr uint32_t noHotLocal = std::numeric_limits<uint32_t>::max();
+
+    static constexpr int32_t minimumHotLocalScore = 4;
+
+    // Both a pinned local and a cached one store through to the slot. Pinning still costs
+    // a move on a write from a temp, because that temp's register cannot be stolen. A
+    // non-pinned local can take the temp's register.
+    void recordLocalRead(uint32_t index) { adjustLocalScore(index, 1); }
+    void recordLocalWrite(uint32_t index) { adjustLocalScore(index, -1); }
+
+    void enterLoop() { ++m_loopDepth; }
+    void exitLoop()
+    {
+        ASSERT(m_loopDepth);
+        --m_loopDepth;
+    }
+    unsigned loopDepth() const { return m_loopDepth; }
+
+    void adjustLocalScore(uint32_t index, int32_t delta)
+    {
+        if (!m_loopDepth)
+            return;
+        if (index >= m_localScores.size())
+            m_localScores.insertFill(m_localScores.size(), 0, index + 1 - m_localScores.size());
+        m_localScores[index] += delta;
+    }
+
+    HotLocals hotLocals() const;
+
 private:
     struct MetadataBufferMalloc final : public FastMalloc {
         static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity) { return capacity + capacity; }
@@ -136,6 +169,8 @@ private:
     unsigned m_nonArgLocalOffset { 0 };
     Vector<FunctionSpaceIndex> m_callTargets { };
     Vector<uint8_t, 8> m_localInitBytecode { };
+    Vector<int32_t, 8> m_localScores { };
+    unsigned m_loopDepth { 0 };
 
     UncheckedKeyHashMap<IPIntPC, IPIntTierUpCounter::OSREntryData> m_tierUpCounter;
     Vector<UnlinkedHandlerInfo> m_exceptionHandlers;
