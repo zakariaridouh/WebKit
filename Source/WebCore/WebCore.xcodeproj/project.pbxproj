@@ -8853,7 +8853,6 @@
 		11E51637261E1A0500E69F25 /* WebXRInputSpace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebXRInputSpace.cpp; sourceTree = "<group>"; };
 		11E5163A261E1A1400E69F25 /* WebXRGamepad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebXRGamepad.h; sourceTree = "<group>"; };
 		11E5163B261E1A1400E69F25 /* WebXRGamepad.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebXRGamepad.cpp; sourceTree = "<group>"; };
-		11FF02D520BA3C810083F25B /* Verification.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Verification.cpp; sourceTree = "<group>"; };
 		1209CD7B2AF1B2C20046C3F0 /* ScrollbarMac.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ScrollbarMac.mm; sourceTree = "<group>"; };
 		1209CD7C2AF1B2C30046C3F0 /* ScrollbarMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScrollbarMac.h; sourceTree = "<group>"; };
 		12BB61202B6426090048B442 /* ScrollingNodeID.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScrollingNodeID.h; sourceTree = "<group>"; };
@@ -25376,7 +25375,6 @@
 				115CA83023328B1E00FD3B08 /* LayoutUnits.cpp */,
 				6F73918C2106CEDD006AF262 /* LayoutUnits.h */,
 				6FE7AA2621C37B6300296DCD /* MarginTypes.h */,
-				11FF02D520BA3C810083F25B /* Verification.cpp */,
 			);
 			path = layout;
 			sourceTree = "<group>";

@@ -2086,7 +2086,6 @@ layout/LayoutContext.cpp @header:RenderStyleGetters
 layout/LayoutPhase.cpp
 layout/LayoutState.cpp
 layout/LayoutUnits.cpp
-layout/Verification.cpp @header:RenderStyleGetters
 layout/floats/FloatAvoider.cpp
 layout/floats/FloatingContext.cpp @header:RenderStyleGetters
 layout/floats/PlacedFloats.cpp @header:RenderStyleGetters

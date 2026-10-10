@@ -31,7 +31,6 @@
 namespace WebCore {
 
 class LayoutSize;
-class RenderView;
 
 namespace Layout {
 
@@ -52,11 +51,6 @@ public:
     void layout(const LayoutSize& rootContentBoxSize);
 
     static std::unique_ptr<FormattingContext> createFormattingContext(const ElementBox& formattingContextRoot, LayoutState&);
-
-#if ASSERT_ENABLED
-    // For testing purposes only
-    static void verifyAndOutputMismatchingLayoutTree(const LayoutState&, const RenderView&);
-#endif
 
 private:
     void NODELETE layoutFormattingContextSubtree(const ElementBox&);
