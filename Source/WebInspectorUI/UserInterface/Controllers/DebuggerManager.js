@@ -1720,7 +1720,7 @@ WI.DebuggerManager = class DebuggerManager extends WI.Object
 
     _handleTimelineCapturingStateChanged(event)
     {
-        switch (event.data.capturingState) {
+        switch (WI.timelineManager.capturingState) {
         case WI.TimelineManager.CapturingState.Starting:
             this._startDisablingBreakpointsTemporarily();
             if (this.paused)
