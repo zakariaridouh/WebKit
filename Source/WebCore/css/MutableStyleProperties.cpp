@@ -289,10 +289,10 @@ bool MutableStyleProperties::removeProperties(std::span<const CSSPropertyID> pro
 
     WTF::BitSet<cssPropertyIDEnumValueCount> toRemove;
     for (auto property : properties)
-        toRemove.set(property);
+        toRemove.set(std::to_underlying(property));
 
     return m_propertyVector.removeAllMatching([&toRemove](const CSSProperty& property) {
-        return toRemove.get(property.id());
+        return toRemove.get(std::to_underlying(property.id()));
     }) > 0;
 }
 
@@ -313,7 +313,7 @@ int MutableStyleProperties::findCustomPropertyIndex(StringView propertyName) con
 {
     auto& properties = m_propertyVector;
     for (int n = m_propertyVector.size() - 1 ; n >= 0; --n) {
-        if (properties[n].metadata().m_propertyID == CSSPropertyCustom) {
+        if (properties[n].metadata().m_propertyID == std::to_underlying(CSSPropertyID::Custom)) {
             // We found a custom property. See if the name matches.
             if (!properties[n].value())
                 continue;

@@ -100,7 +100,7 @@ class AttachmentAssociatedElement;
 class SpatialPortalController;
 #endif
 
-enum CSSPropertyID : uint16_t;
+enum class CSSPropertyID : uint16_t;
 
 enum class AnimationImpact : uint8_t;
 enum class EventHandling : uint8_t;

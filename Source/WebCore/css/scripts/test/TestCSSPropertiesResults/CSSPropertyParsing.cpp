@@ -3311,210 +3311,210 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStylePropertyLonghand(CSSParserTokenRa
         return { };
     }
     switch (id) {
-    case CSSPropertyID::CSSPropertyTestTopPriority:
-    case CSSPropertyID::CSSPropertyTestHighPriority:
-    case CSSPropertyID::CSSPropertyTestMediumPriority:
-    case CSSPropertyID::CSSPropertyTestAnimationWrapper:
-    case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways:
-    case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly:
-    case CSSPropertyID::CSSPropertyTestCustomExtractor:
-    case CSSPropertyID::CSSPropertyTestProperty:
-    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyAllAuthorOrigin:
-    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyAllBorderRadius:
-    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyValueOnly:
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelReference:
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelValue:
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelReference:
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelValue:
-    case CSSPropertyID::CSSPropertyTestSettingsOne:
-    case CSSPropertyID::CSSPropertyTestSinkPriority:
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal:
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical:
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
-    case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
+    case CSSPropertyID::TestTopPriority:
+    case CSSPropertyID::TestHighPriority:
+    case CSSPropertyID::TestMediumPriority:
+    case CSSPropertyID::TestAnimationWrapper:
+    case CSSPropertyID::TestAnimationWrapperAccelerationAlways:
+    case CSSPropertyID::TestAnimationWrapperAccelerationThreadedOnly:
+    case CSSPropertyID::TestCustomExtractor:
+    case CSSPropertyID::TestProperty:
+    case CSSPropertyID::TestRenderStyleHasExplicitlySetPolicyAllAuthorOrigin:
+    case CSSPropertyID::TestRenderStyleHasExplicitlySetPolicyAllBorderRadius:
+    case CSSPropertyID::TestRenderStyleHasExplicitlySetPolicyValueOnly:
+    case CSSPropertyID::TestRenderStyleStorageOneLevelReference:
+    case CSSPropertyID::TestRenderStyleStorageOneLevelValue:
+    case CSSPropertyID::TestRenderStyleStorageTwoLevelReference:
+    case CSSPropertyID::TestRenderStyleStorageTwoLevelValue:
+    case CSSPropertyID::TestSettingsOne:
+    case CSSPropertyID::TestSinkPriority:
+    case CSSPropertyID::TestLogicalPropertyGroupPhysicalHorizontal:
+    case CSSPropertyID::TestLogicalPropertyGroupPhysicalVertical:
+    case CSSPropertyID::TestLogicalPropertyGroupLogicalBlock:
+    case CSSPropertyID::TestLogicalPropertyGroupLogicalInline:
         return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
-    case CSSPropertyID::CSSPropertyBackgroundCoordinatedValueListPropertyTestDiscrete:
+    case CSSPropertyID::BackgroundCoordinatedValueListPropertyTestDiscrete:
         return consumeBackgroundCoordinatedValueListPropertyTestDiscrete(range, state);
-    case CSSPropertyID::CSSPropertyBackgroundCoordinatedValueListPropertyTestTwo:
+    case CSSPropertyID::BackgroundCoordinatedValueListPropertyTestTwo:
         return consumeBackgroundCoordinatedValueListPropertyTestTwo(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommas:
+    case CSSPropertyID::TestBoundedRepetitionWithCommas:
         return consumeTestBoundedRepetitionWithCommas(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasFixed:
+    case CSSPropertyID::TestBoundedRepetitionWithCommasFixed:
         return consumeTestBoundedRepetitionWithCommasFixed(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasNoSingleItemOpt:
+    case CSSPropertyID::TestBoundedRepetitionWithCommasNoSingleItemOpt:
         return consumeTestBoundedRepetitionWithCommasNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasSingleItemOpt:
+    case CSSPropertyID::TestBoundedRepetitionWithCommasSingleItemOpt:
         return consumeTestBoundedRepetitionWithCommasSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpaces:
+    case CSSPropertyID::TestBoundedRepetitionWithSpaces:
         return consumeTestBoundedRepetitionWithSpaces(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesFixed:
+    case CSSPropertyID::TestBoundedRepetitionWithSpacesFixed:
         return consumeTestBoundedRepetitionWithSpacesFixed(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesNoSingleItemOpt:
+    case CSSPropertyID::TestBoundedRepetitionWithSpacesNoSingleItemOpt:
         return consumeTestBoundedRepetitionWithSpacesNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesSingleItemOpt:
+    case CSSPropertyID::TestBoundedRepetitionWithSpacesSingleItemOpt:
         return consumeTestBoundedRepetitionWithSpacesSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType:
+    case CSSPropertyID::TestBoundedRepetitionWithSpacesWithType:
         return consumeTestBoundedRepetitionWithSpacesWithType(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt:
+    case CSSPropertyID::TestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt:
         return consumeTestBoundedRepetitionWithSpacesWithTypeNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious:
+    case CSSPropertyID::TestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious:
         return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(range, state);
-    case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
+    case CSSPropertyID::TestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
         return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(range, state);
-    case CSSPropertyID::CSSPropertyTestColor:
-    case CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport:
+    case CSSPropertyID::TestColor:
+    case CSSPropertyID::TestColorPropertyWithVisitedLinkSupport:
         return consumeColor(range, state, { .allowedColorTypes = { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System } });
-    case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute:
+    case CSSPropertyID::TestColorAllowsTypesAbsolute:
         return consumeColor(range, state, { .allowedColorTypes = { CSS::ColorType::Absolute } });
-    case CSSPropertyID::CSSPropertyTestFunctionBoundedParameters:
+    case CSSPropertyID::TestFunctionBoundedParameters:
         return consumeTestFunctionBoundedParameters(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionFixedParameters:
+    case CSSPropertyID::TestFunctionFixedParameters:
         return consumeTestFunctionFixedParameters(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionNoParameters:
+    case CSSPropertyID::TestFunctionNoParameters:
         return consumeTestFunctionNoParameters(range);
-    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllAnyOrder:
+    case CSSPropertyID::TestFunctionParametersMatchAllAnyOrder:
         return consumeTestFunctionParametersMatchAllAnyOrder(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllAnyOrderWithOptional:
+    case CSSPropertyID::TestFunctionParametersMatchAllAnyOrderWithOptional:
         return consumeTestFunctionParametersMatchAllAnyOrderWithOptional(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllOrdered:
+    case CSSPropertyID::TestFunctionParametersMatchAllOrdered:
         return consumeTestFunctionParametersMatchAllOrdered(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllOrderedWithOptional:
+    case CSSPropertyID::TestFunctionParametersMatchAllOrderedWithOptional:
         return consumeTestFunctionParametersMatchAllOrderedWithOptional(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchOneOrMoreAnyOrder:
+    case CSSPropertyID::TestFunctionParametersMatchOneOrMoreAnyOrder:
         return consumeTestFunctionParametersMatchOneOrMoreAnyOrder(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionSingleParameter:
+    case CSSPropertyID::TestFunctionSingleParameter:
         return consumeTestFunctionSingleParameter(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionSingleParameterMatchOne:
+    case CSSPropertyID::TestFunctionSingleParameterMatchOne:
         return consumeTestFunctionSingleParameterMatchOne(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionSingleParameterOptional:
+    case CSSPropertyID::TestFunctionSingleParameterOptional:
         return consumeTestFunctionSingleParameterOptional(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin:
+    case CSSPropertyID::TestFunctionUnboundedParametersNoMin:
         return consumeTestFunctionUnboundedParametersNoMin(range, state);
-    case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum:
+    case CSSPropertyID::TestFunctionUnboundedParametersWithMinimum:
         return consumeTestFunctionUnboundedParametersWithMinimum(range, state);
-    case CSSPropertyID::CSSPropertyTestImage:
+    case CSSPropertyID::TestImage:
         return consumeImage(range, state, { AllowedImageType::URLFunction, AllowedImageType::ImageSet, AllowedImageType::GeneratedImage });
-    case CSSPropertyID::CSSPropertyTestImageNoImageSet:
+    case CSSPropertyID::TestImageNoImageSet:
         return consumeImage(range, state, { AllowedImageType::URLFunction, AllowedImageType::GeneratedImage });
-    case CSSPropertyID::CSSPropertyTestKeyword:
+    case CSSPropertyID::TestKeyword:
         return consumeIdent(range, isKeywordValidForTestKeyword);
-    case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
+    case CSSPropertyID::TestKeywordWithAliasedTo:
         return consumeTestKeywordWithAliasedTo(range);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrder:
+    case CSSPropertyID::TestMatchAllAnyOrder:
         return consumeTestMatchAllAnyOrder(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithCustomType:
+    case CSSPropertyID::TestMatchAllAnyOrderWithCustomType:
         return consumeTestMatchAllAnyOrderWithCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptional:
         return consumeTestMatchAllAnyOrderWithOptional(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndCustomType:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalAndCustomType:
         return consumeTestMatchAllAnyOrderWithOptionalAndCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType:
         return consumeTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt:
         return consumeTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndCustomTypeNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType:
         return consumeTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt:
         return consumeTestMatchAllAnyOrderWithOptionalAndMultipleRequiredAndPreserveOrderAndCustomTypeNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType:
         return consumeTestMatchAllAnyOrderWithOptionalAndPreserveOrderAndCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalNoSingleItemOpt:
         return consumeTestMatchAllAnyOrderWithOptionalNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalSingleItemOpt:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalSingleItemOpt:
         return consumeTestMatchAllAnyOrderWithOptionalSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrder:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalWithPreserveOrder:
         return consumeTestMatchAllAnyOrderWithOptionalWithPreserveOrder(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt:
+    case CSSPropertyID::TestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt:
         return consumeTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrder:
+    case CSSPropertyID::TestMatchAllAnyOrderWithPreserveOrder:
         return consumeTestMatchAllAnyOrderWithPreserveOrder(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderAndCustomType:
+    case CSSPropertyID::TestMatchAllAnyOrderWithPreserveOrderAndCustomType:
         return consumeTestMatchAllAnyOrderWithPreserveOrderAndCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt:
+    case CSSPropertyID::TestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt:
         return consumeTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrdered:
+    case CSSPropertyID::TestMatchAllOrdered:
         return consumeTestMatchAllOrdered(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithCustomType:
+    case CSSPropertyID::TestMatchAllOrderedWithCustomType:
         return consumeTestMatchAllOrderedWithCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional:
+    case CSSPropertyID::TestMatchAllOrderedWithOptional:
         return consumeTestMatchAllOrderedWithOptional(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndCustomType:
+    case CSSPropertyID::TestMatchAllOrderedWithOptionalAndCustomType:
         return consumeTestMatchAllOrderedWithOptionalAndCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt:
+    case CSSPropertyID::TestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt:
         return consumeTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndMultipleRequired:
+    case CSSPropertyID::TestMatchAllOrderedWithOptionalAndMultipleRequired:
         return consumeTestMatchAllOrderedWithOptionalAndMultipleRequired(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType:
+    case CSSPropertyID::TestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType:
         return consumeTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt:
+    case CSSPropertyID::TestMatchAllOrderedWithOptionalNoSingleItemOpt:
         return consumeTestMatchAllOrderedWithOptionalNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt:
+    case CSSPropertyID::TestMatchAllOrderedWithOptionalSingleItemOpt:
         return consumeTestMatchAllOrderedWithOptionalSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOne:
+    case CSSPropertyID::TestMatchOne:
         return consumeTestMatchOne(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder:
+    case CSSPropertyID::TestMatchOneOrMoreAnyOrder:
         return consumeTestMatchOneOrMoreAnyOrder(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt:
+    case CSSPropertyID::TestMatchOneOrMoreAnyOrderNoSingleItemOpt:
         return consumeTestMatchOneOrMoreAnyOrderNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithCustomType:
+    case CSSPropertyID::TestMatchOneOrMoreAnyOrderWithCustomType:
         return consumeTestMatchOneOrMoreAnyOrderWithCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt:
+    case CSSPropertyID::TestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt:
         return consumeTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder:
+    case CSSPropertyID::TestMatchOneOrMoreAnyOrderWithPreserveOrder:
         return consumeTestMatchOneOrMoreAnyOrderWithPreserveOrder(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType:
+    case CSSPropertyID::TestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType:
         return consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomType(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt:
+    case CSSPropertyID::TestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt:
         return consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCustomTypeNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt:
+    case CSSPropertyID::TestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt:
         return consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithGroupWithSettingsFlag:
         return consumeTestMatchOneWithGroupWithSettingsFlag(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithKeywordWithSettingsFlag:
         return consumeTestMatchOneWithKeywordWithSettingsFlag(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
+    case CSSPropertyID::TestMatchOneWithMultipleKeywords:
         return consumeTestMatchOneWithMultipleKeywords(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithReferenceWithSettingsFlag:
         return consumeTestMatchOneWithReferenceWithSettingsFlag(range, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithSettingsFlag:
         return consumeTestMatchOneWithSettingsFlag(range, state);
-    case CSSPropertyID::CSSPropertyTestNumericValueRange:
+    case CSSPropertyID::TestNumericValueRange:
         return consumeTestNumericValueRange(range, state);
-    case CSSPropertyID::CSSPropertyTestRenderStyleGetterNodeleteFalse:
+    case CSSPropertyID::TestRenderStyleGetterNodeleteFalse:
         return consumeIdent(range, isKeywordValidForTestRenderStyleGetterNodeleteFalse);
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelEnum:
+    case CSSPropertyID::TestRenderStyleStorageOneLevelEnum:
         return consumeIdent(range, isKeywordValidForTestRenderStyleStorageOneLevelEnum);
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelRaw:
+    case CSSPropertyID::TestRenderStyleStorageOneLevelRaw:
         return consumeTestRenderStyleStorageOneLevelRaw(range);
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelEnum:
+    case CSSPropertyID::TestRenderStyleStorageTwoLevelEnum:
         return consumeIdent(range, isKeywordValidForTestRenderStyleStorageTwoLevelEnum);
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelRaw:
+    case CSSPropertyID::TestRenderStyleStorageTwoLevelRaw:
         return consumeTestRenderStyleStorageTwoLevelRaw(range);
-    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMin:
+    case CSSPropertyID::TestUnboundedRepetitionWithCommasWithMin:
         return consumeTestUnboundedRepetitionWithCommasWithMin(range, state);
-    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt:
+    case CSSPropertyID::TestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt:
         return consumeTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinSingleItemOpt:
+    case CSSPropertyID::TestUnboundedRepetitionWithCommasWithMinSingleItemOpt:
         return consumeTestUnboundedRepetitionWithCommasWithMinSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesNoMin:
+    case CSSPropertyID::TestUnboundedRepetitionWithSpacesNoMin:
         return consumeTestUnboundedRepetitionWithSpacesNoMin(range, state);
-    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt:
+    case CSSPropertyID::TestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt:
         return consumeTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMin:
+    case CSSPropertyID::TestUnboundedRepetitionWithSpacesWithMin:
         return consumeTestUnboundedRepetitionWithSpacesWithMin(range, state);
-    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt:
+    case CSSPropertyID::TestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt:
         return consumeTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt:
+    case CSSPropertyID::TestUnboundedRepetitionWithSpacesWithMinSingleItemOpt:
         return consumeTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(range, state);
-    case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
+    case CSSPropertyID::TestUrlWithModifiers:
         return consumeTestUrlWithModifiers(range, state);
-    case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
+    case CSSPropertyID::TestUrlWithNoModifiers:
         return consumeTestUrlWithNoModifiers(range, state);
-    case CSSPropertyID::CSSPropertyTestUsingSharedRule:
+    case CSSPropertyID::TestUsingSharedRule:
         return consumeTestUsingSharedRule(range, state);
-    case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
+    case CSSPropertyID::TestUsingSharedRuleExported:
         return consumeTestUsingSharedRuleExported(range, state);
-    case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
+    case CSSPropertyID::TestUsingSharedRuleWithOverrideFunction:
         return consumeTestUsingSharedRuleWithOverrideFunction(range, state);
     default:
         return { };
@@ -3526,11 +3526,11 @@ bool CSSPropertyParsing::parseStylePropertyShorthand(CSSParserTokenRange& range,
     ASSERT(isShorthand(id));
 
     switch (id) {
-    case CSSPropertyID::CSSPropertyFont:
+    case CSSPropertyID::Font:
         return CSS::PropertyParserCustom::consumeFontShorthand(range, state, fontShorthand(), result);
-    case CSSPropertyID::CSSPropertyTestShorthandOne:
+    case CSSPropertyID::TestShorthandOne:
         return CSS::PropertyParserCustom::consumeValues2Shorthand(range, state, testShorthandOneShorthandForParsing(), result);
-    case CSSPropertyID::CSSPropertyTestShorthandTwo:
+    case CSSPropertyID::TestShorthandTwo:
         if (!state.context.propertySettings.cssSettingsShorthandEnabled) {
             ASSERT_NOT_REACHED();
             return false;
@@ -3544,33 +3544,33 @@ bool CSSPropertyParsing::parseStylePropertyShorthand(CSSParserTokenRange& range,
 bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSValueID keyword, CSS::PropertyParserState& state)
 {
     switch (id) {
-    case CSSPropertyID::CSSPropertyTestKeyword:
+    case CSSPropertyID::TestKeyword:
         return isKeywordValidForTestKeyword(keyword);
-    case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
+    case CSSPropertyID::TestKeywordWithAliasedTo:
         return isKeywordValidForTestKeywordWithAliasedTo(keyword);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithGroupWithSettingsFlag:
         return isKeywordValidForTestMatchOneWithGroupWithSettingsFlag(keyword);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithKeywordWithSettingsFlag:
         return isKeywordValidForTestMatchOneWithKeywordWithSettingsFlag(keyword, state);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
+    case CSSPropertyID::TestMatchOneWithMultipleKeywords:
         return isKeywordValidForTestMatchOneWithMultipleKeywords(keyword);
-    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithReferenceWithSettingsFlag:
         return isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(keyword);
-    case CSSPropertyID::CSSPropertyTestRenderStyleGetterNodeleteFalse:
+    case CSSPropertyID::TestRenderStyleGetterNodeleteFalse:
         return isKeywordValidForTestRenderStyleGetterNodeleteFalse(keyword);
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelEnum:
+    case CSSPropertyID::TestRenderStyleStorageOneLevelEnum:
         return isKeywordValidForTestRenderStyleStorageOneLevelEnum(keyword);
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelEnum:
+    case CSSPropertyID::TestRenderStyleStorageTwoLevelEnum:
         return isKeywordValidForTestRenderStyleStorageTwoLevelEnum(keyword);
-    case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
+    case CSSPropertyID::TestUrlWithModifiers:
         return isKeywordValidForTestUrlWithModifiers(keyword);
-    case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
+    case CSSPropertyID::TestUrlWithNoModifiers:
         return isKeywordValidForTestUrlWithNoModifiers(keyword);
-    case CSSPropertyID::CSSPropertyTestUsingSharedRule:
+    case CSSPropertyID::TestUsingSharedRule:
         return isKeywordValidForTestUsingSharedRule(keyword);
-    case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
+    case CSSPropertyID::TestUsingSharedRuleExported:
         return isKeywordValidForTestUsingSharedRuleExported(keyword);
-    case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
+    case CSSPropertyID::TestUsingSharedRuleWithOverrideFunction:
         return isKeywordValidForTestUsingSharedRuleWithOverrideFunction(keyword);
     default:
         return false;
@@ -3580,20 +3580,20 @@ bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSVal
 bool CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(CSSPropertyID id)
 {
     switch (id) {
-    case CSSPropertyID::CSSPropertyTestKeyword:
-    case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
-    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
-    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
-    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
-    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
-    case CSSPropertyID::CSSPropertyTestRenderStyleGetterNodeleteFalse:
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelEnum:
-    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelEnum:
-    case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
-    case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
-    case CSSPropertyID::CSSPropertyTestUsingSharedRule:
-    case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
-    case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
+    case CSSPropertyID::TestKeyword:
+    case CSSPropertyID::TestKeywordWithAliasedTo:
+    case CSSPropertyID::TestMatchOneWithGroupWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithKeywordWithSettingsFlag:
+    case CSSPropertyID::TestMatchOneWithMultipleKeywords:
+    case CSSPropertyID::TestMatchOneWithReferenceWithSettingsFlag:
+    case CSSPropertyID::TestRenderStyleGetterNodeleteFalse:
+    case CSSPropertyID::TestRenderStyleStorageOneLevelEnum:
+    case CSSPropertyID::TestRenderStyleStorageTwoLevelEnum:
+    case CSSPropertyID::TestUrlWithModifiers:
+    case CSSPropertyID::TestUrlWithNoModifiers:
+    case CSSPropertyID::TestUsingSharedRule:
+    case CSSPropertyID::TestUsingSharedRuleExported:
+    case CSSPropertyID::TestUsingSharedRuleWithOverrideFunction:
         return true;
     default:
         return false;
@@ -3609,7 +3609,7 @@ RefPtr<CSSValue> CSSPropertyParsing::parseFirstAtRuleDescriptor(CSSParserTokenRa
         return { };
     }
     switch (id) {
-    case CSSPropertyID::CSSPropertyFirstTestDescriptorForFirstDescriptor:
+    case CSSPropertyID::FirstTestDescriptorForFirstDescriptor:
         return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
     default:
         return { };
@@ -3635,7 +3635,7 @@ RefPtr<CSSValue> CSSPropertyParsing::parseSecondAtRuleDescriptor(CSSParserTokenR
         return { };
     }
     switch (id) {
-    case CSSPropertyID::CSSPropertyFirstTestDescriptorForSecondDescriptor:
+    case CSSPropertyID::FirstTestDescriptorForSecondDescriptor:
         return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
     default:
         return { };

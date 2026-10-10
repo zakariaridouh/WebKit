@@ -43,7 +43,7 @@ struct Range;
 
 class CSSValue;
 struct CSSParserContext;
-enum CSSPropertyID : uint16_t;
+enum class CSSPropertyID : uint16_t;
 
 class CSSParserFastPaths {
 public:

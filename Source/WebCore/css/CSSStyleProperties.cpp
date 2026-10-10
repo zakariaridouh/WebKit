@@ -131,7 +131,7 @@ static CSSPropertyID parseJavaScriptCSSPropertyName(const AtomString& propertyNa
     if (!length)
         return CSSPropertyInvalid;
 
-    if (auto id = propertyIDCache.get().get(propertyName))
+    if (auto id = propertyIDCache.get().get(propertyName); id != CSSPropertyID::Invalid)
         return id;
 
     constexpr size_t bufferSize = maxCSSPropertyNameLength;
@@ -205,7 +205,7 @@ template<CSSPropertyLookupMode mode> static CSSPropertyID lookupCSSPropertyFromI
 {
     static NeverDestroyed<HashMap<AtomString, CSSPropertyID>> cache;
 
-    if (auto id = cache.get().get(attribute))
+    if (auto id = cache.get().get(attribute); id != CSSPropertyID::Invalid)
         return id;
 
     std::array<char, maxCSSPropertyNameLength> outputBuffer;

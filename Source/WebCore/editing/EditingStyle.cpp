@@ -140,7 +140,7 @@ static Ref<MutableStyleProperties> copyEditingProperties(StyleDeclarationType* s
     return style->copyProperties(std::span { editingProperties }.first(numInheritableEditingProperties));
 }
 
-static inline bool NODELETE isEditingProperty(int id)
+static inline bool NODELETE isEditingProperty(CSSPropertyID id)
 {
     for (auto& editingProperty : editingProperties) {
         if (editingProperty == id)

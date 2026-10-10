@@ -56,7 +56,7 @@ class RenderLayerModelObject;
 class RenderElement;
 class RenderView;
 
-enum CSSPropertyID : uint16_t;
+enum class CSSPropertyID : uint16_t;
 
 namespace Style {
 class ComputedStyle;

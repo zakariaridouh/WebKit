@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-enum CSSPropertyID : uint16_t;
+enum class CSSPropertyID : uint16_t;
 
 namespace CSSCalc {
 

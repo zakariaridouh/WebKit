@@ -975,7 +975,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties()
         CSSPropertyID propertyId = cssPropertyID(name);
 
         if (isCustomPropertyName(name))
-            propertyId = CSSPropertyID::CSSPropertyCustom;
+            propertyId = CSSPropertyID::Custom;
 
         // Default "parsedOk" == true.
         if (!propertyEntry.parsedOk || !isExposed(propertyId, protect(m_style->settings()).get()))
@@ -1008,7 +1008,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties()
                 bool shouldInactivate = false;
 
                 // Canonicalize property names to treat non-prefixed and vendor-prefixed property names the same (opacity vs. -webkit-opacity).
-                String canonicalPropertyName = propertyId != CSSPropertyID::CSSPropertyInvalid && propertyId != CSSPropertyID::CSSPropertyCustom ? nameString(propertyId) : name;
+                String canonicalPropertyName = propertyId != CSSPropertyID::Invalid && propertyId != CSSPropertyID::Custom ? nameString(propertyId) : name;
                 auto activeIt = propertyNameToPreviousActiveProperty.find(canonicalPropertyName);
                 if (activeIt != propertyNameToPreviousActiveProperty.end()) {
                     Ref previousActiveProperty = activeIt->value;

@@ -74,7 +74,7 @@ Ref<SVGFontFaceElement> SVGFontFaceElement::create(const QualifiedName& tagName,
 void SVGFontFaceElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     auto propertyId = cssPropertyIdForSVGAttributeName(name);
-    if (propertyId > 0) {
+    if (propertyId != CSSPropertyID::Invalid) {
         Ref fontFaceRule = m_fontFaceRule;
         Ref properties = fontFaceRule->mutableProperties();
 

@@ -1520,7 +1520,7 @@ static Vector<String> authoredGridTrackSizes(Node* node, Style::GridTrackSizingD
     if (!element)
         return { };
 
-    auto directionCSSPropertyID = direction == Style::GridTrackSizingDirection::Columns ? CSSPropertyID::CSSPropertyGridTemplateColumns : CSSPropertyID::CSSPropertyGridTemplateRows;
+    auto directionCSSPropertyID = direction == Style::GridTrackSizingDirection::Columns ? CSSPropertyID::GridTemplateColumns : CSSPropertyID::GridTemplateRows;
     RefPtr<CSSValue> cssValue;
     if (RefPtr inlineStyle = element->inlineStyle())
         cssValue = inlineStyle->getPropertyCSSValue(directionCSSPropertyID);

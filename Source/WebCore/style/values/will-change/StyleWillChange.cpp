@@ -216,7 +216,7 @@ auto CSSValueConversion<WillChange>::operator()(BuilderState& state, const CSSVa
         // If the <custom-ident> is a case-insensitive match for a currently enabled CSS property,
         // we store a WillChangeAnimatableFeature::CustomIdentWithCachedPropertyID, caching the
         // property lookup.
-        if (auto propertyID = cssPropertyID(customIdent.value); propertyID && isExposed(propertyID, &state.document().settings())) {
+        if (auto propertyID = cssPropertyID(customIdent.value); propertyID != CSSPropertyID::Invalid && isExposed(propertyID, &state.document().settings())) {
             return WillChangeAnimatableFeatures { WillChangeAnimatableFeature::CustomIdentWithCachedPropertyID {
                 .customIdent = WTF::move(customIdent),
                 .propertyID = propertyID,
@@ -249,7 +249,7 @@ auto CSSValueConversion<WillChange>::operator()(BuilderState& state, const CSSVa
             // If the <custom-ident> is a case-insensitive match for a currently enabled CSS property,
             // we store a WillChangeAnimatableFeature::CustomIdentWithCachedPropertyID, caching the
             // property lookup.
-            if (auto propertyID = cssPropertyID(customIdent.value); propertyID && isExposed(propertyID, &state.document().settings())) {
+            if (auto propertyID = cssPropertyID(customIdent.value); propertyID != CSSPropertyID::Invalid && isExposed(propertyID, &state.document().settings())) {
                 return WillChangeAnimatableFeature::CustomIdentWithCachedPropertyID {
                     .customIdent = WTF::move(customIdent),
                     .propertyID = propertyID,

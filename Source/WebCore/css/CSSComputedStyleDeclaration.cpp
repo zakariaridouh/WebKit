@@ -183,7 +183,7 @@ RefPtr<DeprecatedCSSOMValue> CSSComputedStyleDeclaration::getPropertyCSSValue(co
         return extractor().customPropertyValueDeprecatedCSSOMValue(AtomString { propertyName }, *this);
 
     auto propertyID = cssPropertyID(propertyName);
-    if (!propertyID)
+    if (propertyID == CSSPropertyID::Invalid)
         return nullptr;
 
     return extractor().propertyValueDeprecatedCSSOMValue(propertyID, *this);
@@ -198,7 +198,7 @@ String CSSComputedStyleDeclaration::getPropertyValue(const String& propertyName)
         return extractor().customPropertyValueSerialization(AtomString { propertyName }, CSS::defaultSerializationContext());
 
     auto propertyID = cssPropertyID(propertyName);
-    if (!propertyID)
+    if (propertyID == CSSPropertyID::Invalid)
         return String();
 
     return extractor().propertyValueSerialization(propertyID, CSS::defaultSerializationContext());

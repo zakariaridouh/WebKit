@@ -62,7 +62,7 @@ class ScrollTimeline;
 class TransformationMatrix;
 class ViewTimeline;
 
-enum CSSPropertyID : uint16_t;
+enum class CSSPropertyID : uint16_t;
 
 enum class AlignmentBaseline : uint8_t;
 enum class ApplePayButtonStyle : uint8_t;

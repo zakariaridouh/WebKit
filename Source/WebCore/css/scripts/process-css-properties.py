@@ -206,7 +206,7 @@ class PropertyName(Name):
 
     @property
     def id(self):
-        return f"CSSPropertyID::CSSProperty{self.id_without_prefix}"
+        return f"CSSPropertyID::{self.id_without_prefix}"
 
     @property
     def name_for_methods(self):
@@ -3392,7 +3392,7 @@ class GenerationContext:
             to.write(f"WTF::BitSet<cssPropertyIDEnumValueCount> result;")
 
             for item in iterable:
-                to.write(f"result.set({mapping_to_property(item).id});")
+                to.write(f"result.set(std::to_underlying({mapping_to_property(item).id}));")
 
             to.write(f"return result;")
         to.write(f"}})();")
@@ -3611,7 +3611,7 @@ class GenerateCSSPropertyNames:
             %struct-type
             struct CSSPropertyHashTableEntry {
                 const char* name;
-                uint16_t id;
+                CSSPropertyID id;
             };
             %language=C++
             %readonly-tables
@@ -3649,14 +3649,14 @@ class GenerateCSSPropertyNames:
             CSSPropertyID findCSSProperty(const char* characters, unsigned length)
             {
                 auto* value = CSSPropertyNamesHash::in_word_set(characters, length);
-                return value ? static_cast<CSSPropertyID>(value->id) : CSSPropertyID::CSSPropertyInvalid;
+                return value ? value->id : CSSPropertyID::Invalid;
             }
 
             ASCIILiteral nameLiteral(CSSPropertyID id)
             {
-                if (id < firstCSSProperty)
+                if (std::to_underlying(id) < firstCSSProperty)
                     return { };
-                unsigned index = id - firstCSSProperty;
+                unsigned index = std::to_underlying(id) - firstCSSProperty;
                 if (index >= numCSSProperties)
                     return { };
                 return propertyNameData[index].literal();
@@ -3664,9 +3664,9 @@ class GenerateCSSPropertyNames:
 
             const AtomString& nameString(CSSPropertyID id)
             {
-                if (id < firstCSSProperty)
+                if (std::to_underlying(id) < firstCSSProperty)
                     return nullAtom();
-                unsigned index = id - firstCSSProperty;
+                unsigned index = std::to_underlying(id) - firstCSSProperty;
                 if (index >= numCSSProperties)
                     return nullAtom();
 
@@ -3754,7 +3754,7 @@ class GenerateCSSPropertyNames:
         to.write_block("""\
             bool isExposed(CSSPropertyID id, const CSSPropertySettings* settings)
             {
-                if (id == CSSPropertyID::CSSPropertyInvalid || isInternal(id))
+                if (id == CSSPropertyID::Invalid || isInternal(id))
                     return false;
                 if (!settings)
                     return true;
@@ -3763,14 +3763,14 @@ class GenerateCSSPropertyNames:
 
             bool isExposed(CSSPropertyID id, const CSSPropertySettings& settings)
             {
-                if (id == CSSPropertyID::CSSPropertyInvalid || isInternal(id))
+                if (id == CSSPropertyID::Invalid || isInternal(id))
                     return false;
                 return isExposedNotInvalidAndNotInternal(id, settings);
             }
 
             bool isExposed(CSSPropertyID id, const Settings* settings)
             {
-                if (id == CSSPropertyID::CSSPropertyInvalid || isInternal(id))
+                if (id == CSSPropertyID::Invalid || isInternal(id))
                     return false;
                 if (!settings)
                     return true;
@@ -3779,7 +3779,7 @@ class GenerateCSSPropertyNames:
 
             bool isExposed(CSSPropertyID id, const Settings& settings)
             {
-                if (id == CSSPropertyID::CSSPropertyInvalid || isInternal(id))
+                if (id == CSSPropertyID::Invalid || isInternal(id))
                     return false;
                 return isExposedNotInvalidAndNotInternal(id, settings);
             }
@@ -3790,17 +3790,17 @@ class GenerateCSSPropertyNames:
 
         to.write(f"constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {{")
         with to.indent():
-            to.write(f"false, // CSSPropertyID::CSSPropertyInvalid")
-            to.write(f"true , // CSSPropertyID::CSSPropertyCustom")
+            to.write(f"false, // CSSPropertyID::Invalid")
+            to.write(f"true , // CSSPropertyID::Custom")
             to.write_lines(all_inherited_and_ids)
         to.write(f"}};")
 
         to.write_block("""
             bool CSSProperty::isInheritedProperty(CSSPropertyID id)
             {
-                ASSERT(id < cssPropertyIDEnumValueCount);
-                ASSERT(id != CSSPropertyID::CSSPropertyInvalid);
-                return isInheritedPropertyTable[id];
+                ASSERT(std::to_underlying(id) < cssPropertyIDEnumValueCount);
+                ASSERT(id != CSSPropertyID::Invalid);
+                return isInheritedPropertyTable[std::to_underlying(id)];
             }
             """)
 
@@ -4318,10 +4318,10 @@ class GenerateCSSPropertyNames:
     # MARK: - Helper generator functions for CSSPropertyNames.h
 
     def _generate_css_property_names_h_property_constants(self, *, to):
-        to.write(f"enum CSSPropertyID : uint16_t {{")
+        to.write(f"enum class CSSPropertyID : uint16_t {{")
         with to.indent():
-            to.write(f"CSSPropertyInvalid = 0,")
-            to.write(f"CSSPropertyCustom = 1,")
+            to.write(f"Invalid = 0,")
+            to.write(f"Custom = 1,")
 
             first = GenerationContext.number_of_predefined_properties
             count = GenerationContext.number_of_predefined_properties
@@ -4373,7 +4373,7 @@ class GenerateCSSPropertyNames:
                 else:
                     raise Exception(f"{property.id_without_scope} is not part of any priority bucket. {property.codegen_properties.logical_property_group}")
 
-                to.write(f"{property.id_without_scope} = {count},")
+                to.write(f"{property.id_without_prefix} = {count},")
 
                 count += 1
                 max_length = max(len(property.name), max_length)
@@ -4383,8 +4383,15 @@ class GenerateCSSPropertyNames:
         to.write(f"}};")
         to.newline()
 
+        to.write(f"// FIXME: Remove these once all call sites use CSSPropertyID::Foo.")
+        to.write(f"inline constexpr CSSPropertyID CSSPropertyInvalid = CSSPropertyID::Invalid;")
+        to.write(f"inline constexpr CSSPropertyID CSSPropertyCustom = CSSPropertyID::Custom;")
+        for property in self.properties_and_descriptors.all_unique:
+            to.write(f"inline constexpr CSSPropertyID {property.id_without_scope} = {property.id};")
+        to.newline()
+
         to.write(f"// Enum value of the first \"real\" CSS property, which excludes")
-        to.write(f"// CSSPropertyInvalid and CSSPropertyCustom.")
+        to.write(f"// CSSPropertyID::Invalid and CSSPropertyID::Custom.")
         to.write(f"constexpr uint16_t firstCSSProperty = {first};")
 
         to.write(f"// Total number of enum values in the CSSPropertyID enum. If making an array")
@@ -4392,7 +4399,7 @@ class GenerateCSSPropertyNames:
         to.write(f"constexpr uint16_t cssPropertyIDEnumValueCount = {count};")
 
         to.write(f"// Number of \"real\" CSS properties. This differs from cssPropertyIDEnumValueCount,")
-        to.write(f"// as this doesn't consider CSSPropertyInvalid and CSSPropertyCustom.")
+        to.write(f"// as this doesn't consider CSSPropertyID::Invalid and CSSPropertyID::Custom.")
         to.write(f"constexpr uint16_t numCSSProperties = {num};")
 
         to.write(f"constexpr unsigned maxCSSPropertyNameLength = {max_length};")
@@ -4412,7 +4419,7 @@ class GenerateCSSPropertyNames:
         to.write(f"constexpr auto lastLogicalGroupProperty = lastLogicalGroupLogicalProperty;")
         to.write(f"constexpr auto firstShorthandProperty = {first_shorthand_property.id};")
         to.write(f"constexpr auto lastShorthandProperty = {last_shorthand_property.id};")
-        to.write(f"constexpr uint16_t numCSSPropertyLonghands = firstShorthandProperty - firstCSSProperty;")
+        to.write(f"constexpr uint16_t numCSSPropertyLonghands = std::to_underlying(firstShorthandProperty) - firstCSSProperty;")
         to.newline()
 
         to.write(f"extern const std::array<CSSPropertyID, {count_iterable(self.properties_and_descriptors.style_properties.all_computed)}> computedPropertyIDs;")
@@ -4471,7 +4478,7 @@ class GenerateCSSPropertyNames:
                 };
                 static constexpr Iterator begin() { return { }; }
                 static constexpr std::nullptr_t end() { return nullptr; }
-                static constexpr uint16_t size() { return last - first + 1; }
+                static constexpr uint16_t size() { return std::to_underlying(last) - std::to_underlying(first) + 1; }
             };
             using AllCSSPropertiesRange = CSSPropertiesRange<static_cast<CSSPropertyID>(firstCSSProperty), lastShorthandProperty>;
             using AllLonghandCSSPropertiesRange = CSSPropertiesRange<static_cast<CSSPropertyID>(firstCSSProperty), lastLogicalGroupProperty>;
@@ -4513,7 +4520,11 @@ class GenerateCSSPropertyNames:
     def _generate_css_property_names_h_hash_traits(self, *, to):
         with self.generation_context.namespace("WTF", to=to):
             to.write_block("""\
-                template<> struct DefaultHash<WebCore::CSSPropertyID> : IntHash<unsigned> { };
+                template<> struct DefaultHash<WebCore::CSSPropertyID> {
+                    static unsigned hash(WebCore::CSSPropertyID key) { return IntHash<unsigned>::hash(std::to_underlying(key)); }
+                    static bool equal(WebCore::CSSPropertyID a, WebCore::CSSPropertyID b) { return a == b; }
+                    static constexpr bool safeToCompareToEmptyOrDeleted = true;
+                };
 
                 template<> struct HashTraits<WebCore::CSSPropertyID> : GenericHashTraits<WebCore::CSSPropertyID> {
                     static const bool emptyValueIsZero = true;
@@ -4944,9 +4955,9 @@ class GenerateStyleBuilderGenerated:
             void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderState, CSSValue& value, ApplyValueType valueType)
             {
                 switch (id) {
-                case CSSPropertyID::CSSPropertyInvalid:
+                case CSSPropertyID::Invalid:
                     break;
-                case CSSPropertyID::CSSPropertyCustom:
+                case CSSPropertyID::Custom:
                     ASSERT_NOT_REACHED();
                     break;""")
 
@@ -5273,9 +5284,9 @@ class GenerateStyleExtractorGenerated:
             RefPtr<CSSValue> ExtractorGenerated::extractValue(ExtractorState& extractorState, CSSPropertyID id)
             {
                 switch (id) {
-                case CSSPropertyID::CSSPropertyInvalid:
+                case CSSPropertyID::Invalid:
                     break;
-                case CSSPropertyID::CSSPropertyCustom:
+                case CSSPropertyID::Custom:
                     ASSERT_NOT_REACHED();
                     break;""")
 
@@ -5321,9 +5332,9 @@ class GenerateStyleExtractorGenerated:
             void ExtractorGenerated::extractValueSerialization(ExtractorState& extractorState, StringBuilder& builder, const CSS::SerializationContext& context, CSSPropertyID id)
             {
                 switch (id) {
-                case CSSPropertyID::CSSPropertyInvalid:
+                case CSSPropertyID::Invalid:
                     break;
-                case CSSPropertyID::CSSPropertyCustom:
+                case CSSPropertyID::Custom:
                     ASSERT_NOT_REACHED();
                     break;""")
 
@@ -5986,9 +5997,9 @@ class GenerateStyleInterpolationWrapperMap:
 
                 WrapperBase* wrapper(CSSPropertyID id)
                 {
-                    if (id >= cssPropertyIDEnumValueCount)
+                    if (std::to_underlying(id) >= cssPropertyIDEnumValueCount)
                         return nullptr;
-                    return m_wrappers[id];
+                    return m_wrappers[std::to_underlying(id)];
                 }
 
             private:
@@ -6080,7 +6091,7 @@ class GenerateStyleInterpolationWrapperMap:
                 ASSERT(shorthand.length());
 
                 auto longhandWrappers = WTF::compactMap(shorthand, [&](auto longhand) -> std::optional<WrapperBase*> {
-                    auto wrapper = wrappers[longhand];
+                    auto wrapper = wrappers[std::to_underlying(longhand)];
                     if (!wrapper)
                         return std::nullopt;
                     return wrapper;
@@ -6099,8 +6110,8 @@ class GenerateStyleInterpolationWrapperMap:
             to.write(": m_wrappers {")
 
             with to.indent():
-                to.write(f"nullptr, // CSSPropertyID::CSSPropertyInvalid")
-                to.write(f"nullptr, // CSSPropertyID::CSSPropertyCustom")
+                to.write(f"nullptr, // CSSPropertyID::Invalid")
+                to.write(f"nullptr, // CSSPropertyID::Custom")
 
                 for property in self.properties_and_descriptors.all_unique:
                     if not property.codegen_properties.longhands:
@@ -6135,7 +6146,7 @@ class GenerateStyleInterpolationWrapperMap:
             to.newline()
             for property in self.properties_and_descriptors.all_unique:
                 if property in animatable_shorthands:
-                    to.write(f"m_wrappers[{property.id}] = makeShorthandWrapper({property.id}, m_wrappers);")
+                    to.write(f"m_wrappers[std::to_underlying({property.id})] = makeShorthandWrapper({property.id}, m_wrappers);")
 
         to.write("}")
         to.newline()
@@ -6812,7 +6823,7 @@ class ComputedStylePropertyColorResolverGetter(ComputedStylePropertyColorResolvi
         self.signature.generate_function_definition(to=to)
         to.write(f"{{")
         with to.indent():
-            to.write(f"return ColorPropertyResolver<ColorPropertyTraits<PropertyNameConstant<{self.property.id_without_scope}>>> {{ *this }};")
+            to.write(f"return ColorPropertyResolver<ColorPropertyTraits<PropertyNameConstant<{self.property.id}>>> {{ *this }};")
         to.write(f"}}")
         to.newline()
 
@@ -7383,7 +7394,7 @@ class ColorPropertyTraitsColorGetter(ColorPropertyTraitsFunctionBase):
         super().__init__(
             property,
             ComputedStylePropertyFunctionSignature(
-                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>>",
+                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id}>>",
                 function_name=f"color",
                 function_static=True,
                 function_inline=True,
@@ -7415,7 +7426,7 @@ class ColorPropertyTraitsVisitedLinkColorGetter(ColorPropertyTraitsFunctionBase)
         super().__init__(
             property,
             ComputedStylePropertyFunctionSignature(
-                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>>",
+                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id}>>",
                 function_name=f"visitedLinkColor",
                 function_static=True,
                 function_inline=True,
@@ -7447,7 +7458,7 @@ class ColorPropertyTraitsColorResolvingCurrentColorGetter(ColorPropertyTraitsFun
         super().__init__(
             property,
             ComputedStylePropertyFunctionSignature(
-                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>>",
+                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id}>>",
                 function_name=f"colorResolvingCurrentColor",
                 function_static=True,
                 function_inline=True,
@@ -7474,7 +7485,7 @@ class ColorPropertyTraitsVisitedLinkColorResolvingCurrentColorGetter(ColorProper
         super().__init__(
             property,
             ComputedStylePropertyFunctionSignature(
-                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>>",
+                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id}>>",
                 function_name=f"visitedLinkColorResolvingCurrentColor",
                 function_static=True,
                 function_inline=True,
@@ -7501,7 +7512,7 @@ class ColorPropertyTraitsExcludesVisitedLinkColorGetter(ColorPropertyTraitsFunct
         super().__init__(
             property,
             ComputedStylePropertyFunctionSignature(
-                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>>",
+                function_scope=f"ColorPropertyTraits<PropertyNameConstant<{property.id}>>",
                 function_name=f"excludesVisitedLinkColor",
                 function_static=True,
                 function_inline=True,
@@ -7918,7 +7929,7 @@ class ColorPropertyTraitsGenerator(object):
         return f"StyleComputedStyleProperties+GettersCustomInlines.h"
 
     def generate_declaration(self, *, to):
-        to.write(f"template<> struct ColorPropertyTraits<PropertyNameConstant<{self.property.id_without_scope}>> {{")
+        to.write(f"template<> struct ColorPropertyTraits<PropertyNameConstant<{self.property.id}>> {{")
         with to.indent():
             self.all_functions.generate_function_declarations(to=to)
         to.write(f"}};")
@@ -8630,7 +8641,7 @@ class GenerateStyleChangedAnimatablePropertiesGenerated:
                     animatable_properties.add(property)
 
             for property in sorted(animatable_properties, key=lambda x: x.id):
-                to.write(f"changingProperties.m_properties.set({property.id_without_scope});")
+                to.write(f"changingProperties.m_properties.set(std::to_underlying({property.id}));")
 
             if non_animatable_properties:
                 to.newline()
@@ -8738,7 +8749,7 @@ class GenerateStyleChangedAnimatablePropertiesGenerated:
 
                 to.write(f"if (a.{expression} != b.{expression})")
                 with to.indent():
-                    to.write(f"changingProperties.m_properties.set({property.id_without_scope});")
+                    to.write(f"changingProperties.m_properties.set(std::to_underlying({property.id}));")
 
             if (data_children or opaque_children or struct_children or animatable_properties) and animatable_visited_link_properties:
                 to.newline()
@@ -8758,7 +8769,7 @@ class GenerateStyleChangedAnimatablePropertiesGenerated:
 
                 to.write(f"if (a.{expression} != b.{expression})")
                 with to.indent():
-                    to.write(f"changingProperties.m_properties.set({property.id_without_scope});")
+                    to.write(f"changingProperties.m_properties.set(std::to_underlying({property.id}));")
 
             # Print out comments detailing the non-animatable properties that were skipped.
             if non_animatable_properties:

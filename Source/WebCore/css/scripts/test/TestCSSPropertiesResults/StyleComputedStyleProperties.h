@@ -154,15 +154,15 @@ protected:
     inline ComputedStyleProperties(ComputedStyleProperties&, ComputedStyleProperties&&);
 };
 
-template<> struct ColorPropertyTraits<PropertyNameConstant<CSSPropertyTestColor>> {
+template<> struct ColorPropertyTraits<PropertyNameConstant<CSSPropertyID::TestColor>> {
     static inline const Color& color(const ComputedStyleProperties&);
 };
 
-template<> struct ColorPropertyTraits<PropertyNameConstant<CSSPropertyTestColorAllowsTypesAbsolute>> {
+template<> struct ColorPropertyTraits<PropertyNameConstant<CSSPropertyID::TestColorAllowsTypesAbsolute>> {
     static inline const Color& color(const ComputedStyleProperties&);
 };
 
-template<> struct ColorPropertyTraits<PropertyNameConstant<CSSPropertyTestColorPropertyWithVisitedLinkSupport>> {
+template<> struct ColorPropertyTraits<PropertyNameConstant<CSSPropertyID::TestColorPropertyWithVisitedLinkSupport>> {
     static inline const Color& color(const ComputedStyleProperties&);
     static inline const Color& visitedLinkColor(const ComputedStyleProperties&);
 };

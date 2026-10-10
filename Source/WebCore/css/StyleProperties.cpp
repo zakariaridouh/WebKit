@@ -263,7 +263,7 @@ StringBuilder StyleProperties::asTextInternal(const CSS::SerializationContext& c
 {
     StringBuilder result;
 
-    constexpr unsigned shorthandPropertyCount = lastShorthandProperty - firstShorthandProperty + 1;
+    constexpr unsigned shorthandPropertyCount = std::to_underlying(lastShorthandProperty) - std::to_underlying(firstShorthandProperty) + 1;
     std::bitset<shorthandPropertyCount> shorthandPropertyUsed;
     std::bitset<shorthandPropertyCount> shorthandPropertyAppeared;
 
@@ -286,7 +286,7 @@ StringBuilder StyleProperties::asTextInternal(const CSS::SerializationContext& c
         bool alreadyUsedShorthand = false;
         for (auto& shorthandPropertyID : shorthands) {
             ASSERT(isShorthand(shorthandPropertyID));
-            unsigned shorthandPropertyIndex = shorthandPropertyID - firstShorthandProperty;
+            unsigned shorthandPropertyIndex = std::to_underlying(shorthandPropertyID) - std::to_underlying(firstShorthandProperty);
 
             ASSERT(shorthandPropertyIndex < shorthandPropertyUsed.size());
             if (shorthandPropertyUsed[shorthandPropertyIndex]) {

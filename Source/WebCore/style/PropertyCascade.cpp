@@ -169,9 +169,9 @@ void PropertyCascade::set(CSSPropertyID id, CSSValue& cssValue, const MatchedPro
         return;
     }
 
-    ASSERT(id < m_propertyIsPresent.size());
-    if (id == CSSPropertyCustom) {
-        m_propertyIsPresent.set(id);
+    ASSERT(std::to_underlying(id) < m_propertyIsPresent.size());
+    if (id == CSSPropertyID::Custom) {
+        m_propertyIsPresent.set(std::to_underlying(id));
         const auto& customValue = downcast<CSSCustomPropertyValue>(cssValue);
         auto result = m_customProperties.ensure(customValue.name(), [&]() {
             Property property;
@@ -184,8 +184,8 @@ void PropertyCascade::set(CSSPropertyID id, CSSValue& cssValue, const MatchedPro
         return;
     }
 
-    auto& property = m_properties[id];
-    if (!m_propertyIsPresent.testAndSet(id))
+    auto& property = m_properties[std::to_underlying(id)];
+    if (!m_propertyIsPresent.testAndSet(std::to_underlying(id)))
         property.cssValue = { };
     setPropertyInternal(property, id, cssValue, matchedProperties, origin);
 }
@@ -195,7 +195,7 @@ void PropertyCascade::setLogicalGroupProperty(CSSPropertyID id, CSSValue& cssVal
     ASSERT(id >= firstLogicalGroupProperty);
     ASSERT(id <= lastLogicalGroupProperty);
 
-    auto& property = m_properties[id];
+    auto& property = m_properties[std::to_underlying(id)];
     if (!hasLogicalGroupProperty(id)) {
         property.cssValue = { };
         m_lowestSeenLogicalGroupProperty = std::min(m_lowestSeenLogicalGroupProperty, id);
@@ -210,9 +210,9 @@ void PropertyCascade::setDelayingForRuleRollback(CSSPropertyID propertyID, CSSVa
     ASSERT(m_ruleRollbackDepth);
 
     auto key = [&] -> std::pair<unsigned, AtomString>  {
-        if (propertyID == CSSPropertyCustom)
-            return { propertyID, downcast<CSSCustomPropertyValue>(cssValue).name() };
-        return { propertyID, emptyAtom() };
+        if (propertyID == CSSPropertyID::Custom)
+            return { std::to_underlying(propertyID), downcast<CSSCustomPropertyValue>(cssValue).name() };
+        return { std::to_underlying(propertyID), emptyAtom() };
     }();
     auto& delayedValues = m_delayedRollbackProperties.ensure(key, [&] {
         return Deque<DelayedRollbackProperty>();
@@ -516,7 +516,7 @@ void PropertyCascade::addImportantMatches(Origin origin)
 void PropertyCascade::sortLogicalGroupPropertyIDs()
 {
     size_t endIndex = 0;
-    for (uint16_t id = m_lowestSeenLogicalGroupProperty; id <= m_highestSeenLogicalGroupProperty; ++id) {
+    for (uint16_t id = std::to_underlying(m_lowestSeenLogicalGroupProperty); id <= std::to_underlying(m_highestSeenLogicalGroupProperty); ++id) {
         auto propertyID = static_cast<CSSPropertyID>(id);
         if (hasLogicalGroupProperty(propertyID))
             m_logicalGroupPropertyIDs[endIndex++] = propertyID;

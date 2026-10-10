@@ -43,7 +43,7 @@ class DeprecatedCSSOMValue;
 
 struct ComputedStyleDependencies;
 
-enum CSSPropertyID : uint16_t;
+enum class CSSPropertyID : uint16_t;
 enum CSSValueID : uint16_t;
 
 namespace CSS {

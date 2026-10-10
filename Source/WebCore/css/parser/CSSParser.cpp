@@ -154,7 +154,7 @@ static inline void filterProperties(IsImportant important, const ParsedPropertyV
         const CSSProperty& property = input[i];
         if ((property.isImportant() && important == IsImportant::No) || (!property.isImportant() && important == IsImportant::Yes))
             continue;
-        const unsigned propertyIDIndex = property.id() - firstCSSProperty;
+        const unsigned propertyIDIndex = std::to_underlying(property.id()) - firstCSSProperty;
 
         if (property.id() == CSSPropertyCustom) {
             auto& name = downcast<CSSCustomPropertyValue>(*property.value()).name();

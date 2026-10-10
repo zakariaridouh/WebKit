@@ -837,7 +837,7 @@ public:
 
                         if (valueA != valueB && (!valueA || !valueB || *valueA != *valueB))
                             return true;
-                    } else if (auto propertyID = cssPropertyID(name)) {
+                    } else if (auto propertyID = cssPropertyID(name); propertyID != CSSPropertyID::Invalid) {
                         auto valueA = extractor.propertyValueInStyle(a, propertyID, pool);
                         auto valueB = extractor.propertyValueInStyle(b, propertyID, pool);
 

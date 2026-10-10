@@ -2601,7 +2601,7 @@ inline Ref<CSSValue> ExtractorCustom::extractWebkitMaskComposite(ExtractorState&
     auto mapper = [](auto&, const auto& value, const std::optional<MaskLayers::value_type>&, const auto&) -> Ref<CSSValue> {
         return CSSKeywordValue::create(toCSSValueIDForWebkitMaskComposite(value));
     };
-    return extractCoordinatedValueListValue<CSSPropertyID::CSSPropertyMaskComposite>(state, state.style.maskLayers(), mapper);
+    return extractCoordinatedValueListValue<CSSPropertyID::MaskComposite>(state, state.style.maskLayers(), mapper);
 }
 
 inline void ExtractorCustom::extractWebkitMaskCompositeSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
@@ -2609,7 +2609,7 @@ inline void ExtractorCustom::extractWebkitMaskCompositeSerialization(ExtractorSt
     auto mapper = [](auto&, auto& builder, const auto&, const auto& value, const std::optional<MaskLayers::value_type>&, const auto&) {
         builder.append(nameLiteralForSerialization(toCSSValueIDForWebkitMaskComposite(value)));
     };
-    extractCoordinatedValueListSerialization<CSSPropertyID::CSSPropertyMaskComposite>(state, builder, context, state.style.maskLayers(), mapper);
+    extractCoordinatedValueListSerialization<CSSPropertyID::MaskComposite>(state, builder, context, state.style.maskLayers(), mapper);
 }
 
 inline Ref<CSSValue> ExtractorCustom::extractWebkitMaskSourceType(ExtractorState& state)
@@ -2617,7 +2617,7 @@ inline Ref<CSSValue> ExtractorCustom::extractWebkitMaskSourceType(ExtractorState
     auto mapper = [](auto&, const auto& value, const std::optional<MaskLayers::value_type>&, const auto&) -> Ref<CSSValue> {
         return CSSKeywordValue::create(toCSSValueIDForWebkitMaskSourceType(value));
     };
-    return extractCoordinatedValueListValue<CSSPropertyID::CSSPropertyMaskMode>(state, state.style.maskLayers(), mapper);
+    return extractCoordinatedValueListValue<CSSPropertyID::MaskMode>(state, state.style.maskLayers(), mapper);
 }
 
 inline void ExtractorCustom::extractWebkitMaskSourceTypeSerialization(ExtractorState& state, StringBuilder& builder, const CSS::SerializationContext& context)
@@ -2625,7 +2625,7 @@ inline void ExtractorCustom::extractWebkitMaskSourceTypeSerialization(ExtractorS
     auto mapper = [](auto&, auto& builder, const auto&, const auto& value, const std::optional<MaskLayers::value_type>&, const auto&) {
         builder.append(nameLiteralForSerialization(toCSSValueIDForWebkitMaskSourceType(value)));
     };
-    extractCoordinatedValueListSerialization<CSSPropertyID::CSSPropertyMaskMode>(state, builder, context, state.style.maskLayers(), mapper);
+    extractCoordinatedValueListSerialization<CSSPropertyID::MaskMode>(state, builder, context, state.style.maskLayers(), mapper);
 }
 
 inline Ref<CSSValue> ExtractorCustom::extractColor(ExtractorState& state)

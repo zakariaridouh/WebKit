@@ -162,7 +162,7 @@ static RefPtr<CSSValue> extractComputedProperty(const AtomString& name, Element&
         return extractor.customPropertyValue(name);
 
     CSSPropertyID propertyID = cssPropertyID(name);
-    if (!propertyID)
+    if (propertyID == CSSPropertyID::Invalid)
         return nullptr;
 
     return extractor.propertyValue(propertyID, Extractor::UpdateLayout::No);

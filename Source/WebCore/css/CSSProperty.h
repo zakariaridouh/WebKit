@@ -37,14 +37,14 @@ enum class IsImplicit : bool { No, Yes };
 
 struct StylePropertyMetadata {
     StylePropertyMetadata(CSSPropertyID propertyID, bool isSetFromShorthand, int indexInShorthandsVector, IsImportant important, IsImplicit implicit)
-        : m_propertyID(propertyID)
+        : m_propertyID(std::to_underlying(propertyID))
         , m_isSetFromShorthand(isSetFromShorthand)
         , m_indexInShorthandsVector(indexInShorthandsVector)
         , m_important(important == IsImportant::Yes)
         , m_implicit(implicit == IsImplicit::Yes)
     {
-        ASSERT(propertyID != CSSPropertyInvalid);
-        ASSERT_WITH_MESSAGE(propertyID < firstShorthandProperty, "unexpected property: %d", propertyID);
+        ASSERT(propertyID != CSSPropertyID::Invalid);
+        ASSERT_WITH_MESSAGE(propertyID < firstShorthandProperty, "unexpected property: %d", std::to_underlying(propertyID));
     }
 
     CSSPropertyID shorthandID() const;
@@ -155,7 +155,7 @@ public:
     const StylePropertyMetadata& metadata() const LIFETIME_BOUND { return m_metadata; }
     static bool isColorProperty(CSSPropertyID propertyId)
     {
-        return colorProperties.get(propertyId);
+        return colorProperties.get(std::to_underlying(propertyId));
     }
 
     static const WEBCORE_EXPORT WTF::BitSet<cssPropertyIDEnumValueCount> colorProperties;

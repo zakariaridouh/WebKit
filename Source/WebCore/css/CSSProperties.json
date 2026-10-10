@@ -8821,7 +8821,7 @@
             "codegen-properties": {
                 "animation-wrapper": "StyleTypeWrapper",
                 "animation-wrapper-comment": "FIXME: Why doesn't this use VisitedAffectedStyleTypeWrapper?",
-                "animation-wrapper-requires-override-parameters": ["CSSPropertyID::CSSPropertyStrokeColor", "&ComputedStyle::strokeColor", "&ComputedStyle::setStrokeColor"],
+                "animation-wrapper-requires-override-parameters": ["CSSPropertyID::StrokeColor", "&ComputedStyle::strokeColor", "&ComputedStyle::setStrokeColor"],
                 "computed-style-has-explicitly-set-policy": "value-only",
                 "computed-style-has-explicitly-set-storage-path": ["m_inheritedRareData"],
                 "computed-style-storage-path": ["m_inheritedRareData"],

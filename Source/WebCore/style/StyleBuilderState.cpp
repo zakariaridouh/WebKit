@@ -312,12 +312,12 @@ AtomString BuilderState::customPropertyName() const
 
 bool BuilderState::isCurrentPropertyInvalidAtComputedValueTime() const
 {
-    return m_invalidAtComputedValueTimeProperties.get(cssPropertyID());
+    return m_invalidAtComputedValueTimeProperties.get(std::to_underlying(cssPropertyID()));
 }
 
 void BuilderState::setCurrentPropertyInvalidAtComputedValueTime()
 {
-    m_invalidAtComputedValueTimeProperties.set(cssPropertyID());
+    m_invalidAtComputedValueTimeProperties.set(std::to_underlying(cssPropertyID()));
 }
 
 void BuilderState::setUsesViewportUnits()

@@ -326,7 +326,7 @@ class RTCPeerConnection;
 #endif
 
 enum class CollectionType : uint8_t;
-enum CSSPropertyID : uint16_t;
+enum class CSSPropertyID : uint16_t;
 enum class DidUpdateAnyContentRelevancy : bool;
 
 enum class CompositeOperator : uint8_t;

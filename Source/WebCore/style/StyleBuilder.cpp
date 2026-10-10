@@ -67,7 +67,7 @@ namespace Style {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Builder);
 
-static const CSSPropertyID firstLowPriorityProperty = static_cast<CSSPropertyID>(lastHighPriorityProperty + 1);
+static const CSSPropertyID firstLowPriorityProperty = static_cast<CSSPropertyID>(std::to_underlying(lastHighPriorityProperty) + 1);
 
 inline bool NODELETE isValidVisitedLinkProperty(CSSPropertyID id)
 {
@@ -181,7 +181,7 @@ void Builder::applyLogicalGroupProperties()
         applyCascadeProperty(m_cascade.logicalGroupProperty(id));
 }
 
-void Builder::applyProperties(int firstProperty, int lastProperty)
+void Builder::applyProperties(CSSPropertyID firstProperty, CSSPropertyID lastProperty)
 {
     if (m_cascade.customProperties().isEmpty()) [[likely]]
         return applyPropertiesImpl<CustomPropertyCycleTracking::Disabled>(firstProperty, lastProperty);
@@ -190,7 +190,7 @@ void Builder::applyProperties(int firstProperty, int lastProperty)
 }
 
 template<Builder::CustomPropertyCycleTracking trackCycles>
-inline void Builder::applyPropertiesImpl(int firstProperty, int lastProperty)
+inline void Builder::applyPropertiesImpl(CSSPropertyID firstProperty, CSSPropertyID lastProperty)
 {
     auto applyProperty = [&](size_t index) ALWAYS_INLINE_LAMBDA {
         CSSPropertyID propertyID = static_cast<CSSPropertyID>(index);
@@ -198,9 +198,9 @@ inline void Builder::applyPropertiesImpl(int firstProperty, int lastProperty)
         auto& property = m_cascade.normalProperty(propertyID);
 
         if constexpr (trackCycles == CustomPropertyCycleTracking::Enabled) {
-            m_state->m_inProgressProperties.set(propertyID);
+            m_state->m_inProgressProperties.set(index);
             applyCascadeProperty(property);
-            m_state->m_inProgressProperties.clear(propertyID);
+            m_state->m_inProgressProperties.clear(index);
             return;
         }
 
@@ -208,12 +208,12 @@ inline void Builder::applyPropertiesImpl(int firstProperty, int lastProperty)
         applyCascadeProperty(property);
     };
 
-    if (m_cascade.propertyIsPresent().size() == static_cast<size_t>(lastProperty + 1)) {
-        m_cascade.propertyIsPresent().forEachSetBit(firstProperty, applyProperty);
+    if (m_cascade.propertyIsPresent().size() == static_cast<size_t>(std::to_underlying(lastProperty) + 1)) {
+        m_cascade.propertyIsPresent().forEachSetBit(std::to_underlying(firstProperty), applyProperty);
         return;
     }
 
-    for (int id = firstProperty; id <= lastProperty; ++id) {
+    for (int id = std::to_underlying(firstProperty); id <= std::to_underlying(lastProperty); ++id) {
         CSSPropertyID propertyID = static_cast<CSSPropertyID>(id);
         if (!m_cascade.hasNormalProperty(propertyID))
             continue;
@@ -378,7 +378,7 @@ bool Builder::applyRollbackCascadeCustomProperty(const PropertyCascade& rollback
 
 void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::LinkMatchMask linkMatchMask, PropertyCascade::Origin cascadeOrigin)
 {
-    ASSERT_WITH_MESSAGE(!isShorthand(id), "Shorthand property id = %d wasn't expanded at parsing time", id);
+    ASSERT_WITH_MESSAGE(!isShorthand(id), "Shorthand property id = %d wasn't expanded at parsing time", std::to_underlying(id));
     ASSERT_WITH_MESSAGE(id != CSSPropertyCustom, "Custom property should be handled by applyCustomProperty");
 
     auto& style = m_state->style();
@@ -640,7 +640,7 @@ Ref<CSSValue> Builder::resolveSubstitutionFunctions(CSSPropertyID propertyID, CS
 
     // https://drafts.csswg.org/css-variables-2/#invalid-variables
     // ...as if the property’s value had been specified as the unset keyword.
-    if (!variableValue || m_state->m_invalidAtComputedValueTimeProperties.get(propertyID))
+    if (!variableValue || m_state->m_invalidAtComputedValueTimeProperties.get(std::to_underlying(propertyID)))
         return CSSKeywordValue::create(CSSValueUnset);
 
     return *variableValue;
@@ -791,8 +791,8 @@ std::optional<Builder::CustomPropertyOrKeyword> Builder::computeCustomPropertyVa
 
     auto checkDependencies = [&](auto& propertyDependencies) {
         for (auto property : propertyDependencies) {
-            if (m_state->m_inProgressProperties.get(property)) {
-                m_state->m_invalidAtComputedValueTimeProperties.set(property);
+            if (m_state->m_inProgressProperties.get(std::to_underlying(property))) {
+                m_state->m_invalidAtComputedValueTimeProperties.set(std::to_underlying(property));
                 hasCycles = true;
             }
             if (property == CSSPropertyFontSize)
