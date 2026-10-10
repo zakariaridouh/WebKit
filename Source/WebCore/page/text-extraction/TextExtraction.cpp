@@ -1500,7 +1500,7 @@ static inline void extractRecursive(Node& node, Item& parentItem, TraversalConte
         for (Ref child : composedTreeChildren<0>(*container))
             extractRecursive(child.get(), item ? *item : parentItem, context);
 
-        if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(node); iframe && item) {
+        if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(node); iframe && item && context.originalRequest.includeSameOriginSubframes) {
             if (RefPtr frame = dynamicDowncast<LocalFrame>(iframe->contentFrame())) {
                 if (RefPtr document = frame->document(); document && areSameOrigin(*document, protect(node.document()))) {
                     auto [rootItem, textLength] = extractItem([&] {

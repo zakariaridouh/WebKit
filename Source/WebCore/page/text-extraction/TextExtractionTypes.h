@@ -111,6 +111,7 @@ struct Request {
     bool includeTextInAutoFilledControls { false };
     bool includeOffscreenPasswordFields { false };
     bool includeTagName { false };
+    bool includeSameOriginSubframes { true };
 #if ENABLE(DATA_DETECTION)
     OptionSet<DataDetectorType> dataDetectorTypes;
 #endif

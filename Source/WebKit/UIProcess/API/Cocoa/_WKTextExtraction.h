@@ -180,6 +180,13 @@ WK_CLASS_AVAILABLE(macos(26.4), ios(26.4), visionos(26.4))
 @property (nonatomic) BOOL includeOffscreenPasswordFields;
 
 /*!
+ Include content from same-origin subframes in the extraction of their parent frame.
+ When `NO`, the content of each subframe is left out unless that frame is listed in `additionalFrames`.
+ The default value is `YES`.
+ */
+@property (nonatomic) BOOL includeSameOriginSubframes;
+
+/*!
  Max number of words to include per paragraph; remaining text is truncated with an ellipsis (…).
  The default value is `NSUIntegerMax`.
  */

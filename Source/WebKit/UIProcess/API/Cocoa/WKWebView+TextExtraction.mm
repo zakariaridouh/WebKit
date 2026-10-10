@@ -864,11 +864,21 @@ static OptionSet<WebCore::DataDetectorType> NODELETE coreDataDetectorTypes(_WKTe
     std::optional<WebCore::NodeIdentifier> contextMenuTargetNodeIdentifier;
 #endif
 
+    auto targetNodeHandleIdentifierForFrame = [&](const WebKit::WebFrameProxy& frame) -> std::optional<WebCore::JSHandleIdentifier> {
+        if (!configuration.targetNode)
+            return std::nullopt;
+
+        if (!frame.isMainFrame() && configuration.targetNode->_ref->info().frameInfo.frameID != frame.frameID())
+            return std::nullopt;
+
+        return WebKit::jsHandleIdentifierInFrame(frame, configuration.targetNode);
+    };
+
     auto makeRequest = [&](Ref<WebKit::WebFrameProxy>&& frame) {
         return WebCore::TextExtraction::Request {
             .clientNodeAttributes = extractClientNodeAttributes(frame.copyRef(), configuration),
             .collectionRectInRootView = rectInRootView,
-            .targetNodeHandleIdentifier = WebKit::jsHandleIdentifierInFrame(frame, configuration.targetNode),
+            .targetNodeHandleIdentifier = targetNodeHandleIdentifierForFrame(frame),
             .handleIdentifiersOfNodesToSkip = extractHandleIdentifiersOfNodesToSkip(frame.copyRef(), configuration),
             .contextMenuTargetNodeIdentifier = contextMenuTargetNodeIdentifier,
             .mergeParagraphs = mergeParagraphs,
@@ -879,6 +889,7 @@ static OptionSet<WebCore::DataDetectorType> NODELETE coreDataDetectorTypes(_WKTe
             .includeTextInAutoFilledControls = !!configuration.includeTextInAutoFilledControls,
             .includeOffscreenPasswordFields = !!configuration.includeOffscreenPasswordFields,
             .includeTagName = !!configuration.includeTagName,
+            .includeSameOriginSubframes = !!configuration.includeSameOriginSubframes,
 #if ENABLE(DATA_DETECTION)
             .dataDetectorTypes = coreDataDetectorTypes(configuration.dataDetectorTypes),
 #endif
@@ -895,7 +906,7 @@ static OptionSet<WebCore::DataDetectorType> NODELETE coreDataDetectorTypes(_WKTe
         if (!parentFrame)
             continue;
 
-        if (frame->isSameOriginAs(*parentFrame))
+        if (configuration.includeSameOriginSubframes && frame->isSameOriginAs(*parentFrame))
             continue;
 
         additionalFrames.add(frame.releaseNonNull());

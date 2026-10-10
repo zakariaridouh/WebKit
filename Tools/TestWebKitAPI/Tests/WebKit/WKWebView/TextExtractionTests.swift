@@ -123,6 +123,20 @@ extension WKWebView {
 }
 
 @MainActor
+private final class AnySubframeCollector {
+    private(set) var frames: [WKFrameInfo] = []
+
+    func install(on delegate: TestNavigationDelegate) {
+        delegate.didCommitLoadWithRequestInFrame = { [weak self] _, _, frame in
+            guard !frame.isMainFrame else {
+                return
+            }
+            self?.frames.append(frame)
+        }
+    }
+}
+
+@MainActor
 private final class SubframeCollector {
     private(set) var frames: [WKFrameInfo] = []
 
@@ -1097,6 +1111,50 @@ struct TextExtractionTests {
 
         let configuration = _WKTextExtractionConfiguration()
         configuration.targetNode = targetHandle
+
+        let debugText = try await webView.debugText(configuration)
+        #expect(debugText.contains("main content"))
+        #expect(debugText.contains("subframe content"))
+    }
+
+    @Test
+    func excludingSameOriginSubframesLeavesOutTheirContent() async throws {
+        try await webView.load(html: "<div id='target'><p>main content</p><iframe srcdoc='<p>subframe content</p>'></iframe></div>")
+
+        let world = worldForCreatingJSHandles()
+        let targetHandle = try #require(await webView.querySelector("#target", in: world))
+
+        let configuration = _WKTextExtractionConfiguration()
+        configuration.targetNode = targetHandle
+        #expect(configuration.includeSameOriginSubframes)
+        configuration.includeSameOriginSubframes = false
+
+        let debugText = try await webView.debugText(configuration)
+        #expect(debugText.contains("main content"))
+        #expect(!debugText.contains("subframe content"))
+    }
+
+    @Test
+    func sameOriginSubframeInAdditionalFramesIsExtractedWhenNotIncludedByDefault() async throws {
+        let subframes = AnySubframeCollector()
+        let navigationDelegate = TestNavigationDelegate()
+        subframes.install(on: navigationDelegate)
+        webView.navigationDelegate = navigationDelegate
+
+        webView.loadHTMLString("<div id='target'><p>main content</p><iframe srcdoc='<p>subframe content</p>'></iframe></div>", baseURL: nil)
+        try await navigationDelegate.waitForDidFinishNavigation()
+
+        try await waitForCondition("the subframe to commit", timeout: .seconds(2)) {
+            !subframes.frames.isEmpty
+        }
+
+        let world = worldForCreatingJSHandles()
+        let targetHandle = try #require(await webView.querySelector("#target", in: world))
+
+        let configuration = _WKTextExtractionConfiguration()
+        configuration.targetNode = targetHandle
+        configuration.includeSameOriginSubframes = false
+        configuration.additionalFrames = subframes.frames
 
         let debugText = try await webView.debugText(configuration)
         #expect(debugText.contains("main content"))
@@ -2415,6 +2473,78 @@ struct TextExtractionTests {
             #expect(debugText.contains("origin=localhost:\(serverConfiguration.port)"))
             #expect(debugText.contains("origin=http://localhost") == false)
             #expect(debugText.contains("origin=127.0.0.1") == false)
+        }
+    }
+
+    @Test
+    func excludingSameOriginSubframesStillExtractsListedCrossOriginSubframes() async throws {
+        var server = try makeSubframeServer(
+            crossOriginButtonText: "Cross origin: click here",
+            sameOriginButtonText: "Same origin: click here"
+        )
+
+        try await server.run { serverConfiguration in
+            let webView = makeWebViewForTextExtractionTesting(width: 400, height: 400)
+            let subframes = try await loadSubframePage(in: webView, port: serverConfiguration.port)
+            let crossOriginFrame = try #require(subframes.first { $0.securityOrigin.host == "localhost" })
+
+            let configuration = _WKTextExtractionConfiguration()
+            configuration.includeRects = false
+            configuration.includeURLs = false
+            configuration.includeSameOriginSubframes = false
+            configuration.additionalFrames = [crossOriginFrame]
+
+            let debugText = try await webView.debugText(configuration)
+            #expect(debugText.contains("Link to WebKit home page"))
+            #expect(debugText.matches(of: /Cross origin: click here/).count == 1)
+            #expect(!debugText.contains("Same origin: click here"))
+        }
+    }
+
+    @Test
+    func sameOriginSubframesAreInlinedByDefaultAlongsideCrossOriginSubframes() async throws {
+        var server = try makeSubframeServer(
+            crossOriginButtonText: "Cross origin: click here",
+            sameOriginButtonText: "Same origin: click here"
+        )
+
+        try await server.run { serverConfiguration in
+            let webView = makeWebViewForTextExtractionTesting(width: 400, height: 400)
+            let subframes = try await loadSubframePage(in: webView, port: serverConfiguration.port)
+
+            let configuration = _WKTextExtractionConfiguration()
+            configuration.includeRects = false
+            configuration.includeURLs = false
+            configuration.additionalFrames = subframes
+
+            // Both subframes are listed, but the same-origin one is already part of its parent's extraction, so
+            // it appears once and not twice.
+            let debugText = try await webView.debugText(configuration)
+            #expect(debugText.matches(of: /Same origin: click here/).count == 1)
+            #expect(debugText.matches(of: /Cross origin: click here/).count == 1)
+        }
+    }
+
+    @Test
+    func listingSameOriginSubframeExtractsItOnceWhenSameOriginSubframesAreExcluded() async throws {
+        var server = try makeSubframeServer(
+            crossOriginButtonText: "Cross origin: click here",
+            sameOriginButtonText: "Same origin: click here"
+        )
+
+        try await server.run { serverConfiguration in
+            let webView = makeWebViewForTextExtractionTesting(width: 400, height: 400)
+            let subframes = try await loadSubframePage(in: webView, port: serverConfiguration.port)
+
+            let configuration = _WKTextExtractionConfiguration()
+            configuration.includeRects = false
+            configuration.includeURLs = false
+            configuration.includeSameOriginSubframes = false
+            configuration.additionalFrames = subframes
+
+            let debugText = try await webView.debugText(configuration)
+            #expect(debugText.matches(of: /Same origin: click here/).count == 1)
+            #expect(debugText.matches(of: /Cross origin: click here/).count == 1)
         }
     }
 
