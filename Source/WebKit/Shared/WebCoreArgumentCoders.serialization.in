@@ -6227,8 +6227,8 @@ header: <WebCore/AppleVisualEffect.h>
 #endif
 
 [CustomHeader, Nested] struct WebCore::Cursor::CustomCursorIPCData {
-    Ref<WebCore::Image> image;
-    [Validator='Ref { *image }->rect().contains(*hotSpot)'] WebCore::IntPoint hotSpot;
+    Ref<WebCore::ShareableBitmap> image;
+    [Validator='WebCore::IntRect({ }, (*image)->size()).contains(*hotSpot)'] WebCore::IntPoint hotSpot;
 #if ENABLE(MOUSE_CURSOR_SCALE)
     float scaleFactor;
 #endif

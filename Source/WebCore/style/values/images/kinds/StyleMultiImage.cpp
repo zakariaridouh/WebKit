@@ -215,6 +215,16 @@ bool MultiImage::canDrawAtSize(const RenderElement& renderer, const FloatSize& s
     return m_selectedImage && protect(m_selectedImage)->canDrawAtSize(renderer, size);
 }
 
+RefPtr<NativeImage> MultiImage::nativeImage(const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, float resolutionScale, ImagePaintingOptions options) const
+{
+    return m_selectedImage ? protect(m_selectedImage)->nativeImage(renderer, concreteObjectSize, resolutionScale, options) : nullptr;
+}
+
+std::optional<IntPoint> MultiImage::hotSpot() const
+{
+    return m_selectedImage ? protect(m_selectedImage)->hotSpot() : std::nullopt;
+}
+
 bool MultiImage::drawsSVGImage() const
 {
     return m_selectedImage && protect(m_selectedImage)->drawsSVGImage();

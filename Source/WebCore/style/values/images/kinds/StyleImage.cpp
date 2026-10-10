@@ -27,6 +27,7 @@
 #include "StyleImage.h"
 
 #include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include "ImagePaintingOptions.h"
 #include "ImageSizingContext.h"
 #include "NinePieceGeometry.h"
@@ -275,6 +276,17 @@ FloatRect Image::mapSourceToSize(const FloatRect& source, ConcreteObjectSize con
     auto minX = mapX(source.x());
     auto minY = mapY(source.y());
     return { minX, minY, mapX(source.maxX()) - minX, mapY(source.maxY()) - minY };
+}
+
+RefPtr<NativeImage> Image::nativeImage(const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, float resolutionScale, ImagePaintingOptions options) const
+{
+    auto pixelSize = FloatSize { calculateImageBufferBackendSize(concreteObjectSize.size(), resolutionScale) };
+    RefPtr imageBuffer = ImageBuffer::create(pixelSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, ColorSpace::SRGB(), PixelFormat::BGRA8);
+    if (!imageBuffer)
+        return nullptr;
+
+    draw(imageBuffer->context(), renderer, concreteObjectSize, FloatRect { { }, pixelSize }, FloatRect { { }, concreteObjectSize.size() }, options);
+    return ImageBuffer::sinkIntoNativeImage(WTF::move(imageBuffer));
 }
 
 ImageDrawResult Image::drawResolved(GraphicsContext& context, const RenderElement& renderer, WebCore::Image& image, ConcreteObjectSize concreteObjectSize, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options) const

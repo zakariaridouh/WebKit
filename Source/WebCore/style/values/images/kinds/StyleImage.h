@@ -97,6 +97,7 @@ public:
     // Platform Image.
     virtual WebCore::CachedImage* cachedImage() const { return nullptr; }
     virtual bool currentFrameIsComplete(const RenderElement*) const { return true; }
+    virtual std::optional<IntPoint> hotSpot() const { return std::nullopt; }
 
     // Multiple Image selection.
     virtual Image* selectedImage() { return this; }
@@ -120,6 +121,9 @@ public:
     virtual ImageDrawResult drawAsPattern(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatRect& tile, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions, bool isForFirstLine) const = 0;
     virtual ImageDrawResult drawTiled(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const FloatRect& destination, const FloatPoint& phase, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions = { }, bool isForFirstLine = false) const;
     virtual ImageDrawResult drawNinePiece(GraphicsContext&, const RenderElement&, ConcreteObjectSize, const NinePieceGeometry&, ImagePaintingOptions = { }) const;
+    // Rasterizes the image at its concrete object size, with resolutionScale pixels per unit rounded up to whole pixels.
+    // A bitmap is its own pixels, whatever size it is asked for.
+    virtual RefPtr<NativeImage> nativeImage(const RenderElement&, ConcreteObjectSize, float resolutionScale, ImagePaintingOptions = { }) const;
 
     // Drawing options
     virtual DecodingMode decodingModeForImageDraw(const RenderBoxModelObject&, const PaintInfo&) const { return DecodingMode::Synchronous; }

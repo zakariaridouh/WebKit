@@ -84,6 +84,7 @@ public:
     bool hasHDRContent() const final { return m_source->hasHDRContent(); }
     ImageOrientation orientation() const final { return m_source->orientation(); }
     unsigned frameCount() const final { return m_source->frameCount(); }
+    std::optional<IntPoint> hotSpot() const final { return m_source->hotSpot(); }
 #if ASSERT_ENABLED
     bool hasSolidColor() final { return m_source->hasSolidColor(); }
 #endif
@@ -138,7 +139,6 @@ private:
     bool hasDensityCorrectedSize() const final { return m_source->hasDensityCorrectedSize(); }
     String filenameExtension() const final { return m_source->filenameExtension(); }
     String accessibilityDescription() const final { return m_source->accessibilityDescription(); }
-    std::optional<IntPoint> hotSpot() const final { return m_source->hotSpot(); }
     std::optional<Color> singlePixelSolidColor() const final { return m_source->singlePixelSolidColor(); }
 
 #if ENABLE(QUICKLOOK_FULLSCREEN)

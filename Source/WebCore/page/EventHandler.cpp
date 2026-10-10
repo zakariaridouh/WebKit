@@ -32,7 +32,6 @@
 #include "AXObjectCache.h"
 #include "AutoscrollController.h"
 #include "BackForwardController.h"
-#include "BitmapImage.h"
 #include "BoundaryPointInlines.h"
 #include "CachedImage.h"
 #include "Chrome.h"
@@ -125,7 +124,6 @@
 #include "ResourceLoadObserver.h"
 #include "SVGDocument.h"
 #include "SVGElementTypeHelpers.h"
-#include "SVGImage.h"
 #include "SVGNames.h"
 #include "ScrollAnimator.h"
 #include "ScrollLatchingController.h"
@@ -139,7 +137,6 @@
 #include "StyleCachedImage.h"
 #include "StyleComputedStyle+GettersInlines.h"
 #include "StyleCursor.h"
-#include "StyleImageDrawingExtras.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 #include "Styleable.h"
 #include "TextEvent.h"
@@ -162,10 +159,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
-
-#if ENABLE(AX_CUSTOM_COLOR_MODE)
-#include <WebKitAdditions/AXCustomColorModeController.h>
-#endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)
 #include "PlatformTouchEventIOS.h"
@@ -223,15 +216,6 @@ using namespace SVGNames;
 const double fakeMouseMoveDurationThreshold = 0.01;
 const Seconds fakeMouseMoveShortInterval = { 100_ms };
 const Seconds fakeMouseMoveLongInterval = { 250_ms };
-#endif
-
-const int maximumCursorSize = 128;
-
-#if ENABLE(MOUSE_CURSOR_SCALE)
-// It's pretty unlikely that a scale of less than one would ever be used. But all we really
-// need to ensure here is that the scale isn't so small that integer overflow can occur when
-// dividing cursor sizes (limited above) by the scale.
-const double minimumCursorScale = 0.001;
 #endif
 
 class MaximumDurationTracker {
@@ -1672,7 +1656,8 @@ std::optional<Cursor> EventHandler::selectCursor(const HitTestResult& result, bo
     if (m_resizeLayer && m_resizeLayer->inResizeMode())
         return std::nullopt;
 
-    if (!m_frame->page())
+    RefPtr page = m_frame->page();
+    if (!page)
         return std::nullopt;
 
 #if ENABLE(PAN_SCROLLING)
@@ -1730,78 +1715,15 @@ std::optional<Cursor> EventHandler::selectCursor(const HitTestResult& result, bo
         }
     }
 
-    auto styleCursor = style ? style->cursor() : Style::Cursor { CSS::Keyword::Auto { } };
-    if (styleCursor.images) {
-        for (auto& styleCursorImage : *styleCursor.images) {
-            Ref styleImage = styleCursorImage.image;
-            RefPtr cachedImage = styleImage->cachedImage();
-            if (!cachedImage)
-                continue;
-            float scale = styleImage->imageScaleFactor();
-            // Get hotspot and convert from logical pixels to physical pixels.
-            auto hotSpot = styleCursorImage.hotSpot ? Style::evaluate<IntPoint>(*styleCursorImage.hotSpot) : IntPoint { -1, -1 };
-
-            CheckedPtr renderElement = dynamicDowncast<RenderElement>(renderer);
-            if (!renderElement && renderer && renderer->parent())
-                renderElement = renderer->parent();
-
-            IntSize svgCursorSize;
-            if (renderElement) {
-                RefPtr image = cachedImage->image();
-                if (image && image->drawsSVGImage()) {
-                    RefPtr page = frame->page();
-                    float deviceScale = page ? page->deviceScaleFactor() : 1.0f;
-
-                    svgCursorSize = roundedIntSize(image->size() * deviceScale);
-                    renderer = renderElement;
-                    scale *= deviceScale;
-                }
-            }
-
-            FloatSize size = svgCursorSize.isEmpty()
-                ? protect(cachedImage->image())->size()
-                : FloatSize { svgCursorSize };
-            if (cachedImage->errorOccurred())
-                continue;
-            // Limit the size of cursors (in UI pixels) so that they cannot be
-            // used to cover UI elements in chrome.
-            size.scale(1 / scale);
-            if (size.width() > maximumCursorSize || size.height() > maximumCursorSize)
-                continue;
-
-            RefPtr frameView = frame->view();
-            if (!frameView)
-                continue;
-            IntRect visibleContentRect = frameView->visibleContentRect();
-            IntRect cursorRect = { roundedIntPoint(result.pointInMainFrame()), expandedIntSize(size) };
-            cursorRect.moveBy(-hotSpot);
-
-            if (!visibleContentRect.contains(cursorRect))
-                continue;
-
-            RefPtr image = cachedImage->image();
-
-            if (RefPtr svgImage = dynamicDowncast<SVGImage>(image.get()); svgImage && !svgCursorSize.isEmpty()) {
-                auto extras = renderElement ? styleImage->drawingExtrasForRenderer(*renderElement) : Style::ImageDrawingExtras { };
-                ImagePaintingOptions options;
-#if ENABLE(AX_CUSTOM_COLOR_MODE)
-                if (renderElement)
-                    options = ImagePaintingOptions { AXCustomColorModeController::shouldInvertSVGImage(*renderElement, styleImage.get()) ? InvertContent::Yes : InvertContent::No };
-#endif
-                if (RefPtr nativeImage = svgImage->nativeImage(FloatSize { svgCursorSize }, ColorSpace::SRGB(), &extras, options))
-                    image = BitmapImage::create(WTF::move(nativeImage));
-            }
 #if ENABLE(MOUSE_CURSOR_SCALE)
-            // Ensure no overflow possible in calculations above.
-            if (scale < minimumCursorScale)
-                continue;
-            return Cursor(image.get(), hotSpot, scale);
+    float deviceScale = page->deviceScaleFactor();
 #else
-            ASSERT(scale == 1);
-            return Cursor(image.get(), hotSpot);
-#endif // ENABLE(MOUSE_CURSOR_SCALE)
-        }
-    }
+    float deviceScale = 1;
+#endif
+
+    auto styleCursor = style ? style->cursor() : Style::Cursor { CSS::Keyword::Auto { } };
+    if (auto selectedCursorImage = styleCursor.selectImageCursor(renderer.get(), frame.get(), deviceScale, result.roundedPointInMainFrame()))
+        return *selectedCursorImage;
 
     switch (styleCursor.predefined) {
     case CursorType::Auto: {

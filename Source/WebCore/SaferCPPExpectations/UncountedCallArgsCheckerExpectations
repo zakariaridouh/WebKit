@@ -219,7 +219,6 @@ page/IntersectionObserver.cpp
 [ macOS ] page/ResizeObserver.cpp
 [ macOS ] page/scrolling/AsyncScrollingCoordinator.cpp
 [ macOS ] page/scrolling/ThreadedScrollingCoordinator.cpp
-[ macOS ] platform/Cursor.h
 [ macOS ] platform/audio/MediaSessionManagerInterface.cpp
 [ macOS ] platform/audio/PlatformMediaSessionManager.cpp
 [ macOS ] platform/audio/cocoa/MediaSessionManagerCocoa.mm

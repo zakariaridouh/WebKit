@@ -25,6 +25,7 @@
 #include "config.h"
 #include "StyleCachedImage.h"
 
+#include "BitmapImage.h"
 #include "CSSImageValue.h"
 #include "CachedImage.h"
 #include "ContainerNodeInlines.h"
@@ -491,6 +492,21 @@ bool CachedImage::canDraw(const RenderElement& renderer) const
 bool CachedImage::canDrawAtSize(const RenderElement& renderer, const FloatSize& size) const
 {
     return !size.isEmpty() && canDraw(renderer);
+}
+
+RefPtr<NativeImage> CachedImage::nativeImage(const RenderElement& renderer, ConcreteObjectSize concreteObjectSize, float resolutionScale, ImagePaintingOptions options) const
+{
+    if (!referencedSVGResource(renderer)) {
+        if (RefPtr bitmapImage = dynamicDowncast<BitmapImage>(resolvedImage()))
+            return bitmapImage->nativeImage();
+    }
+    return Image::nativeImage(renderer, concreteObjectSize, resolutionScale, options);
+}
+
+std::optional<IntPoint> CachedImage::hotSpot() const
+{
+    RefPtr image = resolvedImage();
+    return image ? image->hotSpot() : std::nullopt;
 }
 
 bool CachedImage::drawsSVGImage() const
