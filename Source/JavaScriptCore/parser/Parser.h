@@ -1532,7 +1532,6 @@ private:
         VariableEnvironment varDeclarations;
         VariableEnvironment lexicalVariables;
         CodeFeatures features;
-        int numConstants;
     };
     std::expected<ParseInnerResult, String> parseInner(const Identifier&, ParsingContext, std::optional<int> functionConstructorParametersEndPosition, const FixedVector<UnlinkedFunctionExecutable::ClassElementDefinition>*, const PrivateNameEnvironment* parentScopePrivateNames);
 
@@ -2206,7 +2205,6 @@ std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const I
                                     parseResult.value().features,
                                     currentScope()->lexicallyScopedFeatures(),
                                     currentScope()->innerArrowFunctionFeatures(),
-                                    parseResult.value().numConstants,
                                     WTF::move(m_moduleScopeData));
         result->setStartOffset(m_lexer->currentOffset());
         result->setEndOffset(m_lexer->currentOffset());

@@ -136,7 +136,6 @@ public:
     JSC::SourceElements* createSourceElements() { return new (m_parserArena) JSC::SourceElements(); }
 
     int features() const { return m_scope.m_features; }
-    int numConstants() const { return m_scope.m_numConstants; }
 
     ExpressionNode* makeAssignNode(const JSTokenLocation&, ExpressionNode* left, Operator, ExpressionNode* right, bool leftHasAssignments, bool rightHasAssignments, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
     ExpressionNode* makePrefixNode(const JSTokenLocation&, ExpressionNode*, Operator, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
@@ -176,7 +175,6 @@ public:
     }
     ExpressionNode* createVoid(const JSTokenLocation& location, ExpressionNode* expr)
     {
-        incConstants();
         return new (m_parserArena) VoidNode(location, expr);
     }
     ExpressionNode* createThisExpr(const JSTokenLocation& location)
@@ -226,51 +224,41 @@ public:
 
     ExpressionNode* createArray(const JSTokenLocation& location, int elisions)
     {
-        if (elisions)
-            incConstants();
         return new (m_parserArena) ArrayNode(location, elisions);
     }
 
     ExpressionNode* createArray(const JSTokenLocation& location, ElementNode* elems) { return new (m_parserArena) ArrayNode(location, elems); }
     ExpressionNode* createArray(const JSTokenLocation& location, int elisions, ElementNode* elems)
     {
-        if (elisions)
-            incConstants();
         return new (m_parserArena) ArrayNode(location, elisions, elems);
     }
     ExpressionNode* createDoubleExpr(const JSTokenLocation& location, double d)
     {
-        incConstants();
         return new (m_parserArena) DoubleNode(location, d);
     }
     ExpressionNode* createIntegerExpr(const JSTokenLocation& location, double d)
     {
-        incConstants();
         return new (m_parserArena) IntegerNode(location, d);
     }
-    
+
     ExpressionNode* createBigInt(const JSTokenLocation& location, const Identifier* bigInt, uint8_t radix)
     {
-        incConstants();
         return new (m_parserArena) BigIntNode(location, *bigInt, radix);
     }
 
     ExpressionNode* createString(const JSTokenLocation& location, const Identifier* string)
     {
         ASSERT(string);
-        incConstants();
         return new (m_parserArena) StringNode(location, *string);
     }
 
     ExpressionNode* createBoolean(const JSTokenLocation& location, bool b)
     {
-        incConstants();
         return new (m_parserArena) BooleanNode(location, b);
     }
 
     ExpressionNode* createNull(const JSTokenLocation& location)
     {
-        incConstants();
         return new (m_parserArena) NullNode(location);
     }
 
@@ -1128,13 +1116,9 @@ public:
 
 private:
     struct Scope {
-        Scope()
-            : m_features(0)
-            , m_numConstants(0)
-        {
-        }
-        int m_features;
-        int m_numConstants;
+        Scope() = default;
+
+        int m_features { 0 };
     };
 
     void checkArgumentsLengthModification(const ExpressionNode* node)
@@ -1151,7 +1135,6 @@ private:
         node->setExceptionSourceCode(divot, divotStart, divotEnd);
     }
 
-    void incConstants() { m_scope.m_numConstants++; }
     void usesThis() { m_scope.m_features |= ThisFeature; }
     void usesArrowFunction() { m_scope.m_features |= ArrowFunctionFeature; }
     void usesArguments() { m_scope.m_features |= ArgumentsFeature; }

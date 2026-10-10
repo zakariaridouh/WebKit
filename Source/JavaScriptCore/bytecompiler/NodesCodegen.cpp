@@ -445,8 +445,10 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
     bool allDenseStrings = true;
     unsigned length = 0;
 
+    AssertNoGC assertNoGC;
+    Vector<JSValue, 16> constants;
+
     IndexingType recommendedIndexingType = ArrayWithUndecided;
-    MarkedArgumentBufferWithSize<16> constants;
     ElementNode* firstPutElement;
     for (firstPutElement = m_element; firstPutElement; firstPutElement = firstPutElement->next()) {
         if (firstPutElement->elision())
@@ -473,8 +475,6 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
 
         ++length;
     }
-    if (constants.hasOverflowed()) [[unlikely]]
-        hadVariableExpression = true;
     if (hadVariableExpression)
         allDenseStrings = false;
 
@@ -482,7 +482,6 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
         if (length && !hadVariableExpression) {
             VM& vm = generator.vm();
             recommendedIndexingType |= CopyOnWrite;
-            ASSERT(vm.heap.isDeferred()); // We run bytecode generator under a DeferGC. If we stopped doing that, we'd need to put a DeferGC here as we filled in these slots.
 
             Structure* cellButterflyStructure = allDenseStrings ? vm.cellButterflyOnlyAtomStringsStructure.get() : vm.cellButterflyStructure(recommendedIndexingType);
             auto* array = JSCellButterfly::tryCreate(generator.vm(), cellButterflyStructure, length);
@@ -491,7 +490,7 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
             ASSERT(elements == m_element);
             ASSERT(constants.size() == length);
             if (allDenseStrings) {
-                for (auto& slot : constants.mutableSpan()) {
+                for (auto& slot : constants) {
                     JSString* string = asString(slot);
                     StringImpl* stringImpl = const_cast<StringImpl*>(string->getValueImpl());
                     slot = vm.atomStringToJSStringMap.ensureValue(stringImpl, [&] { return string; });
@@ -500,14 +499,14 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
 
             if (hasInt32(array->indexingType())) {
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-                memcpy(std::bit_cast<EncodedJSValue*>(array->toButterfly()->contiguous().data()), constants.data(), length * sizeof(EncodedJSValue));
+                memcpy(std::bit_cast<EncodedJSValue*>(array->toButterfly()->contiguous().data()), std::bit_cast<const EncodedJSValue*>(constants.span().data()), length * sizeof(EncodedJSValue));
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             } else if (hasContiguous(array->indexingType())) {
-                gcSafeMemcpy(std::bit_cast<EncodedJSValue*>(array->toButterfly()->contiguous().data()), constants.data(), length * sizeof(EncodedJSValue));
+                gcSafeMemcpy(std::bit_cast<EncodedJSValue*>(array->toButterfly()->contiguous().data()), std::bit_cast<const EncodedJSValue*>(constants.span().data()), length * sizeof(EncodedJSValue));
                 vm.writeBarrier(array);
             } else {
                 for (unsigned index = 0; index < length; ++index)
-                    array->setIndex(vm, index, constants.at(index));
+                    array->setIndex(vm, index, constants[index]);
             }
             return generator.emitNewArrayBuffer(dst, array, recommendedIndexingType);
         }
