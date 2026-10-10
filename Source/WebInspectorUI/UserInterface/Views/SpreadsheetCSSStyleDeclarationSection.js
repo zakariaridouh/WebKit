@@ -465,6 +465,8 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
             let selectorElement = this._selectorElement.appendChild(document.createElement("span"));
             selectorElement.textContent = selectorText;
             selectorElement.classList.add(WI.SpreadsheetCSSStyleDeclarationSection.MatchedSelectorElementStyleClassName);
+
+            this._selectorElements.push(selectorElement);
         };
 
         if (!this._renderedGroupings.length)
