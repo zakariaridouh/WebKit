@@ -162,7 +162,8 @@ void LinkDecorationFilteringController::updateList(CompletionHandler<void()>&& c
             RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to request query parameters from WebPrivacy.");
         else {
             RetainPtr rules = [data rules];
-            for (WPLinkFilteringRule *rule : rules.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL WPLinkFilteringRule *rule : rules.get()) {
                 auto domain = WebCore::RegistrableDomain { URL { makeString("http://"_s, String { rule.domain }) } };
                 result.append(WebCore::LinkDecorationFilteringData { WTF::move(domain), [rule respondsToSelector:@selector(path)] ? rule.path : @"", rule.queryParameter });
             }
@@ -206,7 +207,8 @@ void requestLinkDecorationFilteringData(LinkFilteringRulesCallback&& callback)
             RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to request allowed query parameters from WebPrivacy.");
         else {
             RetainPtr rules = [data rules];
-            for (WPLinkFilteringRule *rule : rules.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL WPLinkFilteringRule *rule : rules.get()) {
                 auto domain = WebCore::RegistrableDomain { URL { makeString("http://"_s, String { rule.domain }) } };
                 result.append(WebCore::LinkDecorationFilteringData { WTF::move(domain), { }, rule.queryParameter });
             }
@@ -238,9 +240,11 @@ static HashMap<WebCore::RegistrableDomain, Vector<WebCore::RegistrableDomain>> q
 {
     HashMap<WebCore::RegistrableDomain, Vector<WebCore::RegistrableDomain>> map;
     RetainPtr<NSArray<NSString *>> topDomains = quirkDomains.allKeys;
-    for (NSString *topDomain : topDomains.get()) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *topDomain : topDomains.get()) {
         Vector<WebCore::RegistrableDomain> subFrameDomains;
-        for (NSString *subFrameDomain : [quirkDomains objectForKey:topDomain])
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL NSString *subFrameDomain : [quirkDomains objectForKey:topDomain])
             subFrameDomains.append(WebCore::RegistrableDomain::fromRawString(subFrameDomain));
         map.add(WebCore::RegistrableDomain::fromRawString(String { topDomain }), WTF::move(subFrameDomains));
     }
@@ -250,7 +254,8 @@ static HashMap<WebCore::RegistrableDomain, Vector<WebCore::RegistrableDomain>> q
 static Vector<URL> quirkPagesArrayToVector(NSArray<NSString *> *triggerPages)
 {
     Vector<URL> triggers;
-    for (NSString *page : triggerPages) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *page : triggerPages) {
         if (![page isEqualToString:@"*"])
             triggers.append(URL { page });
     }
@@ -280,7 +285,8 @@ void StorageAccessPromptQuirkController::updateList(CompletionHandler<void()>&& 
         else {
             RetainPtr quirks = [data quirks];
             auto hasQuirkDomainsAndTriggerPages = [PAL::getWPStorageAccessPromptQuirkClassSingleton() instancesRespondToSelector:@selector(quirkDomains)] && [PAL::getWPStorageAccessPromptQuirkClassSingleton() instancesRespondToSelector:@selector(triggerPages)];
-            for (WPStorageAccessPromptQuirk *quirk : quirks.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL WPStorageAccessPromptQuirk *quirk : quirks.get()) {
                 if (hasQuirkDomainsAndTriggerPages)
                     result.append(WebCore::OrganizationStorageAccessPromptQuirk { quirk.name, quirkDomainsDictToMap(retainPtr(quirk.quirkDomains).get()), quirkPagesArrayToVector(retainPtr(quirk.triggerPages).get()) });
                 else
@@ -321,7 +327,8 @@ void StorageAccessUserAgentStringQuirkController::updateList(CompletionHandler<v
             RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to request storage access user agent string quirks from WebPrivacy.");
         else {
             RetainPtr quirks = [data quirks];
-            for (WPStorageAccessUserAgentStringQuirk *quirk : quirks.get())
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL WPStorageAccessUserAgentStringQuirk *quirk : quirks.get())
                 result.add(WebCore::RegistrableDomain::fromRawString(quirk.domain), quirk.userAgentString);
             setCachedListData(WTF::move(result));
         }
@@ -381,7 +388,8 @@ void RestrictedOpenerDomainsController::update()
         HashMap<WebCore::RegistrableDomain, RestrictedOpenerType> restrictedOpenerTypes;
         restrictedOpenerTypes.reserveInitialCapacity(domains.count);
 
-        for (WPRestrictedOpenerDomain *domainInfo in domains) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL WPRestrictedOpenerDomain *domainInfo in domains) {
             auto registrableDomain = WebCore::RegistrableDomain::fromRawString(domainInfo.domain);
             if (registrableDomain.isEmpty())
                 continue;
@@ -454,7 +462,8 @@ void HighValueFraudTargetDomainsController::update()
         HashSet<WebCore::RegistrableDomain> highValueDomains;
         highValueDomains.reserveInitialCapacity(domains.count);
 
-        for (WPHighValueFraudTargetDomain *domainInfo in domains) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL WPHighValueFraudTargetDomain *domainInfo in domains) {
             auto registrableDomain = WebCore::RegistrableDomain::fromRawString(domainInfo.domain);
             if (registrableDomain.isEmpty())
                 continue;
@@ -656,7 +665,8 @@ public:
                 version4List().clear();
                 version6List().clear();
 
-                for (WPNetworkAddressRange *range in ranges) {
+                // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+                for (SUPPRESS_UNRETAINED_LOCAL WPNetworkAddressRange *range in ranges) {
                     switch (range.version) {
                     case WPNetworkAddressVersion4:
                         version4List().append({ range });
@@ -806,7 +816,8 @@ public:
                 // writer must hold it too — otherwise it races the map structure and frees CString
                 // buffers out from under a concurrent reader.
                 Locker locker { TrackerAddressLookupInfo::trackerLookupLock() };
-                for (WPTrackingDomain *domain in domains)
+                // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+                for (SUPPRESS_UNRETAINED_LOCAL WPTrackingDomain *domain in domains)
                     list().set(String::fromLatin1([domain.host UTF8String]), TrackerDomainLookupInfo { domain });
             }];
         });

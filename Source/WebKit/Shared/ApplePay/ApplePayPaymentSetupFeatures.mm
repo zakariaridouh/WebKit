@@ -72,7 +72,8 @@ PaymentSetupFeatures::operator Vector<Ref<WebCore::ApplePaySetupFeature>>() cons
 {
     Vector<Ref<WebCore::ApplePaySetupFeature>> features;
     features.reserveInitialCapacity([m_platformFeatures count]);
-    for (PKPaymentSetupFeature *platformFeature in m_platformFeatures.get()) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL PKPaymentSetupFeature *platformFeature in m_platformFeatures.get()) {
         if (WebCore::ApplePaySetupFeature::supportsFeature(platformFeature))
             features.append(WebCore::ApplePaySetupFeature::create(platformFeature));
     }
@@ -82,7 +83,8 @@ PaymentSetupFeatures::operator Vector<Ref<WebCore::ApplePaySetupFeature>>() cons
 Vector<RetainPtr<PKPaymentSetupFeature>> PaymentSetupFeatures::serializableFeatures() const
 {
     Vector<RetainPtr<PKPaymentSetupFeature>> result;
-    for (PKPaymentSetupFeature *feature in m_platformFeatures.get())
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL PKPaymentSetupFeature *feature in m_platformFeatures.get())
         result.append(feature);
     return result;
 }

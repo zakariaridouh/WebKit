@@ -279,7 +279,8 @@ static void encodeInvocationArguments(WKRemoteObjectEncoder *encoder, NSInvocati
 
         // Objective-C object
         case '@': {
-            id value;
+            // This is an out-parameter of -getArgument:atIndex:; the argument is kept alive by the invocation.
+            SUPPRESS_UNRETAINED_LOCAL id value;
             [invocation getArgument:&value atIndex:i];
 
             @try {
@@ -362,7 +363,8 @@ static constexpr NSString *clientCertificateKey = @"NSErrorClientCertificateChai
 static RetainPtr<NSArray<NSData *>> transformCertificatesToData(NSArray *input)
 {
     auto dataArray = adoptNS([[NSMutableArray alloc] initWithCapacity:input.count]);
-    for (id certificate in input) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL id certificate in input) {
         if (CFGetTypeID(certificate) != SecCertificateGetTypeID())
             [NSException raise:NSInvalidArgumentException format:@"Error encoding invalid certificate in chain"];
         [dataArray addObject:(NSData *)adoptCF(SecCertificateCopyData((SecCertificateRef)certificate)).get()];
@@ -418,7 +420,8 @@ static void encodeError(WKRemoteObjectEncoder *encoder, NSError *error)
 static RetainPtr<NSArray> transformDataToCertificates(NSArray *input)
 {
     auto array = adoptNS([[NSMutableArray alloc] initWithCapacity:input.count]);
-    for (NSData *data in input) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSData *data in input) {
         if (CFGetTypeID(data) != CFDataGetTypeID())
             [NSException raise:NSInvalidUnarchiveOperationException format:@"Error decoding certificate from object that is not data %@", NSStringFromClass([data class])];
         auto certificate = adoptCF(SecCertificateCreateWithData(nullptr, (CFDataRef)data));
@@ -1189,7 +1192,8 @@ static RetainPtr<id> decodeObject(WKRemoteObjectDecoder *decoder, const API::Dic
 - (id)decodeObjectOfClasses:(NSSet *)classes forKey:(NSString *)key
 {
     HashSet<CFTypeRef> allowedClasses;
-    for (Class allowedClass in classes)
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL Class allowedClass in classes)
         allowedClasses.add((__bridge CFTypeRef)allowedClass);
 
     RefPtr dictionary = Ref { *_currentDictionary }->get<API::Dictionary>(escapeKey(key));

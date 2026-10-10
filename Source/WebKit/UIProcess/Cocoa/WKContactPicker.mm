@@ -252,12 +252,14 @@ SOFT_LINK_CLASS(ContactsUI, CNContactPickerViewController)
     }
 
     if (_properties.contains(WebCore::ContactProperty::Email)) {
-        for (CNLabeledValue<NSString *> *emailAddress in contact.emailAddresses)
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL CNLabeledValue<NSString *> *emailAddress in contact.emailAddresses)
             contactInfo.email.append(emailAddress.value);
     }
 
     if (_properties.contains(WebCore::ContactProperty::Tel)) {
-        for (CNLabeledValue<CNPhoneNumber *> *phoneNumber in contact.phoneNumbers)
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL CNLabeledValue<CNPhoneNumber *> *phoneNumber in contact.phoneNumbers)
             contactInfo.tel.append(phoneNumber.value.stringValue);
     }
 
@@ -288,7 +290,8 @@ SOFT_LINK_CLASS(ContactsUI, CNContactPickerViewController)
 
     RetainPtr stringValuePredicate = [NSPredicate predicateWithFormat:@"self isKindOfClass: %@", [NSString class]];
 
-    for (id jsContact in jsContacts) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL id jsContact in jsContacts) {
         if (![jsContact isKindOfClass:[NSDictionary class]])
             continue;
 
@@ -296,7 +299,8 @@ SOFT_LINK_CLASS(ContactsUI, CNContactPickerViewController)
 
         RetainPtr<id> names = [(NSDictionary *)jsContact objectForKey:@"name"];
         if ([names isKindOfClass:[NSArray class]]) {
-            for (NSString *name in [names filteredArrayUsingPredicate:stringValuePredicate.get()]) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL NSString *name in [names filteredArrayUsingPredicate:stringValuePredicate.get()]) {
                 [contact setGivenName:name];
                 break;
             }
@@ -305,7 +309,8 @@ SOFT_LINK_CLASS(ContactsUI, CNContactPickerViewController)
         RetainPtr<id> emails = [(NSDictionary *)jsContact objectForKey:@"email"];
         if ([emails isKindOfClass:[NSArray class]]) {
             RetainPtr<NSMutableArray<CNLabeledValue<NSString*>*>> emailAddresses = adoptNS([[NSMutableArray alloc] init]);
-            for (NSString *email in [emails filteredArrayUsingPredicate:stringValuePredicate.get()]) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL NSString *email in [emails filteredArrayUsingPredicate:stringValuePredicate.get()]) {
                 RetainPtr<CNLabeledValue<NSString*>> labeledValue = [getCNLabeledValueClassSingleton() labeledValueWithLabel:nil value:email];
                 [emailAddresses addObject:labeledValue.get()];
             }
@@ -315,7 +320,8 @@ SOFT_LINK_CLASS(ContactsUI, CNContactPickerViewController)
         RetainPtr<id> phoneNumbers = [(NSDictionary *)jsContact objectForKey:@"tel"];
         if ([phoneNumbers isKindOfClass:[NSArray class]]) {
             RetainPtr<NSMutableArray<CNLabeledValue<CNPhoneNumber*>*>> numbers = adoptNS([[NSMutableArray alloc] init]);
-            for (NSString *phoneNumber in [phoneNumbers filteredArrayUsingPredicate:stringValuePredicate.get()]) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL NSString *phoneNumber in [phoneNumbers filteredArrayUsingPredicate:stringValuePredicate.get()]) {
                 RetainPtr<CNPhoneNumber> cnPhoneNumber = [getCNPhoneNumberClassSingleton() phoneNumberWithStringValue:phoneNumber];
                 RetainPtr<CNLabeledValue<CNPhoneNumber*>> labeledValue = [getCNLabeledValueClassSingleton() labeledValueWithLabel:nil value:cnPhoneNumber.get()];
                 [numbers addObject:labeledValue.get()];

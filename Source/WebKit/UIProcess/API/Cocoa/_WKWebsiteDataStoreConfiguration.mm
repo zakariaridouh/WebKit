@@ -589,7 +589,8 @@ static WebKit::UnifiedOriginStorageLevel NODELETE toUnifiedOriginStorageLevel(_W
 {
     Vector<WebCore::SecurityOriginData> origins;
     origins.reserveInitialCapacity(originStrings.count);
-    for (NSString *originString in originStrings) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *originString in originStrings) {
         auto origin = WebCore::SecurityOriginData::fromURL(URL { String { originString } });
         if (origin.isNull() || origin.isOpaque())
             continue;

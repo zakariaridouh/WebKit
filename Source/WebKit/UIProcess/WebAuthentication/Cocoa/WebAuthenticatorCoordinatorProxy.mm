@@ -572,7 +572,8 @@ void WebAuthenticatorCoordinatorProxy::makeActiveConditionalAssertion()
 inline static Vector<AuthenticatorTransport> toTransports(NSArray<ASAuthorizationSecurityKeyPublicKeyCredentialDescriptorTransport> *asTransports)
 {
     Vector<AuthenticatorTransport> transports;
-    for (ASAuthorizationSecurityKeyPublicKeyCredentialDescriptorTransport asTransport : asTransports) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL ASAuthorizationSecurityKeyPublicKeyCredentialDescriptorTransport asTransport : asTransports) {
         if (auto transport = convertStringToAuthenticatorTransport(asTransport))
             transports.append(*transport);
     }
@@ -1126,7 +1127,8 @@ static Vector<WebCore::AuthenticatorTransport> toAuthenticatorTransports(NSArray
 {
     Vector<WebCore::AuthenticatorTransport> transports;
     transports.reserveInitialCapacity(ascTransports.count);
-    for (NSString *ascTransport : ascTransports) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *ascTransport : ascTransports) {
         if ([ascTransport isEqualToString:@"usb"])
             transports.append(WebCore::AuthenticatorTransport::Usb);
         else if ([ascTransport isEqualToString:@"nfc"])
@@ -1180,51 +1182,51 @@ static inline void continueAfterRequest(RetainPtr<id <ASCCredentialProtocol>> cr
     if ([credential isKindOfClass:getASCPlatformPublicKeyCredentialRegistrationClassSingleton()]) {
         response.isAuthenticatorAttestationResponse = true;
 
-        ASCPlatformPublicKeyCredentialRegistration *registrationCredential = credential.get();
-        response.rawId = toArrayBuffer(retainPtr(registrationCredential.credentialID).get());
-        response.attestationObject = toArrayBuffer(retainPtr(registrationCredential.attestationObject).get());
-        response.clientDataJSON = toArrayBuffer(retainPtr(registrationCredential.rawClientDataJSON).get());
-        rawAttachment = registrationCredential.attachment;
+        RetainPtr<ASCPlatformPublicKeyCredentialRegistration> registrationCredential = credential.get();
+        response.rawId = toArrayBuffer(retainPtr([registrationCredential credentialID]).get());
+        response.attestationObject = toArrayBuffer(retainPtr([registrationCredential attestationObject]).get());
+        response.clientDataJSON = toArrayBuffer(retainPtr([registrationCredential rawClientDataJSON]).get());
+        rawAttachment = [registrationCredential attachment];
         if ([registrationCredential respondsToSelector:@selector(transports)])
-            response.transports = toAuthenticatorTransports(retainPtr(registrationCredential.transports).get());
+            response.transports = toAuthenticatorTransports(retainPtr([registrationCredential transports]).get());
         if ([registrationCredential respondsToSelector:@selector(extensionOutputsCBOR)])
-            response.extensionOutputs = toExtensionOutputs(retainPtr(registrationCredential.extensionOutputsCBOR).get());
+            response.extensionOutputs = toExtensionOutputs(retainPtr([registrationCredential extensionOutputsCBOR]).get());
     } else if ([credential isKindOfClass:getASCSecurityKeyPublicKeyCredentialRegistrationClassSingleton()]) {
         response.isAuthenticatorAttestationResponse = true;
 
-        ASCSecurityKeyPublicKeyCredentialRegistration *registrationCredential = credential.get();
-        response.rawId = toArrayBuffer(registrationCredential.credentialID);
-        response.attestationObject = toArrayBuffer(registrationCredential.attestationObject);
-        response.clientDataJSON = toArrayBuffer(registrationCredential.rawClientDataJSON);
-        rawAttachment = registrationCredential.attachment;
+        RetainPtr<ASCSecurityKeyPublicKeyCredentialRegistration> registrationCredential = credential.get();
+        response.rawId = toArrayBuffer([registrationCredential credentialID]);
+        response.attestationObject = toArrayBuffer([registrationCredential attestationObject]);
+        response.clientDataJSON = toArrayBuffer([registrationCredential rawClientDataJSON]);
+        rawAttachment = [registrationCredential attachment];
         if ([registrationCredential respondsToSelector:@selector(transports)])
-            response.transports = toAuthenticatorTransports(registrationCredential.transports);
+            response.transports = toAuthenticatorTransports([registrationCredential transports]);
         if ([registrationCredential respondsToSelector:@selector(extensionOutputsCBOR)])
-            response.extensionOutputs = toExtensionOutputs(registrationCredential.extensionOutputsCBOR);
+            response.extensionOutputs = toExtensionOutputs([registrationCredential extensionOutputsCBOR]);
     } else if ([credential isKindOfClass:getASCPlatformPublicKeyCredentialAssertionClassSingleton()]) {
         response.isAuthenticatorAttestationResponse = false;
 
-        ASCPlatformPublicKeyCredentialAssertion *assertionCredential = credential.get();
-        response.rawId = toArrayBuffer(retainPtr(assertionCredential.credentialID).get());
-        response.authenticatorData = toArrayBuffer(retainPtr(assertionCredential.authenticatorData).get());
-        response.signature = toArrayBuffer(retainPtr(assertionCredential.signature).get());
-        response.userHandle = toArrayBufferNilIfEmpty(retainPtr(assertionCredential.userHandle).get());
-        response.clientDataJSON = toArrayBuffer(retainPtr(assertionCredential.rawClientDataJSON).get());
-        rawAttachment = assertionCredential.attachment;
+        RetainPtr<ASCPlatformPublicKeyCredentialAssertion> assertionCredential = credential.get();
+        response.rawId = toArrayBuffer(retainPtr([assertionCredential credentialID]).get());
+        response.authenticatorData = toArrayBuffer(retainPtr([assertionCredential authenticatorData]).get());
+        response.signature = toArrayBuffer(retainPtr([assertionCredential signature]).get());
+        response.userHandle = toArrayBufferNilIfEmpty(retainPtr([assertionCredential userHandle]).get());
+        response.clientDataJSON = toArrayBuffer(retainPtr([assertionCredential rawClientDataJSON]).get());
+        rawAttachment = [assertionCredential attachment];
         if ([assertionCredential respondsToSelector:@selector(extensionOutputsCBOR)])
-            response.extensionOutputs = toExtensionOutputs(retainPtr(assertionCredential.extensionOutputsCBOR).get());
+            response.extensionOutputs = toExtensionOutputs(retainPtr([assertionCredential extensionOutputsCBOR]).get());
     } else if ([credential isKindOfClass:getASCSecurityKeyPublicKeyCredentialAssertionClassSingleton()]) {
         response.isAuthenticatorAttestationResponse = false;
 
-        ASCSecurityKeyPublicKeyCredentialAssertion *assertionCredential = credential.get();
-        response.rawId = toArrayBuffer(assertionCredential.credentialID);
-        response.authenticatorData = toArrayBuffer(assertionCredential.authenticatorData);
-        response.signature = toArrayBuffer(assertionCredential.signature);
-        response.userHandle = toArrayBufferNilIfEmpty(assertionCredential.userHandle);
-        response.clientDataJSON = toArrayBuffer(assertionCredential.rawClientDataJSON);
-        rawAttachment = assertionCredential.attachment;
+        RetainPtr<ASCSecurityKeyPublicKeyCredentialAssertion> assertionCredential = credential.get();
+        response.rawId = toArrayBuffer([assertionCredential credentialID]);
+        response.authenticatorData = toArrayBuffer([assertionCredential authenticatorData]);
+        response.signature = toArrayBuffer([assertionCredential signature]);
+        response.userHandle = toArrayBufferNilIfEmpty([assertionCredential userHandle]);
+        response.clientDataJSON = toArrayBuffer([assertionCredential rawClientDataJSON]);
+        rawAttachment = [assertionCredential attachment];
         if ([assertionCredential respondsToSelector:@selector(extensionOutputsCBOR)])
-            response.extensionOutputs = toExtensionOutputs(assertionCredential.extensionOutputsCBOR);
+            response.extensionOutputs = toExtensionOutputs([assertionCredential extensionOutputsCBOR]);
     } else {
         ExceptionCode exceptionCode;
         RetainPtr<NSString> errorMessage;
@@ -1400,7 +1402,8 @@ void WebAuthenticatorCoordinatorProxy::getClientCapabilities(IPC::Connection& co
 
     [getASCWebKitSPISupportClassSingleton() getClientCapabilitiesForRelyingParty:originData.securityOrigin()->domain().createNSString().get() withCompletionHandler:makeBlockPtr([handler = WTF::move(handler)](NSDictionary<NSString *, NSNumber *> *result) mutable {
         Vector<KeyValuePair<String, bool>> capabilities;
-        for (NSString *key in result)
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL NSString *key in result)
             capabilities.append({ key, result[key].boolValue });
         setRelatedOriginsCapability(capabilities);
         std::ranges::sort(capabilities, codePointCompareLessThan, &KeyValuePair<String, bool>::key);

@@ -2371,7 +2371,8 @@ void UnifiedPDFPlugin::repaintAnnotationsForFormField(NSString *fieldName)
 {
 #if HAVE(PDFDOCUMENT_ANNOTATIONS_FOR_FIELD_NAME)
     RetainPtr annotations = [m_pdfDocument annotationsForFieldName:fieldName];
-    for (PDFAnnotation *annotation in annotations.get())
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL PDFAnnotation *annotation in annotations.get())
         setNeedsRepaintForAnnotation(annotation, repaintRequirementsForAnnotation(annotation));
 #else
     UNUSED_PARAM(fieldName);
@@ -3251,7 +3252,8 @@ PDFPageCoverage UnifiedPDFPlugin::pageCoverageForSelection(PDFSelection *selecti
 
     auto pageCoverage = PDFPageCoverage { };
 
-    for (PDFPage *page in [selection pages]) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL PDFPage *page in [selection pages]) {
         auto pageIndex = m_documentLayout.indexForPage(page);
         if (!pageIndex)
             continue;
@@ -3339,7 +3341,8 @@ PDFPluginTextExtractionContent UnifiedPDFPlugin::textExtractionContent() const
         }];
 
         size_t searchOffset = 0;
-        for (PDFAnnotation *annotation in annotationsInReadingOrder.get()) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL PDFAnnotation *annotation in annotationsInReadingOrder.get()) {
             if (!annotationIsExternalLink(annotation))
                 continue;
 
@@ -3615,8 +3618,10 @@ void UnifiedPDFPlugin::collectFindMatchRects(const String& target, WebCore::Find
     m_findMatchRects.clear();
 
     RetainPtr foundSelections = [m_pdfDocument findString:target.createNSString().get() withOptions:compareOptionsForFindOptions(options)];
-    for (PDFSelection *selection in foundSelections.get()) {
-        for (PDFPage *page in selection.pages) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL PDFSelection *selection in foundSelections.get()) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL PDFPage *page in selection.pages) {
             auto pageIndex = m_documentLayout.indexForPage(page);
             if (!pageIndex)
                 continue;
@@ -3650,7 +3655,8 @@ Vector<WebFoundTextRange::PDFData> UnifiedPDFPlugin::findTextMatches(const Strin
         return matches;
 
     RetainPtr foundSelections = [m_pdfDocument findString:target.createNSString().get() withOptions:compareOptionsForFindOptions(options)];
-    for (PDFSelection *selection in foundSelections.get()) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL PDFSelection *selection in foundSelections.get()) {
         RetainPtr startPage = [[selection pages] firstObject];
         NSRange startPageRange = [selection rangeAtIndex:0 onPage:startPage.get()];
         NSUInteger startPageIndex = [m_pdfDocument indexForPage:startPage.get()];
@@ -3698,7 +3704,8 @@ Vector<WebCore::FloatRect> UnifiedPDFPlugin::rectsForTextMatchesInRect(const Vec
         if (!selection)
             continue;
 
-        for (PDFPage *page in [selection pages]) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL PDFPage *page in [selection pages]) {
             auto pageIndex = m_documentLayout.indexForPage(page);
             if (!pageIndex)
                 continue;
@@ -3963,7 +3970,8 @@ std::pair<String, RetainPtr<PDFSelection>> UnifiedPDFPlugin::textForImmediateAct
     if (!annotationsForCurrentPage)
         return { { }, nil };
 
-    for (PDFAnnotation *annotation in annotationsForCurrentPage.get()) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL PDFAnnotation *annotation in annotationsForCurrentPage.get()) {
         FloatRect annotationBoundsInPageSpace = [annotation bounds];
 
         if (!annotationBoundsInPageSpace.contains(pagePoint))
@@ -4919,7 +4927,8 @@ bool UnifiedPDFPlugin::platformPopulateEditorStateIfNeeded(EditorState& state) c
 
     Vector<FloatRect> selectionRects;
 #if HAVE(PDFSELECTION_ENUMERATE_RECTS_AND_TRANSFORMS)
-    for (PDFPage *page in [selection pages]) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL PDFPage *page in [selection pages]) {
         auto pageIndex = m_documentLayout.indexForPage(page);
         [selection enumerateRectsAndTransformsForPage:page usingBlock:[&, protectedThis = Ref { *this }](CGRect rect, CGAffineTransform transform) {
             auto transformedRectInPage = CGRectApplyAffineTransform(rect, transform);

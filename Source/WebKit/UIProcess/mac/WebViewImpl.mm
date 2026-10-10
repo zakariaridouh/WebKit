@@ -1384,7 +1384,8 @@ WebViewImpl::WebViewImpl(WKWebView *view, WebProcessPool& processPool, Ref<API::
     [view addTrackingArea:m_primaryTrackingArea.get()];
     [view addTrackingArea:m_flagsChangedEventMonitorTrackingArea.get()];
 
-    for (NSView *subview in view.subviews) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSView *subview in view.subviews) {
         if (RetainPtr layerHostingView = dynamic_objc_cast<WKFlippedView>(subview)) {
             // A layer hosting view may have already been created and added to the view hierarchy
             // in the process of initializing the WKWebView from an NSCoder.
@@ -4415,7 +4416,8 @@ RetainPtr<id> WebViewImpl::toolTipOwnerForSendingMouseEvents() const
     if (RetainPtr<id> owner = m_trackingRectOwner.get())
         return owner;
 
-    for (NSTrackingArea *trackingArea in protect(view()).get().trackingAreas) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSTrackingArea *trackingArea in protect(view()).get().trackingAreas) {
         static Class managerClass = NSClassFromString(@"NSToolTipManager");
         RetainPtr<id> owner = trackingArea.owner;
         if ([owner class] == managerClass)
@@ -4808,7 +4810,8 @@ static bool handleLegacyFilesPasteboard(id<NSDraggingInfo> draggingInfo, Box<Web
     String pasteboardName = draggingInfo.draggingPasteboard.name;
 
     RetainPtr originalFileURLs = adoptNS([[NSMutableArray alloc] initWithCapacity:[files count]]);
-    for (NSString *file in files.get())
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *file in files.get())
         [originalFileURLs addObject:adoptNS([[NSURL alloc] initFileURLWithPath:file]).get()];
 
     auto task = makeBlockPtr([protectedPage = protect(page), originalFileURLs, dragData, pasteboardName = pasteboardName.isolatedCopy()] mutable {
@@ -4820,7 +4823,8 @@ static bool handleLegacyFilesPasteboard(id<NSDraggingInfo> draggingInfo, Box<Web
         [coordinator prepareForReadingItemsAtURLs:originalFileURLs.get() options:0 writingItemsAtURLs:@[] options:0 error:&prepareError byAccessor:[coordinator, originalFileURLs, protectedPage = WTF::move(protectedPage), dragData, pasteboardName](void (^completionHandler)(void)) mutable {
             auto fileNames = Box<Vector<String>>::create();
 
-            for (NSURL *originalFileURL in originalFileURLs.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL NSURL *originalFileURL in originalFileURLs.get()) {
                 NSError *error = nil;
                 [coordinator coordinateReadingItemAtURL:originalFileURL options:NSFileCoordinatorReadingWithoutChanges error:&error byAccessor:[fileNames](NSURL *newURL) {
                     fileNames->append(newURL.path);
@@ -4897,7 +4901,7 @@ NSString *WebViewImpl::fileNameForFilePromiseProvider(NSFilePromiseProvider *pro
     return nil;
 }
 
-static NSError *webKitUnknownError()
+static RetainPtr<NSError> webKitUnknownError()
 {
     return [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil];
 }
@@ -4921,7 +4925,7 @@ void WebViewImpl::writeToURLForFilePromiseProvider(NSFilePromiseProvider *provid
             });
             return;
         }
-        completionHandler(webKitUnknownError());
+        completionHandler(webKitUnknownError().get());
         return;
     }
 
@@ -4946,7 +4950,7 @@ void WebViewImpl::writeToURLForFilePromiseProvider(NSFilePromiseProvider *provid
         }
     }
 
-    completionHandler(webKitUnknownError());
+    completionHandler(webKitUnknownError().get());
 }
 
 NSDragOperation WebViewImpl::dragSourceOperationMask(NSDraggingSession *, NSDraggingContext context)
@@ -5091,7 +5095,8 @@ void WebViewImpl::startDrag(const WebCore::DragItem& item, ShareableBitmap::Hand
             // The real data lives in the saved legacy state and is restored once the drag session starts.
             savedLegacyPasteboardTypes = adoptNS([[pasteboard types] copy]);
             savedLegacyPasteboardData = adoptNS([[NSMutableDictionary alloc] init]);
-            for (NSString *type in [pasteboard types]) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL NSString *type in [pasteboard types]) {
                 if (RetainPtr data = [pasteboard dataForType:type])
                     [savedLegacyPasteboardData setObject:data.get() forKey:type];
             }
@@ -5136,7 +5141,8 @@ void WebViewImpl::startDrag(const WebCore::DragItem& item, ShareableBitmap::Hand
             if (savedLegacyPasteboardTypes && [savedLegacyPasteboardTypes count]) {
                 [pasteboard clearContents];
                 [pasteboard addTypes:savedLegacyPasteboardTypes.get() owner:nil];
-                for (NSString *type in savedLegacyPasteboardTypes.get()) {
+                // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+                for (SUPPRESS_UNRETAINED_LOCAL NSString *type in savedLegacyPasteboardTypes.get()) {
                     if (RetainPtr data = [savedLegacyPasteboardData objectForKey:type])
                         [pasteboard setData:data.get() forType:type];
                 }
@@ -5643,7 +5649,8 @@ void WebViewImpl::setCustomSwipeViews(NSArray *customSwipeViews)
 
     Vector<RetainPtr<NSView>> views;
     views.reserveInitialCapacity(customSwipeViews.count);
-    for (NSView *view in customSwipeViews)
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSView *view in customSwipeViews)
         views.append(view);
 
     protect(ensureGestureController())->setCustomSwipeViews(views);
@@ -7279,14 +7286,16 @@ bool WebViewImpl::useMediaPlaybackControlsView() const
 void WebViewImpl::dismissTextTouchBarPopoverItemWithIdentifier(NSString *identifier)
 {
     NSTouchBarItem *foundItem = nil;
-    for (NSTouchBarItem *item in RetainPtr { textTouchBar() }.get().items) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSTouchBarItem *item in RetainPtr { textTouchBar() }.get().items) {
         if ([item.identifier isEqualToString:identifier]) {
             foundItem = item;
             break;
         }
 
         if ([item.identifier isEqualToString:NSTouchBarItemIdentifierTextFormat]) {
-            for (NSTouchBarItem *childItem in checked_objc_cast<NSGroupTouchBarItem>(item).groupTouchBar.items) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL NSTouchBarItem *childItem in checked_objc_cast<NSGroupTouchBarItem>(item).groupTouchBar.items) {
                 if ([childItem.identifier isEqualToString:identifier]) {
                     foundItem = childItem;
                     break;
@@ -8189,7 +8198,8 @@ void WebViewImpl::updateScrollPocket()
         [m_layerHostingView addSubview:captureView.get() positioned:NSWindowBelow relativeTo:nil];
         [captureView layer].zPosition = std::numeric_limits<float>::lowest();
         [view addSubview:m_topScrollPocket.get()];
-        for (NSView *pocketContainer in m_viewsAboveScrollPocket.get())
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL NSView *pocketContainer in m_viewsAboveScrollPocket.get())
             [m_topScrollPocket addElementContainer:pocketContainer];
         updateScrollPocketVisibilityWhenScrolledToTopAndNonEditable();
         updatePrefersSolidColorHardPocket();
@@ -8212,7 +8222,8 @@ void WebViewImpl::updateScrollPocket()
 #endif
 
     if ([protect(m_view) _usesAutomaticContentInsetBackgroundFill]) {
-        for (NSView *pocketContainer in m_viewsAboveScrollPocket.get())
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL NSView *pocketContainer in m_viewsAboveScrollPocket.get())
             topInsetFrame = NSUnionRect(topInsetFrame, [view convertRect:pocketContainer.bounds fromView:pocketContainer]);
     }
 

@@ -227,7 +227,8 @@ bool hasProhibitedUsageStrings()
         @"NSLocationAlwaysAndWhenInUseUsageDescription"
     ];
 
-    for (NSString *prohibitedString : prohibitedStrings) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *prohibitedString : prohibitedStrings) {
         if ([infoDictionary objectForKey:prohibitedString]) {
             String message = adoptNS([[NSString alloc] initWithFormat:@"[In-App Browser Privacy] %@ used prohibited usage string %@.", retainPtr([[NSBundle mainBundle] bundleIdentifier]).get(), prohibitedString]).get();
             SAFE_WTFLOGALWAYS("%s", message.utf8());

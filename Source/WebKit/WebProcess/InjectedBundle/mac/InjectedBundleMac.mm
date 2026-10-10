@@ -141,7 +141,7 @@ bool InjectedBundle::initialize(const WebProcessCreationParameters& parameters, 
     }
 
     if (!initializeFunction) {
-        NSError *error;
+        NSError *error = nil;
         if (![m_platformBundle preflightAndReturnError:&error]) {
             RELEASE_LOG_ERROR(Process, "InjectedBundle::initialize failed - preflightAndReturnError failed for [%{public}s]: %{public}@", m_path.utf8(), error);
             return false;

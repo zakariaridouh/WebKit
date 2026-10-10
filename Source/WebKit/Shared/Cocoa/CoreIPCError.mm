@@ -141,7 +141,8 @@ CoreIPCError::CoreIPCError(NSError *nsError)
         if ([clientIdentityAndCertificates isKindOfClass:[NSArray class]]) {
             m_clientCertificateChain = Vector<RetainPtr<SecCertificateRef>> { };
             // Turn SecIdentity members into SecCertificate to strip out private key information.
-            for (id object in clientIdentityAndCertificates.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL id object in clientIdentityAndCertificates.get()) {
                 // Only SecIdentity or SecCertificate types are expected in clientIdentityAndCertificates
                 if (CFGetTypeID((__bridge CFTypeRef)object) != SecIdentityGetTypeID() && CFGetTypeID((__bridge CFTypeRef)object) != SecCertificateGetTypeID())
                     continue;
@@ -173,7 +174,8 @@ CoreIPCError::CoreIPCError(NSError *nsError)
 
     if (peerCertificateChain && [peerCertificateChain isKindOfClass:[NSArray class]]) {
         m_peerCertificateChain = Vector<RetainPtr<SecCertificateRef>> { };
-        for (id object in peerCertificateChain.get()) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL id object in peerCertificateChain.get()) {
             if (CFGetTypeID((__bridge CFTypeRef)object) != SecCertificateGetTypeID()) {
                 m_peerCertificateChain = std::nullopt;
                 break;
@@ -195,7 +197,8 @@ CoreIPCError::CoreIPCError(NSError *nsError)
     if (RetainPtr<id> extractedValue = [userInfo objectForKey:NSLocalizedRecoveryOptionsErrorKey]) {
         if (RetainPtr array = dynamic_objc_cast<NSArray>(extractedValue)) {
             m_localizedRecoveryOptionsError = Vector<String> { };
-            for (id object in array.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL id object in array.get()) {
                 if (RetainPtr string = dynamic_objc_cast<NSString>(object))
                     m_localizedRecoveryOptionsError->append(string.get());
             }
@@ -229,7 +232,8 @@ CoreIPCError::CoreIPCError(NSError *nsError)
         if (RetainPtr value = dynamic_objc_cast<NSString>([resolutionReport objectForKey:@"extendedDNSErrorExtraText"]))
             report.extendedDNSErrorExtraText = value.get();
         if (RetainPtr interfaces = dynamic_objc_cast<NSArray>([resolutionReport objectForKey:@"interfaces"])) {
-            for (id entry in interfaces.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL id entry in interfaces.get()) {
                 RetainPtr interfaceDictionary = dynamic_objc_cast<NSDictionary>(entry);
                 if (!interfaceDictionary)
                     continue;

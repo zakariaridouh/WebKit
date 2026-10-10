@@ -386,7 +386,8 @@ Vector<TextCheckingResult> TextChecker::checkTextOfParagraph(SpellDocumentTag sp
                                                          inSpellDocumentWithTag:spellDocumentTag 
                                                                     orthography:NULL
                                                                       wordCount:NULL];
-    for (NSTextCheckingResult *incomingResult in incomingResults.get()) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSTextCheckingResult *incomingResult in incomingResults.get()) {
         NSTextCheckingType resultType = [incomingResult resultType];
         ASSERT(incomingResult.range.location != NSNotFound);
         ASSERT(incomingResult.range.length > 0);
@@ -402,7 +403,8 @@ Vector<TextCheckingResult> TextChecker::checkTextOfParagraph(SpellDocumentTag sp
             result.type = TextCheckingType::Grammar;
             result.range = resultRange;
             result.details.reserveInitialCapacity(details.get().count);
-            for (NSDictionary *incomingDetail in details.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL NSDictionary *incomingDetail in details.get()) {
                 ASSERT(incomingDetail);
                 GrammarDetail detail;
                 RetainPtr detailRangeAsNSValue = [incomingDetail objectForKey:NSGrammarRange];
@@ -556,7 +558,8 @@ void TextChecker::requestCheckingOfString(Ref<TextCheckerCompletion>&&, int32_t)
 static Vector<TextCheckingResult> convertExtendedCheckingResults(NSArray<NSTextCheckingResult *> *incomingResults)
 {
     Vector<TextCheckingResult> results;
-    for (NSTextCheckingResult *incomingResult in incomingResults) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSTextCheckingResult *incomingResult in incomingResults) {
         NSTextCheckingType resultType = [incomingResult resultType];
         auto resultRange = incomingResult.range;
         if (resultType == NSTextCheckingTypeGrammar) {
@@ -565,7 +568,8 @@ static Vector<TextCheckingResult> convertExtendedCheckingResults(NSArray<NSTextC
             result.type = TextCheckingType::Grammar;
             result.range = resultRange;
             result.details.reserveInitialCapacity(details.get().count);
-            for (NSDictionary *incomingDetail in details.get()) {
+            // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+            for (SUPPRESS_UNRETAINED_LOCAL NSDictionary *incomingDetail in details.get()) {
                 GrammarDetail detail;
                 RetainPtr detailRangeAsNSValue = [incomingDetail objectForKey:NSGrammarRange];
                 NSRange detailNSRange = [detailRangeAsNSValue rangeValue];

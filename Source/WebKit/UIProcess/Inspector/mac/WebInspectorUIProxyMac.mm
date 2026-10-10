@@ -975,7 +975,7 @@ DebuggableInfoData WebInspectorUIProxy::infoForLocalDebuggable()
 
 void WebInspectorUIProxy::applyForcedAppearance()
 {
-    NSAppearance *platformAppearance;
+    RetainPtr<NSAppearance> platformAppearance;
     switch (m_frontendAppearance) {
     case InspectorFrontendClient::Appearance::System:
         platformAppearance = nil;
@@ -991,9 +991,9 @@ void WebInspectorUIProxy::applyForcedAppearance()
     }
 
     if (RetainPtr window = m_inspectorWindow.get())
-        window.get().appearance = platformAppearance;
+        window.get().appearance = platformAppearance.get();
 
-    [m_inspectorViewController webView].appearance = platformAppearance;
+    [m_inspectorViewController webView].appearance = platformAppearance.get();
 }
 
 } // namespace WebKit

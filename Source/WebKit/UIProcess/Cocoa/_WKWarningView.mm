@@ -207,7 +207,7 @@ static RetainPtr<WebCore::CocoaColor> colorForItem(WarningItem item, ViewType *w
 
 static RetainPtr<ViewType> viewForIconImage(_WKWarningView *warningView)
 {
-    NSString *symbolName;
+    RetainPtr<NSString> symbolName;
     RetainPtr color = colorForItem(WarningItem::WarningSymbol, warningView);
     BOOL shouldSetTint = NO;
     CGFloat imagePointSize = fontOfSize(WarningTextSize::Title).get().pointSize * imageIconPointSizeMultiplier;
@@ -218,12 +218,12 @@ static RetainPtr<ViewType> viewForIconImage(_WKWarningView *warningView)
         shouldSetTint = YES;
     });
 #if PLATFORM(MAC)
-    RetainPtr view = [NSImageView imageViewWithImage:[NSImage imageWithSystemSymbolName:symbolName accessibilityDescription:nil]];
+    RetainPtr view = [NSImageView imageViewWithImage:[NSImage imageWithSystemSymbolName:symbolName.get() accessibilityDescription:nil]];
     [view setSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:imagePointSize weight:NSFontWeightRegular scale:NSImageSymbolScaleLarge]];
     if (shouldSetTint)
         [view setContentTintColor:color.get()];
 #else
-    RetainPtr view = adoptNS([[UIImageView alloc] initWithImage:[UIImage systemImageNamed:symbolName]]);
+    RetainPtr view = adoptNS([[UIImageView alloc] initWithImage:[UIImage systemImageNamed:symbolName.get()]]);
     [view setTintColor:color.get()];
     [view setPreferredSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:imagePointSize]];
     [view setContentMode:UIViewContentModeScaleAspectFit];
@@ -367,7 +367,8 @@ static RetainPtr<ViewType> makeLabel(NSAttributedString *attributedString)
     [box setWarningViewBackgroundColor:colorForItem(WarningItem::BoxBackground, self).get()];
     [box layer].cornerRadius = boxCornerRadius;
 
-    for (ViewType *view in @[ warningViewIcon.get(), title.get(), warning.get(), goBack.get(), primaryButton.get() ]) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL ViewType *view in @[ warningViewIcon.get(), title.get(), warning.get(), goBack.get(), primaryButton.get() ]) {
         view.translatesAutoresizingMaskIntoConstraints = NO;
         [box addSubview:view];
     }
@@ -461,7 +462,8 @@ static RetainPtr<ViewType> makeLabel(NSAttributedString *attributedString)
 
     auto line = adoptNS([_WKWarningViewBox new]);
     [line setWarningViewBackgroundColor:[WebCore::CocoaColor lightGrayColor]];
-    for (ViewType *view in @[details.get(), bottom.get(), line.get()])
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL ViewType *view in @[details.get(), bottom.get(), line.get()])
         view.translatesAutoresizingMaskIntoConstraints = NO;
 
     [self addSubview:bottom.get()];

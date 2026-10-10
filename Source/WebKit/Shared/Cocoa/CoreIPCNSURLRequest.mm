@@ -111,7 +111,8 @@ static bool isReservedProtocolPropertyKeyPrefix(NSString *key)
         @"NS",
         @"com.apple.",
     ];
-    for (NSString *prefix in prefixes) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *prefix in prefixes) {
         if ([key hasPrefix:prefix])
             return true;
     }
@@ -139,7 +140,8 @@ static bool isTypedAllowlistKey(NSString *key)
 
 static void populateAppProperties(NSDictionary *protocolPropertiesDict, ProtocolProperties& props)
 {
-    for (id rawKey in protocolPropertiesDict) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL id rawKey in protocolPropertiesDict) {
         RetainPtr key = dynamic_objc_cast<NSString>(rawKey);
         if (!key)
             continue;
@@ -260,12 +262,14 @@ CoreIPCNSURLRequest::CoreIPCNSURLRequest(NSURLRequest *request)
     if ([headerFields isKindOfClass:[NSDictionary class]]) {
         Vector<CoreIPCNSURLRequestData::HeaderField> vector;
         vector.reserveInitialCapacity(headerFields.get().count);
-        for (id key in headerFields.get()) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL id key in headerFields.get()) {
             RetainPtr<id> value = [headerFields objectForKey:key];
             if (RetainPtr valueArray = dynamic_objc_cast<NSArray>(value.get())) {
                 Vector<String> valueVector;
                 valueVector.reserveInitialCapacity(valueArray.get().count);
-                for (id item in valueArray.get()) {
+                // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+                for (SUPPRESS_UNRETAINED_LOCAL id item in valueArray.get()) {
                     if (RetainPtr nsString = dynamic_objc_cast<NSString>(item))
                         valueVector.append(nsString.get());
                 }
@@ -330,7 +334,8 @@ CoreIPCNSURLRequest::CoreIPCNSURLRequest(NSURLRequest *request)
     if ([contentDispositionEncodingFallbackArray isKindOfClass:[NSArray class]]) {
         Vector<CoreIPCNumber> vector;
         vector.reserveInitialCapacity(contentDispositionEncodingFallbackArray.get().count);
-        for (id element in contentDispositionEncodingFallbackArray.get()) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL id element in contentDispositionEncodingFallbackArray.get()) {
             if ([element isKindOfClass:[NSNumber class]])
                 vector.append(CoreIPCNumber(element));
         }

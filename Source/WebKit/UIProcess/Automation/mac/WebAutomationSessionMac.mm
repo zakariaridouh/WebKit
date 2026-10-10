@@ -102,7 +102,8 @@ void WebAutomationSession::sendSynthesizedEventsToPage(WebPageProxy& page, NSArr
         method_setImplementation(methodToSwizzle, originalImplementation);
     });
 
-    for (NSEvent *event in eventsToSend) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSEvent *event in eventsToSend) {
         LOG(Automation, "Sending event[%p] to window[%p]: %@", event, window.get(), event);
 
         // Take focus back in case the Inspector became focused while the prior command or

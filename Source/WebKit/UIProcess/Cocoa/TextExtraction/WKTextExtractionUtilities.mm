@@ -283,7 +283,8 @@ void requestTextExtractionFilterRuleData(CompletionHandler<void(Vector<TextExtra
         }
 
         HashMap<String, TextExtraction::FilterRuleData> allData;
-        for (NSString *nsKeyIdentifier : data) {
+        // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+        for (SUPPRESS_UNRETAINED_LOCAL NSString *nsKeyIdentifier : data) {
             auto keyIdentifier = String { nsKeyIdentifier };
             auto keyIdentifierComponents = keyIdentifier.split('/');
             if (keyIdentifierComponents.size() != 2)

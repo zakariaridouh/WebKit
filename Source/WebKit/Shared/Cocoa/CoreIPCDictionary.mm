@@ -42,7 +42,8 @@ CoreIPCDictionary::CoreIPCDictionary(NSDictionary *dictionary)
 
     m_keyValuePairs.reserveInitialCapacity(dictionary.count);
 
-    for (id key in dictionary) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL id key in dictionary) {
         RetainPtr<id> value = dictionary[key];
         ASSERT(value);
 

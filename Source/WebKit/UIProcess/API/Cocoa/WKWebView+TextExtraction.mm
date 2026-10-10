@@ -160,16 +160,16 @@ static std::optional<WebCore::NodeIdentifier> activeContextMenuTargetNodeIdentif
         return completionHandler(nil, [NSError errorWithDomain:WKErrorDomain code:WKErrorWebViewInvalidated userInfo:nil]);
 
     webFrame->takeSnapshotOfNode(info.identifier, [completionHandler = makeBlockPtr(completionHandler)](auto&& handle) {
-        auto makeUnknownError = [] {
+        auto makeUnknownError = []() -> RetainPtr<NSError> {
             return [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil];
         };
 
         if (!handle)
-            return completionHandler(nil, makeUnknownError());
+            return completionHandler(nil, makeUnknownError().get());
 
         RefPtr bitmap = WebCore::ShareableBitmap::create(WTF::move(*handle), WebCore::SharedMemory::Protection::ReadOnly);
         if (!bitmap)
-            return completionHandler(nil, makeUnknownError());
+            return completionHandler(nil, makeUnknownError().get());
 
         RetainPtr cgImage = bitmap->createPlatformImage();
 #if PLATFORM(MAC)
@@ -240,7 +240,8 @@ static Vector<std::pair<String, String>> extractReplacementStrings(_WKTextExtrac
 {
     Vector<std::pair<String, String>> result;
     RetainPtr replacementStrings = [configuration replacementStrings];
-    for (NSString *replacement in replacementStrings.get()) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *replacement in replacementStrings.get()) {
         if (!replacement.length)
             continue;
 
@@ -763,7 +764,8 @@ static Vector<WebCore::JSHandleIdentifier> extractHandleIdentifiersOfNodesToSkip
     Vector<WebCore::JSHandleIdentifier> nodes;
     RetainPtr nodesToSkip = [configuration nodesToSkip];
     nodes.reserveInitialCapacity([nodesToSkip count]);
-    for (_WKJSHandle *handle in nodesToSkip.get()) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL _WKJSHandle *handle in nodesToSkip.get()) {
         if (auto identifier = WebKit::jsHandleIdentifierInFrame(frame, handle))
             nodes.append(WTF::move(*identifier));
     }
@@ -897,7 +899,8 @@ static OptionSet<WebCore::DataDetectorType> NODELETE coreDataDetectorTypes(_WKTe
     };
 
     HashSet<Ref<WebKit::WebFrameProxy>> additionalFrames;
-    for (WKFrameInfo *info in [configuration additionalFrames]) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL WKFrameInfo *info in [configuration additionalFrames]) {
         RefPtr frame = WebKit::WebFrameProxy::webFrame(info->_frameInfo->frameInfoData().frameID);
         if (!frame)
             continue;

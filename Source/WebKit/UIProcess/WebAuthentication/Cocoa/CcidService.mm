@@ -131,7 +131,8 @@ void CcidService::onCardRemoved()
 void CcidService::updateSlots(NSArray *slots)
 {
     HashSet<String> slotsSet;
-    for (NSString *nsName : slots) {
+    // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+    for (SUPPRESS_UNRETAINED_LOCAL NSString *nsName : slots) {
         auto name = String(nsName);
         slotsSet.add(name);
         auto it = m_slotObservers.find(name);

@@ -284,7 +284,8 @@ static void appendFilesAsShareableURLs(RetainPtr<NSMutableArray>&& shareDataArra
         RunLoop::mainSingleton().dispatch([completionHandler = WTF::move(completionHandler), shareDataArray = WTF::move(shareDataArray), fileURLs = WTF::move(fileURLs), usePlaceholderFiles] mutable {
             if (usePlaceholderFiles) {
                 RetainPtr placeholderShareDataArray = adoptNS([[NSMutableArray alloc] initWithCapacity:[fileURLs count]]);
-                for (NSURL *fileURL in fileURLs.get()) {
+                // FIXME: Remove the suppression once https://github.com/llvm/llvm-project/pull/230818 is deployed (rdar://189710680).
+                for (SUPPRESS_UNRETAINED_LOCAL NSURL *fileURL in fileURLs.get()) {
 #if PLATFORM(IOS_FAMILY)
                     RetainPtr item = adoptNS([[WKShareSheetFileItemProvider alloc] initWithURL:fileURL]);
 #else
