@@ -419,6 +419,7 @@ public:
 #if PLATFORM(IOS_FAMILY)
     void setKeyboardInputModeIdentifier(const String&);
     UIKeyboardInputMode *overriddenKeyboardInputMode() const { return m_overriddenKeyboardInputMode.get(); }
+    void restoreDefaultKeyboardInputModeIfNeeded();
     void setIsInHardwareKeyboardMode(bool value) { m_isInHardwareKeyboardMode = value; }
     bool isInHardwareKeyboardMode() const { return m_isInHardwareKeyboardMode; }
     unsigned keyboardUpdateForChangedSelectionCount() const;
