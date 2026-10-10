@@ -259,8 +259,9 @@ WI.JavaScriptLogViewController = class JavaScriptLogViewController extends WI.Ob
             returnByValue: false,
             generatePreview: true,
             saveResult: false,
+            disableAwaitConvenience: true,
             emulateUserGesture: WI.settings.emulateInUserGesture.value,
-            sourceURLAppender: appendWebInspectorConsoleEvaluationSourceURL,
+            sourceURLAppender: appendWebInspectorSourceURL,
         };
         WI.runtimeManager.evaluateInInspectedWindow(text, options, function(result, wasThrown) {
             target.RuntimeAgent.releaseObjectGroup(options.objectGroup);

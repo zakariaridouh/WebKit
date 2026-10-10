@@ -100,14 +100,12 @@ WI.RuntimeManager = class RuntimeManager extends WI.Object
         this.dispatchEventToListeners(WI.RuntimeManager.Event.ActiveExecutionContextChanged);
     }
 
-    evaluateInInspectedWindow(expression, options, callback)
+    evaluateInInspectedWindow(expression, {objectGroup, includeCommandLineAPI, doNotPauseOnExceptionsAndMuteConsole, returnByValue, generatePreview, saveResult, emulateUserGesture, sourceURLAppender, disableAwaitConvenience}, callback)
     {
         if (!this._activeExecutionContext) {
             callback(null, false);
             return;
         }
-
-        let {objectGroup, includeCommandLineAPI, doNotPauseOnExceptionsAndMuteConsole, returnByValue, generatePreview, saveResult, emulateUserGesture, sourceURLAppender} = options;
 
         includeCommandLineAPI = includeCommandLineAPI || false;
         doNotPauseOnExceptionsAndMuteConsole = doNotPauseOnExceptionsAndMuteConsole || false;
@@ -126,7 +124,7 @@ WI.RuntimeManager = class RuntimeManager extends WI.Object
         } else if (/^\s*\{/.test(expression) && /\}\s*$/.test(expression)) {
             // Transform {a:1} to ({a:1}) so it is treated like an object literal instead of a block with a label.
             expression = "(" + expression + ")";
-        } else if (/\bawait\b/.test(expression)) {
+        } else if (!disableAwaitConvenience && /\bawait\b/.test(expression)) {
             // Transform `await <expr>` into an async function assignment.
             expression = this._tryApplyAwaitConvenience(expression);
         }
