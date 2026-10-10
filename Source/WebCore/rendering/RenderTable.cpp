@@ -872,7 +872,15 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     if (paintPhase == PaintPhase::Accessibility)
         paintInfo.accessibilityRegionContext()->takeBounds(*this, paintOffset);
 
-    // We're done.  We don't bother painting any children.
+#if ENABLE(AX_CUSTOM_COLOR_MODE)
+    if (paintPhase == PaintPhase::AXCustomColorCollectBackgrounds) {
+        LayoutRect rect(paintOffset, borderBoxSize());
+        adjustBorderBoxRectForPainting(rect);
+        paintInfo.axCustomColorBackdropContext()->recordBackdrop(*this, FloatRect { rect }, paintInfo.paintBehavior);
+    }
+#endif
+
+    // We're done. We don't bother painting any children.
     if (paintPhase == PaintPhase::BlockBackground)
         return;
     
