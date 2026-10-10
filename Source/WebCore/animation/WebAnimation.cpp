@@ -1579,7 +1579,7 @@ bool WebAnimation::needsTick() const
     return pending() || playState() == PlayState::Running || m_hasScheduledEventsDuringTick;
 }
 
-void WebAnimation::tick()
+void WebAnimation::tick(ShouldDispatchProgressEvent shouldDispatchProgressEvent)
 {
     auto wasPending = pending();
 
@@ -1601,6 +1601,11 @@ void WebAnimation::tick()
         if (RefPtr keyframeEffect = this->keyframeEffect()) {
             if (wasPending && !pending())
                 keyframeEffect->animationBecameReady();
+        }
+
+        if (m_effect && shouldDispatchProgressEvent == ShouldDispatchProgressEvent::Yes && hasEventListeners(eventNames().progressEvent)) {
+            if (protect(m_effect)->getComputedTiming().progress)
+                enqueueAnimationPlaybackEvent(eventNames().progressEvent, currentTime(), std::nullopt);
         }
     }
 }
