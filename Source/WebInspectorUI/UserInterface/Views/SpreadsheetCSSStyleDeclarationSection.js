@@ -605,7 +605,7 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
             });
         }
 
-        if (!this._style.inherited && !this._style.ownerRule?.isImplicitlyNested && InspectorBackend.hasCommand("CSS.addRule")) {
+        if (!this._style.inherited && !this._style.ownerRule?.isImplicitlyNested && !this._style.groupings.some((grouping) => grouping.type === WI.CSSGrouping.Type.KeyframesRule) && InspectorBackend.hasCommand("CSS.addRule")) {
             let generateSelector = () => {
                 if (this._style.type === WI.CSSStyleDeclaration.Type.Attribute)
                     return this._style.node.displayName;
