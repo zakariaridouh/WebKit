@@ -795,8 +795,8 @@ LayoutUnit FlexFormattingContext::flexBaseSizeForFlexItem(const FlexLayoutItem& 
 
 LayoutUnit FlexFormattingContext::computeFlexBaseSize(const FlexLayoutItem& flexLayoutItem, const Style::FlexBasis& flexBasis)
 {
-    // FIXME: While we are supposed to ignore min/max here, the cached
-    // The cached block-axis size entry may hold a min/max-constrained size.
+    // FIXME: While we are supposed to ignore min/max here, the cached block-axis size
+    // (FlexItemContentCache::blockAxisSize) may hold a min/max-constrained size.
     auto blockAxisContentSize = ensureBlockAxisContentSizeForFlexItemIfNeeded(flexLayoutItem);
 
     // A. If the item has a definite used flex basis, that's the flex base size.
@@ -829,7 +829,7 @@ LayoutUnit FlexFormattingContext::computeFlexBaseSize(const FlexLayoutItem& flex
 
 std::optional<LayoutUnit> FlexFormattingContext::ensureBlockAxisContentSizeForFlexItemIfNeeded(const FlexLayoutItem& flexLayoutItem)
 {
-    // Laying the item out, reusing the previously cached size, and caching the new one are all render-tree work; ask RenderFlexibleBox.
+    // Laying the item out, reusing the previously cached size, and caching the new one are all render-tree work, so FlexIntegrationUtils does them.
     auto flexBaseSizeNeedsBlockAxisContentSize = [&] {
         if (flexLayoutItem.mainAxisIsInlineAxis)
             return false;
