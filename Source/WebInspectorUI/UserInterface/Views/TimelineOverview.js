@@ -1039,6 +1039,9 @@ WI.TimelineOverview = class TimelineOverview extends WI.View
 
     _recordingImported(event)
     {
+        if (event.data.recording !== this._recording)
+            return;
+
         let {overviewData} = event.data;
 
         if (overviewData.secondsPerPixel !== undefined)

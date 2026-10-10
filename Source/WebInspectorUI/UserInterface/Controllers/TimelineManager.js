@@ -357,7 +357,7 @@ WI.TimelineManager = class TimelineManager extends WI.Object
         this._activeRecording = newRecording;
 
         this.dispatchEventToListeners(WI.TimelineManager.Event.RecordingLoaded, {oldRecording});
-        this.dispatchEventToListeners(WI.TimelineManager.Event.RecordingImported, {overviewData});
+        this.dispatchEventToListeners(WI.TimelineManager.Event.RecordingImported, {recording: newRecording, overviewData});
     }
 
     computeElapsedTime(timestamp)
