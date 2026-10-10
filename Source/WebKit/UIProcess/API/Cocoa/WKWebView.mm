@@ -3634,21 +3634,6 @@ WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::FixedContai
     if ([self _shouldAdjustColorExtensionsForHorizontalBannerViewOverlays]) {
         createSystemBackgroundExtensionViewIfNeeded(WebCore::BoxSide::Left);
         createSystemBackgroundExtensionViewIfNeeded(WebCore::BoxSide::Right);
-#if PLATFORM(IOS_FAMILY)
-        // If there's no top color extension to fill the top obscured content inset area, paint
-        // a system background color extension instead. Unlike top color extensions for fixed
-        // headers, the top system background color extension should scroll with the web content.
-        if (insets.top() > 0 && ![self _hasVisibleColorExtensionView:WebCore::BoxSide::Top]) {
-            if (!_systemBackgroundColorExtensionViews.top()) {
-                RetainPtr topView = adoptNS([[WKColorExtensionView alloc] initWithFrame:CGRectZero delegate:self]);
-                [topView setUserInteractionEnabled:NO];
-                [topView layer].name = @"Top system background color extension";
-                [_scrollView insertSubview:topView aboveSubview:_contentView];
-                _systemBackgroundColorExtensionViews.setAt(WebCore::BoxSide::Top, topView);
-            }
-        } else if (RetainPtr topView = _systemBackgroundColorExtensionViews.top())
-            [topView fadeOut];
-#endif // PLATFORM(IOS_FAMILY)
         [self _updateAppearanceForSystemBackgroundColorExtensionViews];
     }
 #endif
@@ -3738,23 +3723,6 @@ WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::FixedContai
         auto xPosition = bounds.width() - insets.right() + std::max<CGFloat>(insets.right() - distanceFromRightEdge, 0);
         [view setFrame:CGRectMake(xPosition, 0, insets.right(), bounds.height())];
     }
-
-#if PLATFORM(IOS_FAMILY)
-    // The top system background color extension should *generally* have a height equal to the
-    // top obscured content inset. However, some applications (including Safari) add the revealed
-    // height of refresh controls to the top obscured content inset. To prevent the top system
-    // background extension from drawing over the refresh control, we stop recalculating the
-    // height while the scroll view is scrolled past the top of the page (i.e when a refresh
-    // control may be in the revealing state).
-    if (RetainPtr view = _systemBackgroundColorExtensionViews.top(); view && ![view isHidden]) {
-        if (![_scrollView _wk_isScrolledBeyondTopExtent])
-            _restingTopSystemBackgroundColorExtensionInset = self._obscuredInsets.top;
-        auto topInset = _restingTopSystemBackgroundColorExtensionInset;
-        auto yPosition = std::min<CGFloat>(contentOffset.y, -topInset);
-        auto xPosition = contentOffset.x - boundedContentOffsetX;
-        [view setFrame:CGRectMake(xPosition, yPosition, contentWidth, topInset)];
-    }
-#endif
 #endif
 }
 
@@ -3902,11 +3870,6 @@ WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::FixedContai
     auto insets = [self _obscuredInsetsForFixedColorExtension];
     fadeOrSetColorIfNeeded(WebCore::BoxSide::Left, insets.left());
     fadeOrSetColorIfNeeded(WebCore::BoxSide::Right, insets.right());
-#if PLATFORM(IOS_FAMILY)
-    // If there's a top sampled color extension, fade out the top system background extension.
-    auto effectiveTopInset = [self _hasVisibleColorExtensionView:WebCore::BoxSide::Top] ? 0 : insets.top();
-    fadeOrSetColorIfNeeded(WebCore::BoxSide::Top, effectiveTopInset);
-#endif
 }
 
 #endif // ENABLE(HORIZONTAL_BANNER_VIEW_OVERLAYS)

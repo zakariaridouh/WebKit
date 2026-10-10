@@ -8123,6 +8123,9 @@ void WebViewImpl::updatePrefersSolidColorHardPocket()
 
     auto prefersSolidColorHardPocketDueToScrollLocation = [&] {
 #if HAVE(LIQUID_GLASS_ADJUSTMENTS)
+        if (linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::CheckPageLocationDuringHardPocketEligibilityCheck))
+            return pageIsScrolledToTop();
+
         if (linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::IgnorePageLocationDuringHardPocketEligibilityCheck))
             return false;
 #endif

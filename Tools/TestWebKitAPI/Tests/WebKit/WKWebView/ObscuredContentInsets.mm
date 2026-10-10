@@ -860,14 +860,18 @@ static void assertTopPocket(TestWKWebView *webView, const PageState& state, CGFl
 
 static void assertTopColorExtension(TestWKWebView *webView, const PageState& state, bool hasFixedHeader, CGFloat tolerance)
 {
+    RetainPtr topFill = [webView firstLayerWithNameContaining:@"Fixed color extension fill (Top)"];
+    if (!hasFixedHeader) {
+        EXPECT_NULL(topFill.get());
+        return;
+    }
+
     auto geometry = computeGeometry(state);
     auto expected = CGRectMake(0, -topInset, geometry.contentsWidthView, topInset);
 
-    RetainPtr name = hasFixedHeader ? @"Fixed color extension fill (Top)" : @"Top system background color extension";
-    RetainPtr topFill = [webView firstLayerWithNameContaining:name];
     EXPECT_NOT_NULL(topFill.get());
     if (topFill)
-        expectFrameEqualWithTolerance([topFill frame], expected, tolerance, name);
+        expectFrameEqualWithTolerance([topFill frame], expected, tolerance, @"top fixed");
 }
 
 #endif
