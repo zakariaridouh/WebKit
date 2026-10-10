@@ -34,7 +34,7 @@ namespace InlineIterator {
 
 class TextBox : public Box {
 public:
-    TextBox(PathVariant&&);
+    TextBox(BoxPath&&);
 
     bool hasHyphen() const;
     StringView originalText() const;
@@ -58,7 +58,7 @@ public:
 class TextBoxIterator : public LeafBoxIterator {
 public:
     TextBoxIterator() = default;
-    TextBoxIterator(Box::PathVariant&&);
+    TextBoxIterator(BoxPath&&);
     TextBoxIterator(const Box&);
 
     TextBoxIterator& operator++() { return traverseNextTextBox(); }
@@ -85,49 +85,37 @@ BoxRange<TextBoxIterator> textBoxesFor(const RenderText&);
 
 inline bool TextBox::hasHyphen() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.hasHyphen();
-    });
+    return m_path.hasHyphen();
 }
 
-inline TextBox::TextBox(PathVariant&& path)
+inline TextBox::TextBox(BoxPath&& path)
     : Box(WTF::move(path))
 {
 }
 
 inline StringView TextBox::originalText() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.originalText();
-    });
+    return m_path.originalText();
 }
 
 inline unsigned TextBox::start() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.start();
-    });
+    return m_path.start();
 }
 
 inline unsigned TextBox::end() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.end();
-    });
+    return m_path.end();
 }
 
 inline unsigned TextBox::length() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.length();
-    });
+    return m_path.length();
 }
 
 inline TextBoxSelectableRange TextBox::selectableRange() const
 {
-    return WTF::switchOn(m_pathVariant, [&](auto& path) {
-        return path.selectableRange();
-    });
+    return m_path.selectableRange();
 }
 
 }

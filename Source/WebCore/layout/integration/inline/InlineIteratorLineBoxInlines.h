@@ -60,9 +60,7 @@ inline LeafBoxIterator LineBox::logicalRightmostLeafBox() const
 
 inline size_t LineBox::lineIndex() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.lineIndex();
-    });
+    return m_path.lineIndex();
 }
 
 }

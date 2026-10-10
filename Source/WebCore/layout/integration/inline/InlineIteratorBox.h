@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <WebCore/InlineIteratorBoxModernPath.h>
+#include <WebCore/InlineIteratorBoxPath.h>
 
 namespace WebCore {
 
@@ -48,11 +48,7 @@ struct EndIterator { };
 
 class Box {
 public:
-    using PathVariant = Variant<
-        BoxModernPath
-    >;
-
-    Box(PathVariant&&);
+    Box(BoxPath&&);
 
     bool isText() const;
     bool isSVGText() const;
@@ -99,8 +95,6 @@ public:
     CheckedRef<const Style::ComputedStyle> style() const;
     WritingMode writingMode() const { return style()->writingMode(); }
 
-    const InlineDisplay::Box* inlineBox() const LIFETIME_BOUND;
-
     // Text-relative left/right
     LeafBoxIterator nextLineRightwardOnLine() const;
     LeafBoxIterator nextLineLeftwardOnLine() const;
@@ -118,7 +112,7 @@ public:
     LineBoxIterator lineBox() const;
     size_t lineIndex() const;
 
-    const BoxModernPath& modernPath() const LIFETIME_BOUND;
+    const BoxPath& path() const LIFETIME_BOUND { return m_path; }
 
 protected:
     friend class BoxIterator;
@@ -126,7 +120,7 @@ protected:
     friend class LeafBoxIterator;
     friend class TextBoxIterator;
 
-    PathVariant m_pathVariant;
+    BoxPath m_path;
 
 private:
     bool hasRenderer() const;
@@ -134,8 +128,8 @@ private:
 
 class BoxIterator {
 public:
-    BoxIterator() : m_box(BoxModernPath { }) { };
-    BoxIterator(Box::PathVariant&&);
+    BoxIterator() : m_box(BoxPath { }) { };
+    BoxIterator(BoxPath&&);
     BoxIterator(const Box&);
 
     explicit operator bool() const { return !atEnd(); }
@@ -162,7 +156,7 @@ protected:
 class LeafBoxIterator : public BoxIterator {
 public:
     LeafBoxIterator() = default;
-    LeafBoxIterator(Box::PathVariant&&);
+    LeafBoxIterator(BoxPath&&);
     LeafBoxIterator(const Box&);
 
     // Text-relative left/right
@@ -201,128 +195,89 @@ LeafBoxIterator boxFor(const LayoutIntegration::InlineContent&, size_t boxIndex)
 
 // -----------------------------------------------
 
-inline Box::Box(PathVariant&& path)
-    : m_pathVariant(WTF::move(path))
+inline Box::Box(BoxPath&& path)
+    : m_path(WTF::move(path))
 {
 }
 
 inline bool Box::isText() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.isText();
-    });
+    return m_path.isText();
 }
 
 inline bool Box::isInlineBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.isInlineBox();
-    });
+    return m_path.isInlineBox();
 }
 
 inline bool Box::isRootInlineBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.isRootInlineBox();
-    });
+    return m_path.isRootInlineBox();
 }
 
 inline bool Box::isRubyBase() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.isRubyBase();
-    });
+    return m_path.isRubyBase();
 }
 
 inline FloatRect Box::visualRectIgnoringBlockDirection() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.visualRectIgnoringBlockDirection();
-    });
+    return m_path.visualRectIgnoringBlockDirection();
 }
 
 inline bool Box::isLineBreak() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.isLineBreak();
-    });
+    return m_path.isLineBreak();
 }
 
 inline bool Box::isBlockLevelBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.isBlockLevelBox();
-    });
+    return m_path.isBlockLevelBox();
 }
 
 inline bool Box::isAtomicInlineBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.isAtomicInlineBox();
-    });
+    return m_path.isAtomicInlineBox();
 }
 
 inline unsigned Box::minimumCaretOffset() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.minimumCaretOffset();
-    });
+    return m_path.minimumCaretOffset();
 }
 
 inline unsigned Box::maximumCaretOffset() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.maximumCaretOffset();
-    });
+    return m_path.maximumCaretOffset();
 }
 
 inline unsigned char Box::bidiLevel() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.bidiLevel();
-    });
+    return m_path.bidiLevel();
 }
 
 inline size_t Box::lineIndex() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.lineIndex();
-    });
+    return m_path.lineIndex();
 }
 
 inline const RenderObject& Box::renderer() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) -> const RenderObject& {
-        return path.renderer();
-    });
+    return m_path.renderer();
 }
 
 inline bool Box::hasRenderer() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) -> bool {
-        return path.hasRenderer();
-    });
+    return m_path.hasRenderer();
 }
 
 inline const RenderBlockFlow& Box::formattingContextRoot() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) -> const RenderBlockFlow& {
-        return path.formattingContextRoot();
-    });
+    return m_path.formattingContextRoot();
 }
 
 inline CheckedRef<const Style::ComputedStyle> Box::style() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) -> CheckedRef<const Style::ComputedStyle> {
-        return path.style();
-    });
-}
-
-inline const InlineDisplay::Box* Box::inlineBox() const
-{
-    if (!std::holds_alternative<BoxModernPath>(m_pathVariant))
-        return nullptr;
-    return &std::get<BoxModernPath>(m_pathVariant).box();
+    return m_path.style();
 }
 
 }

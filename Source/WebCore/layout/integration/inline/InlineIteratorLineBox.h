@@ -26,7 +26,7 @@
 #pragma once
 
 #include <WebCore/FontBaseline.h>
-#include <WebCore/InlineIteratorLineBoxModernPath.h>
+#include <WebCore/InlineIteratorLineBoxPath.h>
 #include <WebCore/RenderBlockFlow.h>
 
 namespace WebCore {
@@ -43,11 +43,7 @@ struct EndLineBoxIterator { };
 
 class LineBox {
 public:
-    using PathVariant = Variant<
-        LineBoxIteratorModernPath
-    >;
-
-    LineBox(PathVariant&&);
+    LineBox(LineBoxIteratorPath&&);
 
     float logicalTop() const;
     float logicalBottom() const;
@@ -104,13 +100,13 @@ public:
 private:
     friend class LineBoxIterator;
 
-    PathVariant m_pathVariant;
+    LineBoxIteratorPath m_path;
 };
 
 class LineBoxIterator {
 public:
-    LineBoxIterator() : m_lineBox(LineBoxIteratorModernPath { }) { };
-    LineBoxIterator(LineBox::PathVariant&&);
+    LineBoxIterator() : m_lineBox(LineBoxIteratorPath { }) { };
+    LineBoxIterator(LineBoxIteratorPath&&);
     LineBoxIterator(const LineBox&);
 
     LineBoxIterator& operator++() { return traverseNext(); }
@@ -143,102 +139,76 @@ inline float contentStartInBlockDirection(const LineBox&);
 
 // -----------------------------------------------
 
-inline LineBox::LineBox(PathVariant&& path)
-    : m_pathVariant(WTF::move(path))
+inline LineBox::LineBox(LineBoxIteratorPath&& path)
+    : m_path(WTF::move(path))
 {
 }
 
 inline float LineBox::contentLogicalTop() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.contentLogicalTop();
-    });
+    return m_path.contentLogicalTop();
 }
 
 inline float LineBox::contentLogicalBottom() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.contentLogicalBottom();
-    });
+    return m_path.contentLogicalBottom();
 }
 
 inline float LineBox::contentLogicalTopAdjustedForPrecedingLineBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.contentLogicalTopAdjustedForPrecedingLineBox();
-    });
+    return m_path.contentLogicalTopAdjustedForPrecedingLineBox();
 }
 
 inline float LineBox::contentLogicalBottomAdjustedForFollowingLineBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.contentLogicalBottomAdjustedForFollowingLineBox();
-    });
+    return m_path.contentLogicalBottomAdjustedForFollowingLineBox();
 }
 
 inline float LineBox::logicalTop() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.logicalTop();
-    });
+    return m_path.logicalTop();
 }
 
 inline float LineBox::logicalBottom() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.logicalBottom();
-    });
+    return m_path.logicalBottom();
 }
 
 inline float LineBox::logicalWidth() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.logicalWidth();
-    });
+    return m_path.logicalWidth();
 }
 
 inline float LineBox::inkOverflowLogicalTop() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.inkOverflowLogicalTop();
-    });
+    return m_path.inkOverflowLogicalTop();
 }
 
 inline float LineBox::inkOverflowLogicalBottom() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.inkOverflowLogicalBottom();
-    });
+    return m_path.inkOverflowLogicalBottom();
 }
 
 inline float LineBox::scrollableOverflowTop() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.scrollableOverflowTop();
-    });
+    return m_path.scrollableOverflowTop();
 }
 
 inline float LineBox::scrollableOverflowBottom() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.scrollableOverflowBottom();
-    });
+    return m_path.scrollableOverflowBottom();
 }
 
 inline bool LineBox::hasEllipsis() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.hasEllipsis();
-    });
+    return m_path.hasEllipsis();
 }
 
 inline FloatRect LineBox::ellipsisVisualRect(AdjustedForSelection adjustedForSelection) const
 {
     ASSERT(hasEllipsis());
 
-    auto visualRect = WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.ellipsisVisualRectIgnoringBlockDirection();
-    });
+    auto visualRect = m_path.ellipsisVisualRectIgnoringBlockDirection();
 
     // FIXME: Add pixel snapping here.
     if (adjustedForSelection == AdjustedForSelection::No) {
@@ -258,23 +228,17 @@ inline TextRun LineBox::ellipsisText() const
 {
     ASSERT(hasEllipsis());
 
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.ellipsisText();
-    });
+    return m_path.ellipsisText();
 }
 
 inline float LineBox::contentLogicalLeft() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.contentLogicalLeft();
-    });
+    return m_path.contentLogicalLeft();
 }
 
 inline float LineBox::contentLogicalRight() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.contentLogicalRight();
-    });
+    return m_path.contentLogicalRight();
 }
 
 inline float LineBox::contentLogicalWidth() const
@@ -289,30 +253,22 @@ inline float LineBox::contentLogicalHeight() const
 
 inline bool LineBox::isHorizontal() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.isHorizontal();
-    });
+    return m_path.isHorizontal();
 }
 
 inline FontBaseline LineBox::baselineType() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.baselineType();
-    });
+    return m_path.baselineType();
 }
 
 inline const RenderBlockFlow& LineBox::formattingContextRoot() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) -> const RenderBlockFlow& {
-        return path.formattingContextRoot();
-    });
+    return m_path.formattingContextRoot();
 }
 
 inline bool LineBox::isFirstAfterPageBreak() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.isFirstAfterPageBreak();
-    });
+    return m_path.isFirstAfterPageBreak();
 }
 
 inline bool LineBox::isFirst() const
@@ -322,16 +278,12 @@ inline bool LineBox::isFirst() const
 
 inline bool LineBox::hasBlockContent() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.hasBlockLevelBox();
-    });
+    return m_path.hasBlockLevelBox();
 }
 
 inline bool LineBox::hasContentfulInFlowBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.hasContentfulInFlowBox();
-    });
+    return m_path.hasContentfulInFlowBox();
 }
 
 }

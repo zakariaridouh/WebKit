@@ -26,16 +26,16 @@
 #pragma once
 
 #include "InlineDisplayBoxInlines.h"
-#include "InlineIteratorBoxModernPath.h"
+#include "InlineIteratorBoxPath.h"
 #include "RenderBoxInlines.h"
 #include "StyleTabSize.h"
 
 namespace WebCore {
 namespace InlineIterator {
 
-inline bool BoxModernPath::isHorizontal() const { return box().isHorizontal(); }
+inline bool BoxPath::isHorizontal() const { return box().isHorizontal(); }
 
-inline TextRun BoxModernPath::textRun(TextRunMode mode) const
+inline TextRun BoxPath::textRun(TextRunMode mode) const
 {
     CheckedRef style = box().style();
     auto expansion = box().expansion();

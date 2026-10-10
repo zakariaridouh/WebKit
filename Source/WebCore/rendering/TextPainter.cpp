@@ -266,7 +266,7 @@ String TextPainter::cachedGlyphDisplayListsForTextNodeAsText(Text& textNode, Opt
     StringBuilder builder;
 
     for (auto textBox : InlineIterator::textBoxesFor(*protect(textNode.renderer()))) {
-        if (RefPtr displayList = TextPainter::glyphDisplayListIfExists(*textBox.inlineBox())) {
+        if (RefPtr displayList = TextPainter::glyphDisplayListIfExists(textBox.path().box())) {
             builder.append(displayList->asText(flags));
             builder.append('\n');
         }

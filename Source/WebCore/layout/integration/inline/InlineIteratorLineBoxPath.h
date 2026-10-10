@@ -25,19 +25,19 @@
 
 #pragma once
 
-#include <WebCore/InlineIteratorBoxModernPath.h>
+#include <WebCore/InlineIteratorBoxPath.h>
 #include <WebCore/LayoutIntegrationInlineContent.h>
 #include <WebCore/RenderBlockFlow.h>
 
 namespace WebCore {
 namespace InlineIterator {
 
-class BoxModernPath;
+class BoxPath;
 
-class LineBoxIteratorModernPath {
+class LineBoxIteratorPath {
 public:
-    LineBoxIteratorModernPath() = default;
-    LineBoxIteratorModernPath(const LayoutIntegration::InlineContent& inlineContent, size_t lineIndex)
+    LineBoxIteratorPath() = default;
+    LineBoxIteratorPath(const LayoutIntegration::InlineContent& inlineContent, size_t lineIndex)
         : m_inlineContent(&inlineContent)
         , m_lineIndex(lineIndex)
     {
@@ -67,7 +67,7 @@ public:
         if (formattingContextRoot().writingMode().isLineInverted() || !m_lineIndex)
             return contentLogicalTop();
         for (auto precedingLineIndex = m_lineIndex; precedingLineIndex--;) {
-            auto precedingLineBox = LineBoxIteratorModernPath { *m_inlineContent, precedingLineIndex };
+            auto precedingLineBox = LineBoxIteratorPath { *m_inlineContent, precedingLineIndex };
             if (!precedingLineBox.line().hasContentfulInFlowBox())
                 continue;
             if (precedingLineBox.hasBlockLevelBox())
@@ -82,7 +82,7 @@ public:
     {
         if (!formattingContextRoot().writingMode().isLineInverted() || m_lineIndex == lines().size() - 1)
             return contentLogicalBottom();
-        auto followingLineBox = LineBoxIteratorModernPath { *m_inlineContent, m_lineIndex + 1 };
+        auto followingLineBox = LineBoxIteratorPath { *m_inlineContent, m_lineIndex + 1 };
         if (followingLineBox.hasBlockLevelBox())
             return contentLogicalBottom();
         return followingLineBox.contentLogicalTop();
@@ -127,26 +127,26 @@ public:
         --m_lineIndex;
     }
 
-    friend bool operator==(const LineBoxIteratorModernPath&, const LineBoxIteratorModernPath&) = default;
+    friend bool operator==(const LineBoxIteratorPath&, const LineBoxIteratorPath&) = default;
 
     bool atEnd() const { return !m_inlineContent || m_lineIndex == lines().size(); }
 
-    BoxModernPath firstLeafBox() const
+    BoxPath firstLeafBox() const
     {
         if (!line().boxCount())
             return { *m_inlineContent };
-        auto runIterator = BoxModernPath { *m_inlineContent, line().firstBoxIndex() };
+        auto runIterator = BoxPath { *m_inlineContent, line().firstBoxIndex() };
         if (runIterator.box().isInlineBox())
             runIterator.traverseNextLeafOnLine();
         return runIterator;
     }
 
-    BoxModernPath lastLeafBox() const
+    BoxPath lastLeafBox() const
     {
         auto boxCount = line().boxCount();
         if (!boxCount)
             return { *m_inlineContent };
-        auto runIterator = BoxModernPath { *m_inlineContent, line().firstBoxIndex() + boxCount - 1 };
+        auto runIterator = BoxPath { *m_inlineContent, line().firstBoxIndex() + boxCount - 1 };
         if (runIterator.box().isInlineBox())
             runIterator.traversePreviousLeafOnLine();
         return runIterator;

@@ -37,15 +37,15 @@ namespace InlineIterator {
 
 enum class TextRunMode { Painting, Editing };
 
-class BoxModernPath {
+class BoxPath {
 public:
-    BoxModernPath() = default;
-    BoxModernPath(const LayoutIntegration::InlineContent& inlineContent)
+    BoxPath() = default;
+    BoxPath(const LayoutIntegration::InlineContent& inlineContent)
         : m_inlineContent(&inlineContent)
     {
         setAtEnd();
     }
-    BoxModernPath(const LayoutIntegration::InlineContent& inlineContent, size_t startIndex)
+    BoxPath(const LayoutIntegration::InlineContent& inlineContent, size_t startIndex)
         : m_inlineContent(&inlineContent)
         , m_boxIndex(startIndex)
     {
@@ -81,7 +81,7 @@ public:
     {
         auto& box = this->box();
         auto& textContent = box.text();
-        auto extraTrailingLength = [&] () -> unsigned {
+        auto extraTrailingLength = [&] -> unsigned {
             if (textContent.hasHyphen())
                 return box.style().hyphenString().length();
             if (downcast<Layout::InlineTextBox>(box.layoutBox()).isCombined()) {
@@ -228,7 +228,7 @@ public:
             setAtEnd();
     }
 
-    BoxModernPath firstLeafBoxForInlineBox() const
+    BoxPath firstLeafBoxForInlineBox() const
     {
         ASSERT(box().isInlineBox());
 
@@ -244,7 +244,7 @@ public:
         return first;
     }
 
-    BoxModernPath lastLeafBoxForInlineBox() const
+    BoxPath lastLeafBoxForInlineBox() const
     {
         ASSERT(box().isInlineBox());
 
@@ -258,7 +258,7 @@ public:
         return last;
     }
 
-    BoxModernPath parentInlineBox() const
+    BoxPath parentInlineBox() const
     {
         ASSERT(!atEnd());
 
@@ -287,7 +287,7 @@ public:
         return m_inlineContent->svgTextFragments(m_boxIndex);
     }
 
-    friend bool operator==(const BoxModernPath&, const BoxModernPath&) = default;
+    friend bool operator==(const BoxPath&, const BoxPath&) = default;
 
     bool atEnd() const { return !m_inlineContent || m_boxIndex == boxes().size(); }
     const InlineDisplay::Box& box() const { return boxes()[m_boxIndex]; }

@@ -116,9 +116,9 @@
 #include <WebCore/InlineDisplayLine.h>
 #include <WebCore/InlineItem.h>
 #include <WebCore/InlineIteratorBox.h>
-#include <WebCore/InlineIteratorBoxModernPath.h>
+#include <WebCore/InlineIteratorBoxPath.h>
 #include <WebCore/InlineIteratorLineBox.h>
-#include <WebCore/InlineIteratorLineBoxModernPath.h>
+#include <WebCore/InlineIteratorLineBoxPath.h>
 #include <WebCore/InlineIteratorLogicalOrderTraversal.h>
 #include <WebCore/InlineIteratorTextBox.h>
 #include <WebCore/InlineLineTypes.h>

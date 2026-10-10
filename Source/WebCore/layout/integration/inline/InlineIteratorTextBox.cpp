@@ -49,8 +49,8 @@ const FontCascade& TextBox::fontCascade() const
     return style()->fontCascade();
 }
 
-TextBoxIterator::TextBoxIterator(Box::PathVariant&& pathVariant)
-    : LeafBoxIterator(WTF::move(pathVariant))
+TextBoxIterator::TextBoxIterator(BoxPath&& path)
+    : LeafBoxIterator(WTF::move(path))
 {
 }
 
@@ -61,9 +61,7 @@ TextBoxIterator::TextBoxIterator(const Box& box)
 
 TextBoxIterator& TextBoxIterator::traverseNextTextBox()
 {
-    WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
-        path.traverseNextTextBox();
-    });
+    m_box.m_path.traverseNextTextBox();
     return *this;
 }
 
@@ -84,7 +82,7 @@ TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, cons
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, size_t boxIndex)
 {
     ASSERT(content.displayContent().boxes[boxIndex].isTextOrSoftLineBreak());
-    return { BoxModernPath { content, boxIndex } };
+    return { BoxPath { content, boxIndex } };
 }
 
 BoxRange<TextBoxIterator> textBoxesFor(const RenderText& text)

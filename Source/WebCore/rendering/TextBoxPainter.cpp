@@ -111,7 +111,7 @@ struct ShapedContent {
     size_t textBoxStartOffset { 0 }; // text box's position relative to the shaped content.
     float textBoxVisualLeft { 0.f }; // text box's left relative to the visual left of the shaped content.
 };
-static void buildTextForShaping(ShapedContent& shapedContent, InlineIterator::BoxModernPath textBox, bool needsTextBoxVisualLeft = false)
+static void buildTextForShaping(ShapedContent& shapedContent, InlineIterator::BoxPath textBox, bool needsTextBoxVisualLeft = false)
 {
     ASSERT(textBox.direction() == TextDirection::RTL);
 
@@ -185,7 +185,7 @@ static void buildTextForShaping(ShapedContent& shapedContent, InlineIterator::Bo
 }
 
 TextBoxPainter::TextBoxPainter(const LayoutIntegration::InlineContent& inlineContent, const InlineDisplay::Box& box, const Style::ComputedStyle& style, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
-    : m_textBox(InlineIterator::BoxModernPath { inlineContent, inlineContent.indexForBox(box) })
+    : m_textBox(InlineIterator::BoxPath { inlineContent, inlineContent.indexForBox(box) })
     , m_renderer(downcast<RenderText>(m_textBox.renderer()))
     , m_document(m_renderer->document())
     , m_style(style)
@@ -1336,7 +1336,7 @@ static FloatRect snapRectToDevicePixelsInDirection(const FloatRect& rect, float 
 }
 
 enum class TextBoxFragmentLocationWithinLayoutBox : uint8_t { First = 1 << 0, Last = 1 << 1 };
-static OptionSet<TextBoxFragmentLocationWithinLayoutBox> NODELETE textBoxFragmentLocationWithinLayoutBox(const InlineIterator::BoxModernPath& textBox)
+static OptionSet<TextBoxFragmentLocationWithinLayoutBox> NODELETE textBoxFragmentLocationWithinLayoutBox(const InlineIterator::BoxPath& textBox)
 {
     OptionSet<TextBoxFragmentLocationWithinLayoutBox> location;
     if (textBox.box().isFirstForLayoutBox())

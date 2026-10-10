@@ -1336,7 +1336,7 @@ InlineIterator::BoxIterator LineLayout::lastBox() const
     if (!m_inlineContent || !m_inlineContent->hasContentfulInFlowBox())
         return { };
 
-    return { InlineIterator::BoxModernPath { *m_inlineContent, m_inlineContent->displayContent().boxes.size() - 1 } };
+    return { InlineIterator::BoxPath { *m_inlineContent, m_inlineContent->displayContent().boxes.size() - 1 } };
 }
 
 InlineIterator::LineBoxIterator LineLayout::firstLineBox() const
@@ -1344,7 +1344,7 @@ InlineIterator::LineBoxIterator LineLayout::firstLineBox() const
     if (!m_inlineContent || !m_inlineContent->hasContentfulInFlowBox())
         return { };
 
-    return { InlineIterator::LineBoxIteratorModernPath(*m_inlineContent, 0) };
+    return { InlineIterator::LineBoxIteratorPath(*m_inlineContent, 0) };
 }
 
 InlineIterator::LineBoxIterator LineLayout::lastLineBox() const
@@ -1352,7 +1352,7 @@ InlineIterator::LineBoxIterator LineLayout::lastLineBox() const
     if (!m_inlineContent || !m_inlineContent->hasContentfulInFlowBox())
         return { };
 
-    return { InlineIterator::LineBoxIteratorModernPath(*m_inlineContent, m_inlineContent->displayContent().lines.isEmpty() ? 0 : m_inlineContent->displayContent().lines.size() - 1) };
+    return { InlineIterator::LineBoxIteratorPath(*m_inlineContent, m_inlineContent->displayContent().lines.isEmpty() ? 0 : m_inlineContent->displayContent().lines.size() - 1) };
 }
 
 LayoutRect LineLayout::firstInlineBoxRect(const RenderBoxModelObject& inlineBox) const

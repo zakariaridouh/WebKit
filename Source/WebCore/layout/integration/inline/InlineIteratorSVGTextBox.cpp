@@ -36,7 +36,7 @@
 namespace WebCore {
 namespace InlineIterator {
 
-SVGTextBox::SVGTextBox(PathVariant&& path)
+SVGTextBox::SVGTextBox(BoxPath&& path)
     : TextBox(WTF::move(path))
 {
 }
@@ -100,12 +100,10 @@ LayoutRect SVGTextBox::localSelectionRect(unsigned start, unsigned end) const
 
 const Vector<SVGTextFragment>& SVGTextBox::textFragments() const
 {
-    return WTF::switchOn(m_pathVariant, [&](auto& path) -> const Vector<SVGTextFragment>& {
-        return path.svgTextFragments();
-    });
+    return m_path.svgTextFragments();
 }
 
-SVGTextBoxIterator::SVGTextBoxIterator(Box::PathVariant&& path)
+SVGTextBoxIterator::SVGTextBoxIterator(BoxPath&& path)
     : TextBoxIterator(WTF::move(path))
 {
 }
@@ -136,7 +134,7 @@ SVGTextBoxIterator svgTextBoxFor(const LayoutIntegration::InlineContent& inlineC
     auto& box = inlineContent.displayContent().boxes[boxIndex];
     if (!box.isText() || !box.layoutBox().rendererForIntegration()->isRenderSVGInlineText())
         return { };
-    return { BoxModernPath { inlineContent, boxIndex } };
+    return { BoxPath { inlineContent, boxIndex } };
 }
 
 BoxRange<BoxIterator> boxesFor(const RenderSVGText& svgText)

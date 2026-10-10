@@ -37,8 +37,8 @@
 namespace WebCore {
 namespace InlineIterator {
 
-LineBoxIterator::LineBoxIterator(LineBox::PathVariant&& pathVariant)
-    : m_lineBox(WTF::move(pathVariant))
+LineBoxIterator::LineBoxIterator(LineBoxIteratorPath&& path)
+    : m_lineBox(WTF::move(path))
 {
 }
 
@@ -49,24 +49,18 @@ LineBoxIterator::LineBoxIterator(const LineBox& lineBox)
 
 bool LineBoxIterator::atEnd() const
 {
-    return WTF::switchOn(m_lineBox.m_pathVariant, [](auto& path) {
-        return path.atEnd();
-    });
+    return m_lineBox.m_path.atEnd();
 }
 
 LineBoxIterator& LineBoxIterator::traverseNext()
 {
-    WTF::switchOn(m_lineBox.m_pathVariant, [](auto& path) {
-        return path.traverseNext();
-    });
+    m_lineBox.m_path.traverseNext();
     return *this;
 }
 
 LineBoxIterator& LineBoxIterator::traversePrevious()
 {
-    WTF::switchOn(m_lineBox.m_pathVariant, [](auto& path) {
-        return path.traversePrevious();
-    });
+    m_lineBox.m_path.traversePrevious();
     return *this;
 }
 
@@ -77,7 +71,7 @@ LineBoxIterator::operator bool() const
 
 bool LineBoxIterator::operator==(const LineBoxIterator& other) const
 {
-    return m_lineBox.m_pathVariant == other.m_lineBox.m_pathVariant;
+    return m_lineBox.m_path == other.m_lineBox.m_path;
 }
 
 LineBoxIterator firstLineBoxFor(const RenderBlockFlow& flow)
@@ -96,7 +90,7 @@ LineBoxIterator lastLineBoxFor(const RenderBlockFlow& flow)
 
 LineBoxIterator lineBoxFor(const LayoutIntegration::InlineContent& inlineContent, size_t lineIndex)
 {
-    return { LineBoxIteratorModernPath { inlineContent, lineIndex } };
+    return { LineBoxIteratorPath { inlineContent, lineIndex } };
 }
 
 LineBoxIterator LineBox::next() const
@@ -111,16 +105,12 @@ LineBoxIterator LineBox::previous() const
 
 LeafBoxIterator LineBox::lineLeftmostLeafBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) -> LeafBoxIterator {
-        return { path.firstLeafBox() };
-    });
+    return { m_path.firstLeafBox() };
 }
 
 LeafBoxIterator LineBox::lineRightmostLeafBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) -> LeafBoxIterator {
-        return { path.lastLeafBox() };
-    });
+    return { m_path.lastLeafBox() };
 }
 
 LeafBoxIterator closestBoxForHorizontalPosition(const LineBox& lineBox, float horizontalPosition, bool editableOnly)

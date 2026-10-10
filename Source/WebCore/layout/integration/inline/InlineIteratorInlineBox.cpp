@@ -33,7 +33,7 @@
 namespace WebCore {
 namespace InlineIterator {
 
-InlineBox::InlineBox(PathVariant&& path)
+InlineBox::InlineBox(BoxPath&& path)
     : Box(WTF::move(path))
 {
 }
@@ -45,9 +45,9 @@ RectEdges<bool> InlineBox::closedEdges() const
         return closedEdges;
     auto writingMode = style()->writingMode();
     // Layout knows whether a fragment of an inline box has its start/end (the root inline box is not fragmented this way).
-    if (auto* displayBox = inlineBox(); displayBox && displayBox->isNonRootInlineBox()) {
-        closedEdges.setStart(displayBox->isFirstFragment(), writingMode);
-        closedEdges.setEnd(displayBox->isLastFragment(), writingMode);
+    if (auto& displayBox = path().box(); displayBox.isNonRootInlineBox()) {
+        closedEdges.setStart(displayBox.isFirstFragment(), writingMode);
+        closedEdges.setEnd(displayBox.isLastFragment(), writingMode);
         return closedEdges;
     }
     bool isFirst = !nextInlineBoxLineLeftward();
@@ -69,16 +69,12 @@ InlineBoxIterator InlineBox::nextInlineBoxLineLeftward() const
 
 LeafBoxIterator InlineBox::firstLeafBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) -> LeafBoxIterator {
-        return { path.firstLeafBoxForInlineBox() };
-    });
+    return { m_path.firstLeafBoxForInlineBox() };
 }
 
 LeafBoxIterator InlineBox::lastLeafBox() const
 {
-    return WTF::switchOn(m_pathVariant, [](auto& path) -> LeafBoxIterator {
-        return { path.lastLeafBoxForInlineBox() };
-    });
+    return { m_path.lastLeafBoxForInlineBox() };
 }
 
 LeafBoxIterator InlineBox::endLeafBox() const
@@ -99,8 +95,8 @@ IteratorRange<BoxIterator> InlineBox::descendants() const
     return { begin, end };
 }
 
-InlineBoxIterator::InlineBoxIterator(Box::PathVariant&& pathVariant)
-    : BoxIterator(WTF::move(pathVariant))
+InlineBoxIterator::InlineBoxIterator(BoxPath&& path)
+    : BoxIterator(WTF::move(path))
 {
 }
 
@@ -111,17 +107,13 @@ InlineBoxIterator::InlineBoxIterator(const Box& box)
 
 InlineBoxIterator& InlineBoxIterator::traverseInlineBoxLineRightward()
 {
-    WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
-        path.traverseNextInlineBox();
-    });
+    m_box.m_path.traverseNextInlineBox();
     return *this;
 }
 
 InlineBoxIterator& InlineBoxIterator::traverseInlineBoxLineLeftward()
 {
-    WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
-        path.traversePreviousInlineBox();
-    });
+    m_box.m_path.traversePreviousInlineBox();
     return *this;
 }
 
@@ -147,7 +139,7 @@ InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent& content, 
 InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent& content, size_t boxIndex)
 {
     ASSERT(content.displayContent().boxes[boxIndex].isInlineBox());
-    return { BoxModernPath { content, boxIndex } };
+    return { BoxPath { content, boxIndex } };
 }
 
 }

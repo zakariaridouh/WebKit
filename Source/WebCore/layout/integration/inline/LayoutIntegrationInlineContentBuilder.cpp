@@ -395,7 +395,7 @@ void InlineContentBuilder::computeOverflowFromBoxes(InlineContent& inlineContent
         // display boxes (see InlineDisplayContentBuilder) RenderBlockFlow expects visual overflow.
         // Visual overflow propagation is slightly different from ink overflow when it comes to renderers with self painting layers.
         // -and for now we consult atomic renderers for such visual overflow which is not how we are supposed to do in LFC.
-        // (visual overflow is computed during their ::layout() call which we issue right before running inline layout in RenderBlockFlow::layoutModernLines)
+        // (visual overflow is computed during their ::layout() call which we issue right before running inline layout in RenderBlockFlow::layoutInlineContent)
         auto firstTextBoxIndex = std::optional<size_t> { };
         auto lastTextBoxIndex = std::optional<size_t> { };
         for (; boxIndex < boxes.size() && boxes[boxIndex].lineIndex() == lineIndex; ++boxIndex) {

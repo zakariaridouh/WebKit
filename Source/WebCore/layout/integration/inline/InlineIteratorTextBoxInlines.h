@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "InlineIteratorBoxModernPathInlines.h"
+#include "InlineIteratorBoxPathInlines.h"
 #include "InlineIteratorTextBox.h"
 
 namespace WebCore {
@@ -33,9 +33,7 @@ namespace InlineIterator {
 
 inline TextRun TextBox::textRun(TextRunMode mode) const
 {
-    return WTF::switchOn(m_pathVariant, [&](auto& path) {
-        return path.textRun(mode);
-    });
+    return m_path.textRun(mode);
 }
 
 }

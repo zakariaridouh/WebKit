@@ -48,7 +48,7 @@
 namespace WebCore {
 
 ModernSVGTextBoxPainter::ModernSVGTextBoxPainter(const LayoutIntegration::InlineContent& inlineContent, size_t boxIndex, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
-    : SVGTextBoxPainter(InlineIterator::BoxModernPath { inlineContent, boxIndex }, paintInfo, paintOffset)
+    : SVGTextBoxPainter(InlineIterator::BoxPath { inlineContent, boxIndex }, paintInfo, paintOffset)
 {
 }
 
@@ -68,7 +68,7 @@ SVGTextBoxPainter<TextBoxPath>::SVGTextBoxPainter(TextBoxPath&& textBox, PaintIn
 template<typename TextBoxPath>
 InlineIterator::SVGTextBoxIterator SVGTextBoxPainter<TextBoxPath>::textBoxIterator() const
 {
-    return { m_textBox };
+    return { TextBoxPath { m_textBox } };
 }
 
 
@@ -679,6 +679,6 @@ std::pair<unsigned, unsigned> SVGTextBoxPainter<TextBoxPath>::selectionStartEnd(
     return m_renderer.view().selection().rangeForTextBox(m_renderer, m_selectableRange);
 }
 
-template class SVGTextBoxPainter<InlineIterator::BoxModernPath>;
+template class SVGTextBoxPainter<InlineIterator::BoxPath>;
 
 }
