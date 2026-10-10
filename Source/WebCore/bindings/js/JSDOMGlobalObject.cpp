@@ -803,11 +803,12 @@ JSC::JSGlobalObject* JSDOMGlobalObject::deriveShadowRealmGlobalObject(JSC::JSGlo
         // with a given wrapper world should outlive other objects in that
         // world)
         Ref originalOrigin = document->securityOrigin();
+        auto originalAgentClusterIdentifier = document->agentClusterIdentifier();
         auto& originalWorld = domGlobalObject->world();
 
         while (!document->isTopDocument()) {
             RefPtr candidateDocument = document->parentDocument();
-            if (!candidateDocument || !protect(candidateDocument->securityOrigin())->isSameOriginDomain(originalOrigin))
+            if (!candidateDocument || !isPlatformObjectSameOrigin(protect(candidateDocument->securityOrigin()), candidateDocument->agentClusterIdentifier(), originalOrigin, originalAgentClusterIdentifier))
                 break;
 
             document = candidateDocument;

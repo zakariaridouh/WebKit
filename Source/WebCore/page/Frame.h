@@ -156,6 +156,7 @@ public:
     FrameTreeSyncData& frameTreeSyncData() const { return m_frameTreeSyncData.get(); }
     WEBCORE_EXPORT virtual SecurityOrigin* frameDocumentSecurityOrigin() const = 0;
     WEBCORE_EXPORT virtual std::optional<DocumentSecurityPolicy> frameDocumentSecurityPolicy() const = 0;
+    virtual std::optional<AgentClusterIdentifier> frameAgentClusterIdentifier() const = 0;
     WEBCORE_EXPORT virtual String frameURLProtocol() const = 0;
 
     // The scale factor of this frame with respect to its container.

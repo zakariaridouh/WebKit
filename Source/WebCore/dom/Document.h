@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <WebCore/AgentClusterIdentifier.h>
 #include <WebCore/AsyncNodeDeletionQueue.h>
 #include <WebCore/Color.h>
 #include <WebCore/ColorHash.h>
@@ -1724,6 +1725,9 @@ public:
     OriginKeyed isOriginKeyed() const { return m_isOriginKeyed; }
     void setIsOriginKeyed(OriginKeyed value) { m_isOriginKeyed = value; }
 
+    std::optional<AgentClusterIdentifier> agentClusterIdentifier() const { return m_agentClusterIdentifier; }
+    void setAgentClusterIdentifier(std::optional<AgentClusterIdentifier> identifier) { m_agentClusterIdentifier = identifier; }
+
     void willLoadScriptElement(const URL&);
     void willLoadFrameElement(const URL&);
     bool hasLoadedThirdPartyScript() const { return m_hasLoadedThirdPartyScript; }
@@ -2793,6 +2797,7 @@ private:
     RenderTreeState m_renderTreeState { RenderTreeState::NotBuilt };
 
     OriginKeyed m_isOriginKeyed { OriginKeyed::No };
+    Markable<AgentClusterIdentifier> m_agentClusterIdentifier;
 
     // These flags are kept as full bool members rather than joining the bitfield block below
     // because they are bound by reference (via SetForScope or std::exchange), which a bitfield

@@ -811,7 +811,6 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 
     PageConfiguration pageConfiguration(
         pageID,
-        parameters.browsingContextGroupIdentifier,
         WebProcess::singleton().sessionID(),
         makeUniqueRef<WebEditorClient>(*this),
         WebSocketProvider::create(parameters.webPageProxyIdentifier),
@@ -2627,6 +2626,10 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
     m_pendingNavigationID = loadParameters.navigationID;
     m_internals->pendingWebsitePolicies = WTF::move(loadParameters.websitePolicies);
     m_pendingUnpartitionedStorageSite = WTF::move(loadParameters.unpartitionedStorageSite);
+    m_pendingAgentClusterAssignment = loadParameters.agentClusterAssignment;
+    auto pendingAgentClusterAssignmentScope = makeScopeExit([this] {
+        m_pendingAgentClusterAssignment = std::nullopt;
+    });
 
     m_sandboxExtensionTracker.beginLoad(WTF::move(loadParameters.sandboxExtensionHandle));
 
@@ -2747,6 +2750,10 @@ void WebPage::loadData(LoadParameters&& loadParameters)
         corePage()->markAsServiceWorkerPage();
 
     ResourceResponse response(URL(), WTF::move(loadParameters.MIMEType), sharedBuffer->size(), WTF::move(loadParameters.encodingName));
+    m_pendingAgentClusterAssignment = loadParameters.agentClusterAssignment;
+    auto pendingAgentClusterAssignmentScope = makeScopeExit([this] {
+        m_pendingAgentClusterAssignment = std::nullopt;
+    });
     loadDataImpl(loadParameters.navigationID, loadParameters.shouldTreatAsContinuingLoad, WTF::move(loadParameters.websitePolicies), sharedBuffer.releaseNonNull(), ResourceRequest(WTF::move(baseURL)), WTF::move(response), URL(), loadParameters.userData, loadParameters.isNavigatingToAppBoundDomain, loadParameters.sessionHistoryVisibility, loadParameters.shouldOpenExternalURLsPolicy);
 }
 
@@ -2765,6 +2772,10 @@ void WebPage::loadAlternateHTML(LoadParameters&& loadParameters)
     protect(m_mainFrame->coreLocalFrame()->loader())->setProvisionalLoadErrorBeingHandledURL(provisionalLoadErrorURL);
 
     ResourceResponse response(URL(), WTF::move(loadParameters.MIMEType), sharedBuffer->size(), WTF::move(loadParameters.encodingName));
+    m_pendingAgentClusterAssignment = loadParameters.agentClusterAssignment;
+    auto pendingAgentClusterAssignmentScope = makeScopeExit([this] {
+        m_pendingAgentClusterAssignment = std::nullopt;
+    });
     loadDataImpl(loadParameters.navigationID, loadParameters.shouldTreatAsContinuingLoad, WTF::move(loadParameters.websitePolicies), sharedBuffer.releaseNonNull(), ResourceRequest(WTF::move(baseURL)), WTF::move(response), WTF::move(unreachableURL), loadParameters.userData, loadParameters.isNavigatingToAppBoundDomain, WebCore::SubstituteData::SessionHistoryVisibility::Hidden);
     protect(m_mainFrame->coreLocalFrame()->loader())->setProvisionalLoadErrorBeingHandledURL({ });
 }
@@ -2872,6 +2883,10 @@ void WebPage::goToBackForwardItem(GoToBackForwardItemParameters&& parameters)
 
     m_pendingNavigationID = parameters.navigationID;
     m_internals->pendingWebsitePolicies = WTF::move(parameters.websitePolicies);
+    m_pendingAgentClusterAssignment = parameters.agentClusterAssignment;
+    auto pendingAgentClusterAssignmentScope = makeScopeExit([this] {
+        m_pendingAgentClusterAssignment = std::nullopt;
+    });
 
     Ref targetFrame = m_mainFrame;
     if (RefPtr historyItemFrame = WebProcess::singleton().webFrame(item->frameID()); historyItemFrame && historyItemFrame->page() == this)
@@ -8932,6 +8947,9 @@ Ref<DocumentLoader> WebPage::createDocumentLoader(LocalFrame& frame, ResourceReq
 
         if (!frame.isMainFrame())
             documentLoader->setUnpartitionedStorageSite(std::exchange(m_pendingUnpartitionedStorageSite, std::nullopt));
+
+        if (auto agentClusterAssignment = std::exchange(m_pendingAgentClusterAssignment, std::nullopt))
+            documentLoader->setAgentClusterAssignment(*agentClusterAssignment);
     }
 
     return documentLoader;
@@ -10745,6 +10763,10 @@ bool WebPage::shouldSkipDecidePolicyForResponse(const WebCore::ResourceResponse&
         return false;
 
     if (response.url().protocolIsFile())
+        return false;
+
+    // Only the UI process determines these policies.
+    if (response.httpHeaderFields().contains(HTTPHeaderName::DocumentIsolationPolicy) || response.httpHeaderFields().contains(HTTPHeaderName::OriginAgentCluster))
         return false;
 
     if (auto components = response.httpHeaderField(HTTPHeaderName::ContentDisposition).split(';'); !components.isEmpty() && equalIgnoringASCIICase(components[0].trim(isASCIIWhitespaceWithoutFF<char16_t>), "attachment"_s))

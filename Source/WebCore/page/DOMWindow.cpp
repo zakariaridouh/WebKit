@@ -982,6 +982,12 @@ String DOMWindow::crossDomainAccessErrorMessage(const LocalDOMWindow& activeWind
         return String();
     Ref activeOrigin = protect(activeWindow.document())->securityOrigin();
     const Ref targetOrigin = localDocument ? localDocument->securityOrigin() : remoteThis->frameDocumentSecurityOriginOrOpaque();
+
+    RefPtr targetFrame = frame();
+    auto targetAgentClusterIdentifier = localDocument ? localDocument->agentClusterIdentifier() : targetFrame ? targetFrame->frameAgentClusterIdentifier() : std::nullopt;
+    if (activeOrigin->isSameOriginDomain(targetOrigin) && !isPlatformObjectSameOrigin(activeOrigin, protect(activeWindow.document())->agentClusterIdentifier(), targetOrigin, targetAgentClusterIdentifier))
+        return makeString("Blocked a frame with origin \""_s, activeOrigin->toString(), "\" from accessing a same-origin frame in a different agent cluster, likely due to Document-Isolation-Policy."_s);
+
     // A remote frame with an empty site may legitimately appear as same-origin.
     ASSERT(!activeOrigin->isSameOriginDomain(targetOrigin) || (remoteThis && Site { activeOrigin->data() }.isEmpty()));
 
@@ -1044,7 +1050,8 @@ bool DOMWindow::isInsecureScriptAccess(const LocalDOMWindow& activeWindow, const
 
         if (RefPtr frame = this->frame()) {
             if (RefPtr securityOrigin = frame->frameDocumentSecurityOrigin()) {
-                if (protect(protect(activeWindow.document())->securityOrigin())->isSameOriginDomain(*securityOrigin))
+                Ref activeDocument = *activeWindow.document();
+                if (isPlatformObjectSameOrigin(protect(activeDocument->securityOrigin()), activeDocument->agentClusterIdentifier(), *securityOrigin, frame->frameAgentClusterIdentifier()))
                     return false;
             }
         }

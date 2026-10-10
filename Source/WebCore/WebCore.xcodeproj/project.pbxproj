@@ -5853,6 +5853,8 @@
 		BCEFE1EB0DCA5F6400739219 /* JSXSLTProcessor.h in Headers */ = {isa = PBXBuildFile; fileRef = BCEFE1E90DCA5F6400739219 /* JSXSLTProcessor.h */; };
 		BCF0BCEC2BEE8ED000F42CCD /* StyleCurrentColor.h in Headers */ = {isa = PBXBuildFile; fileRef = BCF0BCE42BEE8A6500F42CCD /* StyleCurrentColor.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BCF7E491137CD7C7001DDAE7 /* AdjustViewSize.h in Headers */ = {isa = PBXBuildFile; fileRef = BCF48CE61370D114004E87D6 /* AdjustViewSize.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		7A5331472C4BF45E70234B98 /* AgentClusterAssignment.h in Headers */ = {isa = PBXBuildFile; fileRef = 8DA578AB51F1C853E5069241 /* AgentClusterAssignment.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		AEB5F8B6A94A7849F63DD852 /* AgentClusterIdentifier.h in Headers */ = {isa = PBXBuildFile; fileRef = 27CB4BE8799DE40B5D9D18D7 /* AgentClusterIdentifier.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BCFA930810333193007B25D1 /* RenderOverflow.h in Headers */ = {isa = PBXBuildFile; fileRef = BCFA930710333193007B25D1 /* RenderOverflow.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BCFB2E5E0979E46400BA703D /* CachedResourceClient.h in Headers */ = {isa = PBXBuildFile; fileRef = BCFB2E5D0979E46400BA703D /* CachedResourceClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BCFE79AA2BE307C900114272 /* CSSParserContext.h in Headers */ = {isa = PBXBuildFile; fileRef = BC7C5E4F2BE2A8FB00AE645C /* CSSParserContext.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -21103,6 +21105,8 @@
 		BCF13C432D441F0A007A694E /* CSSCalcTree+Mappings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CSSCalcTree+Mappings.h"; sourceTree = "<group>"; };
 		BCF34A3611A231CD00C71804 /* NamedNodeMap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NamedNodeMap.cpp; sourceTree = "<group>"; };
 		BCF48CE61370D114004E87D6 /* AdjustViewSize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdjustViewSize.h; sourceTree = "<group>"; };
+		8DA578AB51F1C853E5069241 /* AgentClusterAssignment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AgentClusterAssignment.h; sourceTree = "<group>"; };
+		27CB4BE8799DE40B5D9D18D7 /* AgentClusterIdentifier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AgentClusterIdentifier.h; sourceTree = "<group>"; };
 		BCFA930710333193007B25D1 /* RenderOverflow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderOverflow.h; sourceTree = "<group>"; };
 		BCFB2E5D0979E46400BA703D /* CachedResourceClient.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = CachedResourceClient.h; sourceTree = "<group>"; };
 		BCFB45F317D8E39200444446 /* RenderBlockFlow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RenderBlockFlow.h; sourceTree = "<group>"; };
@@ -31479,6 +31483,8 @@
 				F4C574742A8432040024A071 /* ActivityState.serialization.in */,
 				724EE54F1DC7F25B00A91FFB /* ActivityStateChangeObserver.h */,
 				BCF48CE61370D114004E87D6 /* AdjustViewSize.h */,
+				8DA578AB51F1C853E5069241 /* AgentClusterAssignment.h */,
+				27CB4BE8799DE40B5D9D18D7 /* AgentClusterIdentifier.h */,
 				CEDA12D6152CA1CB00D9E08D /* AlternativeTextClient.h */,
 				E36D701B27B70B23006531B7 /* AttachmentElementClient.h */,
 				C9D467041E60C3EB008195FB /* AutoplayEvent.h */,
@@ -44681,6 +44687,8 @@
 				BCF7E491137CD7C7001DDAE7 /* AdjustViewSize.h in Headers */,
 				D2BB5C65290985E40065457D /* AdvancedPrivacyProtections.h in Headers */,
 				84D0C4061115F1EA0018AA34 /* AffineTransform.h in Headers */,
+				7A5331472C4BF45E70234B98 /* AgentClusterAssignment.h in Headers */,
+				AEB5F8B6A94A7849F63DD852 /* AgentClusterIdentifier.h in Headers */,
 				AEBAFFB02D65D478008311A5 /* AllAcceptedCredentialsOptions.h in Headers */,
 				83BB5C881D5D6F45005A71F4 /* AllDescendantsCollection.h in Headers */,
 				3AD4AB8C2C3CADF700A3E7F3 /* Allowlist.h in Headers */,

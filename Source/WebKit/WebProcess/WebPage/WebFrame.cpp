@@ -747,11 +747,12 @@ void WebFrame::didReceivePolicyDecision(PolicyListenerIdentifier listenerID, Pol
             if (RefPtr policyDocumentLoader = loader.policyDocumentLoader()) {
                 if (policyDecision.navigationID)
                     policyDocumentLoader->setNavigationID(*policyDecision.navigationID);
-                policyDocumentLoader->setIsOriginKeyedFromUIProcess(policyDecision.isOriginKeyed);
+                policyDocumentLoader->setAgentClusterAssignment(policyDecision.agentClusterAssignment);
                 if (forNavigationAction)
                     policyDocumentLoader->setUnpartitionedStorageSite(WTF::move(policyDecision.unpartitionedStorageSite));
-            } else if (RefPtr provisionalDocumentLoader = loader.provisionalDocumentLoader()) {
-                provisionalDocumentLoader->setIsOriginKeyedFromUIProcess(policyDecision.isOriginKeyed);
+            } else if (RefPtr provisionalDocumentLoader = loader.provisionalDocumentLoader(); provisionalDocumentLoader && (!forNavigationAction || (policyDecision.navigationID && policyDecision.navigationID == provisionalDocumentLoader->navigationID()))) {
+                // A navigation action decision without a policy document loader, such as for a fragment navigation, belongs to another navigation than the provisional one, unless it is for a redirect.
+                provisionalDocumentLoader->setAgentClusterAssignment(policyDecision.agentClusterAssignment);
                 if (forNavigationAction)
                     provisionalDocumentLoader->setUnpartitionedStorageSite(WTF::move(policyDecision.unpartitionedStorageSite));
             }

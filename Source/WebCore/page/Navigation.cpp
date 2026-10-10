@@ -1483,8 +1483,8 @@ NavigateEventDispatchResult Navigation::innerDispatchNavigateEvent(NavigationNav
     }
 
     if (updatedSourceElement) {
-        Ref sourceOrigin = protect(updatedSourceElement->document())->securityOrigin();
-        if (!protect(document->securityOrigin())->isSameOriginDomain(sourceOrigin))
+        Ref sourceDocument = updatedSourceElement->document();
+        if (!isPlatformObjectSameOrigin(protect(document->securityOrigin()), document->agentClusterIdentifier(), protect(sourceDocument->securityOrigin()), sourceDocument->agentClusterIdentifier()))
             updatedSourceElement = nullptr;
     }
 

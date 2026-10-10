@@ -888,14 +888,21 @@ void FrameLoader::didBeginDocument(bool dispatch, LocalDOMWindow* previousWindow
         if (document->url().protocolIsInHTTPFamily() || document->url().protocolIsBlob()) {
             auto isSecureContext = document->isSecureContext() ? IsSecureContext::Yes : IsSecureContext::No;
             document->setCrossOriginEmbedderPolicy(obtainCrossOriginEmbedderPolicy(documentLoader->response(), isSecureContext, document.ptr()));
-            document->setDocumentIsolationPolicy(obtainDocumentIsolationPolicy(documentLoader->response(), isSecureContext, document));
 
             if (auto ipAddressSpace = documentLoader->response().ipAddressSpace(); ipAddressSpace != IPAddressSpace::Unknown)
                 document->setIPAddressSpace(ipAddressSpace);
 
-            if (frame->settings().originAgentClusterEnabled() && !m_stateMachine.creatingInitialEmptyDocument())
-                document->setIsOriginKeyed(documentLoader->isOriginKeyedFromUIProcess());
+            if (!m_stateMachine.creatingInitialEmptyDocument()) {
+                auto& agentClusterAssignment = documentLoader->agentClusterAssignment();
+                if (frame->settings().originAgentClusterEnabled())
+                    document->setIsOriginKeyed(agentClusterAssignment.isOriginKeyed);
+                document->setDocumentIsolationPolicy(agentClusterAssignment.documentIsolationPolicy);
+            }
         }
+
+        // Documents that inherit their origin, such as about:blank, keep the identifier they inherited.
+        if (auto agentClusterIdentifier = documentLoader->agentClusterAssignment().identifier; agentClusterIdentifier && !m_stateMachine.creatingInitialEmptyDocument())
+            document->setAgentClusterIdentifier(agentClusterIdentifier);
 
         String referrerPolicy = documentLoader->response().httpHeaderField(HTTPHeaderName::ReferrerPolicy);
         if (!referrerPolicy.isNull())
@@ -2624,7 +2631,7 @@ void FrameLoader::commitProvisionalLoad()
             cachedPage->cachedMainFrame()->wasPrivateRelayed(),
             restoredDocument->identifier(),
             restoredDocument->securityOrigin().data(),
-            DocumentSecurityPolicy { restoredDocument->crossOriginEmbedderPolicy(), restoredDocument->crossOriginOpenerPolicy(), restoredDocument->isSecureContext() ? IsSecureContext::Yes : IsSecureContext::No },
+            DocumentSecurityPolicy { restoredDocument->crossOriginEmbedderPolicy(), restoredDocument->crossOriginOpenerPolicy(), restoredDocument->isSecureContext() ? IsSecureContext::Yes : IsSecureContext::No, restoredDocument->agentClusterIdentifier() },
             restoredContentSecurityPolicy ? restoredContentSecurityPolicy->insecureNavigationRequestsToUpgrade() : HashSet<SecurityOriginData> { },
             restoredDocument->isPluginDocument()
         });

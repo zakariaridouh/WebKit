@@ -242,6 +242,7 @@
 #include <WebCore/DigitalCredentialsProtocols.h>
 #include <WebCore/DigitalCredentialsRequestData.h>
 #include <WebCore/DigitalCredentialsResponseData.h>
+#include <WebCore/DocumentIsolationPolicy.h>
 #include <WebCore/DocumentSyncData.h>
 #include <WebCore/DragController.h>
 #include <WebCore/DragData.h>
@@ -1854,7 +1855,7 @@ RefPtr<API::Navigation> WebPageProxy::launchProcessForReload()
     auto publicSuffix = WebCore::PublicSuffixStore::singleton().publicSuffix(URL(currentItem->url()));
 
     // We allow stale content when reloading a WebProcess that's been killed or crashed.
-    GoToBackForwardItemParameters parameters { navigation->navigationID(), copyFrameStateForBackForwardNavigation(protect(currentItem->mainFrameItem())), FrameLoadType::IndexedBackForward, ShouldTreatAsContinuingLoad::No, std::nullopt, m_lastNavigationWasAppInitiated, ShouldRestoreFromBackForwardCache::Unspecified, std::nullopt, publicSuffix, { }, WebCore::ProcessSwapDisposition::None };
+    GoToBackForwardItemParameters parameters { navigation->navigationID(), copyFrameStateForBackForwardNavigation(protect(currentItem->mainFrameItem())), FrameLoadType::IndexedBackForward, ShouldTreatAsContinuingLoad::No, std::nullopt, m_lastNavigationWasAppInitiated, ShouldRestoreFromBackForwardCache::Unspecified, std::nullopt, publicSuffix, { }, WebCore::ProcessSwapDisposition::None, std::nullopt };
 
     // The relaunched process is still launching; for a file:// item defer the load so the sandbox
     // extension is re-issued after launch, as the other load paths do.
@@ -2440,8 +2441,10 @@ void WebPageProxy::loadRequestWithNavigationShared(Ref<WebProcessProxy>&& proces
         loadParameters.hadUserGesture = action->userGestureTokenIdentifier.has_value();
         loadParameters.requester = action->requester;
     }
-    if (shouldTreatAsContinuingLoad == ShouldTreatAsContinuingLoad::YesAfterNavigationPolicyDecision || shouldTreatAsContinuingLoad == ShouldTreatAsContinuingLoad::YesAfterProvisionalLoadStarted)
+    if (shouldTreatAsContinuingLoad == ShouldTreatAsContinuingLoad::YesAfterNavigationPolicyDecision || shouldTreatAsContinuingLoad == ShouldTreatAsContinuingLoad::YesAfterProvisionalLoadStarted) {
         loadParameters.originalRequest = navigation.originalRequest();
+        loadParameters.agentClusterAssignment = navigation.agentClusterAssignment();
+    }
 
     loadParameters.shouldConsiderEnhancedSecurityForInsecureResponse = shouldUseEnhancedSecurityHeuristics(protect(preferences()))
         && internals().enhancedSecurityTracker.shouldEnableForInsecureResponse(navigation, hasOpenedPage());
@@ -2620,6 +2623,8 @@ void WebPageProxy::loadDataWithNavigationShared(Ref<WebProcessProxy>&& process, 
     loadParameters.shouldOpenExternalURLsPolicy = shouldOpenExternalURLsPolicy;
     loadParameters.isNavigatingToAppBoundDomain = isNavigatingToAppBoundDomain;
     loadParameters.isServiceWorkerLoad = isServiceWorkerPage();
+    if (shouldTreatAsContinuingLoad != ShouldTreatAsContinuingLoad::No)
+        loadParameters.agentClusterAssignment = navigation.agentClusterAssignment();
     prepareToLoadWebPage(process, loadParameters);
 
     process->assumeReadAccessToBaseURL(*this, baseURL, [weakProcess = WeakPtr { process }, webPageID, loadParameters = WTF::move(loadParameters)] () mutable {
@@ -2747,6 +2752,8 @@ void WebPageProxy::loadAlternateHTML(Ref<WebCore::DataSegment>&& htmlData, const
     loadParameters.provisionalLoadErrorURLString = m_failingProvisionalLoadURL;
     // FIXME: This is an unnecessary copy.
     loadParameters.data = WebCore::SharedBuffer::create(htmlData->span());
+    auto& agentClusterURL = baseURL.isEmpty() ? aboutBlankURL() : baseURL;
+    loadParameters.agentClusterAssignment = protect(browsingContextGroup())->assignAgentCluster(AgentClusterRequest::forNavigationAction(agentClusterURL, topLevelCreationURL(agentClusterURL, true), true));
     Ref process = m_legacyMainFrameProcess;
     loadParameters.websitePolicies = policies ? std::optional(policies->dataForProcess(process)) : std::nullopt;
     prepareToLoadWebPage(process, loadParameters);
@@ -3012,7 +3019,7 @@ RefPtr<API::Navigation> WebPageProxy::goToBackForwardItem(WebBackForwardListFram
             WEBPAGEPROXY_RELEASE_LOG_ERROR(ProcessSwapping, "goToBackForwardItem: walk dispatched no GoToBackForwardItem messages — back/forward action will be silently dropped");
         navigation->setBackForwardTraversalWasDispatched(anySent);
     } else {
-        process->send(Messages::WebPage::GoToBackForwardItem({ navigation->navigationID(), copyFrameStateForBackForwardNavigation(frameItem), frameLoadType, ShouldTreatAsContinuingLoad::No, std::nullopt, m_lastNavigationWasAppInitiated, shouldRestoreFromBackForwardCache, std::nullopt, WTF::move(publicSuffix), { }, WebCore::ProcessSwapDisposition::None }), webPageIDInProcess(process));
+        process->send(Messages::WebPage::GoToBackForwardItem({ navigation->navigationID(), copyFrameStateForBackForwardNavigation(frameItem), frameLoadType, ShouldTreatAsContinuingLoad::No, std::nullopt, m_lastNavigationWasAppInitiated, shouldRestoreFromBackForwardCache, std::nullopt, WTF::move(publicSuffix), { }, WebCore::ProcessSwapDisposition::None, std::nullopt }), webPageIDInProcess(process));
         process->startResponsivenessTimer();
         navigation->setBackForwardTraversalWasDispatched(true);
     }
@@ -3122,7 +3129,8 @@ bool WebPageProxy::sendGoToBackForwardItemForFrame(WebBackForwardListFrameItem& 
         std::nullopt,
         WTF::move(suffixCopy),
         { },
-        WebCore::ProcessSwapDisposition::None
+        WebCore::ProcessSwapDisposition::None,
+        std::nullopt
     }), webPageIDInProcess(process));
     process->startResponsivenessTimer();
     return true;
@@ -6417,6 +6425,8 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
             if (navigation->currentRequestIsRedirect())
                 loadParameters.originalRequest = navigation->originalRequest();
             loadParameters.unpartitionedStorageSite = navigation->unpartitionedStorageSite();
+            updateAgentClusterAssignmentForContinuingLoad(navigation, browsingContextGroup, frame->isMainFrame());
+            loadParameters.agentClusterAssignment = navigation->agentClusterAssignment();
 
             processNavigatingTo->send(Messages::WebPage::LoadRequest(WTF::move(loadParameters)), webPageIDInProcess(processNavigatingTo));
         }
@@ -6541,6 +6551,31 @@ Ref<WebPageProxy> WebPageProxy::navigationOriginatingPage(const FrameInfoData& f
     return page.releaseNonNull();
 }
 
+URL WebPageProxy::topLevelCreationURL(const URL& url, bool isMainFrame) const
+{
+    RefPtr mainFrame = m_mainFrame;
+    return isMainFrame || !mainFrame ? url : mainFrame->url();
+}
+
+// https://html.spec.whatwg.org/multipage/webappapis.html#obtain-similar-origin-window-agent
+// Loads whose response decision is skipped, such as through the injected bundle, only record the keying here.
+void WebPageProxy::recordAgentClusterKeying(const API::Navigation& navigation)
+{
+    auto& assignment = navigation.agentClusterAssignment();
+    if (!assignment || !assignment->identifier || assignment->documentIsolationPolicy != DocumentIsolationPolicy::None)
+        return;
+    protect(browsingContextGroup())->resolveAgentClusterKeying(navigation.agentClusterOrigin(), assignment->isOriginKeyed);
+}
+
+// A load that continues in another process skips the navigation action decision there.
+void WebPageProxy::updateAgentClusterAssignmentForContinuingLoad(API::Navigation& navigation, BrowsingContextGroup& group, bool isMainFrame)
+{
+    auto& substituteData = navigation.substituteData();
+    URL url = substituteData ? (substituteData->baseURL.isEmpty() ? aboutBlankURL() : URL { substituteData->baseURL }) : navigation.currentRequest().url();
+    auto request = AgentClusterRequest::forNavigationAction(url, topLevelCreationURL(url, isMainFrame), !!substituteData);
+    navigation.setAgentClusterAssignment(request.origin, group.assignAgentCluster(request));
+}
+
 void WebPageProxy::receivedPolicyDecision(PolicyAction action, API::Navigation* navigation, std::optional<std::pair<Ref<API::WebsitePolicies>, Ref<WebProcessProxy>>>&& websitePoliciesAndProcess, Ref<API::NavigationAction>&& navigationAction, WillContinueLoadInNewProcess willContinueLoadInNewProcess, std::optional<SandboxExtension::Handle> sandboxExtensionHandle, std::optional<PolicyDecisionConsoleMessage>&& consoleMessage, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
 {
     if (!hasRunningProcess())
@@ -6587,7 +6622,17 @@ void WebPageProxy::receivedPolicyDecision(PolicyAction action, API::Navigation* 
     if (navigation && action == PolicyAction::Use)
         unpartitionedStorageSite = navigation->unpartitionedStorageSite();
 
-    completionHandler(PolicyDecision { isNavigatingToAppBoundDomain(), action, navigation ? std::optional { navigation->navigationID() } : std::nullopt, downloadID, WTF::move(websitePoliciesData), WTF::move(sandboxExtensionHandle), WTF::move(consoleMessage), isSafeBrowsingCheckOngoing, nullptr, OriginKeyed::No, WTF::move(unpartitionedStorageSite) });
+    AgentClusterAssignment agentClusterAssignment;
+    if (action == PolicyAction::Use) {
+        RefPtr targetFrame = navigationAction->targetFrame();
+        auto& url = navigationAction->request().url();
+        auto request = AgentClusterRequest::forNavigationAction(url, topLevelCreationURL(url, !targetFrame || targetFrame->isMainFrame()), navigation && navigation->substituteData());
+        agentClusterAssignment = browsingContextGroupForCommittingNavigation(navigation)->assignAgentCluster(request);
+        if (navigation)
+            navigation->setAgentClusterAssignment(request.origin, agentClusterAssignment);
+    }
+
+    completionHandler(PolicyDecision { isNavigatingToAppBoundDomain(), action, navigation ? std::optional { navigation->navigationID() } : std::nullopt, downloadID, WTF::move(websitePoliciesData), WTF::move(sandboxExtensionHandle), WTF::move(consoleMessage), isSafeBrowsingCheckOngoing, nullptr, agentClusterAssignment, WTF::move(unpartitionedStorageSite) });
 }
 
 void WebPageProxy::receivedNavigationResponsePolicyDecision(WebCore::PolicyAction action, API::Navigation* navigation, const WebCore::ResourceRequest& request, Ref<API::NavigationResponse>&& navigationResponse, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
@@ -6628,18 +6673,16 @@ void WebPageProxy::receivedNavigationResponsePolicyDecision(WebCore::PolicyActio
         downloadID = download->downloadID();
     }
 
-    // https://html.spec.whatwg.org/multipage/origin.html#origin-keyed-agent-clusters
-    auto isOriginKeyed = OriginKeyed::No;
-    if (action == PolicyAction::Use && protect(m_preferences)->originAgentClusterEnabled()) {
+    AgentClusterAssignment agentClusterAssignment;
+    if (action == PolicyAction::Use) {
         auto& response = navigationResponse->response();
-        Ref responseOrigin = SecurityOrigin::create(response.url());
-        RefPtr mainFrame = m_mainFrame;
-        auto& topLevelCreationURL = navigationResponse->frame().isMainFrame() || !mainFrame ? response.url() : mainFrame->url();
-        auto isSecureContext = responseOrigin->isPotentiallyTrustworthy() && SecurityOrigin::create(topLevelCreationURL)->isPotentiallyTrustworthy() ? IsSecureContext::Yes : IsSecureContext::No;
-        isOriginKeyed = browsingContextGroupForCommittingNavigation(navigation)->resolveAgentClusterKeying(responseOrigin->data(), obtainOriginAgentClusterPolicy(response, isSecureContext, nullptr));
+        auto request = AgentClusterRequest::forNavigationResponse(response, topLevelCreationURL(response.url(), navigationResponse->frame().isMainFrame()), protect(preferences()));
+        agentClusterAssignment = browsingContextGroupForCommittingNavigation(navigation)->assignAgentCluster(request);
+        if (navigation)
+            navigation->setAgentClusterAssignment(request.origin, agentClusterAssignment);
     }
 
-    completionHandler(PolicyDecision { isNavigatingToAppBoundDomain(), action, navigation ? std::optional { navigation->navigationID() } : std::nullopt, downloadID, { }, { }, { }, SafeBrowsingCheckOngoing::No, nullptr, isOriginKeyed });
+    completionHandler(PolicyDecision { isNavigatingToAppBoundDomain(), action, navigation ? std::optional { navigation->navigationID() } : std::nullopt, downloadID, { }, { }, { }, SafeBrowsingCheckOngoing::No, nullptr, agentClusterAssignment });
 }
 
 void WebPageProxy::commitProvisionalPage(IPC::Connection& connection, FrameIdentifier frameID, FrameInfoData&& frameInfo, ResourceRequest&& request, std::optional<WebCore::NavigationIdentifier> navigationID, String&& mimeType, bool frameHasCustomContentProvider, FrameLoadType frameLoadType, bool hasCertificateInfo, bool usedLegacyTLS, bool privateRelayed, String&& proxyName, WebCore::ResourceResponseSource source, bool containsPluginDocument, HasInsecureContent hasInsecureContent, MouseEventPolicy mouseEventPolicy, DocumentSecurityPolicy&& documentSecurityPolicy, HashSet<WebCore::SecurityOriginData>&& cspOriginsThatUpgradeInsecureNavigations, const UserData& userData, RestoredFromBackForwardCache restoredFromBackForwardCache, RefPtr<FrameState>&& redirectReplaceFrameState)
@@ -6768,6 +6811,7 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
     RELEASE_ASSERT(!newProcess->isInProcessCache());
     ASSERT(shouldTreatAsContinuingLoad != ShouldTreatAsContinuingLoad::No);
     navigation.setProcessID(newProcess->coreProcessIdentifier());
+    updateAgentClusterAssignmentForContinuingLoad(navigation, browsingContextGroup, frame.isMainFrame());
 
     auto& currentRequestURL = navigation.currentRequest().url();
     if (currentRequestURL.protocolIsFile())
@@ -6831,13 +6875,14 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
                 navigationID = navigation.navigationID(),
                 frameState = WTF::move(frameState),
                 shouldTreatAsContinuingLoad,
+                agentClusterAssignment = navigation.agentClusterAssignment(),
                 lastNavigationWasAppInitiated = m_lastNavigationWasAppInitiated,
                 publicSuffix = WTF::move(publicSuffix),
                 newProcess = newProcess.copyRef(),
                 preventProcessShutdownScope = newProcess->shutdownPreventingScope()
             ] (std::optional<PageIdentifier> pageID) mutable {
                 if (pageID)
-                    newProcess->send(Messages::WebPage::GoToBackForwardItem({ navigationID, frameState.releaseNonNull(), FrameLoadType::IndexedBackForward, shouldTreatAsContinuingLoad, std::nullopt, lastNavigationWasAppInitiated, ShouldRestoreFromBackForwardCache::Unspecified, std::nullopt, WTF::move(publicSuffix), { }, WebCore::ProcessSwapDisposition::None }), *pageID);
+                    newProcess->send(Messages::WebPage::GoToBackForwardItem({ navigationID, frameState.releaseNonNull(), FrameLoadType::IndexedBackForward, shouldTreatAsContinuingLoad, std::nullopt, lastNavigationWasAppInitiated, ShouldRestoreFromBackForwardCache::Unspecified, std::nullopt, WTF::move(publicSuffix), { }, WebCore::ProcessSwapDisposition::None, agentClusterAssignment }), *pageID);
             });
             return;
         }
@@ -6869,6 +6914,7 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
         if (navigation.currentRequestIsRedirect() || navigation.originalRequest().url() != currentRequestURL)
             loadParameters.originalRequest = navigation.originalRequest();
         loadParameters.unpartitionedStorageSite = navigation.unpartitionedStorageSite();
+        loadParameters.agentClusterAssignment = navigation.agentClusterAssignment();
 
         if (isPendingInitialHistoryItem)
             frame.setIsPendingInitialHistoryItem(true);
@@ -9254,6 +9300,9 @@ void WebPageProxy::didCommitLoadForFrame(IPC::Connection& connection, FrameIdent
         }
 #endif
     }
+
+    if (RefPtr committedNavigation = navigationID ? m_navigationState->navigation(*navigationID) : nullptr)
+        recordAgentClusterKeying(*committedNavigation);
 
     if (frame->provisionalFrame()) {
         frame->commitProvisionalFrame(connection, frameID, WTF::move(frameInfo), WTF::move(request), navigationID, WTF::move(mimeType), frameHasCustomContentProvider, frameLoadType, hasCertificateInfo, usedLegacyTLS, wasPrivateRelayed, WTF::move(proxyName), source, containsPluginDocument, hasInsecureContent, mouseEventPolicy, WTF::move(documentSecurityPolicy), WTF::move(cspOriginsThatUpgradeInsecureNavigations), userData, restoredFromBackForwardCache, WTF::move(redirectReplaceFrameState));
@@ -15171,7 +15220,6 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
         .drawingAreaIdentifier = drawingArea.identifier(),
         .webPageProxyIdentifier = identifier(),
         .pageGroupData = m_pageGroup->data(),
-        .browsingContextGroupIdentifier = m_browsingContextGroup->identifier(),
         .visitedLinkTableID = m_visitedLinkStore->identifier(),
         .userContentControllerParameters = m_userContentController->parametersForProcess(process),
         .mainFrameIdentifier = mainFrameIdentifier,

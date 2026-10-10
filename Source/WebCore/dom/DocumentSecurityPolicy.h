@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <WebCore/AgentClusterIdentifier.h>
 #include <WebCore/CrossOriginEmbedderPolicy.h>
 #include <WebCore/CrossOriginOpenerPolicy.h>
 #include <WebCore/IsSecureContext.h>
@@ -35,6 +36,7 @@ struct DocumentSecurityPolicy {
     CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;
     CrossOriginOpenerPolicy crossOriginOpenerPolicy;
     IsSecureContext isSecureContext;
+    std::optional<AgentClusterIdentifier> agentClusterIdentifier;
 };
 
 } // namespace WebCore

@@ -512,6 +512,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
 {
     return {
         "IPC::AsyncReplyID"_s,
+        "WebCore::AgentClusterIdentifier"_s,
         "WebCore::AttributedStringTextListID"_s,
         "WebCore::AttributedStringTextTableBlockID"_s,
         "WebCore::AttributedStringTextTableID"_s,

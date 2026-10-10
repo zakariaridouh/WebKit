@@ -104,6 +104,7 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ResourceTiming.h>
 #include <WebCore/ScriptController.h>
+#include <WebCore/SecurityOrigin.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/Settings.h>
 #include <WebCore/SubresourceLoader.h>
@@ -789,6 +790,13 @@ void WebLocalFrameLoaderClient::dispatchDidFinishDocumentLoad()
     if (!webPage)
         return;
 
+#if ASSERT_ENABLED
+    if (RefPtr document = m_localFrame->document()) {
+        auto& url = document->url();
+        ASSERT_WITH_MESSAGE(document->agentClusterIdentifier() || protect(document->securityOrigin())->isOpaque() || !(url.protocolIsInHTTPFamily() || url.protocolIsBlob()), "The UI process did not assign an agent cluster to %s", url.string().utf8());
+    }
+#endif
+
     RefPtr<API::Object> userData;
 
     RefPtr documentLoader = m_localFrame->loader().documentLoader();
@@ -999,7 +1007,12 @@ void WebLocalFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceRe
         return;
     }
 
-    if ((!m_frame->isMainFrame() || m_frame->isSafeBrowsingCheckOngoing() == SafeBrowsingCheckOngoing::No) && webPage->shouldSkipDecidePolicyForResponse(response)) {
+    RefPtr policyDocumentLoader = m_localFrame->loader().provisionalDocumentLoader();
+
+    // Without an assignment from the UI process, only this decision assigns the document's agent cluster.
+    // FIXME: Once the UI process assigns agent clusters to opaque origins, they will need this decision too.
+    bool needsAgentClusterAssignment = !(policyDocumentLoader && policyDocumentLoader->agentClusterAssignment().identifier) && !SecurityOrigin::create(response.url())->isOpaque();
+    if (!needsAgentClusterAssignment && (!m_frame->isMainFrame() || m_frame->isSafeBrowsingCheckOngoing() == SafeBrowsingCheckOngoing::No) && webPage->shouldSkipDecidePolicyForResponse(response)) {
         WebLocalFrameLoaderClient_RELEASE_LOG(Network, "dispatchDecidePolicyForResponse: continuing because injected bundle says so");
         function(PolicyAction::Use);
         return;
@@ -1007,7 +1020,6 @@ void WebLocalFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceRe
 
     bool canShowResponse = webPage->canShowResponse(response);
 
-    RefPtr policyDocumentLoader = m_localFrame->loader().provisionalDocumentLoader();
     auto navigationID = policyDocumentLoader ? policyDocumentLoader->navigationID() : std::nullopt;
 
     Ref frame = m_frame;

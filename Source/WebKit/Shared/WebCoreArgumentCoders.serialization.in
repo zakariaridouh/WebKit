@@ -3576,6 +3576,7 @@ struct WebCore::NavigationRequester {
     bool isSecureContext;
     bool localNetworkAllowedByPermissionsPolicy;
     bool loopbackNetworkAllowedByPermissionsPolicy;
+    std::optional<WebCore::AgentClusterIdentifier> agentClusterIdentifier;
 };
 
 struct WebCore::PolicyContainer {
@@ -7229,6 +7230,7 @@ struct WebCore::DocumentSecurityPolicy {
     WebCore::CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;
     WebCore::CrossOriginOpenerPolicy crossOriginOpenerPolicy;
     WebCore::IsSecureContext isSecureContext;
+    std::optional<WebCore::AgentClusterIdentifier> agentClusterIdentifier;
 };
 
 header: <WebCore/ProcessSwapDisposition.h>

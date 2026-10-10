@@ -2008,6 +2008,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/ActivityState.h
     page/ActivityStateChangeObserver.h
     page/AdjustViewSize.h
+    page/AgentClusterAssignment.h
+    page/AgentClusterIdentifier.h
     page/AlternativeTextClient.h
     page/AttachmentElementClient.h
     page/AutoplayEvent.h

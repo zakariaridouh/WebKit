@@ -33,6 +33,7 @@
 #include "SandboxExtension.h"
 #include "SharedPreferencesForWebProcess.h"
 #include <JavaScriptCore/InspectorFrontendChannel.h>
+#include <WebCore/AgentClusterAssignment.h>
 #include <WebCore/BoxExtents.h>
 #include <WebCore/CornerRadii.h>
 #include <WebCore/DevicePostureType.h>
@@ -3355,6 +3356,7 @@ private:
 
     Markable<WebCore::NavigationIdentifier> m_pendingNavigationID;
     std::optional<WebCore::RegistrableDomain> m_pendingUnpartitionedStorageSite;
+    std::optional<WebCore::AgentClusterAssignment> m_pendingAgentClusterAssignment;
 
     bool m_shouldConsiderEnhancedSecurityForInsecureResponseForCurrentNavigation { false };
     bool m_mainFrameProgressCompleted { false };

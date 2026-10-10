@@ -394,6 +394,7 @@ private:
     void didFinishLoadInAnotherProcess() final;
     SecurityOrigin* frameDocumentSecurityOrigin() const final;
     std::optional<DocumentSecurityPolicy> frameDocumentSecurityPolicy() const final;
+    std::optional<AgentClusterIdentifier> frameAgentClusterIdentifier() const final;
     String frameURLProtocol() const final;
 
     void disconnectView() final;

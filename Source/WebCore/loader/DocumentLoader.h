@@ -30,6 +30,7 @@
 #pragma once
 
 #include <WebCore/AdvancedPrivacyProtections.h>
+#include <WebCore/AgentClusterAssignment.h>
 #include <WebCore/AutoplayPolicy.h>
 #include <WebCore/CachedRawResourceClient.h>
 #include <WebCore/CachedResourceHandle.h>
@@ -38,6 +39,7 @@
 #include <WebCore/CrossOriginOpenerPolicy.h>
 #include <WebCore/DeviceOrientationOrMotionPermissionState.h>
 #include <WebCore/DocumentEnums.h>
+#include <WebCore/DocumentIsolationPolicy.h>
 #include <WebCore/DocumentLoadTiming.h>
 #include <WebCore/DocumentWriter.h>
 #include <WebCore/ElementTargetingTypes.h>
@@ -494,8 +496,8 @@ public:
 
     ContentSecurityPolicy* contentSecurityPolicy() const { return m_contentSecurityPolicy.get(); }
     const std::optional<CrossOriginOpenerPolicy>& crossOriginOpenerPolicy() const LIFETIME_BOUND { return m_responseCOOP; }
-    OriginKeyed isOriginKeyedFromUIProcess() const { return m_isOriginKeyedFromUIProcess; }
-    void setIsOriginKeyedFromUIProcess(OriginKeyed value) { m_isOriginKeyedFromUIProcess = value; }
+    const AgentClusterAssignment& agentClusterAssignment() const LIFETIME_BOUND { return m_agentClusterAssignment; }
+    void setAgentClusterAssignment(const AgentClusterAssignment& assignment) { m_agentClusterAssignment = assignment; }
     bool hasUnpartitionedStorageAccess(const URL& url) const { return m_unpartitionedStorageSite && m_unpartitionedStorageSite->matches(url); }
     void setUnpartitionedStorageSite(std::optional<RegistrableDomain>&& site) { m_unpartitionedStorageSite = WTF::move(site); }
     OptionSet<ClearSiteDataValue> responseClearSiteDataValues() const { return m_responseClearSiteDataValues; }
@@ -696,7 +698,7 @@ private:
     Vector<ResourceResponse> m_responses;
 
     std::optional<CrossOriginOpenerPolicy> m_responseCOOP;
-    OriginKeyed m_isOriginKeyedFromUIProcess { OriginKeyed::No };
+    AgentClusterAssignment m_agentClusterAssignment;
     std::optional<RegistrableDomain> m_unpartitionedStorageSite;
     OptionSet<ClearSiteDataValue> m_responseClearSiteDataValues;
     

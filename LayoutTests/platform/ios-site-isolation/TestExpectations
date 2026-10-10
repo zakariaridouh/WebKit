@@ -67,7 +67,10 @@ http/tests/security/block-top-level-navigations-by-third-party-iframes.html [ Fa
 http/tests/security/block-top-level-navigations-by-third-party-sandboxed-iframe.html [ Failure ]
 
 # Document-Isolation-Policy is partially implemented.
+imported/w3c/web-platform-tests/html/document-isolation-policy/agent-cluster.tentative.https.html [ Pass ]
+imported/w3c/web-platform-tests/html/document-isolation-policy/header-parsing.tentative.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp-load-from-cache-storage.tentative.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp.tentative.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/no-secure-context-https-iframe.tentative.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/no-secure-context.tentative.html [ Pass ]
+http/tests/document-isolation-policy/xslt-result-agent-cluster.https.html [ Pass ]

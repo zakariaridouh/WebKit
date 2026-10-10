@@ -229,6 +229,12 @@ std::optional<DocumentSecurityPolicy> RemoteFrame::frameDocumentSecurityPolicy()
     return frameTreeSyncData().frameDocumentSecurityPolicy;
 }
 
+std::optional<AgentClusterIdentifier> RemoteFrame::frameAgentClusterIdentifier() const
+{
+    auto& securityPolicy = frameTreeSyncData().frameDocumentSecurityPolicy;
+    return securityPolicy ? securityPolicy->agentClusterIdentifier : std::nullopt;
+}
+
 bool RemoteFrame::frameDocumentIsSandboxedOrigin() const
 {
     return frameTreeSyncData().frameDocumentIsSandboxedOrigin;

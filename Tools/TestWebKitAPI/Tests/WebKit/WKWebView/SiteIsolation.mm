@@ -5996,6 +5996,47 @@ TEST(SiteIsolation, LoadHTMLString)
     });
 }
 
+TEST(SiteIsolation, LoadHTMLStringRecordsHistoricalAgentClusterKeying)
+{
+    HTTPServer server({
+        { "/frame"_s, { { { "Content-Type"_s, "text/html"_s }, { "Origin-Agent-Cluster"_s, "?1"_s } }, "frame"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    [webView loadHTMLString:@"<iframe src='https://example.com/frame'></iframe>" baseURL:[NSURL URLWithString:@"https://example.com/"]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    // The parent recorded example.com as site-keyed, so the frame joins its agent cluster despite its header.
+    EXPECT_WK_STREQ([webView objectByEvaluatingJavaScript:@"frames[0].document.body.textContent"], "frame");
+    EXPECT_FALSE([[webView objectByEvaluatingJavaScript:@"frames[0].originAgentCluster"] boolValue]);
+}
+
+TEST(SiteIsolation, AlternateHTMLStringIsInTheAgentClusterOfSameOriginFrames)
+{
+    HTTPServer server({
+        { "/frame"_s, { { { "Content-Type"_s, "text/html"_s } }, "<script>const channel = new MessageChannel(); parent.postMessage('port', '*', [channel.port2]); channel.port1.postMessage(new WebAssembly.Module(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0])));</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    // An alternate HTML string gets no navigation policy decision, so the UI process never assigns it an agent cluster.
+    // The module is posted through a MessageChannel, so it is serialized in the frame's realm rather than the parent's.
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    [webView _loadAlternateHTMLString:@"<script>onmessage = event => { const port = event.ports[0]; port.onmessage = event => alert(Object.prototype.toString.call(event.data)); port.onmessageerror = () => alert('messageerror'); };</script><iframe src='https://example.com/frame'></iframe>" baseURL:[NSURL URLWithString:@"https://example.com/"] forUnreachableURL:[NSURL URLWithString:@"https://example.com/"]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "[object WebAssembly.Module]");
+}
+
+TEST(SiteIsolation, AlternateHTMLStringCannotAccessSameOriginFrameWithDocumentIsolationPolicy)
+{
+    HTTPServer server({
+        { "/frame"_s, { { { "Content-Type"_s, "text/html"_s }, { "Document-Isolation-Policy"_s, "isolate-and-require-corp"_s } }, "frame"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    setFeatureEnabled(configuration.get(), @"DocumentIsolationPolicyEnabled", true);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration);
+    [webView _loadAlternateHTMLString:@"<iframe src='https://example.com/frame' onload='let result; try { result = this.contentDocument ? this.contentDocument.body.textContent : \"null\"; } catch (e) { result = e.name; } alert(result)'></iframe>" baseURL:[NSURL URLWithString:@"https://example.com/"] forUnreachableURL:[NSURL URLWithString:@"https://example.com/"]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "null");
+}
+
 TEST(SiteIsolation, WebsitePoliciesCustomUserAgentDuringSameSiteProvisionalNavigation)
 {
     auto mainframeHTML = "<iframe id='frame' src='https://domain2.com/subframe'></iframe>"_s;

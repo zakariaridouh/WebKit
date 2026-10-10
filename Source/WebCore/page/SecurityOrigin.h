@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <WebCore/AgentClusterIdentifier.h>
 #include <WebCore/SecurityOriginData.h>
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -237,6 +238,19 @@ WEBCORE_EXPORT bool shouldTreatAsPotentiallyTrustworthy(const URL&);
 // Returns true if the Origin header values serialized from these two origins would be the same.
 bool serializedOriginsMatch(const SecurityOrigin&, const SecurityOrigin&);
 bool serializedOriginsMatch(const SecurityOrigin*, const SecurityOrigin*);
+
+inline bool canAccessAgentCluster(const SecurityOrigin& origin, std::optional<AgentClusterIdentifier> agentClusterIdentifier, std::optional<AgentClusterIdentifier> targetAgentClusterIdentifier)
+{
+    return origin.hasUniversalAccess() || mayBeInSameAgentCluster(agentClusterIdentifier, targetAgentClusterIdentifier);
+}
+
+// https://html.spec.whatwg.org/multipage/browsers.html#isplatformobjectsameorigin-(-o-)
+// For checks that let one document reach another's objects or run script in it. Unlike HTML, this also
+// requires the same agent cluster: https://github.com/WICG/document-isolation-policy/issues/11
+inline bool isPlatformObjectSameOrigin(const SecurityOrigin& origin, std::optional<AgentClusterIdentifier> agentClusterIdentifier, const SecurityOrigin& targetOrigin, std::optional<AgentClusterIdentifier> targetAgentClusterIdentifier)
+{
+    return origin.isSameOriginDomain(targetOrigin) && canAccessAgentCluster(origin, agentClusterIdentifier, targetAgentClusterIdentifier);
+}
 
 inline void add(Hasher& hasher, const SecurityOrigin& origin)
 {

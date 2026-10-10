@@ -142,7 +142,7 @@ static bool shouldEnableEnhancedSecurity(const std::string& pathOrURL)
 
 static bool shouldEnableSiteIsolation(const std::string& pathOrURL)
 {
-    return pathContains(pathOrURL, "site-isolation/inspector/");
+    return pathContains(pathOrURL, "site-isolation/inspector/") || pathContains(pathOrURL, "/document-isolation-policy/");
 }
 
 static bool shouldUseBackForwardCache(const std::string& pathOrURL)

@@ -8612,6 +8612,7 @@ void Document::initSecurityContext()
     setDocumentIsolationPolicy(ownerFrame->document()->documentIsolationPolicy());
     setIsOriginKeyed(ownerFrame->document()->isOriginKeyed());
     m_isSecureContext = ownerFrame->document()->m_isSecureContext;
+    setAgentClusterIdentifier(ownerFrame->document()->agentClusterIdentifier());
 
     // https://html.spec.whatwg.org/multipage/browsers.html#creating-a-new-browsing-context (Step 12)
     // If creator is non-null and creator's origin is same origin with creator's relevant settings object's top-level origin, then set coop
@@ -8764,16 +8765,15 @@ String Document::agentClusterID() const
 {
     Ref origin = securityOrigin();
     auto& data = origin->data();
-    auto browsingContextGroupIdentifier = page() && page()->browsingContextGroupIdentifier() ? page()->browsingContextGroupIdentifier()->toUInt64() : 0;
+    // FIXME: The UI process should know when a document ends up with an opaque origin, so its identifier can account for that.
     if (origin->isOpaque()) {
         auto opaqueID = data.opaqueOriginIdentifier();
-        return makeString(browsingContextGroupIdentifier, "-opaque-"_s, opaqueID ? opaqueID->toString() : String { });
+        return makeString("opaque-"_s, opaqueID ? opaqueID->toString() : String { });
     }
-    if (isInCrossOriginIsolatedAgentCluster())
-        return makeString(browsingContextGroupIdentifier, "-coi-"_s, data.toString());
-    if (m_isOriginKeyed == OriginKeyed::Yes)
-        return makeString(browsingContextGroupIdentifier, "-oac-"_s, data.toString());
-    return makeString(browsingContextGroupIdentifier, '-', Site(data).toString());
+    if (m_agentClusterIdentifier)
+        return makeString("agent-cluster-"_s, m_agentClusterIdentifier->toUInt64());
+    // Without a UI process, as in WebKitLegacy, there is no identifier.
+    return Site(data).toString();
 }
 
 // https://html.spec.whatwg.org/multipage/origin.html#dom-originagentcluster
@@ -8781,7 +8781,7 @@ bool Document::originAgentCluster() const
 {
     if (securityOrigin().isOpaque())
         return true;
-    if (isInCrossOriginIsolatedAgentCluster())
+    if (isInCrossOriginIsolatedAgentCluster() || documentIsolationPolicy() != DocumentIsolationPolicy::None)
         return true;
     return m_isOriginKeyed == OriginKeyed::Yes;
 }

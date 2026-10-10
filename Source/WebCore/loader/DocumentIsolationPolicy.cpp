@@ -29,16 +29,12 @@
 #include "HTTPHeaderNames.h"
 #include "RFC8941.h"
 #include "ResourceResponse.h"
-#include "ScriptExecutionContext.h"
-#include "Settings.h"
 
 namespace WebCore {
 
-DocumentIsolationPolicy obtainDocumentIsolationPolicy(const ResourceResponse& response, IsSecureContext isSecureContext, const ScriptExecutionContext& context)
+DocumentIsolationPolicy obtainDocumentIsolationPolicy(const ResourceResponse& response, IsSecureContext isSecureContext)
 {
     if (isSecureContext == IsSecureContext::No)
-        return DocumentIsolationPolicy::None;
-    if (!context.settingsValues().documentIsolationPolicyEnabled || !context.settingsValues().siteIsolationEnabled)
         return DocumentIsolationPolicy::None;
 
     auto parsedItem = RFC8941::parseItemStructuredFieldValue(response.httpHeaderField(HTTPHeaderName::DocumentIsolationPolicy));

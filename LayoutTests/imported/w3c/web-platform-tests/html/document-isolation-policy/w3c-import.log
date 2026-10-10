@@ -13,6 +13,7 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/README.md
+/LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/agent-cluster.tentative.https.html
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/credentialless-cache-storage-from-credentialless.https.tentative.window.js
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/credentialless-cache-storage-from-none.https.tentative.window.js
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/credentialless-cache-storage-from-require-corp.https.tentative.window.js
@@ -28,6 +29,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/credentialless-video.https.tentative.window.js
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/credentialless-video.https.tentative.window.js.headers
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/credentialless-websocket.https.tentative.window.js
+/LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/header-parsing.tentative.https.html
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp-load-from-cache-storage.tentative.https.html
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp-load-from-cache-storage.tentative.https.html.headers
 /LayoutTests/imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp.tentative.https.html

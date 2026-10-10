@@ -1028,6 +1028,7 @@ imported/w3c/web-platform-tests/html/cross-origin-embedder-policy/credentialless
 
 # Document-Isolation-Policy requires site isolation and is partially implemented.
 webkit.org/b/325516 imported/w3c/web-platform-tests/html/document-isolation-policy [ Skip ]
+webkit.org/b/325516 http/tests/document-isolation-policy [ Skip ]
 
 # Times out.
 webkit.org/b/214155 imported/w3c/web-platform-tests/html/cross-origin-embedder-policy/blob.https.html [ Skip ]

@@ -437,6 +437,7 @@ def serialized_identifiers():
     # FIXME: This can be derived from *.serialization.in files.
     return [
         'IPC::AsyncReplyID',
+        'WebCore::AgentClusterIdentifier',
         'WebCore::AttributedStringTextListID',
         'WebCore::AttributedStringTextTableBlockID',
         'WebCore::AttributedStringTextTableID',

@@ -125,6 +125,7 @@ private:
     URL urlForConsoleLog() const final;
     SecurityOrigin* NODELETE frameDocumentSecurityOrigin() const final;
     std::optional<DocumentSecurityPolicy> NODELETE frameDocumentSecurityPolicy() const final;
+    std::optional<AgentClusterIdentifier> NODELETE frameAgentClusterIdentifier() const final;
     String NODELETE frameURLProtocol() const final;
     float frameScaleFactorForChild(const Frame&) const final;
 

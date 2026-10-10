@@ -107,6 +107,8 @@ void Navigation::setCurrentRequest(ResourceRequest&& request)
     m_hasStorageForCurrentSite = false;
     m_isEnhancedSecurityLinkForCurrentSite = false;
     m_unpartitionedStorageSite = std::nullopt;
+    m_agentClusterOrigin = { };
+    m_agentClusterAssignment = std::nullopt;
 }
 
 void Navigation::upgradeCurrentInsecureRequest()

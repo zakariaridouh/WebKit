@@ -34,6 +34,7 @@
 #include "WebBackForwardListItem.h"
 #include "WebContentMode.h"
 #include <WebCore/AdvancedPrivacyProtections.h>
+#include <WebCore/AgentClusterAssignment.h>
 #include <WebCore/NavigationIdentifier.h>
 #include <WebCore/PrivateClickMeasurement.h>
 #include <WebCore/ProcessIdentifier.h>
@@ -192,6 +193,15 @@ public:
 
     void setUnpartitionedStorageSite(std::optional<WebCore::RegistrableDomain>&& site) { m_unpartitionedStorageSite = WTF::move(site); }
     const std::optional<WebCore::RegistrableDomain>& unpartitionedStorageSite() const LIFETIME_BOUND { return m_unpartitionedStorageSite; }
+
+    // The most recent assignment handed out for this navigation, and the origin it was computed for.
+    void setAgentClusterAssignment(const WebCore::SecurityOriginData& origin, const WebCore::AgentClusterAssignment& assignment)
+    {
+        m_agentClusterOrigin = origin;
+        m_agentClusterAssignment = assignment;
+    }
+    const WebCore::SecurityOriginData& agentClusterOrigin() const LIFETIME_BOUND { return m_agentClusterOrigin; }
+    const std::optional<WebCore::AgentClusterAssignment>& agentClusterAssignment() const LIFETIME_BOUND { return m_agentClusterAssignment; }
     void setSafeBrowsingCheckOngoing(size_t, bool);
     bool NODELETE safeBrowsingCheckOngoing(size_t);
     bool NODELETE safeBrowsingCheckOngoing();
@@ -255,6 +265,8 @@ private:
     RefPtr<API::WebsitePolicies> m_websitePolicies;
     std::optional<OptionSet<WebCore::AdvancedPrivacyProtections>> m_originatorAdvancedPrivacyProtections;
     std::optional<WebCore::RegistrableDomain> m_unpartitionedStorageSite;
+    WebCore::SecurityOriginData m_agentClusterOrigin;
+    std::optional<WebCore::AgentClusterAssignment> m_agentClusterAssignment;
     MonotonicTime m_requestStart { MonotonicTime::now() };
     RefPtr<WebKit::BrowsingWarning> m_safeBrowsingWarning;
     ListHashSet<size_t> m_ongoingSafeBrowsingChecks;

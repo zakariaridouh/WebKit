@@ -509,7 +509,7 @@ bool ScriptController::canAccessFromCurrentOrigin(Frame* frame, Document& access
 
     // If the current lexicalGlobalObject is null we should use the accessing document for the security check.
     if (!lexicalGlobalObject) {
-        return frame && frame->frameDocumentSecurityOrigin() && protect(accessingDocument.securityOrigin())->isSameOriginDomain(*protect(frame->frameDocumentSecurityOrigin()));
+        return frame && frame->frameDocumentSecurityOrigin() && isPlatformObjectSameOrigin(protect(accessingDocument.securityOrigin()), accessingDocument.agentClusterIdentifier(), *protect(frame->frameDocumentSecurityOrigin()), frame->frameAgentClusterIdentifier());
     }
 
     return BindingSecurity::shouldAllowAccessToFrame(lexicalGlobalObject, frame);
@@ -886,7 +886,7 @@ void ScriptController::executeJavaScriptURL(const URL& url, const NavigationActi
     RefPtr ownerDocument = m_frame->document();
 
     RefPtr requesterSecurityOrigin = action.requester() ? action.requester()->securityOrigin.ptr() : nullptr;
-    if (requesterSecurityOrigin && !requesterSecurityOrigin->isSameOriginDomain(protect(ownerDocument->securityOrigin())))
+    if (requesterSecurityOrigin && !isPlatformObjectSameOrigin(*requesterSecurityOrigin, action.requester()->agentClusterIdentifier, protect(ownerDocument->securityOrigin()), ownerDocument->agentClusterIdentifier()))
         return;
 
     if (!frame->page())

@@ -1706,7 +1706,13 @@ std::optional<DocumentSecurityPolicy> LocalFrame::frameDocumentSecurityPolicy() 
     if (!document)
         return std::nullopt;
 
-    return DocumentSecurityPolicy { document->crossOriginEmbedderPolicy(), document->crossOriginOpenerPolicy(), document->isSecureContext() ? IsSecureContext::Yes : IsSecureContext::No };
+    return DocumentSecurityPolicy { document->crossOriginEmbedderPolicy(), document->crossOriginOpenerPolicy(), document->isSecureContext() ? IsSecureContext::Yes : IsSecureContext::No, document->agentClusterIdentifier() };
+}
+
+std::optional<AgentClusterIdentifier> LocalFrame::frameAgentClusterIdentifier() const
+{
+    RefPtr document = this->document();
+    return document ? document->agentClusterIdentifier() : std::nullopt;
 }
 
 String LocalFrame::frameURLProtocol() const
