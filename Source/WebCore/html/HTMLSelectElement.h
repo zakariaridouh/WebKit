@@ -124,8 +124,6 @@ public:
 
     WEBCORE_EXPORT const Vector<WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData>>& listItems() const LIFETIME_BOUND;
 
-    void accessKeySetSelectedIndex(int);
-
     WEBCORE_EXPORT void setSize(unsigned);
 
     // Called by the bindings for the unnamed index-setter.
@@ -320,7 +318,6 @@ private:
     enum class PickerCloseReason : bool { Appearance, PickerSupport };
     void queuePickerClose(PickerCloseReason);
     void updateOptionSlotIfNeeded(bool usedListBoxSlot);
-    void optionDeselectedByUser(HTMLOptionElement&);
     bool handleImplicitSubmissionKeypress(KeyboardEvent&);
     bool platformHandleKeydownEvent(KeyboardEvent*);
     void listBoxDefaultEventHandler(Event&);

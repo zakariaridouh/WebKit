@@ -70,14 +70,9 @@ if (window.accessibilityController) {
             await expectNotification(`${kind}Single`);
             output += expect(`document.getElementById('${kind}Single').value`, "'Cherry'");
 
-            if (kind == "base") {
-                // Picking the selected option of a base appearance single-select list box deselects it.
-                eventSender.keyDown(" ");
-                await expectNotification(`${kind}Single`);
-                output += expect(`document.getElementById('${kind}Single').value`, "''");
-            }
-
-            // Neither of these changes the selection.
+            // None of these change the selection.
+            eventSender.keyDown(" ");
+            output += expect(`document.getElementById('${kind}Single').value`, "'Cherry'");
             single.selectedIndex = single.selectedIndex;
             single.add(new Option("Date"));
 

@@ -15,8 +15,8 @@ PASS: document.activeElement.id === 'start'
 PASS: selectedOptions('base') === 'baseGreen'
 base: events after setting AXSelected to true on baseGreen: input, change
 PASS: document.activeElement.id === 'start'
-PASS: selectedOptions('base') === 'none'
-base: events after setting AXSelected to false on baseGreen: input, change
+PASS: selectedOptions('base') === 'baseGreen'
+base: events after setting AXSelected to false on baseGreen: none
 PASS: document.activeElement.id === 'start'
 
 PASS successfullyParsed is true

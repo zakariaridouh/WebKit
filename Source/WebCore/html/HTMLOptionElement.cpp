@@ -345,10 +345,8 @@ bool HTMLOptionElement::accessKeyAction(bool)
     if (isActuallyDisabled())
         return false;
 
-    if (select->usesBaseAppearancePicker())
-        select->pickOrToggleOption(*this);
-    else
-        select->accessKeySetSelectedIndex(index());
+    select->pickOrToggleOption(*this);
+    select->scrollToSelection();
     return true;
 }
 
@@ -528,13 +526,10 @@ void HTMLOptionElement::setSelectedByUser(bool selected)
     if (!select || this->selected() == selected || isActuallyDisabled())
         return;
 
-    if (!selected && !select->multiple() && !select->isBaseListBox())
+    if (!selected && !select->multiple())
         return;
 
-    if (select->optionsAreRenderedWithBaseAppearance())
-        select->pickOrToggleOption(*this);
-    else
-        select->optionSelectedByUser(index(), true, select->multiple());
+    select->pickOrToggleOption(*this);
 }
 
 bool HTMLOptionElement::selectedForBindings() const

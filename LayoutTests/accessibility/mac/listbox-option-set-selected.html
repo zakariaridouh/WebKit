@@ -65,7 +65,7 @@ if (window.accessibilityController) {
         await setSelected("multiple", "multipleRed", false, "multipleGreen");
 
         await setSelected("base", "baseGreen", true, "baseGreen");
-        await setSelected("base", "baseGreen", false, "none");
+        await setSelected("base", "baseGreen", false, "baseGreen");
 
         for (const element of document.querySelectorAll("select, button"))
             element.style.display = "none";
