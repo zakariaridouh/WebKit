@@ -264,6 +264,21 @@ private:
                     break;
                 }
 
+                case MultiGetByOffset:
+                case MultiPutByOffset:
+                case MultiDeleteByOffset: {
+                    // Don't count these uses, but do not hoist a check that would contravene the
+                    // structures they were profiled with.
+                    Node* child = node->child1().node();
+                    if (child->op() != GetLocal)
+                        break;
+                    VariableAccessData* variable = child->variableAccessData();
+                    if (!shouldConsiderForHoisting<StructureTypeCheck>(variable))
+                        break;
+                    noticeStructuresAccessedBy(variable, node);
+                    break;
+                }
+
                 case ArrayifyToStructure:
                 case Arrayify:
                 case GetByOffset:
@@ -293,12 +308,9 @@ private:
                 case GetTypedArrayByteOffsetAsInt52:
                 case Phantom:
                 case MovHint:
-                case MultiGetByOffset:
-                case MultiPutByOffset:
-                case MultiDeleteByOffset:
                     // Don't count these uses.
                     break;
-                    
+
                 case SetLocal: {
                     // Find all uses of the source of the SetLocal. If any of them are a
                     // kind of CheckStructure, then we should notice them to ensure that
@@ -315,6 +327,15 @@ private:
                                 break;
                             
                             noticeStructureCheck(variable, subNode->structureSet());
+                            break;
+                        }
+                        case MultiGetByOffset:
+                        case MultiPutByOffset:
+                        case MultiDeleteByOffset: {
+                            if (subNode->child1() != source)
+                                break;
+
+                            noticeStructuresAccessedBy(variable, subNode);
                             break;
                         }
                         default:
@@ -528,6 +549,34 @@ private:
             return;
         }
         noticeStructureCheck(variable, set.at(0));
+    }
+
+    void noticeStructuresAccessedBy(VariableAccessData* variable, Node* node)
+    {
+        StructureSet structures;
+        switch (node->op()) {
+        case MultiGetByOffset:
+            for (const MultiGetByOffsetCase& getCase : node->multiGetByOffsetData().cases)
+                structures.merge(getCase.set().toStructureSet());
+            break;
+        case MultiPutByOffset:
+            for (const PutByVariant& variant : node->multiPutByOffsetData().variants)
+                structures.merge(variant.oldStructure());
+            break;
+        case MultiDeleteByOffset:
+            for (const DeleteByVariant& variant : node->multiDeleteByOffsetData().variants)
+                structures.add(variant.oldStructure());
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
+
+        if (structures.size() != 1) {
+            noticeStructureCheck(variable, RegisteredStructure());
+            return;
+        }
+        noticeStructureCheck(variable, m_graph.registerStructure(structures.onlyStructure()));
     }
 
     void noticeCheckArray(VariableAccessData* variable, ArrayMode arrayMode)
