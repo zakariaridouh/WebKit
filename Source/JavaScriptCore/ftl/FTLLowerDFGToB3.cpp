@@ -6504,7 +6504,7 @@ IGNORE_CLANG_WARNINGS_END
             }
 
             LBasicBlock inBounds = m_out.newBlock();
-            LBasicBlock boxPath = m_out.newBlock();
+            LBasicBlock boxPath = m_node->hasDoubleResult() ? nullptr : m_out.newBlock();
             LBasicBlock slowCase = m_out.newBlock();
             LBasicBlock continuation = m_out.newBlock();
 
@@ -6513,15 +6513,22 @@ IGNORE_CLANG_WARNINGS_END
                     index, m_out.load32NonNegative(storage, m_heaps.Butterfly_publicLength)),
                 rarely(slowCase), usually(inBounds));
 
-            LBasicBlock lastNext = m_out.appendTo(inBounds, boxPath);
+            LBasicBlock lastNext = m_out.appendTo(inBounds, boxPath ? boxPath : slowCase);
             LValue doubleValue = m_out.loadDouble(
                 baseIndexWithProvenValue(heap, storage, index, m_graph.varArgChild(m_node, 1)));
-            m_out.branch(
-                m_out.doubleNotEqualOrUnordered(doubleValue, doubleValue),
-                rarely(slowCase), usually(boxPath));
+            ValueFromBlock fastResult;
+            if (boxPath) {
+                m_out.branch(
+                    m_out.doubleNotEqualOrUnordered(doubleValue, doubleValue),
+                    rarely(slowCase), usually(boxPath));
 
-            m_out.appendTo(boxPath, slowCase);
-            ValueFromBlock fastResult = m_out.anchor(m_node->hasDoubleResult() ? doubleValue : boxDouble(doubleValue));
+                m_out.appendTo(boxPath, slowCase);
+                fastResult = m_out.anchor(boxDouble(doubleValue));
+            } else {
+                // A double result implies out-of-bounds sane chain, where a hole yields PNaN, and a hole
+                // is stored as PNaN, so the loaded value is already the right result.
+                fastResult = m_out.anchor(doubleValue);
+            }
             m_out.jump(continuation);
 
             m_out.appendTo(slowCase, continuation);
@@ -7297,8 +7304,6 @@ IGNORE_CLANG_WARNINGS_END
         } else
             speculate(OutOfBounds, noValue(), nullptr, isOutOfBounds);
 
-        LValue index = m_out.add(indexToCheck, m_out.int32One);
-
         TypedPointer base;
         if (inlineCallFrame) {
             if (inlineCallFrame->argumentCountIncludingThis > 1)
@@ -7308,8 +7313,9 @@ IGNORE_CLANG_WARNINGS_END
 
         LValue result;
         if (base) {
+            // indexToCheck is non-negative here, so its +1 for |this| can go in the offset.
             LValue pointer = m_out.baseIndex(
-                base.value(), m_out.zeroExt(index, pointerType()), ScaleEight);
+                base.value(), m_out.zeroExtPtr(indexToCheck), ScaleEight, sizeof(Register));
             result = m_out.load64(TypedPointer(m_heaps.variables.atAnyIndex(), pointer));
         } else
             result = m_out.constInt64(JSValue::encode(jsUndefined()));
@@ -8079,7 +8085,7 @@ IGNORE_CLANG_WARNINGS_END
                 GPRReg propertyCacheGPR = Options::useHandlerICInFTL() ? params.gpScratch(0) : InvalidGPRReg;
                 ASSERT(base != returnGPR);
 
-                if (child1UseKind)
+                if (child1UseKind == UntypedUse)
                     slowCases.append(jit.branchIfNotCell(base));
 
                 constexpr auto* optimizationFunction = [&] () {
@@ -8741,7 +8747,7 @@ IGNORE_CLANG_WARNINGS_END
 
             m_out.appendTo(loopHeader, loopBody);
             LValue index = m_out.phi(pointerType(), initialStartIndex);
-            m_out.branch(m_out.notEqual(index, length), unsure(loopBody), unsure(notFound));
+            m_out.branch(m_out.notEqual(index, length), usually(loopBody), rarely(notFound));
 
             m_out.appendTo(loopBody, loopNext);
             ValueFromBlock foundResult = isArrayIncludes ? m_out.anchor(m_out.constBool(true)) : m_out.anchor(m_out.castToInt32(index));
@@ -8749,13 +8755,13 @@ IGNORE_CLANG_WARNINGS_END
             case Int32Use: {
                 // Empty value is ignored because of JSValue::NumberTag.
                 LValue value = m_out.load64(m_out.baseIndex(m_heaps.indexedInt32Properties, storage, index));
-                m_out.branch(m_out.equal(value, searchElement), unsure(continuation), unsure(loopNext));
+                m_out.branch(m_out.equal(value, searchElement), rarely(continuation), usually(loopNext));
                 break;
             }
             case DoubleRepUse: {
                 // Empty value is ignored because of NaN.
                 LValue value = m_out.loadDouble(m_out.baseIndex(m_heaps.indexedDoubleProperties, storage, index));
-                m_out.branch(m_out.doubleEqual(value, searchElement), unsure(continuation), unsure(loopNext));
+                m_out.branch(m_out.doubleEqual(value, searchElement), rarely(continuation), usually(loopNext));
                 break;
             }
             default:
@@ -9136,7 +9142,6 @@ IGNORE_CLANG_WARNINGS_END
             LValue prevLength = m_out.load32(storage, m_heaps.ArrayStorage_publicLength);
 
             Vector<ValueFromBlock, 3> results;
-            results.append(m_out.anchor(m_out.constInt64(JSValue::encode(jsUndefined()))));
             m_out.branch(
                 m_out.isZero32(prevLength), rarely(slowCase), usually(vectorLengthCheckCase));
 
@@ -10830,11 +10835,16 @@ IGNORE_CLANG_WARNINGS_END
 
             LValue indexingMode = m_out.load8ZeroExt32(argument, m_heaps.JSCell_indexingTypeAndMisc);
             LValue indexingShape = m_out.bitAnd(indexingMode, m_out.constInt32(IndexingShapeMask));
-            LValue isOKIndexingType = m_out.belowOrEqual(
-                m_out.sub(indexingShape, m_out.constInt32(Int32Shape)),
-                m_out.constInt32(ContiguousShape - Int32Shape));
 
-            m_out.branch(isOKIndexingType, unsure(copyOnWriteContiguousCheck), unsure(slowPath));
+            // Every structure in originalArrayShapesForSpread has an Int32, Double, or Contiguous shape.
+            if (fastSpreadWithStructureCheck)
+                m_out.jump(copyOnWriteContiguousCheck);
+            else {
+                LValue isOKIndexingType = m_out.belowOrEqual(
+                    m_out.sub(indexingShape, m_out.constInt32(Int32Shape)),
+                    m_out.constInt32(ContiguousShape - Int32Shape));
+                m_out.branch(isOKIndexingType, unsure(copyOnWriteContiguousCheck), unsure(slowPath));
+            }
             if (fastSpreadProven)
                 lastNext = m_out.appendTo(copyOnWriteContiguousCheck, copyOnWritePropagation);
             else
@@ -12811,6 +12821,12 @@ IGNORE_CLANG_WARNINGS_END
             }
         }
         bool structuresChecked = m_interpreter.forNode(m_node->child1()).m_structure.isSubsetOf(baseSet);
+
+        bool everyCaseLoadsFromBaseButterfly = data.cases.size() >= 2 && std::ranges::all_of(data.cases, [](const MultiGetByOffsetCase& getCase) {
+            return getCase.method().kind() == GetByOffsetMethod::Load && !isInlineOffset(getCase.method().offset());
+        });
+        LValue baseButterfly = everyCaseLoadsFromBaseButterfly ? m_out.loadPtr(base, m_heaps.JSObject_butterfly) : nullptr;
+
         emitSwitchForMultiByOffset(base, structuresChecked, cases, exit);
 
         LBasicBlock lastNext = m_out.m_nextBlock;
@@ -12843,7 +12859,9 @@ IGNORE_CLANG_WARNINGS_END
                     propertyBase = base;
                 else
                     propertyBase = weakPointer(method.prototype()->value().asCell());
-                if (!isInlineOffset(method.offset()))
+                if (baseButterfly)
+                    propertyBase = baseButterfly;
+                else if (!isInlineOffset(method.offset()))
                     propertyBase = m_out.loadPtr(propertyBase, m_heaps.JSObject_butterfly);
 
                 if (m_node->hasDoubleResult())
@@ -12919,6 +12937,12 @@ IGNORE_CLANG_WARNINGS_END
             }
         }
         bool structuresChecked = m_interpreter.forNode(m_node->child1()).m_structure.isSubsetOf(baseSet);
+
+        bool everyVariantReplacesInBaseButterfly = data.variants.size() >= 2 && std::ranges::all_of(data.variants, [](const PutByVariant& variant) {
+            return variant.kind() == PutByVariant::Replace && !isInlineOffset(variant.offset());
+        });
+        LValue baseButterfly = everyVariantReplacesInBaseButterfly ? m_out.loadPtr(base, m_heaps.JSObject_butterfly) : nullptr;
+
         emitSwitchForMultiByOffset(base, structuresChecked, cases, exit);
 
         LBasicBlock lastNext = m_out.m_nextBlock;
@@ -12930,7 +12954,9 @@ IGNORE_CLANG_WARNINGS_END
 
             LValue storage;
             if (variant.kind() == PutByVariant::Replace) {
-                if (isInlineOffset(variant.offset()))
+                if (baseButterfly)
+                    storage = baseButterfly;
+                else if (isInlineOffset(variant.offset()))
                     storage = base;
                 else
                     storage = m_out.loadPtr(base, m_heaps.JSObject_butterfly);
@@ -13079,6 +13105,38 @@ IGNORE_CLANG_WARNINGS_END
 
         MatchStructureData& data = m_node->matchStructureData();
 
+        RegisteredStructureSet baseSet;
+        Vector<RegisteredStructure, 2> trueStructures;
+        Vector<RegisteredStructure, 2> falseStructures;
+        for (MatchStructureVariant& variant : data.variants) {
+            baseSet.add(variant.structure);
+            (variant.result ? trueStructures : falseStructures).append(variant.structure);
+        }
+        bool structuresChecked = m_interpreter.forNode(m_node->child1()).m_structure.isSubsetOf(baseSet);
+
+        if (structuresChecked && !data.variants.isEmpty()) {
+            if (falseStructures.isEmpty()) {
+                setBoolean(m_out.booleanTrue);
+                return;
+            }
+            if (trueStructures.isEmpty()) {
+                setBoolean(m_out.booleanFalse);
+                return;
+            }
+            bool matchTrueStructures = trueStructures.size() <= falseStructures.size();
+            auto& structuresToMatch = matchTrueStructures ? trueStructures : falseStructures;
+            if (structuresToMatch.size() <= 2) {
+                LValue structureID = m_out.load32(base, m_heaps.JSCell_structureID);
+                LValue matched = nullptr;
+                for (RegisteredStructure structure : structuresToMatch) {
+                    LValue isStructure = m_out.equal(structureID, weakStructureID(structure));
+                    matched = matched ? m_out.bitOr(matched, isStructure) : isStructure;
+                }
+                setBoolean(matchTrueStructures ? matched : m_out.logicalNot(matched));
+                return;
+            }
+        }
+
         LBasicBlock trueBlock = m_out.newBlock();
         LBasicBlock falseBlock = m_out.newBlock();
         LBasicBlock exitBlock = m_out.newBlock();
@@ -13087,14 +13145,11 @@ IGNORE_CLANG_WARNINGS_END
         LBasicBlock lastNext = m_out.insertNewBlocksBefore(trueBlock);
 
         Vector<SwitchCase, 2> cases;
-        RegisteredStructureSet baseSet;
         for (MatchStructureVariant& variant : data.variants) {
-            baseSet.add(variant.structure);
             cases.append(SwitchCase(
                 weakStructureID(variant.structure),
                 variant.result ? trueBlock : falseBlock, Weight(1)));
         }
-        bool structuresChecked = m_interpreter.forNode(m_node->child1()).m_structure.isSubsetOf(baseSet);
         emitSwitchForMultiByOffset(base, structuresChecked, cases, exitBlock);
 
         m_out.appendTo(trueBlock, falseBlock);
@@ -18540,7 +18595,7 @@ IGNORE_CLANG_WARNINGS_END
             {
                 m_out.appendTo(checkIndex);
                 LValue outOfBounds = m_out.aboveOrEqual(index, m_out.load32(enumerator, m_heaps.JSPropertyNameEnumerator_endGenericPropertyIndex));
-                m_out.branch(outOfBounds, unsure(outOfBoundsBlock), unsure(loadPropertyNameBlock));
+                m_out.branch(outOfBounds, rarely(outOfBoundsBlock), usually(loadPropertyNameBlock));
             }
 
             {
