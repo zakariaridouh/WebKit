@@ -856,7 +856,7 @@ public:
     void deferRecomputeTableIsExposed(Element*);
     void deferRecomputeTableCellSlots(AccessibilityNodeObject&);
     void deferTextChangedIfNeeded(Node*);
-    void deferSelectedChildrenChangedIfNeeded(Element&);
+    void deferSelectedChildrenChanged(Element&);
     WEBCORE_EXPORT void performDeferredCacheUpdate(ForceLayout);
     void deferTextReplacementNotificationForTextControl(HTMLTextFormControlElement&, const String& previousValue);
 

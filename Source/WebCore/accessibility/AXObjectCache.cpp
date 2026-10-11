@@ -2980,9 +2980,11 @@ void AXObjectCache::onSelectedOptionChanged(Element& element)
 {
     if (hasCellARIARole(element))
         postNotification(&element, AXNotification::SelectedCellsChanged);
-    else if (is<HTMLOptionElement>(element))
+    else if (RefPtr option = dynamicDowncast<HTMLOptionElement>(element)) {
         postNotification(&element, AXNotification::SelectedStateChanged);
-    else if (RefPtr axObject = getOrCreate(element)) {
+        if (RefPtr select = option->ownerSelectElement(); select && !select->isDropdownBox())
+            deferSelectedChildrenChanged(*select);
+    } else if (RefPtr axObject = getOrCreate(element)) {
         if (RefPtr ancestor = Accessibility::findAncestor<AccessibilityObject>(*axObject, false, [] (const auto& object) {
             return object.canHaveSelectedChildren();
         })) {
@@ -7050,18 +7052,14 @@ void AXObjectCache::deferTextChangedIfNeeded(Node* node)
     handleTextChanged(protect(getOrCreate(*node)));
 }
 
-void AXObjectCache::deferSelectedChildrenChangedIfNeeded(Element& selectElement)
+void AXObjectCache::deferSelectedChildrenChanged(Element& selectElement)
 {
     if (!nodeRendererIsValid(selectElement))
         return;
 
-    if (rendererNeedsDeferredUpdate(*selectElement.renderer())) {
-        m_deferredSelectedChildredChangedList.add(selectElement);
-        if (!m_performCacheUpdateTimer.isActive())
-            m_performCacheUpdateTimer.startOneShot(0_s);
-        return;
-    }
-    selectedChildrenChanged(&selectElement);
+    m_deferredSelectedChildredChangedList.add(selectElement);
+    if (!m_performCacheUpdateTimer.isActive())
+        m_performCacheUpdateTimer.startOneShot(0_s);
 }
 
 void AXObjectCache::deferTextReplacementNotificationForTextControl(HTMLTextFormControlElement& formControlElement, const String& previousValue)

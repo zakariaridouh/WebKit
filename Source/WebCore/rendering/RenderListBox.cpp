@@ -31,7 +31,6 @@
 #include "config.h"
 #include "RenderListBox.h"
 
-#include "AXObjectCache.h"
 #include <wtf/Borrow.h>
 #include "CSSFontSelector.h"
 #include "DocumentInlines.h"
@@ -171,9 +170,6 @@ void RenderListBox::selectionChanged()
         else
             scrollToRevealSelection();
     }
-    
-    if (AXObjectCache* cache = protect(document())->existingAXObjectCache())
-        cache->deferSelectedChildrenChangedIfNeeded(protect(selectElement()));
 }
 
 void RenderListBox::layout()
