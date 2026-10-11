@@ -196,7 +196,7 @@ bool WillChangeAnimatableFeatures::Data::canBeBackdropRoot() const
 
 auto CSSValueConversion<WillChange>::operator()(BuilderState& state, const CSSValue& value) -> WillChange
 {
-    if (auto* keywordValue = dynamicDowncast<CSSKeywordValue>(value)) {
+    if (RefPtr keywordValue = dynamicDowncast<CSSKeywordValue>(value)) {
         switch (keywordValue->valueID()) {
         case CSSValueAuto:
             return CSS::Keyword::Auto { };

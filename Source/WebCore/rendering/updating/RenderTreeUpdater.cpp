@@ -191,7 +191,7 @@ void RenderTreeUpdater::updateRebuildRoots()
         if (!existingStyle)
             return false;
 
-        auto* parent = composedTreeAncestors(element).first();
+        RefPtr parent = composedTreeAncestors(element).first();
         m_styleUpdate->addElement(element, parent, Style::ElementUpdate {
             makeUnique<Style::ComputedStyle>(Style::ComputedStyle::cloneIncludingPseudoElements(*existingStyle)),
             Style::Change::Renderer
@@ -206,7 +206,7 @@ void RenderTreeUpdater::updateRebuildRoots()
         auto it = descendants.begin();
         auto end = descendants.end();
         while (it != end) {
-            auto* descendant = dynamicDowncast<Element>(*it);
+            RefPtr descendant = dynamicDowncast<Element>(*it);
             if (!descendant) {
                 it.traverseNext();
                 continue;

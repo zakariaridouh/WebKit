@@ -1085,9 +1085,9 @@ String ShorthandSerializer::serializeBorderRadius() const
     std::array<RefPtr<const CSSValue>, 4> horizontalRadii;
     std::array<RefPtr<const CSSValue>, 4> verticalRadii;
     for (unsigned i = 0; i < 4; ++i) {
-        auto& value = longhandValue(i);
-        horizontalRadii[i] = value.first();
-        verticalRadii[i] = value.second();
+        Ref value = longhandValue(i);
+        horizontalRadii[i] = value->first();
+        verticalRadii[i] = value->second();
     }
 
     bool serializeBoth = false;
@@ -1127,9 +1127,9 @@ String ShorthandSerializer::serializeBorderRadiusSide() const
     std::array<RefPtr<const CSSValue>, 2> horizontalRadii;
     std::array<RefPtr<const CSSValue>, 2> verticalRadii;
     for (unsigned i = 0; i < 2; ++i) {
-        auto& value = longhandValue(i);
-        horizontalRadii[i] = value.first();
-        verticalRadii[i] = value.second();
+        Ref value = longhandValue(i);
+        horizontalRadii[i] = value->first();
+        verticalRadii[i] = value->second();
     }
 
     bool serializeBoth = false;

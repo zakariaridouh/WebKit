@@ -176,7 +176,7 @@ static Ref<const CustomProperty> interpolatedCustomProperty(const Style::Compute
     return context.progress < 0.5 ? from : to;
 }
 
-static std::pair<const CustomProperty*, const CustomProperty*> customPropertyValuesForInterpolation(const AtomString& customProperty, const Style::ComputedStyle& fromStyle, const Style::ComputedStyle& toStyle)
+static std::pair<RefPtr<const CustomProperty>, RefPtr<const CustomProperty>> customPropertyValuesForInterpolation(const AtomString& customProperty, const Style::ComputedStyle& fromStyle, const Style::ComputedStyle& toStyle)
 {
     return { fromStyle.customPropertyValue(customProperty), toStyle.customPropertyValue(customProperty) };
 }

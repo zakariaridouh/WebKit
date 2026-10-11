@@ -11273,7 +11273,7 @@ Vector<Ref<WebAnimation>> Document::matchingAnimations(NOESCAPE const Function<b
         if (is<CustomEffect>(effect))
             return true;
 
-        if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(effect)) {
+        if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(effect)) {
             RefPtr target = keyframeEffect->target();
             return target && target->isConnected() && &target->document() == this && function(*target);
         }

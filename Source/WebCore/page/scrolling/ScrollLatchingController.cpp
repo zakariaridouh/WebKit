@@ -176,7 +176,7 @@ void ScrollLatchingController::removeLatchingStateForTarget(const Element& eleme
         return;
 
     auto findResult = m_frameStateStack.findIf([&element] (const auto& state) {
-        auto* wheelElement = state.wheelEventElement.get();
+        RefPtr wheelElement = state.wheelEventElement;
         return wheelElement && element.isEqualNode(wheelElement);
     });
     

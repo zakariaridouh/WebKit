@@ -1076,11 +1076,11 @@ InspectorStyleSheet* FrameCSSAgent::createInspectorStyleSheetForDocument(Documen
     auto styleElement = HTMLStyleElement::create(document);
     styleElement->setAttributeWithoutSynchronization(HTMLNames::typeAttr, cssContentTypeAtom());
 
-    ContainerNode* targetNode;
-    if (auto* head = document.head())
-        targetNode = head;
-    else if (auto* body = document.bodyOrFrameset())
-        targetNode = body;
+    RefPtr<ContainerNode> targetNode;
+    if (RefPtr head = document.head())
+        targetNode = WTF::move(head);
+    else if (RefPtr body = document.bodyOrFrameset())
+        targetNode = WTF::move(body);
     else
         return nullptr;
 

@@ -572,10 +572,12 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
         containingBlock = containingBlock->containingBlock();
     ASSERT(containingBlock);
 
-    auto [enclosingClippingBox, enclosingClippingLayer] = enclosingClippingBoxForStickyPosition();
+    auto enclosingClipping = enclosingClippingBoxForStickyPosition();
+    CheckedRef enclosingClippingBox = enclosingClipping.first;
+    CheckedPtr enclosingClippingLayer = enclosingClipping.second;
 
     LayoutRect containerContentRect;
-    if (!enclosingClippingLayer || (containingBlock != &enclosingClippingBox)) {
+    if (!enclosingClippingLayer || (containingBlock != enclosingClippingBox.ptr())) {
         // In this case either the scrolling element is the view or there is another containing block in
         // the hierarchy between this stickily positioned item and its scrolling ancestor. In both cases,
         // we use the content box rectangle of the containing block, which is what should constrain the
@@ -604,12 +606,12 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
 
     // Finally compute container rect relative to the scrolling ancestor. We pass an empty
     // mode here, because sticky positioning should ignore transforms.
-    FloatRect containerRectRelativeToScrollingAncestor = containingBlock->localToContainerQuad(FloatRect(containerContentRect), &enclosingClippingBox, { } /* ignore transforms */).boundingBox();
+    FloatRect containerRectRelativeToScrollingAncestor = containingBlock->localToContainerQuad(FloatRect(containerContentRect), enclosingClippingBox.ptr(), { } /* ignore transforms */).boundingBox();
     if (enclosingClippingLayer) {
         FloatPoint containerLocationRelativeToScrollingAncestor = containerRectRelativeToScrollingAncestor.location() -
-            FloatSize(enclosingClippingBox.borderLeft() + enclosingClippingBox.paddingLeft(),
-            enclosingClippingBox.borderTop() + enclosingClippingBox.paddingTop());
-        if (&enclosingClippingBox != containingBlock) {
+            FloatSize(enclosingClippingBox->borderLeft() + enclosingClippingBox->paddingLeft(),
+            enclosingClippingBox->borderTop() + enclosingClippingBox->paddingTop());
+        if (enclosingClippingBox.ptr() != containingBlock) {
             if (auto* scrollableArea = enclosingClippingLayer->scrollableArea())
                 containerLocationRelativeToScrollingAncestor += scrollableArea->scrollOffset();
         }
@@ -632,13 +634,13 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
     // involving inlines, tables, and transformations.
     if (auto* parentBox = dynamicDowncast<RenderBox>(*parent()))
         parentBox->flipForWritingMode(stickyBoxRect);
-    auto stickyBoxRelativeToScrollingAncestor = parent()->localToContainerQuad(FloatRect(stickyBoxRect), &enclosingClippingBox, { } /* ignore transforms */).boundingBox();
+    auto stickyBoxRelativeToScrollingAncestor = parent()->localToContainerQuad(FloatRect(stickyBoxRect), enclosingClippingBox.ptr(), { } /* ignore transforms */).boundingBox();
 
     if (enclosingClippingLayer) {
-        stickyBoxRelativeToScrollingAncestor.move(-FloatSize(enclosingClippingBox.borderLeft() + enclosingClippingBox.paddingLeft(),
-            enclosingClippingBox.borderTop() + enclosingClippingBox.paddingTop()));
+        stickyBoxRelativeToScrollingAncestor.move(-FloatSize(enclosingClippingBox->borderLeft() + enclosingClippingBox->paddingLeft(),
+            enclosingClippingBox->borderTop() + enclosingClippingBox->paddingTop()));
 
-        if (&enclosingClippingBox != parent()) {
+        if (enclosingClippingBox.ptr() != parent()) {
             if (auto* scrollableArea = enclosingClippingLayer->scrollableArea())
                 stickyBoxRelativeToScrollingAncestor.moveBy(scrollableArea->scrollOffset());
         }

@@ -551,7 +551,7 @@ static Inspector::Protocol::ErrorStringOr<RefPtr<IDBFactory>> IDBFactoryFromDocu
     return { WTF::move(idbFactory) };
 }
 
-static bool getDocumentAndIDBFactoryFromFrameOrSendFailure(LocalFrame* frame, Document*& outDocument, IDBFactory*& outIDBFactory, BackendDispatcher::CallbackBase& callback)
+static bool getDocumentAndIDBFactoryFromFrameOrSendFailure(LocalFrame* frame, RefPtr<Document>& outDocument, RefPtr<IDBFactory>& outIDBFactory, BackendDispatcher::CallbackBase& callback)
 {
     auto document = documentFromFrame(frame);
     if (!document.has_value()) {
@@ -583,8 +583,8 @@ void InspectorIndexedDBAgent::requestDatabaseNames(const String& securityOrigin,
         return;
     }
 
-    Document* document;
-    IDBFactory* idbFactory;
+    RefPtr<Document> document;
+    RefPtr<IDBFactory> idbFactory;
     if (!getDocumentAndIDBFactoryFromFrameOrSendFailure(frame->ptr(), document, idbFactory, callback))
         return;
 
@@ -608,8 +608,8 @@ void InspectorIndexedDBAgent::requestDatabase(const String& securityOrigin, cons
         return;
     }
 
-    Document* document;
-    IDBFactory* idbFactory;
+    RefPtr<Document> document;
+    RefPtr<IDBFactory> idbFactory;
     if (!getDocumentAndIDBFactoryFromFrameOrSendFailure(frame->ptr(), document, idbFactory, callback))
         return;
 
@@ -625,8 +625,8 @@ void InspectorIndexedDBAgent::requestData(const String& securityOrigin, const St
         return;
     }
 
-    Document* document;
-    IDBFactory* idbFactory;
+    RefPtr<Document> document;
+    RefPtr<IDBFactory> idbFactory;
     if (!getDocumentAndIDBFactoryFromFrameOrSendFailure(frame->ptr(), document, idbFactory, callback))
         return;
 
@@ -735,8 +735,8 @@ void InspectorIndexedDBAgent::clearObjectStore(const String& securityOrigin, con
         return;
     }
 
-    Document* document;
-    IDBFactory* idbFactory;
+    RefPtr<Document> document;
+    RefPtr<IDBFactory> idbFactory;
     if (!getDocumentAndIDBFactoryFromFrameOrSendFailure(frame->ptr(), document, idbFactory, callback))
         return;
 

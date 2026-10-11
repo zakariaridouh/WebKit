@@ -234,7 +234,7 @@ struct FontFaceStyleInfo {
 
 static FontFaceStyleInfo calculateFontFaceStyleInfo(CSSValue& value)
 {
-    auto* rangeValue = dynamicDowncast<CSSFontStyleRangeValue>(value);
+    RefPtr rangeValue = dynamicDowncast<CSSFontStyleRangeValue>(value);
     if (!rangeValue) {
         auto slope = Style::fontStyleFromCSSValueDeprecated(value);
         if (!slope)

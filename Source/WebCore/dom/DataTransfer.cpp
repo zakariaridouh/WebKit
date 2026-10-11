@@ -597,7 +597,7 @@ void DataTransfer::setDragImage(Ref<Element>&& element, int x, int y)
         return;
 
     CachedResourceHandle<CachedImage> image;
-    if (auto* imageElement = dynamicDowncast<HTMLImageElement>(element.get()); imageElement && !imageElement->isConnected())
+    if (RefPtr imageElement = dynamicDowncast<HTMLImageElement>(element); imageElement && !imageElement->isConnected())
         image = imageElement->cachedImage();
 
     m_dragLocation = IntPoint(x, y);

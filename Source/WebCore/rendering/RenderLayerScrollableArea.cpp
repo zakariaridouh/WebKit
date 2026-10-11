@@ -428,7 +428,7 @@ void RenderLayerScrollableArea::scrollTo(const ScrollPosition& position)
         renderer.repaintUsingContainer(repaintContainer.get(), rectForRepaint);
 
         auto isScrolledBy = [](auto& renderer, auto& scrollableLayer) {
-            auto layer = renderer.enclosingLayer();
+            CheckedPtr layer = renderer.enclosingLayer();
             return layer && layer->ancestorLayerIsInContainingBlockChain(scrollableLayer);
         };
 

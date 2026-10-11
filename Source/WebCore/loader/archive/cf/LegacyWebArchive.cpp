@@ -541,7 +541,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(LocalFrame& frame, ArchiveOpti
             continue;
         }
 
-        if (auto localChild = dynamicDowncast<LocalFrame>(child.get())) {
+        if (RefPtr localChild = dynamicDowncast<LocalFrame>(child)) {
             if (auto childFrameArchive = create(*localChild, { }))
                 subframeArchives.append(childFrameArchive.releaseNonNull());
         }

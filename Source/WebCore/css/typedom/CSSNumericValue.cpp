@@ -193,7 +193,7 @@ static Ref<CSSNumericValue> negate(Ref<CSSNumericValue>&& value)
     // https://drafts.css-houdini.org/css-typed-om/#cssmath-negate-a-cssnumericvalue
     if (auto* mathNegate = dynamicDowncast<CSSMathNegate>(value.get()))
         return mathNegate->value();
-    if (auto* unitValue = dynamicDowncast<CSSUnitValue>(value.get()))
+    if (RefPtr unitValue = dynamicDowncast<CSSUnitValue>(value))
         return CSSUnitValue::create(-unitValue->value(), unitValue->unitEnum());
     return CSSMathNegate::create(WTF::move(value));
 }
@@ -201,10 +201,10 @@ static Ref<CSSNumericValue> negate(Ref<CSSNumericValue>&& value)
 static ExceptionOr<Ref<CSSNumericValue>> invert(Ref<CSSNumericValue>&& value)
 {
     // https://drafts.css-houdini.org/css-typed-om/#cssmath-invert-a-cssnumericvalue
-    if (auto* mathInvert = dynamicDowncast<CSSMathInvert>(value.get()))
+    if (RefPtr mathInvert = dynamicDowncast<CSSMathInvert>(value))
         return protect(mathInvert->value());
 
-    if (auto* unitValue = dynamicDowncast<CSSUnitValue>(value.get())) {
+    if (RefPtr unitValue = dynamicDowncast<CSSUnitValue>(value)) {
         if (unitValue->unitEnum() == CSSUnitType::Number) {
             if (unitValue->value() == 0.0 || unitValue->value() == -0.0)
                 return Exception { ExceptionCode::RangeError };

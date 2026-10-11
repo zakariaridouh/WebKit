@@ -3102,8 +3102,8 @@ static RefPtr<Element> getElementOrAncestorElementForNode(Node* targetNode)
 {
     RefPtr<Element> targetElement;
     while (targetNode) {
-        if (auto* asElement = dynamicDowncast<Element>(*targetNode)) {
-            targetElement = asElement;
+        if (RefPtr asElement = dynamicDowncast<Element>(*targetNode)) {
+            targetElement = WTF::move(asElement);
             break;
         }
         SUPPRESS_UNCOUNTED_LOCAL targetNode = targetNode->parentInComposedTree();

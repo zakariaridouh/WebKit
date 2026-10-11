@@ -152,7 +152,7 @@ auto CSSValueConversion<PositionTryFallback>::operator()(BuilderState& state, co
 static Ref<CSSValue> computedPositionAreaValue(const PositionTryFallback::PositionArea& value)
 {
     RefPtr cssValue = protect(value.properties)->getPropertyCSSValue(CSSPropertyPositionArea);
-    if (auto* pair = dynamicDowncast<CSSValuePair>(*cssValue)) {
+    if (RefPtr pair = dynamicDowncast<CSSValuePair>(*cssValue)) {
         auto dim1 = downcast<CSSKeywordValue>(pair->first()).valueID();
         auto dim2 = downcast<CSSKeywordValue>(pair->second()).valueID();
         return CSSPropertyParserHelpers::valueForPositionArea(dim1, dim2, CSSPropertyParserHelpers::ValueType::Computed).releaseNonNull();

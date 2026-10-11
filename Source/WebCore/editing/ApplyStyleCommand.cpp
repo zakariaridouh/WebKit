@@ -387,7 +387,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
         RELEASE_ASSERT(node);
 
         RefPtr<HTMLElement> element;
-        if (auto* htmlElement = dynamicDowncast<HTMLElement>(*node)) {
+        if (RefPtr htmlElement = dynamicDowncast<HTMLElement>(*node)) {
             // Only work on fully selected nodes.
             if (!nodeFullySelected(*htmlElement, start, end)) {
                 if (!node->isConnected())
@@ -882,7 +882,7 @@ void ApplyStyleCommand::removeConflictingInlineStyleFromRun(EditingStyle& style,
         } else
             next = NodeTraversal::next(*node);
 
-        auto* htmlElement = dynamicDowncast<HTMLElement>(*node);
+        RefPtr htmlElement = dynamicDowncast<HTMLElement>(*node);
         if (!htmlElement)
             continue;
 
@@ -995,7 +995,7 @@ RefPtr<HTMLElement> ApplyStyleCommand::highestAncestorWithConflictingInlineStyle
     RefPtr unsplittableElement = unsplittableElementForPosition(firstPositionInOrBeforeNode(node));
 
     for (RefPtr ancestor = node; ancestor; ancestor = ancestor->parentNode()) {
-        auto* htmlAncestor = dynamicDowncast<HTMLElement>(*ancestor);
+        RefPtr htmlAncestor = dynamicDowncast<HTMLElement>(*ancestor);
         if (htmlAncestor && shouldRemoveInlineStyleFromElement(style, *htmlAncestor))
             result = htmlAncestor;
         // Should stop at the editable root (cannot cross editing boundary) and
@@ -1440,8 +1440,8 @@ void ApplyStyleCommand::applyInlineStyleChange(Node& passedStart, Node& passedEn
     RefPtr<HTMLElement> styleContainer;
     while (startNode == endNode) {
         if (RefPtr container = dynamicDowncast<HTMLElement>(*startNode)) {
-            if (auto* fontElement = dynamicDowncast<HTMLFontElement>(*container.get()))
-                fontContainer = fontElement;
+            if (RefPtr fontElement = dynamicDowncast<HTMLFontElement>(*container))
+                fontContainer = WTF::move(fontElement);
             if (is<HTMLSpanElement>(*container.get()) || (!is<HTMLSpanElement>(styleContainer) && container->hasChildNodes()))
                 styleContainer = container.get();
             if (!canHaveChildrenForEditing(*startNode))

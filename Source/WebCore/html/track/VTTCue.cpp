@@ -1021,7 +1021,7 @@ void VTTCue::markFutureAndPastNodes(ContainerNode* root, const MediaTime& previo
             childElement->setIsPastNode(isPastNode);
 
         // Make an element id match a cue id for style matching purposes.
-        if (auto* childElement = dynamicDowncast<Element>(*child); !id().isEmpty() && childElement)
+        if (RefPtr childElement = dynamicDowncast<Element>(*child); !id().isEmpty() && childElement)
             childElement->setIdAttribute(id());
     }
 }

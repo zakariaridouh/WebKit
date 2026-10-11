@@ -123,7 +123,7 @@ static CSSPropertyID parseJavaScriptCSSPropertyName(const AtomString& propertyNa
     using CSSPropertyIDMap = HashMap<AtomString, CSSPropertyID>;
     static NeverDestroyed<CSSPropertyIDMap> propertyIDCache;
 
-    auto* propertyNameString = propertyName.impl();
+    RefPtr propertyNameString = propertyName.impl();
     if (!propertyNameString)
         return CSSPropertyInvalid;
 

@@ -880,7 +880,7 @@ void RenderLayerBacking::updateChildrenTransformAndAnchorPoint(const LayoutRect&
         return;
     }
 
-    auto layerForChildrenTransform = [&]() -> std::tuple<GraphicsLayer*, FloatRect> {
+    auto layerForChildrenTransform = [&]() -> std::tuple<RefPtr<GraphicsLayer>, FloatRect> {
         if (m_scrollContainerLayer) {
             // Scroll container layers are only created for RenderBox derived renderers.
             return std::make_tuple(m_scrollContainerLayer.get(), scrollContainerLayerBox(downcast<RenderBox>(renderer())));

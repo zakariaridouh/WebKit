@@ -957,9 +957,8 @@ Vector<Ref<FormListedElement>> HTMLFormElement::copyListedElementsVector() const
     return WTF::map(m_listedElements, [] (auto& weakElement) {
         RefPtr element { weakElement.get() };
         ASSERT(element);
-        auto* formListedElement = element->asFormListedElement();
-        ASSERT(formListedElement);
-        return Ref<FormListedElement>(*formListedElement);
+        RefPtr formListedElement = element->asFormListedElement();
+        return formListedElement.releaseNonNull();
     });
 }
 

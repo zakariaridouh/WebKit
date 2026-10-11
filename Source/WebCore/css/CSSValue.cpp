@@ -358,7 +358,7 @@ bool CSSValue::equals(const CSSValue& other) const
     }
     if (auto* thisList = dynamicDowncast<CSSValueList>(*this))
         return thisList->containsSingleEqualItem(other);
-    if (auto* otherList = dynamicDowncast<CSSValueList>(other))
+    if (RefPtr otherList = dynamicDowncast<CSSValueList>(other))
         return otherList->containsSingleEqualItem(*this);
     return false;
 }

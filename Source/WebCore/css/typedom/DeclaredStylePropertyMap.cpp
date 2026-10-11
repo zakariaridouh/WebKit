@@ -65,7 +65,7 @@ auto DeclaredStylePropertyMap::entries(ScriptExecutionContext* context) const ->
     if (!styleRule)
         return { };
 
-    auto& document = downcast<Document>(*context);
+    Ref document = downcast<Document>(*context);
     Ref properties = styleRule->properties();
     return map(properties.get(), [&document](auto propertyReference) {
         return StylePropertyMapEntry {

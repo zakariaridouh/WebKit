@@ -273,7 +273,7 @@ void WindowEventLoop::removeMutationObserversForContext(ScriptExecutionContext& 
 
     auto disconnectMatching = [&](HashSet<Ref<MutationObserver>>& observers) {
         observers.removeIf([&](auto& observer) {
-            auto* observerContext = observer->callback().scriptExecutionContext();
+            RefPtr observerContext = observer->callback().scriptExecutionContext();
             if (observerContext && observerContext != &context)
                 return false;
             observer->disconnect();

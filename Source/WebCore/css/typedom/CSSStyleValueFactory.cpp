@@ -285,19 +285,19 @@ static ExceptionOr<Ref<CSSStyleValue>> reifyValue(const CSS::CustomIdent& custom
 
 ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& document, const CSSValue& cssValue, AssociatedProperty&& associatedProperty)
 {
-    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(cssValue))
+    if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(cssValue))
         return WebCore::reifyValue(*primitiveValue);
-    else if (auto* keywordValue = dynamicDowncast<CSSKeywordValue>(cssValue))
+    else if (RefPtr keywordValue = dynamicDowncast<CSSKeywordValue>(cssValue))
         return WebCore::reifyValue(keywordValue->keyword());
-    else if (auto* customIdentValue = dynamicDowncast<CSSCustomIdentValue>(cssValue))
+    else if (RefPtr customIdentValue = dynamicDowncast<CSSCustomIdentValue>(cssValue))
         return WebCore::reifyValue(customIdentValue->customIdent());
-    else if (auto* imageValue = dynamicDowncast<CSSImageValue>(cssValue))
+    else if (RefPtr imageValue = dynamicDowncast<CSSImageValue>(cssValue))
         return Ref<CSSStyleValue> { CSSStyleImageValue::create(const_cast<CSSImageValue&>(*imageValue), document) };
-    else if (auto* referenceValue = dynamicDowncast<CSSSubstitutionValue>(cssValue))
+    else if (RefPtr referenceValue = dynamicDowncast<CSSSubstitutionValue>(cssValue))
         return Ref<CSSStyleValue> { CSSUnparsedValue::create(referenceValue->data().tokenRange()) };
-    else if (auto* substitutionValue = dynamicDowncast<CSSShorthandSubstitutionValue>(cssValue))
+    else if (RefPtr substitutionValue = dynamicDowncast<CSSShorthandSubstitutionValue>(cssValue))
         return Ref<CSSStyleValue> { CSSUnparsedValue::create(substitutionValue->shorthandValue().data().tokenRange()) };
-    else if (auto* customPropertyValue = dynamicDowncast<CSSCustomPropertyValue>(cssValue)) {
+    else if (RefPtr customPropertyValue = dynamicDowncast<CSSCustomPropertyValue>(cssValue)) {
         // FIXME: remove CSSStyleValue::create(WTF::move(cssValue)), add reification control flow
         return WTF::switchOn(customPropertyValue->value(),
             [&](const Ref<CSSSubstitutionValue>& value) {
@@ -487,7 +487,7 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& docum
                 return CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue)), WTF::move(associatedProperty));
             }
         );
-    } else if (auto* valueList = dynamicDowncast<CSSValueList>(cssValue)) {
+    } else if (RefPtr valueList = dynamicDowncast<CSSValueList>(cssValue)) {
         // Reifying the first value in value list.
         // FIXME: Verify this is the expected behavior.
         // Refer to LayoutTests/imported/w3c/web-platform-tests/css/css-typed-om/the-stylepropertymap/inline/get.html

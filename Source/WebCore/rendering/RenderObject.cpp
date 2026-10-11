@@ -2417,7 +2417,7 @@ Vector<IntRect> RenderObject::absoluteTextRects(const SimpleRange& range, Option
         CheckedPtr renderer = node->renderer();
         if (auto* lineBreakRenderer = dynamicDowncast<RenderLineBreak>(renderer.get()); lineBreakRenderer && lineBreakRenderer->isBR())
             lineBreakRenderer->boundingRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
-        else if (auto* textNode = dynamicDowncast<Text>(node.get())) {
+        else if (RefPtr textNode = dynamicDowncast<Text>(node)) {
             for (auto& rect : absoluteRectsForRangeInText(range, *textNode, behavior))
                 rects.append(LayoutRect { rect });
         }
@@ -2461,8 +2461,8 @@ static Vector<FloatRect> borderAndTextRects(const SimpleRange& range, Coordinate
     }
 
     for (Ref node : intersectingNodesWithDeprecatedZeroOffsetStartQuirk(range)) {
-        auto* element = dynamicDowncast<Element>(node.get());
-        if (textOnly == TextOnly::No && element && selectedElementsSet.contains(element) && (useVisibleBounds || !node->parentElement() || !selectedElementsSet.contains(node->parentElement()))) {
+        RefPtr element = dynamicDowncast<Element>(node);
+        if (textOnly == TextOnly::No && element && selectedElementsSet.contains(element.get()) && (useVisibleBounds || !node->parentElement() || !selectedElementsSet.contains(node->parentElement()))) {
             if (CheckedPtr renderer = element->renderBoxModelObject()) {
                 if (useVisibleBounds) {
                     auto rootClippedBounds = renderer->computeClippedRectInContentCoordinates(renderer->borderBoundingBox());
@@ -2481,7 +2481,7 @@ static Vector<FloatRect> borderAndTextRects(const SimpleRange& range, Coordinate
                     protect(node->document())->convertAbsoluteToClientQuads(elementQuads, renderer->style());
                 rects.appendVector(boundingBoxes(elementQuads));
             }
-        } else if (auto* textNode = dynamicDowncast<Text>(node.get())) {
+        } else if (RefPtr textNode = dynamicDowncast<Text>(node)) {
             if (CheckedPtr renderer = textNode->renderer()) {
                 auto clippedRects = absoluteRectsForRangeInText(range, *textNode, behavior);
                 if (space == CoordinateSpace::Client)

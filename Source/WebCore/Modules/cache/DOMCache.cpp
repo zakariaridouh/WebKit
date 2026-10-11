@@ -324,10 +324,9 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
                 return;
             }
 
-            auto protectedResponse = result.releaseReturnValue();
-            auto& response = protectedResponse.get();
+            Ref response = result.releaseReturnValue();
 
-            if (!response.ok()) {
+            if (!response->ok()) {
                 taskHandler->error(Exception { ExceptionCode::TypeError, "Response is not OK"_s });
                 return;
             }
@@ -337,7 +336,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
                 return;
             }
 
-            if (response.status() == 206) {
+            if (response->status() == 206) {
                 taskHandler->error(Exception { ExceptionCode::TypeError, "Response is a 206 partial"_s });
                 return;
             }
@@ -348,7 +347,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
             }
             size_t recordPosition = taskHandler->addRecord(toConnectionRecord(request.get(), response, nullptr));
 
-            response.consumeBodyReceivedByChunk([taskHandler = WTF::move(taskHandler), recordPosition, data = SharedBufferBuilder(), response = WTF::move(protectedResponse)] (auto&& result) mutable {
+            response->consumeBodyReceivedByChunk([taskHandler = WTF::move(taskHandler), recordPosition, data = SharedBufferBuilder(), response = response.copyRef()] (auto&& result) mutable {
                 if (taskHandler->isDone())
                     return;
 
@@ -428,8 +427,8 @@ void DOMCache::put(RequestInfo&& info, Ref<FetchResponse>&& response, DOMPromise
     }
 
     if (response->isBodyReceivedByChunk()) {
-        auto& responseRef = response.get();
-        responseRef.consumeBodyReceivedByChunk([promise = WTF::move(promise), request = WTF::move(request), response = WTF::move(response), data = SharedBufferBuilder(), pendingActivity = makePendingActivity(*this)](auto&& result) mutable {
+        Ref responseRef = response;
+        responseRef->consumeBodyReceivedByChunk([promise = WTF::move(promise), request = WTF::move(request), response = WTF::move(response), data = SharedBufferBuilder(), pendingActivity = makePendingActivity(*this)](auto&& result) mutable {
 
             if (result.hasException()) {
                 pendingActivity->object().putWithResponseData(WTF::move(promise), WTF::move(request), WTF::move(response), result.releaseException().isolatedCopy());

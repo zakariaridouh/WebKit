@@ -1527,7 +1527,7 @@ void AXObjectCache::remove(Node& node)
     }
 
     // We cannot use RefPtr here as node's m_deletionHasBegun is true.
-    if (auto* nodeElement = dynamicDowncast<Element>(node)) {
+    if (SUPPRESS_UNCOUNTED_LOCAL auto* nodeElement = dynamicDowncast<Element>(node)) {
         m_deferredTextFormControlValue.remove(*nodeElement);
         m_deferredAttributeChange.removeAllMatching([&node] (const auto& entry) {
             return entry.element == &node;
@@ -1796,14 +1796,14 @@ void AXObjectCache::handleChildrenChanged(AccessibilityObject& object)
 
         AX_ASSERT(children.size() == 1);
         handleChildrenChanged(downcast<AccessibilityObject>(children[0].get()));
-    } else if (auto* menuListPopup = dynamicDowncast<AccessibilityMenuListPopup>(object)) {
+    } else if (RefPtr menuListPopup = dynamicDowncast<AccessibilityMenuListPopup>(object)) {
         menuListPopup->handleChildrenChanged();
         return;
-    } else if (auto* nodeObject = dynamicDowncast<AccessibilityNodeObject>(object); nodeObject && nodeObject->isTable())
+    } else if (RefPtr nodeObject = dynamicDowncast<AccessibilityNodeObject>(object); nodeObject && nodeObject->isTable())
         deferRecomputeTableCellSlots(*nodeObject);
     else if (auto* parentTable = dynamicDowncast<AccessibilityNodeObject>(object.parentTableIfExposedTableRow()))
         deferRecomputeTableCellSlots(*parentTable);
-    else if (auto* scrollView = dynamicDowncast<AccessibilityScrollView>(object)) {
+    else if (RefPtr scrollView = dynamicDowncast<AccessibilityScrollView>(object)) {
 #if ENABLE(ACCESSIBILITY_LOCAL_FRAME)
         if (scrollView->role() == AccessibilityRole::FrameHost) {
             // For FrameHost scroll views, propagate childrenChanged to the parent
@@ -7599,7 +7599,7 @@ void AXObjectCache::updateRelationsForTree(ContainerNode& rootNode)
 
         if (RefPtr shadowRoot = element->shadowRoot(); shadowRoot && shadowRoot->mode() != ShadowRootMode::UserAgent)
             updateRelationsForTree(*shadowRoot);
-        if (auto* frameOwnerElement = dynamicDowncast<HTMLFrameOwnerElement>(element.get())) {
+        if (RefPtr frameOwnerElement = dynamicDowncast<HTMLFrameOwnerElement>(element)) {
             if (RefPtr document = frameOwnerElement->contentDocument())
                 updateRelationsForTree(*document);
         }

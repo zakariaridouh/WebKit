@@ -491,11 +491,11 @@ static ExceptionOr<RefPtr<Node>> processContentsBetweenOffsets(Range::ActionType
     case NodeType::Text:
     case NodeType::CDATASection:
     case NodeType::Comment: {
-        auto& dataNode = uncheckedDowncast<CharacterData>(*container);
-        endOffset = std::min(endOffset, dataNode.length());
+        Ref dataNode = uncheckedDowncast<CharacterData>(*container);
+        endOffset = std::min(endOffset, dataNode->length());
         startOffset = std::min(startOffset, endOffset);
         if (action == Range::Extract || action == Range::Clone) {
-            Ref characters = uncheckedDowncast<CharacterData>(dataNode.cloneNode(CloneSubtree::Yes));
+            Ref characters = uncheckedDowncast<CharacterData>(dataNode->cloneNode(CloneSubtree::Yes));
             auto deleteResult = deleteCharacterData(characters, startOffset, endOffset);
             if (deleteResult.hasException())
                 return deleteResult.releaseException();
@@ -508,18 +508,18 @@ static ExceptionOr<RefPtr<Node>> processContentsBetweenOffsets(Range::ActionType
                 result = WTF::move(characters);
         }
         if (action == Range::Extract || action == Range::Delete) {
-            auto deleteResult = dataNode.deleteData(startOffset, endOffset - startOffset);
+            auto deleteResult = dataNode->deleteData(startOffset, endOffset - startOffset);
             if (deleteResult.hasException())
                 return deleteResult.releaseException();
         }
         break;
     }
     case NodeType::ProcessingInstruction: {
-        auto& instruction = uncheckedDowncast<ProcessingInstruction>(*container);
-        endOffset = std::min(endOffset, instruction.data().length());
+        Ref instruction = uncheckedDowncast<ProcessingInstruction>(*container);
+        endOffset = std::min(endOffset, instruction->data().length());
         startOffset = std::min(startOffset, endOffset);
         if (action == Range::Extract || action == Range::Clone) {
-            Ref processingInstruction = uncheckedDowncast<ProcessingInstruction>(instruction.cloneNode(CloneSubtree::Yes));
+            Ref processingInstruction = uncheckedDowncast<ProcessingInstruction>(instruction->cloneNode(CloneSubtree::Yes));
             processingInstruction->setData(processingInstruction->data().substring(startOffset, endOffset - startOffset));
             if (fragment) {
                 result = fragment;
@@ -530,8 +530,8 @@ static ExceptionOr<RefPtr<Node>> processContentsBetweenOffsets(Range::ActionType
                 result = WTF::move(processingInstruction);
         }
         if (action == Range::Extract || action == Range::Delete) {
-            auto data = makeStringByRemoving(instruction.data(), startOffset, endOffset - startOffset);
-            instruction.setData(WTF::move(data));
+            auto data = makeStringByRemoving(instruction->data(), startOffset, endOffset - startOffset);
+            instruction->setData(WTF::move(data));
         }
         break;
     }

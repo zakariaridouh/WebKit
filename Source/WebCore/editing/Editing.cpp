@@ -505,13 +505,13 @@ bool isListItem(const Node& node)
     return isListHTMLElement(node.parentNode()) || (node.renderer() && node.renderer()->isRenderListItem());
 }
 
-Element* enclosingElementWithTag(const Position& position, const QualifiedName& tagName)
+RefPtr<Element> enclosingElementWithTag(const Position& position, const QualifiedName& tagName)
 {
     auto root = highestEditableRoot(position);
     for (RefPtr node = position.deprecatedNode(); node; node = node->parentNode()) {
         if (root && !node->hasEditableStyle())
             continue;
-        auto* element = dynamicDowncast<Element>(*node);
+        RefPtr element = dynamicDowncast<Element>(*node);
         if (!element)
             continue;
         if (element->hasTagName(tagName))

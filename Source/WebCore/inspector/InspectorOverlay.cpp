@@ -1516,7 +1516,7 @@ void InspectorOverlay::drawGridOverlay(GraphicsContext& context, const Inspector
 
 static Vector<String> authoredGridTrackSizes(Node* node, Style::GridTrackSizingDirection direction, unsigned expectedTrackCount)
 {
-    auto* element = dynamicDowncast<StyledElement>(node);
+    RefPtr element = dynamicDowncast<StyledElement>(node);
     if (!element)
         return { };
 

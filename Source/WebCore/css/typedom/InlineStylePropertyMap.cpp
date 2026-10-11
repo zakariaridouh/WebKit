@@ -81,7 +81,7 @@ auto InlineStylePropertyMap::entries(ScriptExecutionContext* context) const -> V
     if (!inlineStyle)
         return { };
 
-    auto& document = downcast<Document>(*context);
+    Ref document = downcast<Document>(*context);
     return map(*inlineStyle, [&document](auto propertyReference) {
         return StylePropertyMapEntry {
             propertyReference.cssName(),

@@ -293,7 +293,7 @@ String capitalize(const String& string, const AtomString& locale)
 String capitalize(const String& string, char32_t previousCharacter, const AtomString& locale)
 {
     int32_t length = string.length();
-    auto& stringImpl = *string.impl();
+    Ref stringImpl = *string.impl();
 
     static_assert(String::MaxLength < std::numeric_limits<unsigned>::max(), "Must be able to add one without overflowing unsigned");
 
@@ -306,7 +306,7 @@ String capitalize(const String& string, char32_t previousCharacter, const AtomSt
     for (int32_t i = 0; i < previousCharacterLength; ++i)
         stringWithPrevious[i] = convertNoBreakSpaceToSpace(previousCharacterUTF16[i]);
     for (int32_t i = previousCharacterLength; i < length + previousCharacterLength; ++i)
-        stringWithPrevious[i] = convertNoBreakSpaceToSpace(stringImpl[i - previousCharacterLength]);
+        stringWithPrevious[i] = convertNoBreakSpaceToSpace(stringImpl.get()[i - previousCharacterLength]);
 
     auto* breakIterator = WTF::wordBreakIterator(stringWithPrevious.span());
     if (!breakIterator)
@@ -327,18 +327,18 @@ String capitalize(const String& string, char32_t previousCharacter, const AtomSt
             auto startOffset = startOfWord - previousCharacterLength;
             auto endOffset = endOfWord - previousCharacterLength;
             size_t capitalizedContentLength;
-            if (needsLocaleAwareTitlecase(stringImpl[startOffset]))
+            if (needsLocaleAwareTitlecase(stringImpl.get()[startOffset]))
                 capitalizedContentLength = capitalizeWordWithLocale(string, startOffset, endOffset, locale, result);
             else
                 capitalizedContentLength = capitalizeCharacter(string, startOffset, result);
             for (int32_t i = startOfWord + capitalizedContentLength; i < endOfWord; ++i)
-                result.append(stringImpl[i - previousCharacterLength]);
+                result.append(stringImpl.get()[i - previousCharacterLength]);
         } else {
             // This is previous and continous non-titlecased current content. Only append current content.
             for (int32_t i = startOfWord; i < endOfWord; ++i) {
                 if (i < previousCharacterLength)
                     continue;
-                result.append(stringImpl[i - previousCharacterLength]);
+                result.append(stringImpl.get()[i - previousCharacterLength]);
             }
         }
     }

@@ -2405,13 +2405,13 @@ WebGLAny WebGL2RenderingContext::getIndexedParameter(GCGLenum target, GCGLuint i
 
     switch (target) {
     case GraphicsContextGL::TRANSFORM_FEEDBACK_BUFFER_BINDING: {
-        WebGLBuffer* buffer;
-        bool success = protect(m_boundTransformFeedback)->getBoundIndexedTransformFeedbackBuffer(index, &buffer);
+        RefPtr<WebGLBuffer> buffer;
+        bool success = protect(m_boundTransformFeedback)->getBoundIndexedTransformFeedbackBuffer(index, buffer);
         if (!success) {
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "getIndexedParameter"_s, "index out of range"_s);
             return nullptr;
         }
-        return toWebGLAny(protect(buffer));
+        return toWebGLAny(WTF::move(buffer));
     }
     case GraphicsContextGL::TRANSFORM_FEEDBACK_BUFFER_SIZE:
     case GraphicsContextGL::TRANSFORM_FEEDBACK_BUFFER_START:

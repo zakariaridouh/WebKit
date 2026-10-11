@@ -276,8 +276,8 @@ static const RatioSchema& aspectRatioFeatureSchema()
         "aspect-ratio"_s,
         MediaQueryDynamicDependency::Viewport,
         [](auto& context) {
-            auto& view = *context.document->view();
-            return FloatSize(view.layoutWidth(), view.layoutHeight());
+            Ref view = *context.document->view();
+            return FloatSize(view->layoutWidth(), view->layoutHeight());
         }
     };
     return schema;

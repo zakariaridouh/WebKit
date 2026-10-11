@@ -3152,12 +3152,12 @@ void WebGLRenderingContextBase::readPixels(GCGLint x, GCGLint y, GCGLsizei width
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "readPixels"_s, "no pixels"_s);
         return;
     }
-    ArrayBufferView& pixels = *maybePixels;
+    Ref pixels = *maybePixels;
 
     // ANGLE will validate the readback from the framebuffer according
     // to WebGL's restrictions. At this level, just validate the type
     // of the readback against the typed array's type.
-    if (!validateTypeAndArrayBufferType("readPixels"_s, ArrayBufferViewFunctionType::ReadPixels, type, &pixels))
+    if (!validateTypeAndArrayBufferType("readPixels"_s, ArrayBufferViewFunctionType::ReadPixels, type, pixels.ptr()))
         return;
 
     if (!validateImageFormatAndType("readPixels"_s, format, type))
@@ -3172,7 +3172,7 @@ void WebGLRenderingContextBase::readPixels(GCGLint x, GCGLint y, GCGLsizei width
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "readPixels"_s, "invalid dimensions"_s);
         return;
     }
-    if (pixels.byteLength() < packSizes->initialSkipBytes + packSizes->imageBytes) {
+    if (pixels->byteLength() < packSizes->initialSkipBytes + packSizes->imageBytes) {
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "readPixels"_s, "size too large"_s);
         return;
     }
@@ -3184,7 +3184,7 @@ void WebGLRenderingContextBase::readPixels(GCGLint x, GCGLint y, GCGLsizei width
         clearIfComposited(CallerTypeOther);
     }
     auto restoreReadBinding = prepareDefaultFramebufferForReadIfBound(rect);
-    auto data = pixels.mutableSpan().subspan(packSizes->initialSkipBytes, packSizes->imageBytes);
+    auto data = pixels->mutableSpan().subspan(packSizes->initialSkipBytes, packSizes->imageBytes);
     const bool packReverseRowOrder = false;
     protect(graphicsContextGL())->readPixels(rect, format, type, data, m_packParameters.alignment, m_packParameters.rowLength, packReverseRowOrder);
 }

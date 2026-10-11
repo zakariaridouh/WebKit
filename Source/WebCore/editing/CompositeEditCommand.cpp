@@ -513,7 +513,7 @@ void CompositeEditCommand::applyCommandToComposite(Ref<EditCommand>&& command)
 {
     command->setParent(this);
     command->doApply();
-    if (auto* simpleCommand = dynamicDowncast<SimpleEditCommand>(command.get())) {
+    if (RefPtr simpleCommand = dynamicDowncast<SimpleEditCommand>(command)) {
         command->setParent(nullptr);
         ensureComposition()->append(*simpleCommand);
     }

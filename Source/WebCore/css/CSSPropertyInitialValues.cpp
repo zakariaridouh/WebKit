@@ -92,49 +92,49 @@ bool isInitialValueForLonghand(CSSPropertyID longhand, const CSSValue& value)
             return true;
         break;
     case CSSPropertyBorderImageOutset:
-        if (auto outsetValue = dynamicDowncast<CSSBorderImageOutsetValue>(value)) {
+        if (RefPtr outsetValue = dynamicDowncast<CSSBorderImageOutsetValue>(value)) {
             if (outsetValue->outsets().values.allOf([](auto& edge) { return edge == 0_css_number; }))
                 return true;
         }
         break;
     case CSSPropertyMaskBorderOutset:
-        if (auto outsetValue = dynamicDowncast<CSSMaskBorderOutsetValue>(value)) {
+        if (RefPtr outsetValue = dynamicDowncast<CSSMaskBorderOutsetValue>(value)) {
             if (outsetValue->outsets().values.allOf([](auto& edge) { return edge == 0_css_number; }))
                 return true;
         }
         break;
     case CSSPropertyBorderImageRepeat:
-        if (auto repeatValue = dynamicDowncast<CSSBorderImageRepeatValue>(value)) {
+        if (RefPtr repeatValue = dynamicDowncast<CSSBorderImageRepeatValue>(value)) {
             if (repeatValue->repeats().values.allOf([](auto& edge) { return WTF::holdsAlternative<CSS::Keyword::Stretch>(edge); }))
                 return true;
         }
         break;
     case CSSPropertyMaskBorderRepeat:
-        if (auto repeatValue = dynamicDowncast<CSSMaskBorderRepeatValue>(value)) {
+        if (RefPtr repeatValue = dynamicDowncast<CSSMaskBorderRepeatValue>(value)) {
             if (repeatValue->repeats().values.allOf([](auto& edge) { return WTF::holdsAlternative<CSS::Keyword::Stretch>(edge); }))
                 return true;
         }
         break;
     case CSSPropertyBorderImageSlice:
-        if (auto sliceValue = dynamicDowncast<CSSBorderImageSliceValue>(value)) {
+        if (RefPtr sliceValue = dynamicDowncast<CSSBorderImageSliceValue>(value)) {
             if (!sliceValue->slices().fill.has_value() && sliceValue->slices().values.allOf([](auto& edge) { return edge == 100_css_percentage; }))
                 return true;
         }
         break;
     case CSSPropertyMaskBorderSlice:
-        if (auto sliceValue = dynamicDowncast<CSSMaskBorderSliceValue>(value)) {
+        if (RefPtr sliceValue = dynamicDowncast<CSSMaskBorderSliceValue>(value)) {
             if (!sliceValue->slices().fill.has_value() && sliceValue->slices().values.allOf([](auto& edge) { return edge == 0_css_number; }))
                 return true;
         }
         return false;
     case CSSPropertyBorderImageWidth:
-        if (auto widthValue = dynamicDowncast<CSSBorderImageWidthValue>(value)) {
+        if (RefPtr widthValue = dynamicDowncast<CSSBorderImageWidthValue>(value)) {
             if (!widthValue->widths().legacyWebkitBorderImage && widthValue->widths().values.allOf([](auto& edge) { return edge == 1_css_number; }))
                 return true;
         }
         break;
     case CSSPropertyMaskBorderWidth:
-        if (auto widthValue = dynamicDowncast<CSSMaskBorderWidthValue>(value)) {
+        if (RefPtr widthValue = dynamicDowncast<CSSMaskBorderWidthValue>(value)) {
             if (widthValue->widths().values.allOf([](auto& edge) { return edge.isAuto(); }))
                 return true;
         }

@@ -2352,7 +2352,9 @@ static bool canBeMultilineTextField(AccessibilityObject& object)
 static constexpr unsigned unignoredSizeToReserve = 2;
 IsolatedObjectData createIsolatedObjectData(const Ref<AccessibilityObject>& axObject, Ref<AXIsolatedTree> tree)
 {
-    auto& object = axObject.get();
+    // axObject is a Ref which keeps the object alive throughout this function. We avoid converting this local to Ref
+    // since it's used as AccessibilityObject& in hundreds of places in this function.
+    SUPPRESS_UNCOUNTED_LOCAL auto& object = axObject.get();
 
     bool getsGeometryFromChildren = false;
     AXPropertyVector properties;

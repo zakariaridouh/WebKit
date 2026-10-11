@@ -284,10 +284,9 @@ void UniqueIDBDatabase::performCurrentOpenOperationAfterSpaceCheck(bool isGrante
     Ref connection = UniqueIDBDatabaseConnection::create(*this, *currentOpenDBRequest);
 
     if (requestedVersion == m_databaseInfo->version()) {
-        auto* rawConnection = &connection.get();
-        addOpenDatabaseConnection(WTF::move(connection));
+        addOpenDatabaseConnection(connection.copyRef());
 
-        auto result = IDBResultData::openDatabaseSuccess(currentOpenDBRequest->requestData().requestIdentifier(), *rawConnection);
+        auto result = IDBResultData::openDatabaseSuccess(currentOpenDBRequest->requestData().requestIdentifier(), connection);
         currentOpenDBRequest->didOpenDatabase(result);
         m_currentOpenDBRequest = nullptr;
         return;

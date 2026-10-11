@@ -1837,7 +1837,7 @@ void HTMLMediaElement::selectMediaResource()
                 HTMLMEDIAELEMENT_RELEASE_LOG_WITH_THIS(&element, SelectMediaResourceHasSrcAttrPlayerNotCreated);
                 return;
             }
-        } else if (auto firstSource = childrenOfType<HTMLSourceElement>(element).first()) {
+        } else if (RefPtr firstSource = childrenOfType<HTMLSourceElement>(element).first()) {
             //    Otherwise, if the media element does not have an assigned media provider object and does not have a src attribute,
             //    but does have a source element child, then let mode be children and let candidate be the first such source element
             //    child in tree order.
@@ -10259,11 +10259,11 @@ void HTMLMediaElement::playbackControlsManagerBehaviorRestrictionsTimerFired()
         return;
 
     queueCancellableTaskKeepingObjectAlive(*this, TaskSource::MediaElement, m_playbackControlsManagerBehaviorRestrictionsTaskCancellationGroup, [](auto& element) {
-        auto& mediaElementSession = element.mediaSession();
-        if (element.isPlaying() || mediaElementSession.state() == PlatformMediaSession::State::Autoplaying || mediaElementSession.state() == PlatformMediaSession::State::Playing)
+        Ref mediaElementSession = element.mediaSession();
+        if (element.isPlaying() || mediaElementSession->state() == PlatformMediaSession::State::Autoplaying || mediaElementSession->state() == PlatformMediaSession::State::Playing)
             return;
 
-        mediaElementSession.addBehaviorRestriction(MediaElementSession::RequirePlaybackToControlControlsManager);
+        mediaElementSession->addBehaviorRestriction(MediaElementSession::RequirePlaybackToControlControlsManager);
         element.schedulePlaybackControlsManagerUpdate();
     });
 }

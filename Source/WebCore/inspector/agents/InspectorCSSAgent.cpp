@@ -655,12 +655,12 @@ InspectorStyleSheet* InspectorCSSAgent::createInspectorStyleSheetForDocument(Doc
     auto styleElement = HTMLStyleElement::create(document);
     styleElement->setAttributeWithoutSynchronization(HTMLNames::typeAttr, cssContentTypeAtom());
 
-    ContainerNode* targetNode;
+    RefPtr<ContainerNode> targetNode;
     // HEAD is absent in ImageDocuments, for example.
-    if (auto* head = document.head())
-        targetNode = head;
-    else if (auto* body = document.bodyOrFrameset())
-        targetNode = body;
+    if (RefPtr head = document.head())
+        targetNode = WTF::move(head);
+    else if (RefPtr body = document.bodyOrFrameset())
+        targetNode = WTF::move(body);
     else
         return nullptr;
 

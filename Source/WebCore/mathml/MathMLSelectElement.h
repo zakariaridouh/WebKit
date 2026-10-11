@@ -53,7 +53,7 @@ private:
     bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     void toggle();
-    int getSelectedActionChildAndIndex(Element*& selectedChild);
+    int getSelectedActionChildAndIndex(RefPtr<Element>& selectedChild);
     RefPtr<Element> getSelectedActionChild();
     RefPtr<Element> getSelectedSemanticsChild();
 

@@ -65,7 +65,7 @@ RefPtr<Element> enclosingBlock(RefPtr<Node>, EditingBoundaryCrossingRule = Canno
 RefPtr<Element> enclosingTableCell(const Position&);
 RefPtr<Node> enclosingEmptyListItem(const VisiblePosition&);
 RefPtr<Element> NODELETE enclosingAnchorElement(const Position&);
-Element* enclosingElementWithTag(const Position&, const QualifiedName&);
+RefPtr<Element> enclosingElementWithTag(const Position&, const QualifiedName&);
 RefPtr<Node> enclosingNodeOfType(const Position&, bool (*nodeIsOfType)(const Node&), EditingBoundaryCrossingRule = CannotCrossEditingBoundary);
 HTMLSpanElement* NODELETE tabSpanNode(Node*);
 HTMLSpanElement* NODELETE parentTabSpanNode(Node*);

@@ -357,7 +357,7 @@ bool GraphicsLayer::replaceChild(GraphicsLayer* oldChild, Ref<GraphicsLayer>&& n
 {
     ASSERT(!newChild->parent());
     
-    GraphicsLayer* rawNewChild = newChild.ptr();
+    Ref newChildLayer = newChild;
 
     bool found = false;
     for (unsigned i = 0; i < m_children.size(); i++) {
@@ -370,8 +370,8 @@ bool GraphicsLayer::replaceChild(GraphicsLayer* oldChild, Ref<GraphicsLayer>&& n
     if (found) {
         oldChild->setParent(nullptr);
 
-        rawNewChild->removeFromParent();
-        rawNewChild->setParent(this);
+        newChildLayer->removeFromParent();
+        newChildLayer->setParent(this);
         return true;
     }
     return false;

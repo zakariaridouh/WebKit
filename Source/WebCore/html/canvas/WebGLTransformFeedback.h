@@ -62,7 +62,7 @@ public:
     // Returns false if index is out of range and the caller should
     // synthesize a GL error.
     void setBoundIndexedTransformFeedbackBuffer(const AbstractLocker&, GCGLuint index, WebGLBuffer*);
-    bool NODELETE getBoundIndexedTransformFeedbackBuffer(GCGLuint index, WebGLBuffer** outBuffer);
+    bool getBoundIndexedTransformFeedbackBuffer(GCGLuint index, RefPtr<WebGLBuffer>& outBuffer);
     bool hasBoundIndexedTransformFeedbackBuffer(const WebGLBuffer* buffer) { return m_boundIndexedTransformFeedbackBuffers.contains(buffer); }
 
     bool NODELETE validateProgramForResume(WebGLProgram*) const;

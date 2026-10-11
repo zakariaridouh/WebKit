@@ -783,9 +783,9 @@ static Position positionForIndex(TextControlInnerTextElement* innerText, unsigne
                 return positionBeforeNode(*node);
             remainingCharactersToMoveForward--;
             lastBrOrText = node;
-        } else if (auto* text = dynamicDowncast<Text>(*node)) {
+        } else if (RefPtr text = dynamicDowncast<Text>(*node)) {
             if (remainingCharactersToMoveForward < text->length())
-                return Position(text, remainingCharactersToMoveForward);
+                return Position(WTF::move(text), remainingCharactersToMoveForward);
             remainingCharactersToMoveForward -= text->length();
             lastBrOrText = node;
         }
@@ -879,7 +879,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
     for (RefPtr<Node> node = innerText->firstChild(); node; node = NodeTraversal::next(*node, innerText.get())) {
         if (is<HTMLBRElement>(*node))
             result.append(newlineCharacter);
-        else if (auto* textNode = dynamicDowncast<Text>(*node)) {
+        else if (RefPtr textNode = dynamicDowncast<Text>(*node)) {
             String data = textNode->data();
             unsigned length = data.length();
             unsigned position = 0;
