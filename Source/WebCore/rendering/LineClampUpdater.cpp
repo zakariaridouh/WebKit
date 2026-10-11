@@ -241,15 +241,16 @@ std::optional<LineClampUpdater::AutoClampPoint> LineClampUpdater::autoClampPoint
 }
 
 // "Any absolutely positioned box which has an invisible box within its containing block chain, and all of its descendants."
-static bool isInsideInvisibleBox(const RenderObject& renderer, const RenderBox& invisibleBox)
+static bool isInsideInvisibleBox(const RenderObject& renderer, const RenderElement& invisibleBox)
 {
     if (!renderer.isOutOfFlowPositioned())
         return true;
-    CheckedPtr containingBlock = renderer.containingBlock();
+    // The containing block may be an inline box (unlike containingBlock(), container() returns it).
+    CheckedPtr containingBlock = renderer.container();
     return containingBlock && (containingBlock == &invisibleBox || containingBlock->isDescendantOf(&invisibleBox));
 }
 
-static void setIsForceHiddenByLineClamp(RenderElement& renderer, const RenderBox& invisibleBox, bool isHidden)
+static void setIsForceHiddenByLineClamp(RenderElement& renderer, const RenderElement& invisibleBox, bool isHidden)
 {
     renderer.setIsForceHiddenByLineClamp(isHidden);
     // Invisible boxes are not laid out (see skipLayoutForForcedHidden), so a box that becomes visible again needs layout.
@@ -338,7 +339,7 @@ std::optional<LayoutRect> LineClampUpdater::blockEndClipRect(const RenderBox& fl
     return clipRect;
 }
 
-void LineClampUpdater::setIsForcedHidden(RenderBox& renderer, bool isHidden)
+void LineClampUpdater::setIsForcedHidden(RenderElement& renderer, bool isHidden)
 {
     if (renderer.isForceHiddenByLineClamp() == isHidden)
         return;

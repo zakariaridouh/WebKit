@@ -4372,9 +4372,9 @@ RenderBlockFlow::InlineContentStatus RenderBlockFlow::markInlineContentDirtyForL
             renderer.setNeedsLayout(MarkingBehavior::MarkOnlyThis);
         if (childNeedsIntrinsicWidthComputation)
             renderer.invalidateContentLogicalWidths(MarkingBehavior::MarkOnlyThis);
-        // A float line-clamp hid was not laid out. Inline layout decides again whether it comes after the clamp point (see LineLayout::updateRenderTreePositions).
-        if (box && box->isFloating() && box->isForceHiddenByLineClamp())
-            LineClampUpdater::setIsForcedHidden(*box, false);
+        // Inline layout decides again what line-clamp hides after the clamp point (see InlineFormattingContext::resetBoxGeometriesForDiscardedContent).
+        if (CheckedPtr element = dynamicDowncast<RenderElement>(renderer); element && element->isForceHiddenByLineClamp())
+            LineClampUpdater::setIsForcedHidden(*element, false);
 
         if (renderer.isOutOfFlowPositioned()) {
             renderer.containingBlock()->addOutOfFlowBox(*box);

@@ -4227,8 +4227,6 @@ imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-auto-032.
 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-auto-with-ruby-005.tentative.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-balance-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-balance-006.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-with-abspos-015.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-overflow/line-clamp/line-clamp-with-abspos-017.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/webkit-line-clamp-024.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/webkit-line-clamp-036.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-overflow/line-clamp/webkit-line-clamp-040.html [ ImageOnlyFailure ]

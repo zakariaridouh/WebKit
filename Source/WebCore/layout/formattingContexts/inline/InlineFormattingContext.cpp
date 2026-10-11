@@ -497,8 +497,8 @@ void InlineFormattingContext::resetBoxGeometriesForDiscardedContent(const Inline
     if (discardedRange.isEmpty() && suspendedFloats.isEmpty())
         return;
 
-    auto setIsForcedHidden = [](auto& floatBox) {
-        if (CheckedPtr renderer = dynamicDowncast<RenderBox>(floatBox.rendererForIntegration()))
+    auto setIsForcedHidden = [](auto& box) {
+        if (CheckedPtr renderer = dynamicDowncast<RenderElement>(box.rendererForIntegration()))
             LineClampUpdater::setIsForcedHidden(*renderer, true);
     };
 
@@ -509,7 +509,10 @@ void InlineFormattingContext::resetBoxGeometriesForDiscardedContent(const Inline
         if (!hasBoxGeometry)
             continue;
         geometryForBox(inlineItem.layoutBox()).reset();
-        if (inlineItem.isFloat())
+        // Floats and inline boxes that start after the clamp point are invisible boxes, and so is "any absolutely positioned box
+        // which has an invisible box within its containing block chain" (see LineClampUpdater::setIsForcedHidden).
+        // https://drafts.csswg.org/css-overflow-4/#line-clamp-containers
+        if (inlineItem.isFloat() || inlineItem.isInlineBoxStart())
             setIsForcedHidden(inlineItem.layoutBox());
     }
 
