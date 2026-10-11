@@ -4931,6 +4931,12 @@ bool AccessibilityNodeObject::canSetSelectedAttribute() const
     }
 }
 
+void AccessibilityNodeObject::setSelected(bool selected)
+{
+    if (RefPtr option = dynamicDowncast<HTMLOptionElement>(node()); option && canSetSelectedAttribute())
+        option->setSelectedByUser(selected);
+}
+
 bool AccessibilityNodeObject::isAccessibilityList() const
 {
     RefPtr element = this->element();

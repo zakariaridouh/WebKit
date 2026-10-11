@@ -52,7 +52,6 @@ private:
     bool isVisible() const final;
     bool isOffScreen() const final;
     bool isSelected() const final;
-    void setSelected(bool) final;
     bool canSetSelectedAttribute() const final;
     LayoutRect elementRect() const final;
     String stringValue() const final;

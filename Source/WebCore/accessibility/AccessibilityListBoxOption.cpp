@@ -216,29 +216,6 @@ AccessibilityObject* AccessibilityListBoxOption::parentObject() const
     return cache ? cache->getOrCreate(*parentNode) : nullptr;
 }
 
-void AccessibilityListBoxOption::setSelected(bool selected)
-{
-    RefPtr selectElement = listBoxOptionParentNode();
-    if (!selectElement)
-        return;
-
-    if (!canSetSelectedAttribute())
-        return;
-
-    bool isOptionSelected = isSelected();
-    if ((isOptionSelected && selected) || (!isOptionSelected && !selected))
-        return;
-
-    // Convert from the entire list index to the option index.
-    int optionIndex = selectElement->listToOptionIndex(listBoxOptionIndex());
-
-    if (selected && selectElement->usesBaseAppearancePicker()) {
-        selectElement->optionSelectedByUser(optionIndex, true);
-        selectElement->hidePickerPopoverElement();
-    } else
-        selectElement->accessKeySetSelectedIndex(optionIndex);
-}
-
 HTMLSelectElement* AccessibilityListBoxOption::listBoxOptionParentNode() const
 {
     // A node that is being destroyed has no parent, and its tag name can no longer be checked.

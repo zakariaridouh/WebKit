@@ -522,6 +522,21 @@ void HTMLOptionElement::setSelected(bool selected)
         select->optionSelectionStateChanged(*this, selected);
 }
 
+void HTMLOptionElement::setSelectedByUser(bool selected)
+{
+    RefPtr select = ownerSelectElement();
+    if (!select || this->selected() == selected || isActuallyDisabled())
+        return;
+
+    if (!selected && !select->multiple() && !select->isBaseListBox())
+        return;
+
+    if (select->optionsAreRenderedWithBaseAppearance())
+        select->pickOrToggleOption(*this);
+    else
+        select->optionSelectedByUser(index(), true, select->multiple());
+}
+
 bool HTMLOptionElement::selectedForBindings() const
 {
     return selected();

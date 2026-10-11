@@ -81,6 +81,7 @@ public:
     Vector<String> determineDropEffects() const final;
 
     bool canSetSelectedAttribute() const override;
+    void setSelected(bool) final;
 
     Node* NODELETE node() const final { return m_node.get(); }
     Document* document() const override;

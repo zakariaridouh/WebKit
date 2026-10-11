@@ -56,6 +56,7 @@ public:
 
     WEBCORE_EXPORT bool selected(AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
     WEBCORE_EXPORT void setSelected(bool);
+    void setSelectedByUser(bool);
 
     bool selectedForBindings() const;
     void setSelectedForBindings(bool);

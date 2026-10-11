@@ -41,7 +41,6 @@ public:
     virtual ~AccessibilityListBoxOption();
 
     bool isSelected() const final;
-    void setSelected(bool) final;
 
 private:
     explicit AccessibilityListBoxOption(AXID, RenderObject&, AXObjectCache&);
