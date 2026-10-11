@@ -81,8 +81,9 @@ RemoteLayerTreeDrawingArea::RemoteLayerTreeDrawingArea(WebPage& webPage, const W
     , m_scheduleRenderingTimer(*this, &RemoteLayerTreeDrawingArea::scheduleRenderingUpdateTimerFired)
     , m_preferredFramesPerSecond(DefaultPreferredFramesPerSecond)
 {
-    lazyInitialize(m_postRenderingUpdateRunLoopObserver, makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [this] {
-        this->postRenderingUpdateRunLoopCallback();
+    lazyInitialize(m_postRenderingUpdateRunLoopObserver, makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [weakThis = WeakPtr { *this }] {
+        if (RefPtr protectedThis = weakThis)
+            protectedThis->postRenderingUpdateRunLoopCallback();
     }));
 
     if (auto viewExposedRect = parameters.viewExposedRect)
