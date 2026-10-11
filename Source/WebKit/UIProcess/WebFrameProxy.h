@@ -303,8 +303,8 @@ public:
     bool isShowingInitialAboutBlank() const { return m_isShowingInitialAboutBlank; }
 
     WebCore::LayerHostingContextIdentifier layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
-    void setAppBadge(IPC::Untrusted<WebCore::SecurityOriginData>&&, std::optional<uint64_t> badge);
-    void didChangeCSPOriginsThatUpgradeInsecureNavigations(IPC::Untrusted<HashSet<WebCore::SecurityOriginData>>&&);
+    void setAppBadge(IPC::Connection&, IPC::Untrusted<WebCore::SecurityOriginData>&&, std::optional<uint64_t> badge);
+    void didChangeCSPOriginsThatUpgradeInsecureNavigations(IPC::Connection&, IPC::Untrusted<HashSet<WebCore::SecurityOriginData>>&&);
     void findFocusableElementDescendingIntoRemoteFrame(WebCore::FocusDirection, const WebCore::FocusEventData&, WebCore::ShouldFocusElement, CompletionHandler<void(WebCore::FoundElementInRemoteFrame)>&&);
     void findFocusableElementContinuingFromFrame(WebCore::FocusDirection, WebCore::FrameIdentifier, const WebCore::FocusEventData&, WebCore::ShouldFocusElement);
 
