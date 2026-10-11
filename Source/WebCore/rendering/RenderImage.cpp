@@ -370,6 +370,13 @@ IntSize RenderImage::imageContainerSize() const
         : flooredIntSize(contentBoxRect().size());
 }
 
+LayoutRect RenderImage::imagePaintRect() const
+{
+    return hasNaturalAspectRatio()
+        ? computePaintRectForObjectViewBox(replacedContentRect())
+        : contentBoxRect();
+}
+
 std::optional<FloatSize> RenderImage::usedImageSize() const
 {
     return imageResource().usedImageSize(imageContainerSize());
@@ -736,16 +743,11 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
     contentBoxRect.moveBy(paintOffset);
 
-    LayoutRect replacedContentRect;
-    LayoutRect paintRect;
-    if (hasNaturalAspectRatio()) {
-        replacedContentRect = this->replacedContentRect();
-        replacedContentRect.moveBy(paintOffset);
-        paintRect = computePaintRectForObjectViewBox(replacedContentRect);
-    } else {
-        replacedContentRect = contentBoxRect;
-        paintRect = replacedContentRect;
-    }
+    auto replacedContentRect = hasNaturalAspectRatio() ? this->replacedContentRect() : this->contentBoxRect();
+    replacedContentRect.moveBy(paintOffset);
+
+    auto paintRect = imagePaintRect();
+    paintRect.moveBy(paintOffset);
 
     float snappingScaleFactor = protect(document())->pixelSnappingScaleFactor();
     bool clip = !contentBoxRect.contains(paintRect);
@@ -832,6 +834,35 @@ void RenderImage::areaElementFocusChanged(HTMLAreaElement* element)
     // for the passed-in area element. That would require adding functions
     // to the area element class.
     repaint();
+}
+
+RefPtr<NativeImage> RenderImage::createNativeImageAsPainted(float deviceScaleFactor, const FloatSize& maximumSize)
+{
+    auto contentBoxRect = this->contentBoxRect();
+    if (contentBoxRect.isEmpty())
+        return nullptr;
+
+    FloatSize contentBoxSize = contentBoxRect.size();
+    auto scaleFactor = deviceScaleFactor * std::min({ 1.0f, maximumSize.width() / contentBoxSize.width(), maximumSize.height() / contentBoxSize.height() });
+
+    Ref frame = this->frame();
+    auto colorSpace = screenColorSpace(protect(protect(frame->mainFrame())->virtualView()).get());
+    RefPtr imageBuffer = ImageBuffer::create(contentBoxRect.size(), RenderingMode::Unaccelerated, RenderingPurpose::Snapshot, scaleFactor, colorSpace, PixelFormat::BGRA8);
+    if (!imageBuffer)
+        return nullptr;
+
+    auto& context = imageBuffer->context();
+    context.translate(-contentBoxRect.x().toFloat(), -contentBoxRect.y().toFloat());
+
+    auto paintRect = imagePaintRect();
+    if (!contentBoxRect.contains(paintRect))
+        context.clip(snapRectToDevicePixels(contentBoxRect, scaleFactor));
+
+    PaintInfo paintInfo(context, LayoutRect::infiniteRect(), PaintPhase::Foreground, PaintBehavior::Snapshotting);
+    if (paintIntoRect(paintInfo, snapRectToDevicePixels(paintRect, scaleFactor)) != ImageDrawResult::DidDraw)
+        return nullptr;
+
+    return ImageBuffer::sinkIntoNativeImage(WTF::move(imageBuffer));
 }
 
 ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect& rect)

@@ -34,6 +34,7 @@ class HTMLAreaElement;
 class HTMLMapElement;
 class GraphicsContext;
 class ImageBuffer;
+class NativeImage;
 class ShareableBitmap;
 
 enum ImageSizeChangeType {
@@ -98,9 +99,13 @@ public:
     bool isMultiRepresentationHEIC() const;
 #endif
 
+    LayoutRect imagePaintRect() const;
     WEBCORE_EXPORT std::optional<FloatSize> usedImageSize() const final;
 
     WEBCORE_EXPORT virtual RefPtr<ShareableBitmap> createShareableBitmap(const CreateShareableBitmapFromImageOptions& = { }) const;
+
+    // Returns an image as `paint()` would draw it. Sized and placed respecting 'object-fit', 'object-position', 'object-view-box', and orientation, and clipped to the content box.
+    RefPtr<NativeImage> createNativeImageAsPainted(float deviceScaleFactor, const FloatSize& maximumSize);
 
     FloatSize preferredAspectRatioAsSize() const final;
 

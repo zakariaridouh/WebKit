@@ -31,6 +31,7 @@
 #include "SVGElementTypeHelpers.h"
 
 #if ENABLE(DRAG_SUPPORT)
+#include "BitmapImage.h"
 #include "BoundaryPointInlines.h"
 #include "CachedImage.h"
 #include "ColorSerialization.h"
@@ -1338,6 +1339,20 @@ bool DragController::startDrag(LocalFrame& src, const DragState& state, OptionSe
     return false;
 }
 
+static DragImageRef createDragImageForElementImage(Element& element, Image& image, LocalFrame& frame)
+{
+    CheckedPtr renderer = element.renderer();
+    auto* hostWindow = frame.view() ? protect(frame.view())->hostWindow() : nullptr;
+    float deviceScaleFactor = protect(element.document())->deviceScaleFactor();
+
+    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(renderer.get())) {
+        if (RefPtr nativeImage = renderImage->createNativeImageAsPainted(deviceScaleFactor, DragController::maxDragImageSize()))
+            return createDragImageFromImage(BitmapImage::create(nativeImage.releaseNonNull()).ptr(), ImageOrientation::Orientation::None, hostWindow, 1);
+    }
+
+    return createDragImageFromImage(&image, renderer->imageOrientation(), hostWindow, deviceScaleFactor);
+}
+
 void DragController::doImageDrag(Element& element, const IntPoint& dragOrigin, const IntRect& layoutRect, LocalFrame& frame, IntPoint& dragImageOffset, const DragState& state, PromisedAttachmentInfo&& attachmentInfo)
 {
     IntPoint mouseDownPoint = dragOrigin;
@@ -1348,11 +1363,9 @@ void DragController::doImageDrag(Element& element, const IntPoint& dragOrigin, c
     if (!renderer)
         return;
 
-    auto orientation = renderer->imageOrientation();
-
     RefPtr image = getImage(element);
     if (image && !layoutRect.isEmpty() && shouldUseCachedImageForDragImage(*image)
-        && (dragImage = DragImage { createDragImageFromImage(image.get(), orientation, frame.view() ? protect(frame.view())->hostWindow() : nullptr, protect(element.document())->deviceScaleFactor()) })) {
+        && (dragImage = DragImage { createDragImageForElementImage(element, *image, frame) })) {
         dragImage = DragImage { fitDragImageToMaxSize(dragImage.get(), layoutRect.size(), maxDragImageSize()) };
         IntSize fittedSize = dragImageSize(dragImage.get());
 

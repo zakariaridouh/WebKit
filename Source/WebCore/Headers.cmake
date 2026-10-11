@@ -3174,6 +3174,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/RenderWidget.h
     rendering/RepaintRectCalculation.h
     rendering/ReplacedElementIntrinsicSizing.h
+    rendering/ReplacedElementSizing.h
     rendering/SubtreeScrollbarChangesState.h
 
     rendering/TextBoxSelectableRange.h

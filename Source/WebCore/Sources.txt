@@ -3170,6 +3170,7 @@ rendering/RenderVideo.cpp @header:RenderStyleGetters
 rendering/RenderView.cpp @header:RenderStyleGetters
 rendering/RenderViewTransitionCapture.cpp @header:RenderStyleGetters
 rendering/RenderWidget.cpp @header:RenderStyleGetters
+rendering/ReplacedElementSizing.cpp
 rendering/SubtreeScrollbarChangesState.cpp
 rendering/StyledMarkedText.cpp @header:RenderStyleGetters
 rendering/TableLayout.cpp @header:RenderStyleGetters

@@ -63,6 +63,7 @@
 #include "RenderVideo.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
+#include "ReplacedElementSizing.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
 #include "Settings.h"
@@ -657,9 +658,6 @@ std::optional<FloatRect> RenderReplaced::resolvedObjectViewBox(const FloatSize& 
 
 bool RenderReplaced::objectViewBoxIsContainedWithinNaturalSize() const
 {
-    if (style().objectViewBox().isNone())
-        return true;
-
     auto viewBox = resolvedObjectViewBox(FloatSize(intrinsicSize()));
     if (!viewBox)
         return true;
@@ -669,11 +667,21 @@ bool RenderReplaced::objectViewBoxIsContainedWithinNaturalSize() const
 
 LayoutRect RenderReplaced::computePaintRectForObjectViewBox(const LayoutRect& destRect, const LayoutSize& intrinsicSize) const
 {
-    if (!style().objectViewBox().isNone()) {
-        if (auto viewBox = resolvedObjectViewBox(FloatSize(intrinsicSize)))
-            return LayoutRect(fullRectFromSubrectAndSize(FloatSize(intrinsicSize), *viewBox, FloatRect(destRect)));
-    }
+    if (auto viewBox = resolvedObjectViewBox(FloatSize(intrinsicSize)))
+        return LayoutRect(fullRectFromSubrectAndSize(FloatSize(intrinsicSize), *viewBox, FloatRect(destRect)));
     return destRect;
+}
+
+// https://drafts.csswg.org/css-images-3/#the-object-position
+static LayoutRect placeConcreteObject(const Style::ComputedStyle& style, const LayoutRect& contentRect, LayoutSize concreteObjectSize)
+{
+    auto& objectPosition = style.objectPosition();
+    auto zoom = style.usedZoomForLength();
+
+    auto xOffset = Style::evaluate<LayoutUnit>(objectPosition.x, contentRect.width() - concreteObjectSize.width(), zoom);
+    auto yOffset = Style::evaluate<LayoutUnit>(objectPosition.y, contentRect.height() - concreteObjectSize.height(), zoom);
+
+    return { contentRect.location() + LayoutSize { xOffset, yOffset }, concreteObjectSize };
 }
 
 LayoutRect RenderReplaced::replacedContentRect(const LayoutSize& intrinsicSize) const
@@ -683,38 +691,12 @@ LayoutRect RenderReplaced::replacedContentRect(const LayoutSize& intrinsicSize) 
         return contentRect;
 
     LayoutSize effectiveIntrinsicSize = intrinsicSize;
-    if (!style().objectViewBox().isNone()) {
-        if (auto viewBox = resolvedObjectViewBox(FloatSize(intrinsicSize)))
-            effectiveIntrinsicSize = LayoutSize(viewBox->size());
-    }
+    if (auto viewBox = resolvedObjectViewBox(FloatSize(intrinsicSize)))
+        effectiveIntrinsicSize = LayoutSize(viewBox->size());
 
-    auto objectFit = style().objectFit();
+    auto concreteObjectSize = ReplacedElementSizing { contentRect.size(), style().objectFit() }.resolve(NaturalDimensions::fixed(FloatSize { effectiveIntrinsicSize }));
 
-    LayoutRect finalRect = contentRect;
-    switch (objectFit) {
-    case ObjectFit::Contain:
-    case ObjectFit::ScaleDown:
-    case ObjectFit::Cover:
-        finalRect.setSize(finalRect.size().fitToAspectRatio(effectiveIntrinsicSize, objectFit == ObjectFit::Cover ? AspectRatioFit::Grow : AspectRatioFit::Shrink));
-        if (objectFit != ObjectFit::ScaleDown || finalRect.width() <= effectiveIntrinsicSize.width())
-            break;
-        [[fallthrough]];
-    case ObjectFit::None:
-        finalRect.setSize(effectiveIntrinsicSize);
-        break;
-    case ObjectFit::Fill:
-        break;
-    }
-
-    auto& objectPosition = style().objectPosition();
-    auto zoom = style().usedZoomForLength();
-
-    auto xOffset = Style::evaluate<LayoutUnit>(objectPosition.x, contentRect.width() - finalRect.width(), zoom);
-    auto yOffset = Style::evaluate<LayoutUnit>(objectPosition.y, contentRect.height() - finalRect.height(), zoom);
-
-    finalRect.move(xOffset, yOffset);
-
-    return finalRect;
+    return placeConcreteObject(style(), contentRect, LayoutSize { concreteObjectSize.size() });
 }
 
 std::optional<double> RenderReplaced::preferredAspectRatio() const
