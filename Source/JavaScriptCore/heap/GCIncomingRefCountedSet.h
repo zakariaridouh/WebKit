@@ -42,7 +42,7 @@ public:
     void lastChanceToFinalize();
 
     // Returns true if the native object is new to this set.
-    bool addReference(JSCell*, T*);
+    ALWAYS_INLINE bool addReference(JSCell*, T*);
     
     void sweep(VM&, CollectionScope);
     
@@ -50,6 +50,8 @@ public:
     
 private:
     Vector<T*> m_vector;
+    Vector<T*> m_markedObjectsWithNewIncomingReferences;
+    size_t m_oldCount { 0 };
     size_t m_bytes;
 };
 

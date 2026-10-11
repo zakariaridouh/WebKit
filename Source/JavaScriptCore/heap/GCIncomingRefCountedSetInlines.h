@@ -49,8 +49,13 @@ bool GCIncomingRefCountedSet<T>::addReference(JSCell* cell, T* object)
     if (!object->addIncomingReference(cell)) {
         ASSERT(object->isDeferred());
         ASSERT(object->numberOfIncomingReferences());
+        if (!object->m_needsFilteringIncomingReferences) {
+            object->m_needsFilteringIncomingReferences = true;
+            m_markedObjectsWithNewIncomingReferences.append(object);
+        }
         return false;
     }
+    object->m_needsFilteringIncomingReferences = true;
     m_vector.append(object);
     m_bytes += object->gcSizeEstimateInBytes();
     ASSERT(object->isDeferred());
@@ -61,17 +66,34 @@ bool GCIncomingRefCountedSet<T>::addReference(JSCell* cell, T* object)
 template<typename T>
 void GCIncomingRefCountedSet<T>::sweep(VM& vm, CollectionScope collectionScope)
 {
+    auto filter = [&](T* object) {
+        object->m_needsFilteringIncomingReferences = false;
+        return object->filterIncomingReferences([&](JSCell* cell) {
+            return vm.heap.isMarked(cell);
+        });
+    };
+    size_t startIndex = 0;
+    if (collectionScope == CollectionScope::Eden) {
+        for (size_t i = 0; i < m_markedObjectsWithNewIncomingReferences.size(); ++i) {
+            bool isRemoved = filter(m_markedObjectsWithNewIncomingReferences[i]);
+            RELEASE_ASSERT(!isRemoved);
+        }
+        startIndex = m_oldCount;
+    }
+    m_markedObjectsWithNewIncomingReferences.shrink(0);
+
     size_t preciseBytes = 0;
     m_vector.removeAllMatching([&](T* object) {
         size_t size = object->gcSizeEstimateInBytes();
         ASSERT(object->isDeferred());
         ASSERT(object->numberOfIncomingReferences());
-        if (!object->filterIncomingReferences([&] (JSCell* cell) { return vm.heap.isMarked(cell); })) {
+        if (!filter(object)) {
             preciseBytes += size;
             return false;
         }
         return true;
-    });
+    }, startIndex);
+    m_oldCount = m_vector.size();
     // Update m_bytes to the precise value when Full-GC happens since Eden-GC only expects that Eden region is collected.
     if (collectionScope == CollectionScope::Full)
         m_bytes = preciseBytes;

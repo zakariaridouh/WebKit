@@ -1840,7 +1840,7 @@ void Heap::reconcileWeakGCHashTables()
 
 void Heap::sweepArrayBuffers()
 {
-    m_arrayBuffers.sweep(vm(), collectionScope().value_or(CollectionScope::Eden));
+    m_arrayBuffers.sweep(vm(), collectionScope().value_or(CollectionScope::Full));
 }
 
 void Heap::snapshotUnswept()
