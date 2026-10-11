@@ -95,7 +95,7 @@ public:
 
     DerivedTime isolatedCopy() const
     {
-        return *static_cast<const DerivedTime*>(this);
+        SUPPRESS_MEMORY_UNSAFE_CAST return *static_cast<const DerivedTime*>(this);
     }
 
     static constexpr DerivedTime timePointFromNow(Seconds relativeTimeFromNow)
@@ -118,7 +118,7 @@ public:
     {
         if (isInfinity())
             return TargetTime::fromRawSeconds(m_value);
-        return *static_cast<const DerivedTime*>(this) - DerivedTime::now() + TargetTime::now();
+        SUPPRESS_MEMORY_UNSAFE_CAST return *static_cast<const DerivedTime*>(this) - DerivedTime::now() + TargetTime::now();
     }
 
 protected:
