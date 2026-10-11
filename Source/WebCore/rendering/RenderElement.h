@@ -255,8 +255,11 @@ public:
     void setScrollAnchoringSuppressionStyleChanged(bool b) { m_scrollAnchoringSuppressionStyleChanged = b; }
 
     // An invisible box of a line-clamp container (css-overflow-4). Its used visibility is hidden.
-    bool isForceHiddenByLineClamp() const { return m_isForceHiddenByLineClamp; }
-    void setIsForceHiddenByLineClamp(bool isHidden) { m_isForceHiddenByLineClamp = isHidden; }
+    bool isForceHiddenByLineClamp() const { return lineClampState() == LineClampState::ForceHidden; }
+    void setIsForceHiddenByLineClamp(bool isHidden) { setLineClampState(isHidden ? LineClampState::ForceHidden : LineClampState::None); }
+    // A float of a line-clamp container (css-overflow-4), clipped to the container's block-end content edge.
+    bool isClippedByLineClamp() const { return lineClampState() == LineClampState::Clipped; }
+    void setIsClippedByLineClamp(bool isClipped) { setLineClampState(isClipped ? LineClampState::Clipped : LineClampState::None); }
 
     bool allowsAnimation() const final;
     bool repaintForPausedImageAnimationsIfNeeded(const IntRect& visibleRect, CachedImage&);
@@ -430,6 +433,10 @@ private:
     RenderObject* firstChildSlow() const final { return firstChild(); }
     RenderObject* lastChildSlow() const final { return lastChild(); }
 
+    enum class LineClampState : uint8_t { None, ForceHidden, Clipped };
+    LineClampState lineClampState() const { return static_cast<LineClampState>(m_lineClampState); }
+    void setLineClampState(LineClampState state) { m_lineClampState = static_cast<unsigned>(state); }
+
     inline bool mayContainOutOfFlowPositionedObjects(const Style::ComputedStyle* styleToUse = nullptr) const; // Defined in RenderElementStyleInlines.h.
 
     RenderElement* NODELETE rendererForPseudoStyleAcrossShadowBoundary() const;
@@ -494,8 +501,8 @@ private:
     unsigned m_scrollAnchoringSuppressionStyleChanged : 1 { false };
     unsigned m_isInPendingSVGTransformAttributeUpdates : 1 { false };
     unsigned m_mayHaveNonScalingStrokeInSubtree : 1 { false };
-    unsigned m_isForceHiddenByLineClamp : 1 { false };
-    // 9 bits free.
+    unsigned m_lineClampState : 2 { static_cast<unsigned>(LineClampState::None) };
+    // 8 bits free.
 
     Style::ComputedStyle m_style;
 };
