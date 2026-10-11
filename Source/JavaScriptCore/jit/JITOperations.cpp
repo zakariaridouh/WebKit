@@ -886,11 +886,10 @@ static ALWAYS_INLINE JSValue inByValMegamorphic(JSGlobalObject* globalObject, VM
         RELEASE_AND_RETURN(scope, jsBoolean(CommonSlowPaths::opInByVal(globalObject, baseValue, subscript, profile)));
     }
 
-    Identifier propertyName = subscript.toPropertyKey(globalObject);
-    RETURN_IF_EXCEPTION(scope, { });
+    auto propertyName = CacheableIdentifier::getCacheableIdentifier(subscript.asCell());
+    UniquedStringImpl* uid = const_cast<UniquedStringImpl*>(propertyName.data);
 
     JSObject* baseObject = asObject(baseValue);
-    UniquedStringImpl* uid = propertyName.impl();
     if (!canUseMegamorphicInById(vm, uid)) [[unlikely]] {
         dataLogLnIf(verbose, " ", __LINE__);
         if (propertyCache && propertyCache->considerRepatchingCacheMegamorphic(vm)) {
@@ -2008,12 +2007,11 @@ ALWAYS_INLINE static void putByValMegamorphic(JSGlobalObject* globalObject, VM& 
         return;
     }
 
-    Identifier propertyName = subscript.toPropertyKey(globalObject);
-    RETURN_IF_EXCEPTION(scope, void());
+    auto propertyName = CacheableIdentifier::getCacheableIdentifier(subscript.asCell());
+    UniquedStringImpl* uid = const_cast<UniquedStringImpl*>(propertyName.data);
 
     PutPropertySlot slot(baseValue, isStrict);
 
-    UniquedStringImpl* uid = propertyName.impl();
     if (!canUseMegamorphicPutById(vm, uid)) [[unlikely]] {
         if (propertyCache && propertyCache->considerRepatchingCacheMegamorphic(vm))
             repatchPutBySlowPathCall(callFrame->codeBlock(), *propertyCache, kind);
@@ -3673,17 +3671,8 @@ static ALWAYS_INLINE JSValue getByValMegamorphic(JSGlobalObject* globalObject, V
 
     JSObject* baseObject = asObject(baseValue);
 
-    GCOwnedDataScope<AtomStringImpl*> propertyName;
-    GCOwnedDataScope<SymbolImpl*> symbolName;
-    UniquedStringImpl* uid = nullptr;
-    if (subscript.isString()) {
-        propertyName = asString(subscript)->toAtomString(globalObject);
-        uid = propertyName.data;
-    } else {
-        symbolName = { asSymbol(subscript), &asSymbol(subscript)->uid() };
-        uid = symbolName.data;
-    }
-    RETURN_IF_EXCEPTION(scope, { });
+    auto propertyName = CacheableIdentifier::getCacheableIdentifier(subscript.asCell());
+    UniquedStringImpl* uid = const_cast<UniquedStringImpl*>(propertyName.data);
 
     if (!canUseMegamorphicGetByIdExcludingIndex(vm, uid)) [[unlikely]] {
         if (propertyCache && propertyCache->considerRepatchingCacheMegamorphic(vm))
