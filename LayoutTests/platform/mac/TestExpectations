@@ -254,9 +254,6 @@ http/wpt/mediarecorder/MediaRecorder-first-frame.html [ Pass Failure ]
 # DRT does not support toggling caret browsing on / off
 editing/selection/caret-mode-paragraph-keys-navigation.html
 
-# Non-premultiplied-alpha currently broken on mac.
-webkit.org/b/55509 compositing/webgl/webgl-nonpremultiplied-blend.html
-
 # DataTransferItems is not yet implemented.
 editing/pasteboard/data-transfer-items.html
 editing/pasteboard/data-transfer-items-image-png.html

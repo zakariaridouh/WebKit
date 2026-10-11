@@ -1886,6 +1886,9 @@ webkit.org/b/213699 http/wpt/mediarecorder/MediaRecorder-AV-audio-video-dataavai
 webkit.org/b/213699 http/wpt/mediarecorder/MediaRecorder-first-frame.html [ Failure Pass ]
 
 webkit.org/b/323054 http/wpt/mediarecorder/MediaRecorder-single-frame-timeslice.html [ Skip ]
+webkit.org/b/213699 fast/mediacapturefromelement/CanvasCaptureMediaStream-capture-out-of-DOM-element.html [ Skip ]
+webkit.org/b/213699 fast/mediacapturefromelement/CanvasCaptureMediaStream-framerate-0.html [ Skip ]
+webkit.org/b/213699 fast/mediacapturefromelement/CanvasCaptureMediaStream-imagebitmaprenderingcontext.html [ Skip ]
 
 # Timeout due to webkit.org/b/312138
 webkit.org/b/307032 imported/w3c/web-platform-tests/mediacapture-streams/MediaStream-removetrack.https.html [ Timeout Failure ]
@@ -2723,6 +2726,8 @@ webkit.org/b/216071 fast/canvas/webgl/move-canvas-in-document-while-clean.html [
 webkit.org/b/210239 fast/canvas/webgl/out-of-bounds-simulated-vertexAttrib0-drawArrays.html [ Slow ]
 
 webkit.org/b/251195 webgl/1.0.x/conformance/extensions/ext-color-buffer-half-float.html [ Failure ]
+webkit.org/b/251514 webgl/1.0.x/conformance/extensions/khr-parallel-shader-compile.html [ Skip ]
+webkit.org/b/251514 webgl/2.0.y/conformance/extensions/khr-parallel-shader-compile.html [ Skip ]
 
 # Passing on GLib; failing generically after the 2026-07-18 WebGL conformance update.
 webkit.org/b/320901 webgl/2.0.y/conformance2/extensions/webgl-render-shared-exponent.html [ Pass ]
