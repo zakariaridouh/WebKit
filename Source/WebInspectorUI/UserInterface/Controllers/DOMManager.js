@@ -105,6 +105,10 @@ WI.DOMManager = class DOMManager extends WI.Object
             this._setInspectModeEnabledForTarget(target, true, WI.DOMManager.buildHighlightConfigs());
 
         target.DOMAgent.getDocument((error, root) => {
+            // Superseded by a newer request or by the target's removal, so this reply's node ids are dead.
+            if (this._frameTargetDOMData.get(target) !== data)
+                return;
+
             if (error) {
                 console.warn("FrameDOMAgent.getDocument failed:", error);
                 return;
