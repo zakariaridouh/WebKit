@@ -142,7 +142,7 @@ void saveRecentSearchesToFile(const String& name, const Vector<RecentSearch>& se
         [itemsDictionary removeObjectForKey:name.createNSString().get()];
     else {
         auto items = createNSArray(searchItems, [] (auto& item) {
-            return adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:item.string.createNSString().get(), searchStringKey, toNSDateFromSystemClock(item.time), dateKey, nil]);
+            return adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:item.string.createNSString().get(), searchStringKey, protect(toNSDateFromSystemClock(item.time)).get(), dateKey, nil]);
         });
         [itemsDictionary setObject:adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:items.get(), searchesKey, nil]).get() forKey:name.createNSString().get()];
     }

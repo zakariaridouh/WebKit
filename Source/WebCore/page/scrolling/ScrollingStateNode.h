@@ -124,7 +124,7 @@ public:
             if (std::holds_alternative<GraphicsLayerData>(m_data)) {
                 auto& data = std::get<GraphicsLayerData>(m_data);
                 if (data.graphicsLayer)
-                    return platformLayerFromGraphicsLayer(Ref { *data.graphicsLayer });
+                    return PlatformLayerContainer { platformLayerFromGraphicsLayer(Ref { *data.graphicsLayer }) }.get();
             }
             return static_cast<ScrollingPlatformLayer*>(nullptr);
         }
