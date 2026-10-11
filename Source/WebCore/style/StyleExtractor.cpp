@@ -114,7 +114,7 @@ RefPtr<CSSValue> Extractor::getFontSizeCSSValuePreferringKeyword() const
     if (!style)
         return nullptr;
 
-    if (auto sizeIdentifier = style->fontDescription().keywordSizeAsIdentifier())
+    if (auto sizeIdentifier = style->fontDescription().keywordSizeAsIdentifier(); sizeIdentifier != CSSValueID::Invalid)
         return CSSKeywordValue::create(sizeIdentifier);
 
     return CSSPrimitiveValue::create(unapplyingZoom<float>(style->fontDescription().usedSize(), *style), CSSUnitType::Px);
@@ -584,7 +584,7 @@ bool Extractor::propertyMatches(CSSPropertyID propertyID, const CSSValue* value)
         if (auto* keywordValue = dynamicDowncast<CSSKeywordValue>(*value)) {
             protect(m_element->document())->updateLayoutIgnorePendingStylesheets();
             if (auto* style = m_element->computedStyle(m_pseudoElementIdentifier)) {
-                if (CSSValueID sizeIdentifier = style->fontDescription().keywordSizeAsIdentifier()) {
+                if (auto sizeIdentifier = style->fontDescription().keywordSizeAsIdentifier(); sizeIdentifier != CSSValueID::Invalid) {
                     if (keywordValue->valueID() == sizeIdentifier)
                         return true;
                 }

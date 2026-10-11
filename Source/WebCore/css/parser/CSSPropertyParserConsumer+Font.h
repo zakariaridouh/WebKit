@@ -44,7 +44,7 @@ class CSSValueList;
 class ScriptExecutionContext;
 
 enum CSSParserMode : uint8_t;
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 
 enum class FontTechnology : uint8_t;
 
@@ -197,15 +197,15 @@ Vector<AtomString> consumeFontFeatureValuesPreludeFamilyNameList(CSSParserTokenR
 inline bool isSystemFontShorthand(CSSValueID valueID)
 {
     // This needs to stay in sync with SystemFontDatabase::FontShorthand.
-    static_assert(CSSValueStatusBar - CSSValueCaption == static_cast<SystemFontDatabase::FontShorthandUnderlyingType>(SystemFontDatabase::FontShorthand::StatusBar));
-    return valueID >= CSSValueCaption && valueID <= CSSValueStatusBar;
+    static_assert(std::to_underlying(CSSValueID::StatusBar) - std::to_underlying(CSSValueID::Caption) == static_cast<SystemFontDatabase::FontShorthandUnderlyingType>(SystemFontDatabase::FontShorthand::StatusBar));
+    return valueID >= CSSValueID::Caption && valueID <= CSSValueID::StatusBar;
 }
 
 inline SystemFontDatabase::FontShorthand lowerFontShorthand(CSSValueID valueID)
 {
     // This needs to stay in sync with SystemFontDatabase::FontShorthand.
     ASSERT(isSystemFontShorthand(valueID));
-    return static_cast<SystemFontDatabase::FontShorthand>(valueID - CSSValueCaption);
+    return static_cast<SystemFontDatabase::FontShorthand>(std::to_underlying(valueID) - std::to_underlying(CSSValueID::Caption));
 }
 
 } // namespace CSSPropertyParserHelpers

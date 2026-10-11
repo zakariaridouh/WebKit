@@ -92,8 +92,8 @@ inline CSSKeywordValue& CSSKeywordValue::implicitInitialValue()
 
 inline Ref<CSSKeywordValue> CSSKeywordValue::create(CSSValueID value)
 {
-    RELEASE_ASSERT(value < numCSSValueKeywords);
-    return *staticCSSValuePool->m_identifierValues[value];
+    RELEASE_ASSERT(std::to_underlying(value) < numCSSValueKeywords);
+    return *staticCSSValuePool->m_identifierValues[std::to_underlying(value)];
 }
 
 inline Ref<CSSKeywordValue> CSSKeywordValue::create(CSS::Keyword ident)

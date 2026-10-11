@@ -474,10 +474,10 @@ RefPtr<HTMLElement> ApplyStyleCommand::splitAncestorsWithUnicodeBidi(Node* node,
 
     RefPtr<Node> highestAncestorWithUnicodeBidi;
     RefPtr<Node> nextHighestAncestorWithUnicodeBidi;
-    int highestAncestorUnicodeBidi = 0;
+    auto highestAncestorUnicodeBidi = CSSValueID::Invalid;
     for (RefPtr ancestor { node->parentNode() }; ancestor != block; ancestor = ancestor->parentNode()) {
-        int unicodeBidi = valueID(Style::Extractor(ancestor.get()).propertyValue(CSSPropertyUnicodeBidi).get());
-        if (unicodeBidi && unicodeBidi != CSSValueNormal) {
+        auto unicodeBidi = valueID(Style::Extractor(ancestor.get()).propertyValue(CSSPropertyUnicodeBidi).get());
+        if (unicodeBidi != CSSValueID::Invalid && unicodeBidi != CSSValueID::Normal) {
             highestAncestorUnicodeBidi = unicodeBidi;
             nextHighestAncestorWithUnicodeBidi = highestAncestorWithUnicodeBidi;
             highestAncestorWithUnicodeBidi = ancestor;
@@ -489,7 +489,7 @@ RefPtr<HTMLElement> ApplyStyleCommand::splitAncestorsWithUnicodeBidi(Node* node,
 
     RefPtr<HTMLElement> unsplitAncestor;
 
-    if (allowedDirection != WritingDirection::Natural && highestAncestorUnicodeBidi != CSSValueBidiOverride) {
+    if (allowedDirection != WritingDirection::Natural && highestAncestorUnicodeBidi != CSSValueID::BidiOverride) {
         if (RefPtr highestAncestorElementWithUnicodeBidi = dynamicDowncast<HTMLElement>(*highestAncestorWithUnicodeBidi)) {
             auto highestAncestorDirection = EditingStyle::create(highestAncestorElementWithUnicodeBidi.get(), EditingStyle::PropertiesToInclude::AllProperties)->textDirection();
             if (highestAncestorDirection && *highestAncestorDirection == allowedDirection) {
@@ -528,8 +528,8 @@ void ApplyStyleCommand::removeEmbeddingUpToEnclosingBlock(Node* node, Node* unsp
         if (!element)
             continue;
 
-        int unicodeBidi = valueID(Style::Extractor(element.get()).propertyValue(CSSPropertyUnicodeBidi).get());
-        if (!unicodeBidi || unicodeBidi == CSSValueNormal)
+        auto unicodeBidi = valueID(Style::Extractor(element.get()).propertyValue(CSSPropertyUnicodeBidi).get());
+        if (unicodeBidi == CSSValueID::Invalid || unicodeBidi == CSSValueID::Normal)
             continue;
 
         // FIXME: This code should really consider the mapped attribute 'dir', the inline style declaration,

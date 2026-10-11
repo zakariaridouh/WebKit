@@ -758,7 +758,7 @@ static RefPtr<CSSValue> parseKeywordValue(CSSPropertyID property, StringView str
     }
 
     auto valueID = cssValueKeywordID(string);
-    if (!valueID)
+    if (valueID == CSSValueID::Invalid)
         return nullptr;
 
     if (isCSSWideKeyword(valueID))

@@ -216,7 +216,7 @@ constexpr CSSValueID toCSSValueID(BorderStyle e)
 
 template<> constexpr BorderStyle fromCSSValueID(CSSValueID valueID)
 {
-    return static_cast<BorderStyle>(valueID - CSSValueNone);
+    return static_cast<BorderStyle>(std::to_underlying(valueID) - std::to_underlying(CSSValueID::None));
 }
 
 #define TYPE OutlineStyle
@@ -403,7 +403,7 @@ template<> constexpr StyleAppearance fromCSSValueID(CSSValueID valueID)
     if (valueID == CSSValueAuto)
         return StyleAppearance::Auto;
 
-    return StyleAppearance(valueID - CSSValueBase + static_cast<unsigned>(StyleAppearance::Base));
+    return StyleAppearance(std::to_underlying(valueID) - std::to_underlying(CSSValueID::Base) + static_cast<unsigned>(StyleAppearance::Base));
 }
 
 #define TYPE BackfaceVisibility
@@ -690,7 +690,7 @@ template<> constexpr CursorType fromCSSValueID(CSSValueID valueID)
     case CSSValueNone:
         return CursorType::None;
     default:
-        return static_cast<CursorType>(valueID - CSSValueAuto);
+        return static_cast<CursorType>(std::to_underlying(valueID) - std::to_underlying(CSSValueID::Auto));
     }
 }
 
@@ -1041,7 +1041,7 @@ template<> constexpr Style::TextAlign fromCSSValueID(CSSValueID valueID)
     case CSSValueEnd:
         return Style::TextAlign::End;
     default:
-        return static_cast<Style::TextAlign>(valueID - CSSValueLeft);
+        return static_cast<Style::TextAlign>(std::to_underlying(valueID) - std::to_underlying(CSSValueID::Left));
     }
 }
 

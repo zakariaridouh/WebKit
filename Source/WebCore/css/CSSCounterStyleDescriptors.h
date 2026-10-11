@@ -34,7 +34,7 @@ namespace WebCore {
 class CSSValue;
 class StyleProperties;
 
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 
 struct CSSCounterStyleDescriptors {
     using Name = AtomString;

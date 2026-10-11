@@ -451,20 +451,20 @@ static LogicalBoxAxis NODELETE mapInsetPropertyToLogicalAxis(CSSPropertyID id, c
 static bool NODELETE anchorSideMatchesInsetProperty(CSSValueID anchorSideID, BoxAxis physicalAxis)
 {
     switch (anchorSideID) {
-    case CSSValueID::CSSValueInside:
-    case CSSValueID::CSSValueOutside:
-    case CSSValueID::CSSValueStart:
-    case CSSValueID::CSSValueEnd:
-    case CSSValueID::CSSValueSelfStart:
-    case CSSValueID::CSSValueSelfEnd:
-    case CSSValueID::CSSValueCenter:
-    case CSSValueID::CSSValueInvalid: // percentage
+    case CSSValueID::Inside:
+    case CSSValueID::Outside:
+    case CSSValueID::Start:
+    case CSSValueID::End:
+    case CSSValueID::SelfStart:
+    case CSSValueID::SelfEnd:
+    case CSSValueID::Center:
+    case CSSValueID::Invalid: // percentage
         return true;
-    case CSSValueID::CSSValueTop:
-    case CSSValueID::CSSValueBottom:
+    case CSSValueID::Top:
+    case CSSValueID::Bottom:
         return BoxAxis::Vertical == physicalAxis;
-    case CSSValueID::CSSValueLeft:
-    case CSSValueID::CSSValueRight:
+    case CSSValueID::Left:
+    case CSSValueID::Right:
         return BoxAxis::Horizontal == physicalAxis;
     default:
         ASSERT_NOT_REACHED();

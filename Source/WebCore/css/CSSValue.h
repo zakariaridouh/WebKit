@@ -44,7 +44,7 @@ class DeprecatedCSSOMValue;
 struct ComputedStyleDependencies;
 
 enum class CSSPropertyID : uint16_t;
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 
 namespace CSS {
 struct SerializationContext;

@@ -42,7 +42,7 @@ struct PropertyParserState;
 class CSSParserTokenRange;
 struct CSSParserContext;
 
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 
 namespace CSSCalc {
 

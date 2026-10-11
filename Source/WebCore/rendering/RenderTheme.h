@@ -461,7 +461,7 @@ public:
 
 protected:
     struct ColorCache {
-        HashMap<int, Color> systemStyleColors;
+        HashMap<CSSValueID, Color> systemStyleColors;
 
         Color systemLinkColor;
         Color systemActiveLinkColor;

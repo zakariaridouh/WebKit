@@ -17,8 +17,8 @@ using namespace CSSPropertyParserHelpers;
 static bool isKeywordValidForTestKeyword(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Bar:
+    case CSSValueID::Foo:
         return true;
     default:
         return false;
@@ -28,7 +28,7 @@ static bool isKeywordValidForTestKeyword(CSSValueID keyword)
 static bool isKeywordValidForTestKeywordWithAliasedTo(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
+    case CSSValueID::Bar:
         return true;
     default:
         return false;
@@ -38,9 +38,9 @@ static bool isKeywordValidForTestKeywordWithAliasedTo(CSSValueID keyword)
 static bool isKeywordValidForTestMatchOneWithGroupWithSettingsFlag(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
-    case CSSValueID::CSSValueBaz:
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Bar:
+    case CSSValueID::Baz:
+    case CSSValueID::Foo:
         return true;
     default:
         return false;
@@ -50,10 +50,10 @@ static bool isKeywordValidForTestMatchOneWithGroupWithSettingsFlag(CSSValueID ke
 static bool isKeywordValidForTestMatchOneWithKeywordWithSettingsFlag(CSSValueID keyword, CSS::PropertyParserState& state)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
-    case CSSValueID::CSSValueBaz:
+    case CSSValueID::Bar:
+    case CSSValueID::Baz:
         return true;
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Foo:
         return state.context.cssSettingsFooDisabled;
     default:
         return false;
@@ -63,9 +63,9 @@ static bool isKeywordValidForTestMatchOneWithKeywordWithSettingsFlag(CSSValueID 
 static bool isKeywordValidForTestMatchOneWithMultipleKeywords(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
-    case CSSValueID::CSSValueBaz:
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Bar:
+    case CSSValueID::Baz:
+    case CSSValueID::Foo:
         return true;
     default:
         return false;
@@ -75,9 +75,9 @@ static bool isKeywordValidForTestMatchOneWithMultipleKeywords(CSSValueID keyword
 static bool isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
-    case CSSValueID::CSSValueBaz:
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Bar:
+    case CSSValueID::Baz:
+    case CSSValueID::Foo:
         return true;
     default:
         return false;
@@ -87,8 +87,8 @@ static bool isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(CSSValueI
 static bool isKeywordValidForTestRenderStyleGetterNodeleteFalse(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Bar:
+    case CSSValueID::Foo:
         return true;
     default:
         return false;
@@ -98,8 +98,8 @@ static bool isKeywordValidForTestRenderStyleGetterNodeleteFalse(CSSValueID keywo
 static bool isKeywordValidForTestRenderStyleStorageOneLevelEnum(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Bar:
+    case CSSValueID::Foo:
         return true;
     default:
         return false;
@@ -109,8 +109,8 @@ static bool isKeywordValidForTestRenderStyleStorageOneLevelEnum(CSSValueID keywo
 static bool isKeywordValidForTestRenderStyleStorageTwoLevelEnum(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueBar:
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Bar:
+    case CSSValueID::Foo:
         return true;
     default:
         return false;
@@ -120,7 +120,7 @@ static bool isKeywordValidForTestRenderStyleStorageTwoLevelEnum(CSSValueID keywo
 static bool isKeywordValidForTestUrlWithModifiers(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueNone:
+    case CSSValueID::None:
         return true;
     default:
         return false;
@@ -130,7 +130,7 @@ static bool isKeywordValidForTestUrlWithModifiers(CSSValueID keyword)
 static bool isKeywordValidForTestUrlWithNoModifiers(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueNone:
+    case CSSValueID::None:
         return true;
     default:
         return false;
@@ -140,7 +140,7 @@ static bool isKeywordValidForTestUrlWithNoModifiers(CSSValueID keyword)
 static bool isKeywordValidForTestUsingSharedRule(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueAuto:
+    case CSSValueID::Auto:
         return true;
     default:
         return false;
@@ -150,7 +150,7 @@ static bool isKeywordValidForTestUsingSharedRule(CSSValueID keyword)
 static bool isKeywordValidForTestUsingSharedRuleExported(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueAuto:
+    case CSSValueID::Auto:
         return true;
     default:
         return false;
@@ -160,7 +160,7 @@ static bool isKeywordValidForTestUsingSharedRuleExported(CSSValueID keyword)
 static bool isKeywordValidForTestUsingSharedRuleWithOverrideFunction(CSSValueID keyword)
 {
     switch (keyword) {
-    case CSSValueID::CSSValueAuto:
+    case CSSValueID::Auto:
         return true;
     default:
         return false;
@@ -418,7 +418,7 @@ static RefPtr<CSSValue> consumeTestFunctionBoundedParameters(CSSParserTokenRange
             };
             return consumeBoundedRepetition(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -428,7 +428,7 @@ static RefPtr<CSSValue> consumeTestFunctionBoundedParameters(CSSParserTokenRange
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -448,7 +448,7 @@ static RefPtr<CSSValue> consumeTestFunctionFixedParameters(CSSParserTokenRange& 
             };
             return consumeBoundedRepetition(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -458,7 +458,7 @@ static RefPtr<CSSValue> consumeTestFunctionFixedParameters(CSSParserTokenRange& 
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -475,7 +475,7 @@ static RefPtr<CSSValue> consumeTestFunctionNoParameters(CSSParserTokenRange& ran
             };
             return consumeMatchAllOrdered(args);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -485,7 +485,7 @@ static RefPtr<CSSValue> consumeTestFunctionNoParameters(CSSParserTokenRange& ran
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range);
 }
@@ -537,7 +537,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrder(CSSParserT
             };
             return consumeMatchAllAnyOrder(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -547,7 +547,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrder(CSSParserT
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -597,7 +597,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrderWithOptiona
             };
             return consumeMatchAllAnyOrder(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -607,7 +607,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrderWithOptiona
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -644,7 +644,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrdered(CSSParserTo
             };
             return consumeMatchAllOrdered(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -654,7 +654,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrdered(CSSParserTo
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -689,7 +689,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrderedWithOptional
             };
             return consumeMatchAllOrdered(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -699,7 +699,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrderedWithOptional
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -749,7 +749,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchOneOrMoreAnyOrder(CSSP
             };
             return consumeMatchOneOrMoreAnyOrder(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -759,7 +759,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchOneOrMoreAnyOrder(CSSP
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -778,7 +778,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameter(CSSParserTokenRange& 
                 return { };
             return CSSValueListBuilder { parameter.releaseNonNull() };
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -788,7 +788,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameter(CSSParserTokenRange& 
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -801,8 +801,8 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameterMatchOne(CSSParserToke
             auto consumeParameter = [](CSSParserTokenRange& args, CSS::PropertyParserState& state) -> RefPtr<CSSValue> {
                 // bar | baz
                 switch (auto keyword = args.peek().id(); keyword) {
-                case CSSValueID::CSSValueBar:
-                case CSSValueID::CSSValueBaz:
+                case CSSValueID::Bar:
+                case CSSValueID::Baz:
                     args.consumeIncludingWhitespace();
                     return CSSKeywordValue::create(CSS::Keyword { keyword });
                 default:
@@ -819,7 +819,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameterMatchOne(CSSParserToke
                 return { };
             return CSSValueListBuilder { parameter.releaseNonNull() };
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -829,7 +829,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameterMatchOne(CSSParserToke
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -848,7 +848,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameterOptional(CSSParserToke
                 return CSSValueListBuilder { };
             return CSSValueListBuilder { parameter.releaseNonNull() };
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -858,7 +858,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameterOptional(CSSParserToke
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -878,7 +878,7 @@ static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersNoMin(CSSParserTok
             };
             return consumeUnboundedRepetition(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -888,7 +888,7 @@ static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersNoMin(CSSParserTok
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -908,7 +908,7 @@ static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersWithMinimum(CSSPar
             };
             return consumeUnboundedRepetition(args, state);
         };
-        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+        if (range.peek().functionId() != CSSValueID::Foo)
             return { };
         CSSParserTokenRange rangeCopy = range;
         CSSParserTokenRange args = consumeFunction(rangeCopy);
@@ -918,7 +918,7 @@ static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersWithMinimum(CSSPar
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
+        return CSSFunctionValue::create(CSSValueID::Foo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -930,9 +930,9 @@ static RefPtr<CSSValue> consumeTestKeywordWithAliasedTo(CSSParserTokenRange& ran
         return result;
     // foo@(aliased-to=baz)
     switch (auto keyword = range.peek().id(); keyword) {
-    case CSSValueID::CSSValueFoo:
+    case CSSValueID::Foo:
         range.consumeIncludingWhitespace();
-        return CSSKeywordValue::create(CSS::Keyword { CSSValueID::CSSValueBaz });
+        return CSSKeywordValue::create(CSS::Keyword { CSSValueID::Baz });
     default:
         return nullptr;
     }
@@ -2958,7 +2958,7 @@ static RefPtr<CSSValue> consumeTestMatchOneWithSettingsFlag(CSSParserTokenRange&
             auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
                 // none
                 switch (auto keyword = range.peek().id(); keyword) {
-                case CSSValueID::CSSValueNone:
+                case CSSValueID::None:
                     range.consumeIncludingWhitespace();
                     return CSSKeywordValue::create(CSS::Keyword { keyword });
                 default:
@@ -2977,8 +2977,8 @@ static RefPtr<CSSValue> consumeTestMatchOneWithSettingsFlag(CSSParserTokenRange&
                     return { };
                 // foo | bar
                 switch (auto keyword = range.peek().id(); keyword) {
-                case CSSValueID::CSSValueFoo:
-                case CSSValueID::CSSValueBar:
+                case CSSValueID::Foo:
+                case CSSValueID::Bar:
                     range.consumeIncludingWhitespace();
                     return CSSKeywordValue::create(CSS::Keyword { keyword });
                 default:
@@ -3033,7 +3033,7 @@ static RefPtr<CSSValue> consumeTestRenderStyleStorageOneLevelRaw(CSSParserTokenR
             auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
                 // foo
                 switch (auto keyword = range.peek().id(); keyword) {
-                case CSSValueID::CSSValueFoo:
+                case CSSValueID::Foo:
                     range.consumeIncludingWhitespace();
                     return CSSKeywordValue::create(CSS::Keyword { keyword });
                 default:
@@ -3050,7 +3050,7 @@ static RefPtr<CSSValue> consumeTestRenderStyleStorageOneLevelRaw(CSSParserTokenR
             auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
                 // bar
                 switch (auto keyword = range.peek().id(); keyword) {
-                case CSSValueID::CSSValueBar:
+                case CSSValueID::Bar:
                     range.consumeIncludingWhitespace();
                     return CSSKeywordValue::create(CSS::Keyword { keyword });
                 default:
@@ -3090,7 +3090,7 @@ static RefPtr<CSSValue> consumeTestRenderStyleStorageTwoLevelRaw(CSSParserTokenR
             auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
                 // foo
                 switch (auto keyword = range.peek().id(); keyword) {
-                case CSSValueID::CSSValueFoo:
+                case CSSValueID::Foo:
                     range.consumeIncludingWhitespace();
                     return CSSKeywordValue::create(CSS::Keyword { keyword });
                 default:
@@ -3107,7 +3107,7 @@ static RefPtr<CSSValue> consumeTestRenderStyleStorageTwoLevelRaw(CSSParserTokenR
             auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
                 // bar
                 switch (auto keyword = range.peek().id(); keyword) {
-                case CSSValueID::CSSValueBar:
+                case CSSValueID::Bar:
                     range.consumeIncludingWhitespace();
                     return CSSKeywordValue::create(CSS::Keyword { keyword });
                 default:

@@ -409,7 +409,7 @@ inline void BuilderCustom::applyInitialFontFamily(BuilderState& builderState)
 
     // We need to adjust the size to account for the generic family change from monospace to non-monospace.
     if (fontDescription.useFixedDefaultSize()) {
-        if (CSSValueID sizeIdentifier = fontDescription.keywordSizeAsIdentifier())
+        if (auto sizeIdentifier = fontDescription.keywordSizeAsIdentifier(); sizeIdentifier != CSSValueID::Invalid)
             builderState.setFontDescriptionFontSize(fontSizeForKeyword(sizeIdentifier, false, builderState.document()));
     }
 
@@ -431,7 +431,7 @@ inline void BuilderCustom::applyValueFontFamily(BuilderState& builderState, CSSV
     builderState.setFontDescriptionFamilies(toStyleFromCSSValue<FontFamilies>(builderState, value));
 
     if (fontDescription.useFixedDefaultSize() != oldFamilyUsedFixedDefaultSize) {
-        if (CSSValueID sizeIdentifier = fontDescription.keywordSizeAsIdentifier())
+        if (auto sizeIdentifier = fontDescription.keywordSizeAsIdentifier(); sizeIdentifier != CSSValueID::Invalid)
             builderState.setFontDescriptionFontSize(fontSizeForKeyword(sizeIdentifier, !oldFamilyUsedFixedDefaultSize, builderState.document()));
     }
 }

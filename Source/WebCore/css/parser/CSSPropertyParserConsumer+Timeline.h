@@ -32,7 +32,7 @@ namespace WebCore {
 class CSSParserTokenRange;
 class CSSValue;
 class Document;
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 struct CSSParserContext;
 
 namespace CSS {

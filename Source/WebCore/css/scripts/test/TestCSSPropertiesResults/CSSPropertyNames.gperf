@@ -886,15 +886,15 @@ TextStream& operator<<(TextStream& stream, CSSPropertyID property)
 }
 
 static constexpr std::array validKeywordsForTestUsingSharedRule {
-    CSSValueID::CSSValueAuto,
+    CSSValueID::Auto,
 };
 
 static constexpr std::array validKeywordsForTestUsingSharedRuleExported {
-    CSSValueID::CSSValueAuto,
+    CSSValueID::Auto,
 };
 
 static constexpr std::array validKeywordsForTestUsingSharedRuleWithOverrideFunction {
-    CSSValueID::CSSValueAuto,
+    CSSValueID::Auto,
 };
 
 std::span<const CSSValueID> CSSProperty::validKeywordsForProperty(CSSPropertyID id)

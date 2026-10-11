@@ -38,7 +38,7 @@ struct CounterStyle;
 }
 
 class StyleRuleCounterStyle;
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 
 using NamedCounterStyleMap = HashMap<AtomString, Ref<CSSRegisteredCounterStyle>>;
 using SymbolsFunctionCounterStyleMap = Vector<std::pair<Style::SymbolsFunction, Ref<CSSRegisteredCounterStyle>>>;

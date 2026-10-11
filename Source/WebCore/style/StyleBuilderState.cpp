@@ -254,7 +254,7 @@ void BuilderState::updateFontForGenericFamilyChange()
     // If the font uses a keyword size, then we refetch from the table rather than
     // multiplying by our scale factor.
     float size = [&] {
-        if (CSSValueID sizeIdentifier = childFont.keywordSizeAsIdentifier())
+        if (auto sizeIdentifier = childFont.keywordSizeAsIdentifier(); sizeIdentifier != CSSValueID::Invalid)
             return Style::fontSizeForKeyword(sizeIdentifier, childFont.useFixedDefaultSize(), document());
 
         auto fixedSize =  document().settings().defaultFixedFontSize();

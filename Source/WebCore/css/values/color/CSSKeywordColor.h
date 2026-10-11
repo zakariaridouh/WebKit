@@ -32,7 +32,7 @@ namespace WebCore {
 
 class Color;
 
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 enum class StyleColorOptions : uint8_t;
 
 namespace CSS {

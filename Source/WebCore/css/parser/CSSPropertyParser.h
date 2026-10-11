@@ -36,7 +36,7 @@ struct CSSCustomPropertySyntax;
 struct ComputedStyleDependencies;
 
 enum class CSSPropertyID : uint16_t;
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 enum class CSSWideKeyword : uint8_t;
 enum class IsImportant : bool;
 enum class StyleRuleType : uint8_t;

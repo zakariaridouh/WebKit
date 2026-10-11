@@ -239,7 +239,7 @@ class ValueKeywordName(Name):
 
     @property
     def id(self):
-        return f"CSSValueID::CSSValue{self.id_without_prefix}"
+        return f"CSSValueID::{self.id_without_prefix}"
 
     def cpp_enum_literal(self, base):
         override_id = ValueKeywordName.special_case_name_to_enum.get(base, {}).get(self.id_without_prefix)
@@ -3452,7 +3452,7 @@ class GenerateCSSPropertyInitialValues:
                     if isinstance(initial.list[0], NumericLiteral):
                         to.write(f"return CSSPrimitiveValue::Raw {{ {initial.list[0].cpp_unit_type}, {initial.list[0].digits} }};")
                     elif isinstance(initial.list[0], ValueKeywordName):
-                        to.write(f"return {initial.list[0].id_without_scope};")
+                        to.write(f"return {initial.list[0].id};")
 
             to.write(f"default:")
             with to.indent():

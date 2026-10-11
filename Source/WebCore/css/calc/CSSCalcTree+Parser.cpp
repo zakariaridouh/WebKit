@@ -925,7 +925,7 @@ static std::optional<TypedChild> consumeValueWithoutSimplifyingRootCalc(CSSParse
     if (tokens.peek().type() == LeftParenthesisToken)
         return { };
 
-    auto isFunction = !!tokens.peek().functionId();
+    auto isFunction = tokens.peek().functionId() != CSSValueID::Invalid;
 
     auto typedValue = parseCalcValue(tokens, depth, state);
     if (!typedValue)

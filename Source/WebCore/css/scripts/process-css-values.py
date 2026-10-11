@@ -77,7 +77,7 @@ class Value:
 
     @property
     def id(self):
-        return f"CSSValueID::CSSValue{self.id_without_prefix}"
+        return f"CSSValueID::{self.id_without_prefix}"
 
 
 def attribute_from_attribute_string(attribute, attribute_name, attribute_string, value):
@@ -207,7 +207,7 @@ class GenerationContext:
             """))
 
         for value in self.values:
-            to.write(f"{value.name_lowercase}, {value.id_without_scope}\n")
+            to.write(f"{value.name_lowercase}, static_cast<uint16_t>({value.id})\n")
 
         to.write("%%\n")
 
@@ -235,34 +235,34 @@ class GenerationContext:
             CSSValueID findCSSValueKeyword(std::span<const char> characters)
             {
                 auto* value = CSSValueKeywordsHash::in_word_set(characters.data(), characters.size());
-                return value ? static_cast<CSSValueID>(value->id) : CSSValueInvalid;
+                return value ? static_cast<CSSValueID>(value->id) : CSSValueID::Invalid;
             }
 
             ASCIILiteral nameLiteral(CSSValueID id)
             {
-                if (static_cast<uint16_t>(id) >= numCSSValueKeywords)
+                if (std::to_underlying(id) >= numCSSValueKeywords)
                     return { };
-                return valueData[id].literal();
+                return valueData[std::to_underlying(id)].literal();
             }
 
             // When serializing a CSS keyword, it should be converted to ASCII lowercase.
             // https://drafts.csswg.org/cssom/#serialize-a-css-component-value
             ASCIILiteral nameLiteralForSerialization(CSSValueID id)
             {
-                if (static_cast<uint16_t>(id) >= numCSSValueKeywords)
+                if (std::to_underlying(id) >= numCSSValueKeywords)
                     return { };
-                return valueDataForSerialization[id].literal();
+                return valueDataForSerialization[std::to_underlying(id)].literal();
             }
 
             const AtomString& nameString(CSSValueID id)
             {
-                if (static_cast<uint16_t>(id) >= numCSSValueKeywords)
+                if (std::to_underlying(id) >= numCSSValueKeywords)
                     return nullAtom();
 
                 static NeverDestroyed<std::array<AtomString, numCSSValueKeywords>> strings;
-                auto& string = strings.get()[id];
+                auto& string = strings.get()[std::to_underlying(id)];
                 if (string.isNull())
-                    string = valueData[id];
+                    string = valueData[std::to_underlying(id)];
                 return string;
             }
 
@@ -270,13 +270,13 @@ class GenerationContext:
             // https://drafts.csswg.org/cssom/#serialize-a-css-component-value
             const AtomString& nameStringForSerialization(CSSValueID id)
             {
-                if (static_cast<uint16_t>(id) >= numCSSValueKeywords)
+                if (std::to_underlying(id) >= numCSSValueKeywords)
                     return nullAtom();
 
                 static NeverDestroyed<std::array<AtomString, numCSSValueKeywords>> strings;
-                auto& string = strings.get()[id];
+                auto& string = strings.get()[std::to_underlying(id)];
                 if (string.isNull())
-                    string = valueDataForSerialization[id];
+                    string = valueDataForSerialization[std::to_underlying(id)];
                 return string;
             }
 
@@ -321,14 +321,14 @@ class GenerationContext:
             """))
 
     def _generate_css_value_keywords_h_property_constants(self, *, to):
-        to.write(f"enum CSSValueID : uint16_t {{\n")
-        to.write(f"    CSSValueInvalid = 0,\n")
+        to.write(f"enum class CSSValueID : uint16_t {{\n")
+        to.write(f"    Invalid = 0,\n")
 
         count = GenerationContext.number_of_predefined_values
         max_length = 0
 
         for value in self.values:
-            to.write(f"    {value.id_without_scope} = {count},\n")
+            to.write(f"    {value.id_without_prefix} = {count},\n")
 
             count += 1
             max_length = max(len(value.name), max_length)
@@ -336,6 +336,12 @@ class GenerationContext:
         last = count - 1
 
         to.write(f"}};\n\n")
+
+        to.write(f"// FIXME: These legacy constants are transitional. Use CSSValueID::Foo instead of CSSValueFoo in new code.\n")
+        to.write(f"inline constexpr CSSValueID CSSValueInvalid = CSSValueID::Invalid;\n")
+        for value in self.values:
+            to.write(f"inline constexpr CSSValueID {value.id_without_scope} = {value.id};\n")
+        to.write(f"\n")
 
         to.write(f"constexpr uint16_t numCSSValueKeywords = {count};\n")
         to.write(f"constexpr uint16_t lastCSSValueKeyword = {last};\n")
@@ -382,7 +388,7 @@ class GenerationContext:
 
         to.write(f"    // Unique types for each predefined keyword value.\n\n")
         for value in self.values:
-            to.write(f"    using {value.id_without_prefix} = Constant<{value.id_without_scope}>;\n")
+            to.write(f"    using {value.id_without_prefix} = Constant<{value.id}>;\n")
 
         to.write(f"}};\n\n")
 
@@ -394,7 +400,7 @@ class GenerationContext:
         to.write(textwrap.dedent("""
             namespace WTF {
 
-            template<> struct DefaultHash<WebCore::CSSValueID> : IntHash<unsigned> { };
+            template<> struct DefaultHash<WebCore::CSSValueID> : IntHash<WebCore::CSSValueID> { };
 
             template<> struct HashTraits<WebCore::CSSValueID> : StrongEnumHashTraits<WebCore::CSSValueID> { };
 

@@ -37,7 +37,7 @@ class CSSParserTokenRange;
 class CSSValue;
 class ScriptExecutionContext;
 struct CSSParserContext;
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 
 namespace CSS {
 struct Color;

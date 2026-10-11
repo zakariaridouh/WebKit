@@ -31,7 +31,7 @@ class Color;
 class ImmutableStyleProperties;
 class MutableStyleProperties;
 
-enum CSSValueID : uint16_t;
+enum class CSSValueID : uint16_t;
 enum CSSParserMode : uint8_t;
 
 namespace CSS {

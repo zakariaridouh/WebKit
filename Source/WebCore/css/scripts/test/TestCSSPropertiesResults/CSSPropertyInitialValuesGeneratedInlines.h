@@ -48,7 +48,7 @@ static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
     case CSSPropertyID::TestColor:
     case CSSPropertyID::TestColorAllowsTypesAbsolute:
     case CSSPropertyID::TestColorPropertyWithVisitedLinkSupport:
-        return CSSValueCurrentColor;
+        return CSSValueID::CurrentColor;
     case CSSPropertyID::TestKeyword:
     case CSSPropertyID::TestKeywordWithAliasedTo:
     case CSSPropertyID::TestRenderStyleGetterNodeleteFalse:
@@ -56,11 +56,11 @@ static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
     case CSSPropertyID::TestRenderStyleStorageOneLevelRaw:
     case CSSPropertyID::TestRenderStyleStorageTwoLevelEnum:
     case CSSPropertyID::TestRenderStyleStorageTwoLevelRaw:
-        return CSSValueFoo;
+        return CSSValueID::Foo;
     case CSSPropertyID::TestMatchOneWithSettingsFlag:
     case CSSPropertyID::TestUrlWithModifiers:
     case CSSPropertyID::TestUrlWithNoModifiers:
-        return CSSValueNone;
+        return CSSValueID::None;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }

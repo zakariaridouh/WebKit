@@ -525,30 +525,31 @@ static inline Color rgbaBackgroundColorInEffect(Node* node)
     return cssValueToColor(backgroundColorInEffect(node).get());
 }
 
-static int NODELETE textAlignResolvingStartAndEnd(int textAlign, int direction)
+static CSSValueID NODELETE textAlignResolvingStartAndEnd(CSSValueID textAlign, CSSValueID direction)
 {
     switch (textAlign) {
-    case CSSValueCenter:
-    case CSSValueWebkitCenter:
-        return CSSValueCenter;
-    case CSSValueJustify:
-        return CSSValueJustify;
-    case CSSValueLeft:
-    case CSSValueWebkitLeft:
-        return CSSValueLeft;
-    case CSSValueRight:
-    case CSSValueWebkitRight:
-        return CSSValueRight;
-    case CSSValueStart:
-        return direction != CSSValueRtl ? CSSValueLeft : CSSValueRight;
-    case CSSValueEnd:
-        return direction == CSSValueRtl ? CSSValueRight : CSSValueLeft;
+    case CSSValueID::Center:
+    case CSSValueID::WebkitCenter:
+        return CSSValueID::Center;
+    case CSSValueID::Justify:
+        return CSSValueID::Justify;
+    case CSSValueID::Left:
+    case CSSValueID::WebkitLeft:
+        return CSSValueID::Left;
+    case CSSValueID::Right:
+    case CSSValueID::WebkitRight:
+        return CSSValueID::Right;
+    case CSSValueID::Start:
+        return direction != CSSValueID::Rtl ? CSSValueID::Left : CSSValueID::Right;
+    case CSSValueID::End:
+        return direction == CSSValueID::Rtl ? CSSValueID::Right : CSSValueID::Left;
+    default:
+        return CSSValueID::Invalid;
     }
-    return CSSValueInvalid;
 }
 
 template<typename T>
-static int textAlignResolvingStartAndEnd(T& style)
+static CSSValueID textAlignResolvingStartAndEnd(T& style)
 {
     return textAlignResolvingStartAndEnd(identifierForStyleProperty(style, CSSPropertyTextAlign), identifierForStyleProperty(style, CSSPropertyDirection));
 }
@@ -2012,8 +2013,8 @@ void StyleChange::extractTextStyles(Document& document, MutableStyleProperties& 
         m_applyBold = true;
     }
 
-    int fontStyle = identifierForStyleProperty(style, CSSPropertyFontStyle);
-    if (fontStyle == CSSValueItalic) {
+    auto fontStyle = identifierForStyleProperty(style, CSSPropertyFontStyle);
+    if (fontStyle == CSSValueID::Italic) {
         style.removeProperty(CSSPropertyFontStyle);
         m_applyItalic = true;
     }
@@ -2031,15 +2032,17 @@ void StyleChange::extractTextStyles(Document& document, MutableStyleProperties& 
         setTextDecorationProperty(style, CSSValueList::createSpaceSeparated(WTF::move(newTextDecoration)), CSSPropertyTextDecoration);
     }
 
-    int verticalAlign = identifierForStyleProperty(style, CSSPropertyVerticalAlign);
+    auto verticalAlign = identifierForStyleProperty(style, CSSPropertyVerticalAlign);
     switch (verticalAlign) {
-    case CSSValueSub:
+    case CSSValueID::Sub:
         style.removeProperty(CSSPropertyVerticalAlign);
         m_applySubscript = true;
         break;
-    case CSSValueSuper:
+    case CSSValueID::Super:
         style.removeProperty(CSSPropertyVerticalAlign);
         m_applySuperscript = true;
+        break;
+    default:
         break;
     }
 
@@ -2128,7 +2131,7 @@ int legacyFontSizeFromCSSValue(Document& document, CSSValue& value, bool shouldU
         int pixelFontSize = Style::deprecatedToStyleFromCSSValue<Style::Length<CSS::Nonnegative, int>>(*primitiveValue)->resolveZoom(Style::ZoomFactor::none());
         int legacyFontSize = Style::legacyFontSizeForPixelSize(pixelFontSize, shouldUseFixedFontDefaultSize, document);
         // Use legacy font size only if pixel value matches exactly to that of legacy font size.
-        int cssPrimitiveEquivalent = legacyFontSize - 1 + CSSValueXSmall;
+        auto cssPrimitiveEquivalent = static_cast<CSSValueID>(legacyFontSize - 1 + std::to_underlying(CSSValueID::XSmall));
         if (mode == LegacyFontSizeMode::AlwaysUseLegacyFontSize || Style::fontSizeForKeyword(cssPrimitiveEquivalent, shouldUseFixedFontDefaultSize, document) == pixelFontSize)
             return legacyFontSize;
 
@@ -2136,8 +2139,8 @@ int legacyFontSizeFromCSSValue(Document& document, CSSValue& value, bool shouldU
     }
 
     if (RefPtr keywordValue = dynamicDowncast<CSSKeywordValue>(value)) {
-        if (auto valueID = keywordValue->valueID(); CSSValueXSmall <= valueID && valueID <= CSSValueXxxLarge)
-            return valueID - CSSValueXSmall + 1;
+        if (auto valueID = keywordValue->valueID(); CSSValueID::XSmall <= valueID && valueID <= CSSValueID::XxxLarge)
+            return std::to_underlying(valueID) - std::to_underlying(CSSValueID::XSmall) + 1;
     }
 
     return 0;

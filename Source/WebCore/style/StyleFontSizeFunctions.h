@@ -32,6 +32,8 @@ class FontMetrics;
 struct FontSizeAdjust;
 struct SettingsValues;
 
+enum class CSSValueID : uint16_t;
+
 namespace Style {
 
 class ComputedStyle;
@@ -50,8 +52,8 @@ float NODELETE adjustedFontSize(float size, const WebCore::FontSizeAdjust&, cons
 
 // Given a CSS keyword id in the range (CSSValueXxSmall to CSSValueXxxLarge), this function will return
 // the correct font size scaled relative to the user's default (medium).
-float fontSizeForKeyword(unsigned keywordID, bool shouldUseFixedDefaultSize, const SettingsValues&, bool inQuirksMode = false);
-float fontSizeForKeyword(unsigned keywordID, bool shouldUseFixedDefaultSize, const Document&);
+float fontSizeForKeyword(CSSValueID keyword, bool shouldUseFixedDefaultSize, const SettingsValues&, bool inQuirksMode = false);
+float fontSizeForKeyword(CSSValueID keyword, bool shouldUseFixedDefaultSize, const Document&);
 
 // Given a font size in pixel, this function will return legacy font size between 1 and 7.
 int NODELETE legacyFontSizeForPixelSize(int pixelFontSize, bool shouldUseFixedDefaultSize, const Document&);
