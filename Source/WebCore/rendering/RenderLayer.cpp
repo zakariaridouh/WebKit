@@ -94,6 +94,7 @@
 #include "LegacyRenderSVGImage.h"
 #include "LegacyRenderSVGResourceClipper.h"
 #include "LegacyRenderSVGRoot.h"
+#include "LineClampUpdater.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
@@ -5370,6 +5371,15 @@ void RenderLayer::calculateClipRects(const ClipRectsContext& clipRectsContext, C
     } else if (renderer().hasNonVisibleOverflow() && transform() && renderer().style().border().hasBorderRadius())
         clipRects.setOverflowClipRectAffectedByRadius();
 
+    // A float painted as its own root layer (e.g. through its transform) is already clipped as a whole (see backgroundClipRect).
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(renderer()); box && clipRectsContext.rootLayer != this) {
+        if (auto blockEndClipRect = LineClampUpdater::blockEndClipRect(*box, clipRectsContext.rootLayer->renderer())) {
+            clipRects.setPosClipRect(intersection(*blockEndClipRect, clipRects.posClipRect()));
+            clipRects.setOverflowClipRect(intersection(*blockEndClipRect, clipRects.overflowClipRect()));
+            clipRects.setFixedClipRect(intersection(*blockEndClipRect, clipRects.fixedClipRect()));
+        }
+    }
+
     LOG_WITH_STREAM(ClipRects, stream << "RenderLayer " << this << " calculateClipRects " << clipRectsContext << " computed " << clipRects);
 }
 
@@ -5421,6 +5431,10 @@ ClipRect RenderLayer::backgroundClipRect(const ClipRectsContext& clipRectsContex
         return backgroundClipRect;
     }
     backgroundClipRect = backgroundClipRectForPosition(*parentRects, renderer().style().position());
+    if (CheckedPtr box = dynamicDowncast<RenderBox>(renderer())) {
+        if (auto blockEndClipRect = LineClampUpdater::blockEndClipRect(*box, clipRectsContext.rootLayer->renderer()))
+            backgroundClipRect.intersect(*blockEndClipRect);
+    }
     RenderView& view = renderer().view();
     // Note: infinite clipRects should not be scrolled here, otherwise they will accidentally no longer be considered infinite.
     if (parentRects->fixed() && &clipRectsContext.rootLayer->renderer() == &view && !backgroundClipRect.isInfinite())

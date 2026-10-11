@@ -49,6 +49,9 @@ public:
 
     // Whether content laid out now comes after the clamp point (the line-clamp budget is used up).
     static bool isAfterClampPoint(const RenderObject&);
+    static bool isInsideLineClampContainer(const RenderObject&);
+    // Floats of a line-clamp container are clipped to its block-end content edge (and nowhere else). The clip rect is in the renderer's coordinates.
+    static std::optional<LayoutRect> blockEndClipRect(const RenderBox& floatBox, const RenderElement&);
     static void setIsForcedHidden(RenderBox&, bool);
     static void skipLayoutForForcedHidden(RenderBox&);
 

@@ -773,6 +773,7 @@ void LineLayout::updateRenderTreePositions(const Vector<LineAdjustment>& lineAdj
                 LineClampUpdater::skipLayoutForForcedHidden(renderer);
                 continue;
             }
+            renderer->setIsClippedByLineClamp(LineClampUpdater::isInsideLineClampContainer(renderer));
             auto isInitialLetter = layoutBox->style().pseudoElementType() == PseudoElementType::FirstLetter;
             auto& floatingObject = flow().insertFloatingBox(renderer);
             auto [marginBoxVisualRect, borderBoxVisualRect] = Layout::IntegrationUtils::toMarginAndBorderBoxVisualRect(logicalGeometry, m_inlineContentConstraints->formattingRootBorderBoxSize(), placedFloatsWritingMode);

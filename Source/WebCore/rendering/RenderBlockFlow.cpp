@@ -1059,6 +1059,7 @@ void RenderBlockFlow::layoutBlockChildren(RelayoutChildren relayoutChildren, Lay
                 LineClampUpdater::skipLayoutForForcedHidden(child);
                 continue;
             }
+            child.setIsClippedByLineClamp(LineClampUpdater::isInsideLineClampContainer(child));
             markSiblingsIfIntrudingForLayout();
             insertFloatingBoxAndMarkForLayout(child);
             adjustFloatingBlock(marginInfo);
@@ -2766,11 +2767,26 @@ void RenderBlockFlow::paintFloats(PaintInfo& paintInfo, const LayoutPoint& paint
             continue;
 
         auto floatBoxLocation = flipFloatForWritingModeForChild(*floatingObject, paintOffset + floatingObject->translationOffsetToAncestor());
+        auto& renderer = *floatingObject->renderer();
+        GraphicsContextStateSaver stateSaver(paintInfo.context(), false);
+
+        auto clipBlockEndIfNeeded = [&] {
+            // The clip rect in the float's own coordinates, moved to where the float's border box paints.
+            auto clipRect = LineClampUpdater::blockEndClipRect(renderer, renderer);
+            if (!clipRect)
+                return;
+            clipRect->moveBy(floatBoxLocation + renderer.locationOffset());
+            // Like the layer clip rects, this is within the area being painted (and so it is finite, which the conversion to float needs).
+            clipRect->intersect(paintInfo.rect);
+            stateSaver.save();
+            paintInfo.context().clip(*clipRect);
+        };
+        clipBlockEndIfNeeded();
+
         if (preservePhase) {
-            floatingObject->renderer()->paint(paintInfo, floatBoxLocation);
+            renderer.paint(paintInfo, floatBoxLocation);
             continue;
         }
-        auto& renderer = *floatingObject->renderer();
         auto paintInfoForFloat = PaintInfo { paintInfo };
 
         paintInfoForFloat.phase = PaintPhase::BlockBackground;
