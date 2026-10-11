@@ -112,6 +112,14 @@ set(WEBKIT_SWIFT_MACRO_FLAGS
     -disable-sandbox
 )
 
+# Mirrors -Xfrontend -disable-round-trip-debug-types in CommonBase.xcconfig's OTHER_SWIFT_FLAGS.
+# An asserts swiftc aborts in IRGenDebugInfo getMangledName on a captured mutable variable of a
+# namespaced C++ type such as IPC.Connection.
+# FIXME(rdar://189511928, rdar://189512247): remove when both are resolved.
+set(WEBKIT_SWIFT_DEBUG_INFO_FLAGS
+    "-Xfrontend -disable-round-trip-debug-types"
+)
+
 set(WEBKIT_SWIFT_CONCURRENCY_FLAGS
     "-default-isolation nonisolated"
     -strict-concurrency=complete
@@ -133,6 +141,7 @@ webkit_add_swift_options(
     ${WEBKIT_SWIFT_FATAL_DIAGNOSTIC_FLAGS}
     ${WEBKIT_SWIFT_CLANG_IMPORTER_FLAGS}
     ${WEBKIT_SWIFT_MACRO_FLAGS}
+    ${WEBKIT_SWIFT_DEBUG_INFO_FLAGS}
 )
 
 webkit_add_swift_options(
