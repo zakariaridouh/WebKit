@@ -39,6 +39,7 @@
 #include "InlineIteratorBox.h"
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorLineBox.h"
+#include "InlineIteratorLogicalOrderTraversal.h"
 #include "InlineRunAndOffset.h"
 #include "LineSelection.h"
 #include "Logging.h"

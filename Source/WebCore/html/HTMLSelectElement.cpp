@@ -73,6 +73,7 @@
 #include "RenderElementInlines.h"
 #include "RenderListBox.h"
 #include "RenderMenuList.h"
+#include "RenderText.h"
 #include "RenderTheme.h"
 #include "ScriptDisallowedScope.h"
 #include "ScriptElement.h"

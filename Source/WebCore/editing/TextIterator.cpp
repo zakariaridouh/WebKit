@@ -54,6 +54,7 @@
 #include "HTMLTextFormControlElement.h"
 #include "ICUSearcher.h"
 #include "ImageOverlay.h"
+#include "InlineIteratorLogicalOrderTraversal.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "Range.h"

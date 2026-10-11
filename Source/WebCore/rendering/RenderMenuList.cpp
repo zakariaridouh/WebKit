@@ -43,6 +43,7 @@
 #include "RenderElementStyleInlines.h"
 #include "RenderElementInlines.h"
 #include "RenderObjectInlines.h"
+#include "RenderText.h"
 #include "RenderTheme.h"
 #include "StyleComputedStyle+SettersInlines.h"
 #include "TextRun.h"

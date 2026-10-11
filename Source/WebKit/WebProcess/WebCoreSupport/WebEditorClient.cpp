@@ -66,6 +66,10 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringView.h>
 
+#if PLATFORM(COCOA)
+#include <WebCore/AttributedString.h>
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 using namespace HTMLNames;

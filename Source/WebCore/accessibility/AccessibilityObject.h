@@ -35,7 +35,7 @@
 #include <WebCore/FloatQuad.h>
 #include <WebCore/LayoutRect.h>
 #include <WebCore/Path.h>
-#include <WebCore/TextIterator.h>
+#include <WebCore/TextIteratorBehavior.h>
 #include <iterator>
 #include <wtf/CompactUniquePtrTuple.h>
 #include <wtf/Forward.h>
@@ -69,6 +69,7 @@ class HTMLTextFormControlElement;
 class IntPoint;
 class IntSize;
 class ScrollableArea;
+class TextIterator;
 
 enum class CommandType: uint8_t;
 

@@ -88,6 +88,7 @@
 #include "PopoverData.h"
 #include "Position.h"
 #include "PseudoClassChangeInvalidation.h"
+#include "RenderBlock.h"
 #include "RenderElement.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"

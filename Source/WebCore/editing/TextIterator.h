@@ -27,7 +27,6 @@
 
 #include <WebCore/CharacterRange.h>
 #include <WebCore/FindOptions.h>
-#include <WebCore/InlineIteratorLogicalOrderTraversal.h>
 #include <WebCore/InlineIteratorTextBox.h>
 #include <WebCore/SimpleRange.h>
 #include <WebCore/TextIteratorBehavior.h>
@@ -38,6 +37,11 @@
 namespace WebCore {
 
 class RenderTextFragment;
+
+namespace InlineIterator {
+struct TextLogicalOrderCacheData;
+using TextLogicalOrderCache = std::unique_ptr<TextLogicalOrderCacheData>;
+}
 
 // Character ranges based on characters from the text iterator.
 WEBCORE_EXPORT uint64_t characterCount(const SimpleRange&, TextIteratorBehaviors = { });

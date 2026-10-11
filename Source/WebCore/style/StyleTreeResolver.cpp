@@ -58,6 +58,7 @@
 #include "PositionedLayoutConstraints.h"
 #include "RenderBoxInlines.h"
 #include "RenderElement.h"
+#include "RenderText.h"
 #include "RenderView.h"
 #include "ResolvedStyle.h"
 #include "SelectPopoverElement.h"

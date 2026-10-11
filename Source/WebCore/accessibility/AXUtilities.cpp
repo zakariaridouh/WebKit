@@ -39,6 +39,7 @@
 #include "HTMLNames.h"
 #include "Node.h"
 #include "RenderImage.h"
+#include "RenderObjectNode.h"
 #include "RenderStyleConstants.h"
 #include "RenderTreeBuilder.h"
 #include "SpaceSplitString.h"

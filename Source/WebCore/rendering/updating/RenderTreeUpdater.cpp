@@ -53,6 +53,7 @@
 #include "RenderObjectInlines.h"
 #include "RenderSVGInline.h"
 #include "RenderStyleConstants.h"
+#include "RenderText.h"
 #include "RenderTreeUpdaterGeneratedContent.h"
 #include "RenderTreeUpdaterViewTransition.h"
 #include "RenderView.h"

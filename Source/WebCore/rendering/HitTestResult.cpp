@@ -43,6 +43,7 @@
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
 #include "ImageOverlay.h"
+#include "InlineIteratorLineBox.h"
 #include "LocalFrame.h"
 #include "LocalFrameInlines.h"
 #include "OriginAccessPatterns.h"
