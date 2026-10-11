@@ -66,16 +66,11 @@ void FlexIntegrationUtils::applyStretchedLogicalHeightToFlexItem(const FlexLayou
     // FIXME: This is fragile. RenderBoxes should be smart enough to determine their content logical height
     // correctly even when there's an overrideHeight.
     auto canSetFlexItemContentLogicalHeight = !is<RenderReplaced>(renderer) && !renderer->shouldComputeLogicalHeightFromAspectRatio();
-    if (!canSetFlexItemContentLogicalHeight) {
-        dirtyPercentHeightDescendantsWithinFlexItem(renderer);
-        layoutFlexItemForStretchedCrossSize(flexLayoutItem, blockSize, LogicalBoxAxis::Block);
-        return;
-    }
-
-    auto contentLogicalHeight = flexItemContentLogicalHeight(flexLayoutItem);
+    auto contentLogicalHeight = canSetFlexItemContentLogicalHeight ? std::make_optional(flexItemContentLogicalHeight(flexLayoutItem)) : std::nullopt;
     dirtyPercentHeightDescendantsWithinFlexItem(renderer);
     layoutFlexItemForStretchedCrossSize(flexLayoutItem, blockSize, LogicalBoxAxis::Block);
-    m_flexItemContentCache.setContentLogicalHeight(renderer, contentLogicalHeight);
+    if (contentLogicalHeight)
+        m_flexItemContentCache.setContentLogicalHeight(renderer, *contentLogicalHeight);
 }
 
 void FlexIntegrationUtils::layoutFlexItemForStretchedCrossSize(const FlexLayoutItem& flexLayoutItem, LayoutUnit crossSize, LogicalBoxAxis crossAxis)

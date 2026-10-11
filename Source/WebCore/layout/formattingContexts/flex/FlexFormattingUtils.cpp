@@ -489,20 +489,22 @@ LayoutUnit FlexFormattingUtils::columnInnerMainSize(LayoutUnit hypotheticalMainS
 
 FlowDirection FlexFormattingUtils::crossAxisDirection() const
 {
-    auto crossAxisDirection = flexBox().style().isRowFlexDirection() ? flexBox().writingMode().blockDirection() : flexBox().writingMode().inlineDirection();
+    auto crossAxisDirection = transformedBlockFlowDirection();
+    if (!isWrapReverse(flexBox()))
+        return crossAxisDirection;
+    // wrap-reverse swaps the cross-start and cross-end edges.
     switch (crossAxisDirection) {
     case FlowDirection::TopToBottom:
-        return isWrapReverse(flexBox()) ? FlowDirection::BottomToTop : FlowDirection::TopToBottom;
+        return FlowDirection::BottomToTop;
     case FlowDirection::BottomToTop:
-        return isWrapReverse(flexBox()) ? FlowDirection::TopToBottom : FlowDirection::BottomToTop;
-    case FlowDirection::LeftToRight:
-        return isWrapReverse(flexBox()) ? FlowDirection::RightToLeft : FlowDirection::LeftToRight;
-    case FlowDirection::RightToLeft:
-        return isWrapReverse(flexBox()) ? FlowDirection::LeftToRight : FlowDirection::RightToLeft;
-    default:
-        ASSERT_NOT_REACHED();
         return FlowDirection::TopToBottom;
+    case FlowDirection::LeftToRight:
+        return FlowDirection::RightToLeft;
+    case FlowDirection::RightToLeft:
+        return FlowDirection::LeftToRight;
     }
+    ASSERT_NOT_REACHED();
+    return crossAxisDirection;
 }
 
 bool FlexFormattingUtils::isColumnOrRowReverse() const
@@ -553,7 +555,7 @@ FlowDirection FlexFormattingUtils::transformedBlockFlowDirection() const
 bool FlexFormattingUtils::isLeftToRightFlow() const
 {
     if (isColumnFlow(flexBox()))
-        return flexBox().writingMode().blockDirection() == FlowDirection::TopToBottom || flexBox().writingMode().blockDirection() == FlowDirection::LeftToRight;
+        return !flexBox().writingMode().isBlockFlipped();
     return flexBox().writingMode().isLogicalLeftInlineStart() ^ (flexBox().style().flexDirection() == FlexDirection::RowReverse);
 }
 
