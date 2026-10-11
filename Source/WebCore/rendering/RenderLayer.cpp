@@ -3411,7 +3411,7 @@ void RenderLayer::paintLayer(GraphicsContext& context, const LayerPaintingInfo& 
         return;
     }
 
-    if (auto* recorder = canvasDrawableRecorder(*this, context)) {
+    if (RefPtr recorder = canvasDrawableRecorder(*this, context)) {
         paintLayerWithEffects(*recorder, paintingInfo, paintFlags);
         return;
     }
