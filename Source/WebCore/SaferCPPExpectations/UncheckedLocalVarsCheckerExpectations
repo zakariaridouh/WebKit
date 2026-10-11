@@ -1,42 +1,14 @@
-[ macOS ] Modules/mediastream/UserMediaRequest.cpp
-[ macOS ] Modules/permissions/Permissions.cpp
-[ macOS ] Modules/push-api/PushManager.cpp
-[ macOS ] Modules/storage/WorkerStorageConnection.cpp
 [ macOS ] accessibility/AXObjectCache.cpp
-[ macOS ] accessibility/AXTableHelpers.cpp
 [ macOS ] accessibility/AccessibilityObject.cpp
-[ macOS ] bindings/js/InternalReadableStreamDefaultReader.cpp
-[ macOS ] bindings/js/InternalWritableStreamWriter.cpp
-[ macOS ] bindings/js/JSDOMConvertUnion.h
-[ macOS ] bindings/js/JSDOMWrapperCache.h
-[ macOS ] css/query/MediaQueryFeatures.cpp
-[ macOS ] css/typedom/DeclaredStylePropertyMap.cpp
-[ macOS ] css/typedom/InlineStylePropertyMap.cpp
-[ macOS ] dom/DataTransfer.cpp
 dom/Document.cpp
 dom/Position.cpp
 [ macOS ] dom/PositionIterator.cpp
-[ macOS ] dom/Range.cpp
 [ macOS ] dom/ViewTransition.cpp
-[ macOS ] dom/WindowEventLoop.cpp
-[ macOS ] editing/ApplyStyleCommand.cpp
-[ macOS ] editing/Editing.cpp
 [ macOS ] editing/FrameSelection.cpp
 [ macOS ] html/HTMLFormElement.cpp
-[ macOS ] html/HTMLMediaElement.cpp
-[ macOS ] html/HTMLSelectedContentElement.cpp
-[ macOS ] html/HTMLSummaryElement.cpp
-[ macOS ] html/HTMLTextFormControlElement.cpp
-[ macOS ] html/MediaElementSession.cpp
 [ macOS ] html/canvas/CanvasRenderingContext2D.cpp
 [ macOS ] html/canvas/WebGLRenderingContextBase.cpp
 [ macOS ] html/track/TextTrackList.cpp
-[ macOS ] html/track/VTTCue.cpp
-[ macOS ] inspector/InspectorOverlay.cpp
-[ macOS ] inspector/agents/InspectorCSSAgent.cpp
-[ macOS ] inspector/agents/InspectorIndexedDBAgent.cpp
-[ macOS ] inspector/agents/frame/FrameCSSAgent.cpp
-[ macOS ] inspector/agents/page/PageDOMDebuggerAgent.cpp
 layout/formattingContexts/FormattingGeometry.cpp
 [ macOS ] layout/formattingContexts/block/BlockFormattingContext.cpp
 [ macOS ] layout/formattingContexts/block/BlockFormattingGeometry.cpp
@@ -55,14 +27,10 @@ layout/integration/LayoutIntegrationBoxTreeUpdater.cpp
 [ macOS ] layout/integration/inline/LayoutIntegrationInlineContentBuilder.cpp
 layout/integration/inline/LayoutIntegrationLineLayout.cpp
 [ macOS ] layout/layouttree/LayoutTreeBuilder.cpp
-[ macOS ] mathml/MathMLSelectElement.cpp
-[ macOS ] page/EventHandler.cpp
 [ macOS ] page/InteractionRegion.cpp
 [ macOS ] page/LocalFrameView.cpp
 [ macOS ] page/LocalFrameViewLayoutContext.cpp
 [ macOS ] page/PointerCaptureController.cpp
-[ macOS ] page/scrolling/ScrollLatchingController.cpp
-[ macOS ] platform/graphics/Path.cpp
 rendering/AutoTableLayout.cpp
 rendering/BackgroundPainter.cpp
 rendering/CounterNode.cpp
@@ -196,5 +164,3 @@ style/values/grid/StyleGridPositionsResolver.cpp
 style/values/images/kinds/StyleCanvasImage.cpp
 style/values/primitives/StyleLengthResolution.cpp
 workers/WorkerGlobalScope.cpp
-[ macOS ] workers/service/ServiceWorkerWindowClient.cpp
-[ macOS ] workers/service/context/SWContextManager.cpp
