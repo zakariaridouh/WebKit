@@ -183,21 +183,6 @@ WI.SearchSidebarPanel = class SearchSidebarPanel extends WI.NavigationSidebarPan
             }
         };
 
-        function forEachMatch(lineContent, callback)
-        {
-            searchRegex.lastIndex = 0;
-
-            var lineMatch;
-            while ((searchRegex.lastIndex < lineContent.length) && (lineMatch = searchRegex.exec(lineContent))) {
-                if (lineMatch.index === searchRegex.lastIndex) {
-                    ++searchRegex.lastIndex;
-                    continue;
-                }
-
-                callback(lineMatch, searchRegex.lastIndex);
-            }
-        }
-
         let resourceCallback = (frameId, url, {result}) => {
             if (!result || !result.length)
                 return;
@@ -212,8 +197,9 @@ WI.SearchSidebarPanel = class SearchSidebarPanel extends WI.NavigationSidebarPan
 
             let searchMatchObjects = [];
             for (let match of result) {
-                forEachMatch(match.lineContent, (lineMatch, lastIndex) => {
-                    searchMatchObjects.push(new WI.SourceCodeSearchMatchObject(resource, match.lineContent, searchQuery, new WI.TextRange(match.lineNumber, lineMatch.index, match.lineNumber, lastIndex)));
+                WI.SearchUtilities.forEachMatch(searchRegex, match.lineContent, (lineMatch) => {
+                    let textRange = new WI.TextRange(match.lineNumber, lineMatch.index, match.lineNumber, lineMatch.index + lineMatch[0].length);
+                    searchMatchObjects.push(new WI.SourceCodeSearchMatchObject(resource, match.lineContent, searchQuery, textRange));
                 });
             }
             if (!searchMatchObjects.length)
@@ -257,8 +243,9 @@ WI.SearchSidebarPanel = class SearchSidebarPanel extends WI.NavigationSidebarPan
 
             let searchMatchObjects = [];
             for (let match of result) {
-                forEachMatch(match.lineContent, (lineMatch, lastIndex) => {
-                    searchMatchObjects.push(new WI.SourceCodeSearchMatchObject(script, match.lineContent, searchQuery, new WI.TextRange(match.lineNumber, lineMatch.index, match.lineNumber, lastIndex)));
+                WI.SearchUtilities.forEachMatch(searchRegex, match.lineContent, (lineMatch) => {
+                    let textRange = new WI.TextRange(match.lineNumber, lineMatch.index, match.lineNumber, lineMatch.index + lineMatch[0].length);
+                    searchMatchObjects.push(new WI.SourceCodeSearchMatchObject(script, match.lineContent, searchQuery, textRange));
                 });
             }
             if (!searchMatchObjects.length)
@@ -297,8 +284,9 @@ WI.SearchSidebarPanel = class SearchSidebarPanel extends WI.NavigationSidebarPan
 
                 // Textual matches.
                 var didFindTextualMatch = false;
-                forEachMatch(domNodeTitle, (lineMatch, lastIndex) => {
-                    searchMatchObjects.push(new WI.DOMSearchMatchObject(resource, domNode, domNodeTitle, searchQuery, new WI.TextRange(0, lineMatch.index, 0, lastIndex)));
+                WI.SearchUtilities.forEachMatch(searchRegex, domNodeTitle, (lineMatch) => {
+                    let textRange = new WI.TextRange(0, lineMatch.index, 0, lineMatch.index + lineMatch[0].length);
+                    searchMatchObjects.push(new WI.DOMSearchMatchObject(resource, domNode, domNodeTitle, searchQuery, textRange));
                     didFindTextualMatch = true;
                 });
 
