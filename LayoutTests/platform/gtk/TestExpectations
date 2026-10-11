@@ -1295,7 +1295,7 @@ webkit.org/b/324838 inspector/timeline/setInstruments-programmatic-capture.html 
 webkit.org/b/324838 inspector/timeline/timeline-event-EventDispatch.html [ Crash Pass ]
 webkit.org/b/324838 inspector/timeline/timeline-event-FireAnimationFrame.html [ Crash Pass ]
 webkit.org/b/324838 inspector/timeline/timeline-event-RequestAnimationFrame.html [ Crash Pass ]
-webkit.org/b/324838 inspector/timeline/timeline-event-TimerFire.html [ Crash Pass ]
+webkit.org/b/302413 webkit.org/b/324838 inspector/timeline/timeline-event-TimerFire.html [ Crash Failure Pass ]
 webkit.org/b/324838 inspector/timeline/timeline-event-TimerRemove.html [ Crash Pass ]
 webkit.org/b/324838 inspector/timeline/timeline-recording-autocapture.html [ Crash Pass ]
 webkit.org/b/324838 inspector/timeline/timeline-recording.html [ Crash Pass ]
