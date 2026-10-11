@@ -543,11 +543,12 @@ void JIT::emit_op_iterator_next(const JSInstruction* instruction)
     emitGetVirtualRegister(bytecode.m_iterable, scratch1GPR);
     loadPtr(Address(scratch1GPR, JSString::offsetOfValue()), scratch1GPR);
     stringSlowCases.append(branchIfRopeStringImpl(scratch1GPR));
-    stringSlowCases.append(branchTest32(Zero, Address(scratch1GPR, StringImpl::flagsOffset()), TrustedImm32(StringImpl::flagIs8Bit())));
     stringSlowCases.append(branch32(AboveOrEqual, indexGPR, Address(scratch1GPR, StringImpl::lengthMemoryOffset())));
-    loadPtr(Address(scratch1GPR, StringImpl::dataOffset()), scratch1GPR);
+    loadPtr(Address(scratch1GPR, StringImpl::dataOffset()), valueGPR);
     zeroExtend32ToWord(indexGPR, indexGPR);
-    load8(BaseIndex(scratch1GPR, indexGPR, TimesOne), valueGPR);
+    Jump is16Bit = branchTest32(Zero, Address(scratch1GPR, StringImpl::flagsOffset()), TrustedImm32(StringImpl::flagIs8Bit()));
+    load8(BaseIndex(valueGPR, indexGPR, TimesOne), valueGPR);
+    Label haveCharacter = label();
     move(TrustedImmPtr(vm().smallStrings.singleCharacterStrings()), scratch1GPR);
     loadPtr(BaseIndex(scratch1GPR, valueGPR, ScalePtr), valueGPR);
 
@@ -561,6 +562,10 @@ void JIT::emit_op_iterator_next(const JSInstruction* instruction)
     boxInt32(indexGPR, indexGPR);
     emitPutVirtualRegister(bytecode.m_next, indexGPR);
     doneCases.append(jump());
+
+    is16Bit.link(this);
+    load16(BaseIndex(valueGPR, indexGPR, TimesTwo), valueGPR);
+    branch32(BelowOrEqual, valueGPR, TrustedImm32(maxSingleCharacterString)).linkTo(haveCharacter, this);
 
     stringSlowCases.link(this);
     {
