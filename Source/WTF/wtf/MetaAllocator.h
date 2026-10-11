@@ -190,7 +190,7 @@ private:
     size_t NODELETE roundUp(size_t sizeInBytes);
     
     FreeSpaceNode* NODELETE allocFreeSpaceNode();
-    WTF_EXPORT_PRIVATE void NODELETE freeFreeSpaceNode(CheckedPtr<FreeSpaceNode>&&);
+    WTF_EXPORT_PRIVATE void freeFreeSpaceNode(CheckedPtr<FreeSpaceNode>&&);
     
     size_t m_allocationGranule;
     size_t m_pageSize;

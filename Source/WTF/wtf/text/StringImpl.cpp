@@ -126,9 +126,9 @@ StringImpl::~StringImpl()
     if (isAtom()) {
         ASSERT(!isSymbol());
         if (length())
-            AtomStringImpl::remove(static_cast<AtomStringImpl*>(this));
+            AtomStringImpl::remove(uncheckedDowncast<AtomStringImpl>(this));
     } else if (isSymbol()) {
-        auto& symbol = static_cast<SymbolImpl&>(*this);
+        auto& symbol = uncheckedDowncast<SymbolImpl>(*this);
         if (CheckedPtr symbolRegistry = symbol.symbolRegistry())
             SUPPRESS_UNCOUNTED_ARG symbolRegistry->remove(*symbol.asRegisteredSymbolImpl());
     }
@@ -142,7 +142,7 @@ StringImpl::~StringImpl()
         StringImplMalloc::free(const_cast<Latin1Character*>(m_data8));
         break;
     case BufferExternal: {
-        auto* external = static_cast<ExternalStringImpl*>(this);
+        auto* external = uncheckedDowncast<ExternalStringImpl>(this);
         external->freeExternalBuffer(const_cast<Latin1Character*>(m_data8), sizeInBytes());
         external->m_free.~ExternalStringImplFreeFunction();
         break;

@@ -109,7 +109,7 @@ public:
         requires (std::is_same_v<TargetTime, DerivedTime>)
     inline DerivedTime approximate() const
     {
-        return *reinterpret_cast<const DerivedTime*>(this);
+        return *static_cast<const DerivedTime*>(this);
     }
 
     template<typename TargetTime>
@@ -118,7 +118,7 @@ public:
     {
         if (isInfinity())
             return TargetTime::fromRawSeconds(m_value);
-        return *reinterpret_cast<const DerivedTime*>(this) - DerivedTime::now() + TargetTime::now();
+        return *static_cast<const DerivedTime*>(this) - DerivedTime::now() + TargetTime::now();
     }
 
 protected:

@@ -281,7 +281,7 @@ inline AtomString String::toExistingAtomString() const
     if (isNull())
         return { };
     if (impl()->isAtom())
-        return Ref { static_cast<AtomStringImpl&>(*impl()) };
+        return Ref { uncheckedDowncast<AtomStringImpl>(*impl()) };
     return AtomStringImpl::lookUp(impl());
 }
 

@@ -1475,21 +1475,21 @@ inline bool String::containsIgnoringASCIICase(StringView string, unsigned start)
 
 [[nodiscard]] inline String makeStringByReplacingAll(const String& string, StringView target, StringView replacement)
 {
-    if (auto* impl = string.impl())
+    if (RefPtr impl = string.impl())
         return String { impl->replace(target, replacement) };
     return string;
 }
 
 [[nodiscard]] inline String makeStringByReplacing(const String& string, unsigned start, unsigned length, StringView replacement)
 {
-    if (auto* impl = string.impl())
+    if (RefPtr impl = string.impl())
         return String { impl->replace(start, length, replacement) };
     return string;
 }
 
 [[nodiscard]] inline String makeStringByReplacingAll(const String& string, char16_t target, StringView replacement)
 {
-    if (auto* impl = string.impl())
+    if (RefPtr impl = string.impl())
         return String { impl->replace(target, replacement) };
     return string;
 }

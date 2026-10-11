@@ -468,20 +468,23 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
 
 } // anonymous namespace
 
+// Values tagged as objects or arrays are always ObjectBase or ArrayBase, which are layout compatible with Object and Array.
 template<typename Visitor> constexpr decltype(auto) Value::visitDerived(NOESCAPE const Visitor& visitor)
 {
     if (std::holds_alternative<ObjectTypeTag>(m_value))
-        return std::invoke(visitor, static_cast<Object&>(*this));
+        SUPPRESS_MEMORY_UNSAFE_CAST return std::invoke(visitor, static_cast<Object&>(*this));
     if (std::holds_alternative<ArrayTypeTag>(m_value))
-        return std::invoke(visitor, static_cast<Array&>(*this));
-    return std::invoke(visitor, static_cast<Value&>(*this));
+        SUPPRESS_MEMORY_UNSAFE_CAST return std::invoke(visitor, static_cast<Array&>(*this));
+    return std::invoke(visitor, *this);
 }
 
 template<typename Visitor> constexpr decltype(auto) Value::visitDerived(NOESCAPE const Visitor& visitor) const
 {
-    return const_cast<Value&>(*this).visitDerived([&](auto& derived) {
-        return std::invoke(visitor, std::as_const(derived));
-    });
+    if (std::holds_alternative<ObjectTypeTag>(m_value))
+        SUPPRESS_MEMORY_UNSAFE_CAST return std::invoke(visitor, static_cast<const Object&>(*this));
+    if (std::holds_alternative<ArrayTypeTag>(m_value))
+        SUPPRESS_MEMORY_UNSAFE_CAST return std::invoke(visitor, static_cast<const Array&>(*this));
+    return std::invoke(visitor, *this);
 }
 
 void Value::operator delete(Value* value, std::destroying_delete_t)

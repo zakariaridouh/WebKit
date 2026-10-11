@@ -482,14 +482,14 @@ inline char16_t String::codeUnitAt(unsigned index) const
 
 [[nodiscard]] inline String makeStringByReplacingAll(const String& string, char16_t target, char16_t replacement)
 {
-    if (auto impl = string.impl())
+    if (RefPtr impl = string.impl())
         return String { impl->replace(target, replacement) };
     return string;
 }
 
 [[nodiscard]] ALWAYS_INLINE String makeStringByReplacingAll(const String& string, char16_t target, ASCIILiteral literal)
 {
-    if (auto impl = string.impl())
+    if (RefPtr impl = string.impl())
         return String { impl->replace(target, literal.span8()) };
     return string;
 }
