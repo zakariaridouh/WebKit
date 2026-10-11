@@ -196,6 +196,5 @@ style/values/grid/StyleGridPositionsResolver.cpp
 style/values/images/kinds/StyleCanvasImage.cpp
 style/values/primitives/StyleLengthResolution.cpp
 workers/WorkerGlobalScope.cpp
-workers/WorkerOrWorkletThread.cpp
 [ macOS ] workers/service/ServiceWorkerWindowClient.cpp
 [ macOS ] workers/service/context/SWContextManager.cpp

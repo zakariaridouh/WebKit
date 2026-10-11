@@ -26,6 +26,7 @@
 #import <JavaScriptCore/JSCJSValue.h>
 #import <WebCore/WebScriptObject.h>
 #import <wtf/RefPtr.h>
+#import <wtf/RetainPtr.h>
 
 namespace JSC {
     class JSObject;
@@ -79,5 +80,11 @@ WEBCORE_EXPORT @interface WebScriptObjectPrivate : NSObject
     SUPPRESS_UNCOUNTED_MEMBER JSC::Bindings::RootObject* rootObject;
     SUPPRESS_UNCOUNTED_MEMBER JSC::Bindings::RootObject* originRootObject;
     BOOL isCreatedByDOMWrapper;
+}
+@end
+
+@interface WebScriptObject () {
+@public // Accessed by WebKitLegacy.
+    RetainPtr<WebScriptObjectPrivate> _private;
 }
 @end

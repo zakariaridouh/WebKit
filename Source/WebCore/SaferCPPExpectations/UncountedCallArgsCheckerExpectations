@@ -209,7 +209,6 @@ dom/ViewTransition.cpp
 [ macOS ] page/EventHandler.cpp
 [ macOS ] page/IntelligenceTextEffectsSupport.cpp
 [ macOS ] page/InteractionRegion.cpp
-page/IntersectionObserver.cpp
 [ macOS ] page/LocalDOMWindow.cpp
 [ macOS ] page/LocalFrameView.cpp
 [ macOS ] page/NavigateEvent.cpp

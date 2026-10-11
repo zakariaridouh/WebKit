@@ -236,7 +236,7 @@ void disconnectWindowWrapper(WebScriptObject *windowWrapper)
     ASSERT(imp);
 
     self = [super init];
-    _private = [[WebScriptObjectPrivate alloc] init];
+    _private = adoptNS([[WebScriptObjectPrivate alloc] init]);
     [self _setImp:imp originRootObject:WTF::move(originRootObject) rootObject:WTF::move(rootObject)];
     
     return self;
@@ -325,8 +325,6 @@ void disconnectWindowWrapper(WebScriptObject *windowWrapper)
 
     if (_private->originRootObject)
         _private->originRootObject->deref();
-
-    [_private release];
 
     [super dealloc];
 }

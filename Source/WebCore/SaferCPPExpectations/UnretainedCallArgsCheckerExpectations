@@ -1,4 +1,3 @@
-bridge/objc/WebScriptObject.mm
 [ macOS ] page/scrolling/ScrollingStateNode.h
 [ macOS ] platform/audio/cocoa/PlatformRawAudioDataCocoa.cpp
 [ macOS ] platform/cocoa/LocalCurrentGraphicsContext.h

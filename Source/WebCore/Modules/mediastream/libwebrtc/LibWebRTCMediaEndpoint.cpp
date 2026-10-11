@@ -70,8 +70,11 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/MainThread.h>
 #include <wtf/SetForScope.h>
 #include <wtf/SharedTask.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCMediaEndpoint);
 
 static void NODELETE prepareConfiguration(webrtc::PeerConnectionInterface::RTCConfiguration& configuration)
 {

@@ -197,7 +197,6 @@ layout/layouttree/LayoutTreeBuilder.cpp
 [ macOS ] page/ElementTargetingController.cpp
 [ macOS ] page/EventHandler.cpp
 [ macOS ] page/IntelligenceTextEffectsSupport.cpp
-page/IntersectionObserver.cpp
 [ macOS ] page/LocalFrameView.cpp
 [ macOS ] page/LocalFrameViewLayoutContext.cpp
 [ macOS ] page/ResizeObserver.cpp

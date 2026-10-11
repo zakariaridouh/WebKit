@@ -49,8 +49,10 @@ IGNORE_CLANG_WARNINGS_END
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
+#include <wtf/CheckedRef.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace webrtc {
@@ -74,12 +76,15 @@ struct LibWebRTCMediaEndpointTransceiverState;
 
 class LibWebRTCMediaEndpoint final
     : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<LibWebRTCMediaEndpoint, WTF::DestructionThread::Main>
+    , public CanMakeThreadSafeCheckedPtr<LibWebRTCMediaEndpoint>
     , private webrtc::PeerConnectionObserver
     , private webrtc::RTCStatsCollectorCallback
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
 {
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCMediaEndpoint);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LibWebRTCMediaEndpoint);
 public:
     static RefPtr<LibWebRTCMediaEndpoint> create(RTCPeerConnection&, LibWebRTCProvider&, Document&, webrtc::PeerConnectionInterface::RTCConfiguration&&, bool shouldEnableServiceClass);
     ~LibWebRTCMediaEndpoint();

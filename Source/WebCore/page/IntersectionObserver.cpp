@@ -537,7 +537,7 @@ auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRe
             intersectionState.absoluteIntersectionRect = rootAbsoluteIntersectionRect;
         else {
             auto rootViewIntersectionRect = hostFrameView.contentsToView(rootAbsoluteIntersectionRect);
-            intersectionState.absoluteIntersectionRect = targetRenderer->view().frameView().rootViewToContentsAcrossIsolatedFrames(rootViewIntersectionRect);
+            intersectionState.absoluteIntersectionRect = protect(targetRenderer->view().frameView())->rootViewToContentsAcrossIsolatedFrames(rootViewIntersectionRect);
         }
 
         intersectionState.isIntersecting = intersectionState.absoluteIntersectionRect->edgeInclusiveIntersect(*intersectionState.absoluteTargetRect);
@@ -747,12 +747,12 @@ bool IntersectionObserver::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& 
     }
 
     for (auto& target : m_pendingTargets) {
-        if (containsWebCoreOpaqueRoot(visitor, target.get()))
+        SUPPRESS_UNCOUNTED_ARG SUPPRESS_UNCHECKED_ARG if (containsWebCoreOpaqueRoot(visitor, target.get()))
             return true;
     }
 
     for (auto& target : m_targetsWaitingForFirstObservation) {
-        if (containsWebCoreOpaqueRoot(visitor, target.get()))
+        SUPPRESS_UNCOUNTED_ARG SUPPRESS_UNCHECKED_ARG if (containsWebCoreOpaqueRoot(visitor, target.get()))
             return true;
     }
 

@@ -343,12 +343,12 @@ public:
     unsigned NODELETE metalAppleGPUFamily() const { return m_deviceState.appleGPUFamily; }
     bool NODELETE shaderValidationEnabled() const { return m_deviceState.shaderValidationEnabled; }
 
-    ASCIILiteral NODELETE declareForwardProgress() const
+    ASCIILiteral declareForwardProgress() const
     {
         return metalAppleGPUFamily() < 9 ? DECLARE_FORWARD_PROGRESS_VOLATILE_ACCESS : DECLARE_FORWARD_PROGRESS_VOLATILE_COUNTER;
     }
 
-    ASCIILiteral NODELETE checkForwardProgress() const
+    ASCIILiteral checkForwardProgress() const
     {
         return metalAppleGPUFamily() < 9 ? CHECK_FORWARD_PROGRESS_VOLATILE_ACCESS : CHECK_FORWARD_PROGRESS_VOLATILE_COUNTER;
     }
@@ -358,7 +358,7 @@ private:
     void serializeVariable(AST::Variable&);
     void generatePackingHelpers(AST::Structure&);
     bool emitPackedVector(const Types::Vector&, bool shouldPack);
-    bool NODELETE shouldForceInlining(AST::Function&) const;
+    bool shouldForceInlining(AST::Function&) const;
 
     bool outlineConstant(const Type*, AST::Expression&);
     void serializeConstant(const Type*, ConstantValue);

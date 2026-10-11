@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ASTForward.h"
+#include "ASTStructure.h"
 #include "CompilationMessage.h"
 #include "WGSLEnums.h"
 #include <array>

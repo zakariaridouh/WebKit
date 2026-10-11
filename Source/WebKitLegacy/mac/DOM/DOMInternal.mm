@@ -95,7 +95,7 @@ void removeDOMWrapper(void* impl)
         return nil;
     }
 
-    _private = [[WebScriptObjectPrivate alloc] init];
+    _private = adoptNS([[WebScriptObjectPrivate alloc] init]);
     _private->isCreatedByDOMWrapper = YES;
     
     return self;
