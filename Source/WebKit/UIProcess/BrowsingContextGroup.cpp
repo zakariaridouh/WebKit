@@ -524,6 +524,7 @@ WebCore::AgentClusterAssignment BrowsingContextGroup::assignAgentCluster(const A
     }
 
     // FIXME: Assign opaque origins an agent cluster too. Their responses can then no longer skip the policy decision through the injected bundle.
+    // A blob URL created by an opaque origin belongs to its creator's agent cluster, which needs the blob URL entry rather than the URL.
     if (origin.isOpaque())
         return assignment;
 

@@ -98,6 +98,7 @@ imported/w3c/web-platform-tests/svg/painting/reftests/non-scaling-stroke-with-no
 
 # Document-Isolation-Policy is partially implemented.
 imported/w3c/web-platform-tests/html/document-isolation-policy/agent-cluster.tentative.https.html [ Pass ]
+imported/w3c/web-platform-tests/html/document-isolation-policy/blob-document-inherits-policy.tentative.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/header-parsing.tentative.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp-load-from-cache-storage.tentative.https.html [ Pass ]
 imported/w3c/web-platform-tests/html/document-isolation-policy/isolate-and-require-corp.tentative.https.html [ Pass ]

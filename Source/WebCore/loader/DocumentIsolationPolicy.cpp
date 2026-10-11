@@ -34,7 +34,8 @@ namespace WebCore {
 
 DocumentIsolationPolicy obtainDocumentIsolationPolicy(const ResourceResponse& response, IsSecureContext isSecureContext)
 {
-    if (isSecureContext == IsSecureContext::No)
+    // FIXME: Get the blob URL entry's policy container directly instead of reading the headers it is reflected as.
+    if (isSecureContext == IsSecureContext::No && !response.url().protocolIsBlob())
         return DocumentIsolationPolicy::None;
 
     auto parsedItem = RFC8941::parseItemStructuredFieldValue(response.httpHeaderField(HTTPHeaderName::DocumentIsolationPolicy));
