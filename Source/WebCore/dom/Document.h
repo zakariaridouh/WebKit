@@ -2259,6 +2259,8 @@ private:
     void invalidateAccessKeyCacheSlowCase();
     void buildAccessKeyCache();
 
+    void styleRecalcTimerFired();
+
     void intersectionObserversInitialUpdateTimerFired();
 
     void loadEventDelayTimerFired();

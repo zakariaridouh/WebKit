@@ -151,10 +151,9 @@ MediaPlayerPrivateMediaStreamAVFObjC::MediaPlayerPrivateMediaStreamAVFObjC(Media
 {
     INFO_LOG(LOGIDENTIFIER);
     // MediaPlayerPrivateMediaStreamAVFObjC::processNewVideoFrame expects a weak pointer to be created in the constructor.
-    lazyInitialize(m_boundsChangeListener, adoptNS([[WebRootSampleBufferBoundsChangeListener alloc] initWithCallback:[this, weakThis = WeakPtr { *this }] {
-        if (!weakThis)
-            return;
-        rootLayerBoundsDidChange();
+    lazyInitialize(m_boundsChangeListener, adoptNS([[WebRootSampleBufferBoundsChangeListener alloc] initWithCallback:[weakThis = WeakPtr { *this }] {
+        if (RefPtr protectedThis = weakThis)
+            protectedThis->rootLayerBoundsDidChange();
     }]));
 }
 

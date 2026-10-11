@@ -83,6 +83,8 @@ public:
     private:
         FullGCActivityCallback(JSC::Heap&);
 
+        UniqueRef<RunLoopObserver> createRunLoopObserver();
+
         JSC::VM& m_vm;
         const UniqueRef<RunLoopObserver> m_runLoopObserver;
         JSC::HeapVersion m_version { 0 };
@@ -102,6 +104,8 @@ public:
 
     private:
         EdenGCActivityCallback(JSC::Heap&);
+
+        UniqueRef<RunLoopObserver> createRunLoopObserver();
 
         JSC::VM& m_vm;
         const UniqueRef<RunLoopObserver> m_runLoopObserver;

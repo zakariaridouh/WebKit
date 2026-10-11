@@ -688,7 +688,7 @@ Document::Document(LocalFrame* frame, const Settings& settings, const URL& url, 
     , m_creationURL(url)
     , m_domTreeVersion(++s_globalTreeVersion)
     , m_styleScope(makeUniqueRef<Style::DocumentScope>(*this))
-    , m_styleRecalcTimer([this] { Ref { *this }->updateStyleIfNeeded(); })
+    , m_styleRecalcTimer(*this, &Document::styleRecalcTimerFired)
 #if !LOG_DISABLED
     , m_documentCreationTime(MonotonicTime::now())
 #endif
@@ -3033,6 +3033,11 @@ bool Document::needsStyleRecalc() const
         return true;
 
     return false;
+}
+
+void Document::styleRecalcTimerFired()
+{
+    updateStyleIfNeeded();
 }
 
 bool Document::updateStyleIfNeeded()

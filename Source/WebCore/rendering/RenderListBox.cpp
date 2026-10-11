@@ -130,24 +130,21 @@ void RenderListBox::updateFromElement()
         std::optional<FontCascade> boldFont;
         for (auto& element : protect(selectElement())->listItems()) {
             String text;
-            Function<const FontCascade&()> selectFont = [&normalFont] () -> const FontCascade& {
-                return normalFont;
-            };
+            bool isGroupLabel = false;
             if (RefPtr optionElement = dynamicDowncast<HTMLOptionElement>(element.get()))
                 text = optionElement->textIndentedToRespectGroupLabel();
             else if (RefPtr optGroupElement = dynamicDowncast<HTMLOptGroupElement>(element.get())) {
                 text = optGroupElement->groupLabelText();
-                selectFont = [this, &normalFont, &boldFont] () -> const FontCascade& {
-                    if (!boldFont)
-                        boldFont = bolder(protect(document()), normalFont);
-                    return boldFont.value();
-                };
+                isGroupLabel = true;
             }
             if (text.isEmpty())
                 continue;
+            if (isGroupLabel && !boldFont)
+                boldFont = bolder(protect(document()), normalFont);
+            auto& font = isGroupLabel ? boldFont.value() : normalFont;
             text = applyTextTransform(style(), text);
             auto textRun = constructTextRun(text, style(), ExpansionBehavior::allowRightOnly());
-            logicalWidth = std::max(logicalWidth, selectFont().width(textRun));
+            logicalWidth = std::max(logicalWidth, font.width(textRun));
         }
         // FIXME: Is ceiling right here, or should we be doing some kind of rounding instead?
         m_optionsLogicalWidth = static_cast<int>(std::ceil(logicalWidth));

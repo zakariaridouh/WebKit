@@ -145,9 +145,10 @@ AudioContext::AudioContext(Document& document, const AudioContextOptions& contex
     // Unlike OfflineAudioContext, AudioContext does not require calling resume() to start rendering.
     // Lazy initialization starts rendering so we schedule a task here to make sure lazy initialization
     // ends up happening, even if no audio node gets constructed.
-    postTask([this, pendingActivity = makePendingActivity(*this)] {
-        if (!isStopped())
-            lazyInitialize();
+    postTask([pendingActivity = makePendingActivity(*this)] {
+        Ref protectedThis = pendingActivity->object();
+        if (!protectedThis->isStopped())
+            protectedThis->lazyInitialize();
     });
 }
 

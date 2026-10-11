@@ -1,20 +1,7 @@
-[ macOS ] Modules/mediastream/RTCDTMFSender.cpp
-[ macOS ] Modules/webaudio/AudioContext.cpp
 css/values/CSSValueTypes+DeprecatedCSSOMValueCreation.h
-[ macOS ] dom/Document.cpp
-[ macOS ] page/OpportunisticTaskScheduler.cpp
-[ macOS ] page/Page.cpp
-[ macOS ] platform/audio/AudioDestinationResampler.cpp
-[ macOS ] platform/graphics/avfoundation/objc/LocalSampleBufferDisplayLayer.mm
-[ macOS ] platform/graphics/avfoundation/objc/MediaPlayerPrivateMediaStreamAVFObjC.mm
-[ macOS ] platform/graphics/cocoa/MediaPlayerPrivateWebM.mm
-[ macOS ] platform/mediastream/RealtimeIncomingVideoSource.cpp
-rendering/BorderPainter.cpp
 [ iOS ] rendering/RenderBox.cpp
 [ iOS ] rendering/RenderElement.cpp
-[ iOS ] rendering/RenderGrid.cpp
 [ iOS ] rendering/RenderLayer.cpp
-[ iOS ] rendering/RenderListBox.cpp
 [ iOS ] style/StyleCustomProperty.cpp
 [ iOS ] style/values/backgrounds/StyleFillLayers.h
 [ iOS ] style/values/images/StyleGradient.cpp

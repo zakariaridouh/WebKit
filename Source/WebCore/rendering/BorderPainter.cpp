@@ -974,11 +974,11 @@ void BorderPainter::drawLineForBoxSide(GraphicsContext& graphicsContext, const D
         graphicsContext.drawRect(rect);
     };
 
-    auto drawLineFor = [&graphicsContext, &document, color, antialias](const FloatRect& rect, BoxSide side, BorderStyle borderStyle, const FloatSize& adjacent)
+    auto drawLineFor = [&graphicsContext, protectedDocument = Ref { document }, color, antialias](const FloatRect& rect, BoxSide side, BorderStyle borderStyle, const FloatSize& adjacent)
     {
         if (rect.isEmpty())
             return;
-        drawLineForBoxSide(graphicsContext, document, rect, side, color, borderStyle, adjacent.width(), adjacent.height(), antialias);
+        drawLineForBoxSide(graphicsContext, protectedDocument, rect, side, color, borderStyle, adjacent.width(), adjacent.height(), antialias);
     };
 
     float x1 = rect.x();

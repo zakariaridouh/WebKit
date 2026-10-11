@@ -58,8 +58,9 @@ RTCDTMFSender::RTCDTMFSender(ScriptExecutionContext& context, RTCRtpSender& send
     , m_sender(sender)
     , m_backend(WTF::move(backend))
 {
-    m_backend->onTonePlayed([this] {
-        onTonePlayed();
+    m_backend->onTonePlayed([weakThis = WeakPtr { *this }] {
+        if (RefPtr protectedThis = weakThis)
+            protectedThis->onTonePlayed();
     });
 }
 
