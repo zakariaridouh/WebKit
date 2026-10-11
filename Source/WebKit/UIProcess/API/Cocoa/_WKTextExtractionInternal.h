@@ -102,6 +102,8 @@ typedef NS_ENUM(NSInteger, WKTextExtractionContainer) {
     WKTextExtractionContainerNav,
     WKTextExtractionContainerButton,
     WKTextExtractionContainerCanvas,
+    WKTextExtractionContainerVideo,
+    WKTextExtractionContainerAudio,
     WKTextExtractionContainerSubscript,
     WKTextExtractionContainerSuperscript,
     WKTextExtractionContainerStrikethrough,

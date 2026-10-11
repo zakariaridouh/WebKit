@@ -57,9 +57,11 @@
 #include "HTMLIFrameElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
 #include "HTMLSelectElement.h"
+#include "HTMLVideoElement.h"
 #include "HandleUserInputEventResult.h"
 #include "HighlightRegistry.h"
 #include "HitTestResult.h"
@@ -933,6 +935,13 @@ static inline Variant<SkipExtraction, ItemData, URL, Editable> extractItemData(N
 
     if (is<HTMLCanvasElement>(element))
         return { ItemData { ContainerType::Canvas } };
+
+    if (RefPtr media = dynamicDowncast<HTMLMediaElement>(element)) {
+        return { MediaItemData {
+            .type = is<HTMLVideoElement>(*media) ? MediaType::Video : MediaType::Audio,
+            .hasControls = media->controls(),
+        } };
+    }
 
     if (CheckedPtr box = dynamicDowncast<RenderBox>(node.renderer()); box && box->canBeScrolledAndHasScrollableArea()) {
         if (CheckedPtr layer = box->layer()) {

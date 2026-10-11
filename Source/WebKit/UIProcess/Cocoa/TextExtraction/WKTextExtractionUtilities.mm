@@ -241,6 +241,15 @@ inline static RetainPtr<WKTextExtractionItem> createItemWithChildren(const TextE
                 ariaAttributes:ariaAttributes.get()
                 accessibilityRole:accessibilityRole.get()
                 nodeIdentifier:nodeIdentifier.get()]);
+        }, [&](const TextExtraction::MediaItemData& data) -> RetainPtr<WKTextExtractionItem> {
+            return adoptNS([[WKTextExtractionContainerItem alloc]
+                initWithContainer:data.type == TextExtraction::MediaType::Video ? WKTextExtractionContainerVideo : WKTextExtractionContainerAudio
+                rectInWebView:rectInWebView
+                children:children
+                eventListeners:eventListeners
+                ariaAttributes:ariaAttributes.get()
+                accessibilityRole:accessibilityRole.get()
+                nodeIdentifier:nodeIdentifier.get()]);
         }, [&](TextExtraction::ContainerType type) -> RetainPtr<WKTextExtractionItem> {
             return adoptNS([[WKTextExtractionContainerItem alloc]
                 initWithContainer:containerType(type)

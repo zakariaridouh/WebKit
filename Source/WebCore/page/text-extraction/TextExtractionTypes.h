@@ -159,6 +159,13 @@ struct IFrameData {
     FrameIdentifier identifier;
 };
 
+enum class MediaType : bool { Video, Audio };
+
+struct MediaItemData {
+    MediaType type { MediaType::Video };
+    bool hasControls { false };
+};
+
 struct ContentEditableData {
     bool isPlainTextOnly { false };
     bool isFocused { false };
@@ -212,7 +219,7 @@ enum class ContainerType : uint8_t {
     Generic,
 };
 
-using ItemData = Variant<ContainerType, TextItemData, ScrollableItemData, ImageItemData, SelectData, ContentEditableData, TextFormControlData, FormData, LinkItemData, IFrameData>;
+using ItemData = Variant<ContainerType, TextItemData, ScrollableItemData, ImageItemData, SelectData, ContentEditableData, TextFormControlData, FormData, LinkItemData, IFrameData, MediaItemData>;
 
 struct Item {
     ItemData data;

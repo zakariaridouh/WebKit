@@ -1143,7 +1143,8 @@ static String jsonTypeStringForItem(const TextExtraction::Item& item, const Text
         },
         [](const TextExtraction::FormData&) -> String { return "form"_s; },
         [](const TextExtraction::LinkItemData&) -> String { return "link"_s; },
-        [](const TextExtraction::IFrameData&) -> String { return "iframe"_s; }
+        [](const TextExtraction::IFrameData&) -> String { return "iframe"_s; },
+        [](const TextExtraction::MediaItemData& mediaData) -> String { return mediaData.type == TextExtraction::MediaType::Video ? "video"_s : "audio"_s; }
     );
 }
 
@@ -1484,6 +1485,10 @@ static void populateJSONForItem(JSON::Object& jsonObject, const TextExtraction::
                 return;
             if (!iframeData.shortenedOrigin.isEmpty())
                 jsonObject.setString("origin"_s, iframeData.shortenedOrigin);
+        },
+        [&](const TextExtraction::MediaItemData& mediaData) {
+            if (mediaData.hasControls)
+                jsonObject.setBoolean("controls"_s, true);
         },
         [](auto) { }
     );
@@ -2010,6 +2015,25 @@ static void addPartsForItem(const TextExtraction::Item& item, std::optional<Node
                 }
             }
 
+            aggregator.addResult(line, WTF::move(parts), WTF::move(cachedParts));
+        },
+        [&](const TextExtraction::MediaItemData& mediaData) {
+            if (aggregator.useHTMLOutput()) {
+                auto attributes = partsForItem(item, aggregator, includeRectForParentItem).textForClient;
+                if (mediaData.hasControls)
+                    attributes.append("controls"_s);
+
+                if (attributes.isEmpty())
+                    parts.append(makeString('<', item.nodeName.convertToASCIILowercase(), '>'));
+                else
+                    parts.append(makeString('<', item.nodeName.convertToASCIILowercase(), ' ', makeStringByJoining(attributes, " "_s), '>'));
+            } else if (!aggregator.useMarkdownOutput()) {
+                appendBoth(mediaData.type == TextExtraction::MediaType::Video ? "video"_s : "audio"_s);
+                appendItemParts();
+
+                if (mediaData.hasControls)
+                    appendBoth("controls"_s);
+            }
             aggregator.addResult(line, WTF::move(parts), WTF::move(cachedParts));
         },
         [&](const TextExtraction::IFrameData& iframeData) {
